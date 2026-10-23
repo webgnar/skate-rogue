@@ -1,0 +1,211 @@
+// Builds a floor's 3D kit from the physics level: street slabs, canals, buildings under rooftops, ledges, rails,
+// parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
+import * as THREE from 'three';
+import { TILE } from '../physics/constants';
+import type { Level } from '../physics/level';
+import { makeRng, randInt } from '../gen/rng';
+import { CITY, paintTexture, tileTexture, type TileCell } from './textures';
+
+export const toX = (px: number) => px / TILE;
+export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
+
+const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
+const STREET_BACK = -3.5;
+
+function lambert(map: THREE.Texture | null, color = 0xffffff, transparent = false): THREE.MeshLambertMaterial {
+  return new THREE.MeshLambertMaterial({ map, color, transparent, alphaTest: transparent ? 0.5 : 0 });
+}
+
+// box with a different material on the front face (+z) and top face (+y)
+function slab(w: number, h: number, d: number, front: THREE.Material, top: THREE.Material, side: THREE.Material): THREE.Mesh {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  return new THREE.Mesh(geo, [side, side, top, side, front, side]);
+}
+
+export function buildKit(level: Level): THREE.Group {
+  const kit = new THREE.Group();
+  const rng = makeRng(level.layout.seed * 31 + level.layout.floor);
+  const cols = level.street.length;
+  const sideMat = lambert(null, 0x3a3640);
+
+  //--- street slabs and canals -------------------------------------------------------------
+  let c = 0;
+  while (c < cols) {
+    const isStreet = level.street[c];
+    let end = c;
+    while (end + 1 < cols && level.street[end + 1] === isStreet) end++;
+    const n = end - c + 1;
+    const x = c + n / 2;
+    if (isStreet) {
+      //front face: QFS's 3-row city street with crumbled corners next to canals
+      const front: number[][] = [[], [], []];
+      for (let i = 0; i < n; i++) {
+        const col = c + i;
+        let t = CITY.road(col);
+        if (c > 0 && i < 3 && n > 4) t = CITY.cornerLeft[i];
+        if (end < cols - 1 && n - 1 - i < 3 && n > 4) t = CITY.cornerRight[2 - (n - 1 - i)];
+        front[0].push(t);
+        front[1].push(t + 15);
+        front[2].push(t + 30);
+      }
+      const top = paintTexture(n, STREET_DEPTH, (ctx, W, H) => {
+        const lane = H * 0.55;
+        ctx.fillStyle = '#2a2830'; // asphalt
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#7d7a86'; // sidewalk at the back
+        ctx.fillRect(0, 0, W, H * 0.3);
+        ctx.fillStyle = '#5d5a66';
+        for (let px = 0; px < W; px += 16) ctx.fillRect(px, 0, 1, H * 0.3);
+        ctx.fillStyle = '#9a97a3'; // curb
+        ctx.fillRect(0, H * 0.3, W, 2);
+        ctx.fillStyle = '#d8b84a'; // centre line
+        for (let px = (c * 8) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
+      });
+      const mesh = slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
+      mesh.position.set(x, -1.5, STREET_BACK + STREET_DEPTH / 2);
+      kit.add(mesh);
+    } else {
+      //canal: water a bit below the street, QFS's clean water tiles
+      const front = [new Array(n).fill(CITY.waterTop), new Array(n).fill(CITY.water), new Array(n).fill(CITY.water)];
+      const water = slab(n, 2.4, STREET_DEPTH, lambert(tileTexture(front)), lambert(null, 0x3a5fb0), sideMat);
+      water.position.set(x, -1.8, STREET_BACK + STREET_DEPTH / 2);
+      kit.add(water);
+    }
+    c = end + 1;
+  }
+
+  //--- the wall along the back of the sidewalk, and buildings behind it ----------------------
+  const wallRows = [[], []] as number[][];
+  for (let i = 0; i < cols; i++) {
+    wallRows[0].push(CITY.brick[(i * 7) % CITY.brick.length]);
+    wallRows[1].push(CITY.brick[(i * 5 + 3) % CITY.brick.length]);
+  }
+  const wall = slab(cols, 2, 0.5, lambert(tileTexture(wallRows)), lambert(null, 0x6b5a55), sideMat);
+  wall.position.set(cols / 2, 1, STREET_BACK - 0.25);
+  kit.add(wall);
+
+  for (let bx = -8; bx < cols + 20; ) {
+    const w = 4 + randInt(rng, 5);
+    const h = 5 + randInt(rng, 9);
+    const t = CITY.facade[randInt(rng, CITY.facade.length)];
+    const b = slab(w, h, 4, lambert(tileTexture(facade(w, h, t)), 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
+    b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - randInt(rng, 3));
+    kit.add(b);
+    bx += w + randInt(rng, 2);
+  }
+
+  //--- one-way surfaces: buildings under rooftops, floating ledges, flat rails -------------------
+  const metal = new THREE.MeshLambertMaterial({ color: 0xb8bcc8 });
+  const postMat = new THREE.MeshLambertMaterial({ color: 0x55596a });
+  for (const s of level.surfaces) {
+    const w = toX(s.x1 - s.x0);
+    const x = toX(s.x0) + w / 2;
+    const y = toY(level, s.y);
+    if (s.kind === 'roof') {
+      const t = CITY.facade[randInt(rng, CITY.facade.length)];
+      const b = slab(w, y, 3, lambert(tileTexture(facade(Math.round(w), Math.ceil(y), t))), lambert(null, 0x6a6478), sideMat);
+      b.position.set(x, y / 2, -1.6);
+      kit.add(b);
+    } else if (s.kind === 'ledge') {
+      const row = new Array(Math.round(w)).fill(CITY.ledge[1]);
+      row[0] = CITY.ledge[0];
+      row[row.length - 1] = CITY.ledge[2];
+      const l = slab(w, 0.35, 2.2, lambert(tileTexture([row])), lambert(null, 0x8a6a50), sideMat);
+      l.position.set(x, y - 0.175, -0.4);
+      kit.add(l);
+    } else {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.14), metal);
+      bar.position.set(x, y - 0.06, 0);
+      kit.add(bar);
+      for (let px = toX(s.x0) + 0.3; px < toX(s.x1); px += 2) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, y, 0.1), postMat);
+        post.position.set(px, y / 2, 0);
+        kit.add(post);
+      }
+    }
+  }
+
+  //--- curved rails ---------------------------------------------------------------------------
+  for (const rail of level.rails) {
+    const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.07, 6), metal);
+    kit.add(tube);
+    for (const i of [0, Math.floor(pts.length / 2), pts.length - 1]) {
+      const p = pts[i];
+      if (p.y <= 0.1) continue;
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, p.y, 0.1), postMat);
+      post.position.set(p.x, p.y / 2, 0);
+      kit.add(post);
+    }
+  }
+
+  //--- parked cars ----------------------------------------------------------------------------
+  const paints = [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a, 0xe8e8f0, 0x2a2a34];
+  level.cars.forEach((car, i) => {
+    kit.add(makeCar(toX(car.x0), toX(car.x1), toY(level, car.bottom), toY(level, car.roof), paints[(i * 7 + level.layout.floor) % paints.length]));
+  });
+
+  //--- broken glass ----------------------------------------------------------------------------
+  const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe8ff, emissive: 0x204050 });
+  for (const g of level.glass) {
+    for (let px = toX(g.x0); px < toX(g.x1); px += 0.35) {
+      const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.12), glassMat);
+      shard.position.set(px + rng() * 0.2, 0.06, (rng() - 0.5) * 1.5);
+      shard.rotation.set(rng() * 3, rng() * 3, rng() * 3);
+      kit.add(shard);
+    }
+  }
+
+  //--- exit: a glowing gate -------------------------------------------------------------------
+  const gate = new THREE.Mesh(
+    new THREE.TorusGeometry(1.6, 0.12, 8, 32, Math.PI),
+    new THREE.MeshBasicMaterial({ color: 0x7cf0ff }),
+  );
+  gate.position.set(toX(level.exitX) + 0.5, 0, 0);
+  kit.add(gate);
+
+  return kit;
+}
+
+// a building front: facade tiles with QFS's roof-line cap drawn over the top row
+function facade(w: number, h: number, t: number): TileCell[][] {
+  const grid: TileCell[][] = [];
+  for (let r = 0; r < h; r++) grid.push(new Array(w).fill(t));
+  grid[0] = grid[0].map((_, i) => [t, i === 0 ? CITY.cap[0] : i === w - 1 ? CITY.cap[2] : CITY.cap[1]]);
+  return grid;
+}
+
+function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number): THREE.Group {
+  const car = new THREE.Group();
+  const w = x1 - x0;
+  const h = roof - bottom;
+  const body = new THREE.MeshLambertMaterial({ color: paint });
+  const glass = new THREE.MeshLambertMaterial({ color: 0x1c2333 });
+  const lower = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, h * 0.55, 1.6), body);
+  lower.position.set(0, bottom + 0.15 + h * 0.275, 0);
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6, h * 0.45 - 0.15, 1.4), body);
+  cabin.position.set(-0.05, bottom + 0.15 + h * 0.55 + (h * 0.45 - 0.15) / 2, 0);
+  const win = new THREE.Mesh(new THREE.BoxGeometry(w * 0.62, h * 0.3, 1.42), glass);
+  win.position.set(-0.05, cabin.position.y, 0);
+  car.add(lower, cabin, win);
+  const wheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.2, 10).rotateX(Math.PI / 2);
+  const tire = new THREE.MeshLambertMaterial({ color: 0x111114 });
+  for (const wx of [-w / 2 + 0.25, w / 2 - 0.25]) {
+    for (const wz of [-0.75, 0.75]) {
+      const wheel = new THREE.Mesh(wheelGeo, tire);
+      wheel.position.set(wx, bottom + 0.22, wz);
+      car.add(wheel);
+    }
+  }
+  const lamp = new THREE.MeshBasicMaterial({ color: 0xfff2b0 });
+  const tail = new THREE.MeshBasicMaterial({ color: 0xff3030 });
+  for (const wz of [-0.55, 0.55]) {
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.25), lamp);
+    head.position.set(w / 2 + 0.15, bottom + 0.15 + h * 0.4, wz);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.25), tail);
+    back.position.set(-w / 2 - 0.15, bottom + 0.15 + h * 0.4, wz);
+    car.add(head, back);
+  }
+  car.position.x = x0 + w / 2;
+  return car;
+}

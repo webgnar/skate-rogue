@@ -58,10 +58,10 @@ refills jumps, and ends when the rail ends or the player ollies.
 Landing on a curved rail SHALL ride it with gravity acting along the curve (speeding up downhill, slowing uphill
 but never below the minimum), and riding off an end SHALL launch along the rail's angle while keeping the speed.
 
-#### Scenario: Launch off a dipping rail
-- **WHEN** the skater rides a sagging curved rail to its far end
-- **THEN** the skater leaves the rail moving faster than base speed with an upward component, and that extra speed
-  bleeds off only after landing
+#### Scenario: Launch off a downhill rail
+- **WHEN** the skater rides a downhill curved rail to its far end
+- **THEN** the skater leaves the rail moving faster than base speed, and that extra speed bleeds off only after
+  landing
 
 ### Requirement: Car-hop
 Landing on a car roof SHALL bounce the skater up and refill all jumps.
