@@ -155,7 +155,7 @@ A full Slay the Spire map is an option for later.
 
 ### 2. How a run ends: escape the city
 
-A run is an **escape across five acts**, about 20 minutes when you win:
+Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes when you win:
 
 | Act | District (biome) | Floors | Escape set piece |
 | --- | --- | --- | --- |
@@ -644,7 +644,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 5. ~~Health.~~ Decided: one life, hits cost speed and raise Heat, and a gap or full Heat ends the run.
 6. **Run structure** (see that section). To hash out together:
    a. Choosing the next floor by skating the high road or low road at a fork?
-   b. A run as an escape across five acts with set-piece chases, then Endless after you win?
+   b. ~~How a run ends.~~ Decided: escape across five acts with set-piece chases, then Endless after you win.
    c. Which event nodes are in (shop, stash, gap challenge, underground spot, Shredtoshi's mark, hot street)?
    d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
 7. **Skaters.** Cosmetic, or one passive each?
