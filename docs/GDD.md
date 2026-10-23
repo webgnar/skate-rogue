@@ -1,6 +1,6 @@
-# Lou Gnar: Gnarlike — Game Design Document
+# Gnar Run — Game Design Document
 
-Oct 23, 2026 · @webgnar · Draft 4 (working title)
+Oct 23, 2026 · @webgnar · Draft 4
 
 A mobile-first, browser-based 3D roguelike skate game. It remakes the Lou Gnar runner ([webgnar/excaliburSkate](https://github.com/webgnar/excaliburSkate)), swaps its
 one-tap physics for the ollie, grind and rail physics from Quest For Stoken (QFSHIVE), and builds the whole
@@ -661,4 +661,4 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
    d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
 7. ~~Skaters.~~ Decided: one small passive each, plus a starting boon type lean (see Meta progression).
 8. ~~Board build scope.~~ Decided: a light version at launch (3 slots, ~6 triggers, ~8 effects), expanded later.
-9. **Name.** "Lou Gnar: Gnarlike" is a placeholder.
+9. ~~Name.~~ Decided: **Gnar Run**.

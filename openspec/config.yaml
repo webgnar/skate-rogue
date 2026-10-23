@@ -1,7 +1,7 @@
 schema: spec-driven
 
 context: |
-  Skate Rogue: a mobile-first 3D (2.5D side view) roguelike skate game in JavaScript/TypeScript with Three.js and Vite.
+  Gnar Run: a mobile-first 3D (2.5D side view) roguelike skate game in JavaScript/TypeScript with Three.js and Vite.
   docs/GDD.md is the game design document and the source of truth for design decisions; proposals must not
   contradict a decision marked "Decided" there without saying so.
   One-button controls only (tap / hold). Pure auto-run. No combat.
