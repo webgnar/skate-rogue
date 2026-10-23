@@ -326,9 +326,9 @@ skill and builds stay the point, not grinding the tree. Unlocking is mostly *mor
 
 ## Presentation (3D)
 
-The game is 3D in JavaScript (decided Oct 23, 2026). The draft assumes **2.5D**: everything is 3D models and
+The game is 3D in JavaScript, as a **2.5D side view** (decided Oct 23, 2026). Everything is 3D models and
 lighting, but the skater rides on one plane, left to right, so the QFS physics and the chunk generator work in
-x and y and the z axis is only for looks. (Pending zack's pick: 2.5D side view, behind-the-back runner, or free roam.)
+x and y and the z axis is only for looks.
 
 - **Camera:** a perspective camera to the side and slightly above, about 15° down. It leads ahead and pulls back
   and widens its field of view at high speed. For big airs and curved-rail launches it swings a little toward a
@@ -412,7 +412,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 ## Open questions
 
 1. ~~How much steering?~~ Decided: pure auto-run, one button (see Controls).
-2. **Which 3D?** 2.5D side view (assumed in this draft), behind-the-back runner, or free roam.
+2. ~~Which 3D?~~ Decided: 2.5D side view (see Presentation).
 3. **Lou Gnar vs QFS universe.** Is this a Lou Gnar game with QFS cameos, or set in the QFS world (Stoken, the AI)?
 4. **Hazards.** Do QFS critters come back as stompable hazards, or does the cast change to skate hazards
    (security guards, cones, cars, pedestrians)?
