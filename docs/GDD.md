@@ -113,10 +113,10 @@ them), boons are about skate physics, and the run adds a shop and a board build 
 1. **Floor** (30–90 s). Skate from the start to the exit portal across a generated stretch of street, rooftops,
    rails, gaps and traffic. Grab cash (run currency) and Stoken (meta currency). Land tricks for stoke.
 2. **Boon pick.** Three cards; take one. Reroll costs cash.
-3. **Biome change** every 3 floors: new 3D kit, gravity and traffic, then the **Skate Shop**
-   (the Noita Holy Mountain beat): buy and arrange board mods, cool off Heat, maybe a free boon.
-4. **Run over.** Fall into a gap, or let the AI's Heat catch you, and the run ends. Score, deepest floor and Stoken earned are shown and posted.
-5. **Between runs**, spend Stoken on the unlock tree, then go again. Restart is one tap.
+3. **Fork:** pick the next road (high or low) by skating, toward a boon, cash, a shop or an event.
+4. **Act change** after 3 floors and an escape set piece: a new district with its own 3D kit, gravity and traffic.
+5. **Run over.** Fall into a gap, or let the AI's Heat catch you, and the run ends. Score, deepest floor and Stoken earned are shown and posted.
+6. **Between runs**, spend Stoken on the unlock tree, then go again. Restart is one tap.
 
 The run's shape (route choices, acts, events, how it ends) is in **Run structure** below.
 
