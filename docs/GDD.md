@@ -401,6 +401,8 @@ SPEED to skate types:
 
 ### Starting boon pool (draft)
 
+The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK, COOL and STREET come later.
+
 | Boon | Type | Effect | Max |
 | --- | --- | --- | --- |
 | Triple Threat | POP | +1 jump (QFS Triple Jump) | 1 |
@@ -658,7 +660,9 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
    a. ~~Choosing the next floor.~~ Decided: skate the fork (high road or low road).
    b. ~~How a run ends.~~ Decided: escape across five acts with set-piece chases, then Endless after you win.
    c. ~~Events at launch.~~ Decided: shop, stash, hot street and underground spot; the other two come later.
-   d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
+   d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat. First step decided:
+      the first playable set (M1) is POP + GRIND only, the 12 boons in the starting pool; the other types follow
+      once Heat, traffic and the economy exist.
 7. ~~Skaters.~~ Decided: one small passive each, plus a starting boon type lean (see Meta progression).
 8. ~~Board build scope.~~ Decided: a light version at launch (3 slots, ~6 triggers, ~8 effects), expanded later.
 9. ~~Name.~~ Decided: **Gnar Run**.
