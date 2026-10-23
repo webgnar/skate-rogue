@@ -5,6 +5,7 @@ import type { StepInput } from '../physics/skater';
 export class OneButton {
   private down = 0; // pointers and keys currently holding the button
   private presses = 0; // presses not yet handed to a physics step
+  lastTarget: Element | null = null; // what the last pointer press landed on (boon cards)
 
   constructor(target: HTMLElement) {
     const press = () => {
@@ -17,6 +18,7 @@ export class OneButton {
     target.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       e.preventDefault();
+      this.lastTarget = e.target instanceof Element ? e.target : null;
       target.setPointerCapture?.(e.pointerId);
       press();
     });
@@ -31,6 +33,7 @@ export class OneButton {
     window.addEventListener('keydown', (e) => {
       if (e.code !== 'Space' && e.code !== 'ArrowUp') return;
       e.preventDefault();
+      this.lastTarget = null;
       if (!e.repeat) press();
     });
     window.addEventListener('keyup', (e) => {
@@ -46,7 +49,12 @@ export class OneButton {
     return { pressed, held: this.down > 0 || pressed };
   }
 
-  // a press the game used outside physics (restarting after a bail)
+  // drop presses made while the street was paused
+  clear(): void {
+    this.presses = 0;
+  }
+
+  // a press the game used outside physics (menus and restarting)
   takePress(): boolean {
     if (this.presses === 0) return false;
     this.presses = 0;

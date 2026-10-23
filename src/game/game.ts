@@ -1,5 +1,9 @@
 // Wires a run together: floors from the generator, the fixed-step skater, input, the view and the HUD.
-import { makeLayout } from '../gen/layout';
+import * as THREE from 'three';
+import { addBoon, type Boon, type Held } from '../boons/defs';
+import { skaterMods } from '../boons/mods';
+import { offerBoons } from '../boons/offer';
+import { validatedLayout } from '../gen/validate';
 
 import { buildLevel, type Level } from '../physics/level';
 import { Skater } from '../physics/skater';
@@ -12,9 +16,15 @@ import { FixedStep } from './loop';
 export interface Hud {
   floor(n: number): void;
   callout(text: string, kind?: 'trick' | 'good' | 'bad'): void;
-  bail(show: boolean): void;
   debug(text: string): void;
+  boons(held: Held[]): void;
+  pick(offer: Boon[] | null): void; // null hides the cards
+  over(result: { floor: number; boons: Held[] } | null): void;
 }
+
+type State = 'skate' | 'pick' | 'over';
+
+const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
 
 export class Game {
   private level: Level;
@@ -22,11 +32,17 @@ export class Game {
   private prev = { x: 0, y: 0 };
   private loop = new FixedStep();
   private floor = 1;
+  private boons: Held[] = [];
+  private state: State = 'skate';
+  private menuAt = 0;
+  private offer: Boon[] = [];
   private last = performance.now();
   private combo = 0;
+  private ghostMesh: THREE.Mesh;
 
   constructor(
-    private readonly seed: number,
+    private seed: number,
+    private readonly fixedSeed: boolean,
     private readonly view: StreetView,
     private readonly sprite: SkaterSprite,
     private readonly input: OneButton,
@@ -35,31 +51,73 @@ export class Game {
     this.level = this.makeLevel();
     this.skater = new Skater(this.level);
     this.view.scene.add(this.sprite.mesh);
+    this.ghostMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 0.12, 0.14),
+      new THREE.MeshBasicMaterial({ color: 0x9ff3ff, transparent: true, opacity: 0.6 }),
+    );
+    this.ghostMesh.visible = false;
+    this.view.scene.add(this.ghostMesh);
     this.startFloor();
   }
 
   private makeLevel(): Level {
-    return buildLevel(makeLayout(this.seed, this.floor));
+    return buildLevel(validatedLayout(this.seed, this.floor).layout);
+  }
+
+  private newRun(): void {
+    if (!this.fixedSeed) this.seed = Math.floor(Math.random() * 1e6);
+    this.floor = 1;
+    this.boons = [];
+    this.level = this.makeLevel();
+    this.hud.over(null);
+    this.startFloor();
+  }
+
+  private openMenu(state: State, now: number): void {
+    this.state = state;
+    this.menuAt = now;
+    this.input.clear();
   }
 
   private startFloor(): void {
-    this.skater = new Skater(this.level);
+    this.state = 'skate';
+    this.input.clear();
+    this.skater = new Skater(this.level, skaterMods(this.boons));
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level);
     this.view.follow(this.skater.x, this.skater.y, this.skater.hsp, true);
     this.sprite.play('push');
     this.hud.floor(this.floor);
-    this.hud.bail(false);
+    this.hud.boons(this.boons);
     this.combo = 0;
+  }
+
+  private pickBoon(i: number): void {
+    const boon = this.offer[i];
+    if (!boon) return;
+    this.boons = addBoon(this.boons, boon.id);
+    this.hud.pick(null);
+    this.floor++;
+    this.level = this.makeLevel();
+    this.startFloor();
+    this.hud.callout(boon.name.toUpperCase(), 'good');
+  }
+
+  // a tap on a boon card, or keys 1-3
+  choose(i: number): void {
+    if (this.state === 'pick' && performance.now() - this.menuAt >= MENU_LOCK_MS) this.pickBoon(i);
   }
 
   frame(now: number): void {
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
 
-    if (this.skater.mode === 'bail') {
-      //one press: try the same floor again
-      if (this.input.takePress()) this.startFloor();
+    if (this.state === 'pick') {
+      const press = this.input.takePress();
+      const card = press ? this.input.lastTarget?.closest<HTMLElement>('[data-pick]') : null;
+      if (card) this.choose(Number(card.dataset.pick));
+    } else if (this.state === 'over') {
+      if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.newRun();
     } else {
       this.loop.advance(dt, () => {
         this.prev = { x: this.skater.x, y: this.skater.y };
@@ -69,11 +127,22 @@ export class Game {
       });
     }
 
-    if (this.skater.mode === 'exit') {
-      this.floor++;
-      this.level = this.makeLevel();
-      this.startFloor();
-      this.hud.callout(`FLOOR ${this.floor}`, 'good');
+    if (this.state === 'skate' && this.skater.mode === 'exit') {
+      this.offer = offerBoons(this.seed, { floor: this.floor, boons: this.boons });
+      this.openMenu('pick', now);
+      this.hud.pick(this.offer);
+    } else if (this.state === 'skate' && this.skater.mode === 'bail') {
+      this.openMenu('over', now);
+      this.hud.over({ floor: this.floor, boons: this.boons });
+    }
+
+    const ghost = this.skater.ghost;
+    this.ghostMesh.visible = ghost !== null;
+    if (ghost) {
+      const w = toX(ghost.x1 - ghost.x0);
+      this.ghostMesh.scale.x = w;
+      this.ghostMesh.position.set(toX(ghost.x0) + w / 2, toY(this.level, ghost.y) - 0.06, 0);
+      (this.ghostMesh.material as THREE.MeshBasicMaterial).opacity = 0.25 + 0.4 * Math.min(1, ghost.ttl / 60);
     }
 
     const a = this.loop.alpha;
@@ -116,7 +185,7 @@ export class Game {
         this.hud.callout('SLAM!', 'bad');
         break;
       case 'bail':
-        this.hud.bail(true);
+        this.combo = 0;
         break;
     }
   }
