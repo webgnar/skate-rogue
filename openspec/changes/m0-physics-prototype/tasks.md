@@ -30,7 +30,7 @@
 ## 6. Integration
 
 - [x] 6.1 Play from floor 1 to the exit and on to floor 2, and restart after a bail, in headless Chromium at a phone landscape viewport; verify with screenshots
-- [ ] 6.2 Publish a playable build link for a phone test
+- [x] 6.2 Publish a playable build link for a phone test
 
 ## Workflow follow-up
 
