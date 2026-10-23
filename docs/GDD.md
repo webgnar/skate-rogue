@@ -137,7 +137,8 @@ reward icon and a danger rating (1 to 3 car icons). You choose by skating:
 This keeps the one-button rule, makes the choice a skill moment (the high road takes a clean jump at speed), and
 works like the doors in Hades: you always know the reward and roughly the danger, never the layout.
 
-**What a road can lead to:**
+**What a road can lead to** (launch set decided Oct 23, 2026: boon, cash, hot street, shop, stash and underground
+spot; gap challenge and Shredtoshi's mark come in a later update):
 
 | Node | What it is |
 | --- | --- |
@@ -146,9 +147,9 @@ works like the doors in Hades: you always know the reward and roughly the danger
 | **Hot street** (elite) | Rush-hour traffic, Heat starts at 30, and the reward is a rare boon or a duo boon |
 | **Skate shop** | No floor: spend cash on board mods, rerolls and a slot (the Noita Holy Mountain beat) |
 | **Stash** | A short floor ending in a Stoken stash (meta currency) |
-| **Gap challenge** | One huge gap, one attempt. Land it for a rare boon; miss and the Tuck-and-Roll net saves you but you start the next floor at 50 Heat |
+| **Gap challenge** (post-launch) | One huge gap, one attempt. Land it for a rare boon; miss and the Tuck-and-Roll net saves you but you start the next floor at 50 Heat |
 | **Underground spot** | A safe DIY skate spot: start the next floor at 0 Heat, swap one boon, or remove a curse |
-| **Shredtoshi's mark** | Graffiti shrine: trade cash or a boon for a cursed boon or a duo boon |
+| **Shredtoshi's mark** (post-launch) | Graffiti shrine: trade cash or a boon for a cursed boon or a duo boon |
 
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
@@ -645,7 +646,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 6. **Run structure** (see that section). To hash out together:
    a. ~~Choosing the next floor.~~ Decided: skate the fork (high road or low road).
    b. ~~How a run ends.~~ Decided: escape across five acts with set-piece chases, then Endless after you win.
-   c. Which event nodes are in (shop, stash, gap challenge, underground spot, Shredtoshi's mark, hot street)?
+   c. ~~Events at launch.~~ Decided: shop, stash, hot street and underground spot; the other two come later.
    d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
 7. **Skaters.** Cosmetic, or one passive each?
 8. **Board build scope.** Is the Noita-style mod system wanted for launch, or after boons prove fun?
