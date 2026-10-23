@@ -469,11 +469,20 @@ extra slots and a bigger mod pool come in updates.
 **unlock tree** with three branches:
 
 - **Deck shop:** new decks (stats and slot counts), new skaters (Webster, Keanu, Roxy, Goldie from QFS; Lou Gnar
-  is the default). Skaters are cosmetic plus one passive each, *to be decided*.
+  is the default). Each skater has one small passive and leans the first boon pick toward one type (decided
+  Oct 23, 2026; draft passives below, to be balanced).
 - **Boon library:** unlocks boons into the pool. A run starts with 12 of the boons above; the rest are unlocked.
   Also unlocks duo boons and curses.
 - **Spots:** unlocks biomes as starting points (after you've reached them), daily runs, and a "gnar mode"
   (harder: traffic one rank up, better Stoken).
+
+| Skater | Passive (draft) | First boon pick leans to |
+| --- | --- | --- |
+| Lou Gnar (default) | None: the baseline | Any |
+| Webster | Grinds start 15% faster | GRIND |
+| Keanu | Heat cools 15% faster while you're airborne | COOL |
+| Roxy | Car-hops bounce 20% higher | STREET |
+| Goldie | +25% cash from every source | LUCK |
 
 Small permanent stat buffs are kept rare and capped (for example Heat starts 10% lower, a free reroll per run), so
 skill and builds stay the point, not grinding the tree. Unlocking is mostly *more variety*, not *more power*.
@@ -650,6 +659,6 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
    b. ~~How a run ends.~~ Decided: escape across five acts with set-piece chases, then Endless after you win.
    c. ~~Events at launch.~~ Decided: shop, stash, hot street and underground spot; the other two come later.
    d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
-7. **Skaters.** Cosmetic, or one passive each?
+7. ~~Skaters.~~ Decided: one small passive each, plus a starting boon type lean (see Meta progression).
 8. ~~Board build scope.~~ Decided: a light version at launch (3 slots, ~6 triggers, ~8 effects), expanded later.
 9. **Name.** "Lou Gnar: Gnarlike" is a placeholder.
