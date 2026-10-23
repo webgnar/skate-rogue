@@ -1,6 +1,6 @@
 # Lou Gnar: Gnarlike — Game Design Document
 
-Oct 23, 2026 · @webgnar · Draft 3 (working title)
+Oct 23, 2026 · @webgnar · Draft 4 (working title)
 
 A mobile-first, browser-based 3D roguelike skate game. It remakes the Lou Gnar runner ([webgnar/excaliburSkate](https://github.com/webgnar/excaliburSkate)), swaps its
 one-tap physics for the ollie, grind and rail physics from Quest For Stoken (QFSHIVE), and builds the whole
@@ -117,6 +117,83 @@ them), boons are about skate physics, and the run adds a shop and a board build 
    (the Noita Holy Mountain beat): buy and arrange board mods, cool off Heat, maybe a free boon.
 4. **Run over.** Fall into a gap, or let the AI's Heat catch you, and the run ends. Score, deepest floor and Stoken earned are shown and posted.
 5. **Between runs**, spend Stoken on the unlock tree, then go again. Restart is one tap.
+
+The run's shape (route choices, acts, events, how it ends) is in **Run structure** below.
+
+## Run structure (draft, being hashed out)
+
+This is what makes the game a roguelike rather than an endless runner: choices between floors, a run with a shape
+and an ending, and risk you can opt into. Everything here is a recommendation to discuss.
+
+### 1. Choosing the next floor: high road or low road
+
+Every floor ends at a **fork** instead of a single exit portal. Street signs ahead show what each road leads to: a
+reward icon and a danger rating (1 to 3 car icons). You choose by skating:
+
+- **Low road:** keep rolling along the street. It's the default if you do nothing.
+- **High road:** ollie up onto the rooftops or the overpass before the fork.
+- Some forks have a third exit, a **rail line** that you only take if you land on the rail and grind it.
+
+This keeps the one-button rule, makes the choice a skill moment (the high road takes a clean jump at speed), and
+works like the doors in Hades: you always know the reward and roughly the danger, never the layout.
+
+**What a road can lead to:**
+
+| Node | What it is |
+| --- | --- |
+| **Boon street** | A normal floor; the reward is a boon pick of a shown type (POP, GRIND, FLOW, LUCK, COOL or STREET) |
+| **Cash street** | A normal floor with a big cash payout, for the shop |
+| **Hot street** (elite) | Rush-hour traffic, Heat starts at 30, and the reward is a rare boon or a duo boon |
+| **Skate shop** | No floor: spend cash on board mods, rerolls and a slot (the Noita Holy Mountain beat) |
+| **Stash** | A short floor ending in a Stoken stash (meta currency) |
+| **Gap challenge** | One huge gap, one attempt. Land it for a rare boon; miss and the Tuck-and-Roll net saves you but you start the next floor at 50 Heat |
+| **Underground spot** | A safe DIY skate spot: start the next floor at 0 Heat, swap one boon, or remove a curse |
+| **Shredtoshi's mark** | Graffiti shrine: trade cash or a boon for a cursed boon or a duo boon |
+
+Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
+A full Slay the Spire map is an option for later.
+
+### 2. How a run ends: escape the city
+
+A run is an **escape across five acts**, about 20 minutes when you win:
+
+| Act | District (biome) | Floors | Escape set piece |
+| --- | --- | --- | --- |
+| 1 | Chicago streets | 3 + escape | **Roadblock:** cruisers block the street; clear it over bus and car roofs |
+| 2 | Clemente Park or Los Angeles (the route picks) | 3 + escape | **Helicopter:** a spotlight sweeps the street; staying in it adds Heat fast |
+| 3 | Ancient Greece, Atlantis or the Art Museum | 3 + escape | **The flood / the chariot race / the guards:** one set piece per biome |
+| 4 | High-Tech City | 3 + escape | **Drone swarm:** drones dive in patterns; car-hop them to stay ahead |
+| 5 | The Hive (the AI's stronghold, QFS's finale) | 3 + finale | **The Hive core:** grind the tower's rails to the top and hit it with Stoken |
+
+- Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
+  by skating. They use the same traffic and Heat rules.
+- Beating Act 5 wins the run. It unlocks **Endless** (QFS Survivor style: floors forever, mixed worlds, its own
+  leaderboard) and harder **Gnar levels** (like Hades' Heat or Slay the Spire's Ascension: each level adds one
+  rule, such as faster traffic or Heat that never fully resets).
+- The acts pick biomes from the QFS worlds, so two runs don't look the same even early on.
+
+### 3. Risk and reward inside a floor
+
+- **Side lines:** optional harder lines on every floor (a long rail over traffic, a roof chain) with cash or Stoken
+  at the end.
+- **Stoke cash-out:** a long combo pays cash when you land it and nothing if you slam, so you decide how greedy to be.
+- **Wanted posters:** an AI poster on a floor offers a bounty: finish the floor with Heat above 50 for double
+  Stoken.
+
+### 4. Boons for traffic and the chase
+
+The boon pool gets a sixth type, **STREET** (red), for traffic and the chase, and keeps the other five. New cards:
+
+| Boon | Type | Effect | Max |
+| --- | --- | --- | --- |
+| Roof Rider | STREET | Car and bus roofs grind like rails | 1 |
+| Slipstream | STREET | Rolling right behind a car for 1 s gives a speed burst | 2 |
+| Hood Pop | STREET | Car-hops bounce 50% higher | 2 |
+| Spoofed Plate | STREET | Robotaxis don't brake for you | 1 |
+| Jaywalker | STREET | Near-miss window doubled, near-miss stoke doubled | 1 |
+| Siren Song | COOL | Each car-hop takes an extra 10 Heat off | 2 |
+| Decoy | COOL | The first time Heat reaches 75 on a floor, a decoy board pulls the cruiser back to 35 | 1 |
+| Ghost Mode | COOL | Flock cameras don't see you: Heat from slow skating is halved | 1 |
 
 ## Controls
 
@@ -318,6 +395,7 @@ SPEED to skate types:
 | **FLOW** | Cyan | Speed, momentum, landings, slopes |
 | **LUCK** | Green | Cash, Stoken, rerolls, shop prices |
 | **COOL** | Blue | Heat, slams, bails |
+| **STREET** | Red | Traffic: car-hops, roofs, near-misses (see Run structure) |
 
 ### Starting boon pool (draft)
 
@@ -332,7 +410,7 @@ SPEED to skate types:
 | Rail Magnet | GRIND | Rails pull you in from 48 px further away | 2 |
 | Grease | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
 | Rail Launch | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |
-| Sparky | GRIND | Grinding leaves sparks that stun hazards they touch | 1 |
+| Sparky | GRIND | Grinding leaves sparks that make cars swerve out of the skate lane | 1 |
 | Feeble Frenzy | GRIND | Each grind trick on one rail adds +10% speed until you leave it | 1 |
 | Ghost Rail | GRIND | Your last grind leaves a 2 s ghost rail behind you in the air | 1 |
 | New Wheels | FLOW | +20% base speed and +20% score (QFS New Wheels) | 2 |
@@ -564,7 +642,11 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 4. **Traffic.** Decided: car traffic is the main hazard. Still open: does a traffic director spawn cars on a
    timer, or does the generator place them? How do cars that brake when you're close actually feel?
 5. ~~Health.~~ Decided: one life, hits cost speed and raise Heat, and a gap or full Heat ends the run.
-6. **Run length.** Endless floors (QFS Survivor), or a final boss-free "last spot" at floor 21 with endless after?
+6. **Run structure** (see that section). To hash out together:
+   a. Choosing the next floor by skating the high road or low road at a fork?
+   b. A run as an escape across five acts with set-piece chases, then Endless after you win?
+   c. Which event nodes are in (shop, stash, gap challenge, underground spot, Shredtoshi's mark, hot street)?
+   d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
 7. **Skaters.** Cosmetic, or one passive each?
 8. **Board build scope.** Is the Noita-style mod system wanted for launch, or after boons prove fun?
 9. **Name.** "Lou Gnar: Gnarlike" is a placeholder.
