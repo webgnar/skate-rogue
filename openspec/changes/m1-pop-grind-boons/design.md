@@ -31,12 +31,12 @@ other four boon types.
   | Big Pop | POP | Ollie +20% per stack | 3 |
   | Floaty Flip | POP | Gravity halved for 24 frames after a flip trick | 1 |
   | Late Flip | POP | *Changed:* flip tricks ignore the release cut, so they always reach full height | 1 |
-  | Pressure Flip | POP | *Changed:* keep holding for 0.5 s after an ollie and gravity drops 30% until you let go | 1 |
+  | Pressure Flip | POP | *Changed:* keep holding for 0.25 s after an ollie and gravity drops 30% until you let go | 1 |
   | Spare Change | POP | Each grind adds 0.25 of a bonus jump; each full 1.0 is one extra air jump until you land | 3 |
   | Rail Magnet | GRIND | Rails catch you from 48 px further away per stack | 2 |
-  | Grease | GRIND | Grind speed +25% per stack, minimum grind speed doubled | 2 |
+  | Grease | GRIND | *Changed:* grind speed +25% per stack, and you enter grinds at full grind speed | 2 |
   | Rail Launch | GRIND | Ollieing off a rail adds 40% of grind speed to the ollie | 1 |
-  | Exit Wax | GRIND | *New, replaces Sparky (needs moving traffic):* leaving a rail keeps all grind speed as carry | 1 |
+  | Exit Wax | GRIND | *New, replaces Sparky (needs moving traffic):* speed carried off rails bleeds 4x slower on the ground (M0 already keeps it as carry) | 1 |
   | Feeble Frenzy | GRIND | *Changed (no grind tricks with one button):* +10% grind speed for every 0.5 s on one rail | 1 |
   | Ghost Rail | GRIND | *Changed (behind you is useless in auto-run):* leaving a rail extends it 4 tiles ahead as a ghost rail for 2 s | 1 |
 

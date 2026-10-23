@@ -27,5 +27,11 @@ export const PHYS = {
   coyoteFrames: 5,
   width: 16,
   height: 48,
+  // boons
+  floatyFrames: 24, // Floaty Flip
+  frenzyStep: 0.1, // Feeble Frenzy
+  pressureFrames: 15, // Pressure Flip kicks in after holding this long
+  ghostTiles: 4, // Ghost Rail
+  ghostFrames: 120,
   bailDepth: 24, // this far below the street surface and you're in the canal
 } as const;

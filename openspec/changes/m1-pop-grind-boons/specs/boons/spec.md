@@ -31,7 +31,7 @@ effect again.
 ### Requirement: POP boons
 POP boons SHALL change the ollie and air jumps as follows: Triple Threat gives one more jump; Big Pop raises
 ollie speed 20% per stack; Floaty Flip halves gravity for 24 frames after a flip trick; Late Flip makes flip
-tricks ignore the release cut; Pressure Flip lowers gravity 30% while the button stays held more than 30 frames
+tricks ignore the release cut; Pressure Flip lowers gravity 30% while the button stays held more than 15 frames
 after an ollie; Spare Change adds 0.25 of a bonus jump per grind per stack, spent as extra air jumps until
 landing.
 
@@ -45,8 +45,8 @@ landing.
 
 ### Requirement: GRIND boons
 GRIND boons SHALL change grinding as follows: Rail Magnet widens rail catch range by 48 px per stack; Grease
-raises grind speed 25% per stack and doubles minimum grind speed; Rail Launch adds 40% of grind speed to an ollie
-off a rail; Exit Wax keeps all grind speed as carry when leaving a rail; Feeble Frenzy adds 10% grind speed for
+raises grind speed 25% per stack and starts grinds at full grind speed; Rail Launch adds 40% of grind speed to an ollie
+off a rail; Exit Wax makes speed carried off rails bleed 4 times slower on the ground; Feeble Frenzy adds 10% grind speed for
 every 30 frames on one rail; Ghost Rail extends a rail 4 tiles past its end for 2 s after the skater leaves it.
 
 #### Scenario: Rail Magnet
