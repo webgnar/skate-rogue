@@ -458,8 +458,9 @@ Noita's wands take spells in slots that fire in order and modify each other. Our
 Boards also have **base stats** (from the deck you pick): pop, grind grip, speed, weight, slots. Decks are
 unlocked in the meta tree. The shop also sells a Heat cool-down, a boon reroll and a slot.
 
-This is the deepest system and the riskiest one for scope. It ships after boons are fun (see Milestones), and the
-first version can be just "3 slots, 6 triggers, 8 effects".
+This is the deepest system and the riskiest one for scope. Decided Oct 23, 2026: a **light version ships at launch**
+(3 slots, about 6 triggers and 8 effects, no modifiers), built after boons are fun (see Milestones). Modifiers,
+extra slots and a bigger mod pool come in updates.
 
 ## Meta progression
 
@@ -649,5 +650,5 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
    c. ~~Events at launch.~~ Decided: shop, stash, hot street and underground spot; the other two come later.
    d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
 7. **Skaters.** Cosmetic, or one passive each?
-8. **Board build scope.** Is the Noita-style mod system wanted for launch, or after boons prove fun?
+8. ~~Board build scope.~~ Decided: a light version at launch (3 slots, ~6 triggers, ~8 effects), expanded later.
 9. **Name.** "Lou Gnar: Gnarlike" is a placeholder.
