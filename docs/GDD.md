@@ -210,14 +210,43 @@ There's one life, as in Lou Gnar, and hits don't kill you (decided Oct 23, 2026)
 
 - **Slam:** clipping a car, landing mid-flip, or hitting a wall at speed. The skater wipes out, the board flies, and
   the skater is back on it in about 0.6 s. You drop to half speed, lose your combo and gain **Heat**.
-- **Heat** is the AI closing in. It shows as sirens and red-blue light growing from the left edge of the screen,
-  plus louder audio. Slams and slow skating raise it; speed, tricks and car-hops lower it. At full Heat an
-  enforcer catches you and the run is over.
 - **Bail:** falling into a gap or canal ends the run immediately, as in Lou Gnar.
-- Clearing a floor resets Heat to zero.
+
+#### The chase (Heat)
+
+Being chased is the game's tension (decided Oct 23, 2026). With one-button auto-run and hits that don't kill, the
+chase is what makes mistakes matter, so it has to be tight: always visible, always fair, and quick to recover from.
+
+- **The chaser is physically there.** An enforcer cruiser rides in the lane just behind the skate lane, lights and
+  siren on, with Flock drones above it. Heat is simply how close it is: at 0 it's off screen to the left, and at
+  100 it pulls level and boxes you in. No bar, because the car is the meter.
+- **What moves it** (starting numbers, to be tuned in M2):
+
+| Event | Heat |
+| --- | --- |
+| Slam | +35 |
+| Each second below base speed (recovering from a slam) | +10 |
+| Landed trick | −3 |
+| Grind, per second | −4 |
+| Car-hop | −8 |
+| Near-miss | −5 |
+| Clean skating, per second (no slam in the last 3 s) | −6 |
+| Clear the floor | reset to 0 |
+
+  So **three slams close together end the run**, two are a scare you can skate out of, and one is forgiven after
+  about 8 seconds of clean skating (less with tricks and grinds).
+- **Escalation, not surprise.** At 50 the siren layer comes in and the cruiser's lights reach the screen. At 75 a
+  drone drops in front and the music thins out. At 90 the screen edge pulses and the phone vibrates. Every
+  step is readable at a glance.
+- **Caught:** at 100 the cruiser cuts in and the run ends with a short camera beat (the board skidding away,
+  the skater pinned in the headlights) before the run summary. Restart is one tap.
+- **Depth:** deeper floors make Heat decay slower and add a second chaser type (a drone swarm in High-Tech City,
+  a chariot in Greece). Boons like Low Profile and the Wanted curse play directly with these numbers.
+- **Readable fairness:** a slam always shows its cause (the car flashes), and the chaser never moves between a
+  slam and the next 0.6 s remount, so a hit never chains into an unavoidable catch.
 
 This keeps runs fast and tense: no health bar to manage, just keep moving, but one mistake is never the end.
-The exact Heat numbers need prototyping.
+The Heat numbers above are a first guess and need prototyping.
 
 ## Procedural generation
 
