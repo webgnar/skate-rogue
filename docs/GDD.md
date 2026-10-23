@@ -127,7 +127,7 @@ and an ending, and risk you can opt into. Everything here is a recommendation to
 
 ### 1. Choosing the next floor: high road or low road
 
-Every floor ends at a **fork** instead of a single exit portal. Street signs ahead show what each road leads to: a
+Decided Oct 23, 2026. Every floor ends at a **fork** instead of a single exit portal. Street signs ahead show what each road leads to: a
 reward icon and a danger rating (1 to 3 car icons). You choose by skating:
 
 - **Low road:** keep rolling along the street. It's the default if you do nothing.
@@ -643,7 +643,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
    timer, or does the generator place them? How do cars that brake when you're close actually feel?
 5. ~~Health.~~ Decided: one life, hits cost speed and raise Heat, and a gap or full Heat ends the run.
 6. **Run structure** (see that section). To hash out together:
-   a. Choosing the next floor by skating the high road or low road at a fork?
+   a. ~~Choosing the next floor.~~ Decided: skate the fork (high road or low road).
    b. ~~How a run ends.~~ Decided: escape across five acts with set-piece chases, then Endless after you win.
    c. Which event nodes are in (shop, stash, gap challenge, underground spot, Shredtoshi's mark, hot street)?
    d. The STREET boons and the rest of the pool, now that we have one button, traffic and Heat.
