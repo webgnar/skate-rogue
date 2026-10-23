@@ -386,12 +386,10 @@ x and y and the z axis is only for looks.
   three-quarter view for drama, then swings back.
 - **World:** each ASCII piece becomes a strip of 3D kit pieces: street, curb, kiosk, rooftop, ledge, rail, stairs,
   kicker. Depth comes from real background buildings, props and skyline instead of parallax layers.
-- **Art style:** low-poly with flat, toon-shaded colours, which keeps the pixel-art cheerfulness of both games,
-  stays light on phones, and is fast to model. Low-res texture atlases with nearest-neighbour filtering can nod
-  to the pixel art.
-- **Skater:** one rigged low-poly model (Lou Gnar first), with animations for push, ollie, kickflip, heelflip,
-  360 flip, hardflip, shuvit, the four grind poses, landing, slam and bail. Flip tricks spin the board as a
-  separate object, so new tricks are mostly code.
+- **Art style:** low-poly geometry wearing Quest For Stoken's own pixel textures (see Art pipeline below), so the
+  3D world looks like the Stoken world. Light toon shading keeps it cheerful and cheap on phones.
+- **Skater:** one rigged human model (Lou Gnar first) whose animations are built from Lou Gnar's sprite frames
+  (see Art pipeline). Flip tricks spin the board as a separate object, so new tricks are mostly code.
 - **Traffic:** low-poly cars, buses, trucks and enforcer cruisers with working headlights, brake lights and
   indicators, plus drones and pigeons. Rank colours become paint jobs and an emissive outline (QFS's rank outline).
 - **Juice:** squash and stretch on the model, landing dust and grind sparks as GPU particles, trick name text,
@@ -400,6 +398,59 @@ x and y and the z axis is only for looks.
   skater (a blob shadow on low-end phones).
 - Landscape, rendered at device pixel ratio up to 2 and scaled down automatically when the frame rate drops.
 - Music per biome; reuse the title and gameplay tracks first.
+
+### Art pipeline
+
+Decided Oct 23, 2026: environments reuse Stoken's textures and patterns, and the skater's 3D animations are based
+on the Lou Gnar player sprites.
+
+**Environments from Stoken textures**
+
+- Source: QFSHIVE's tilesets, which use 32 px tiles: `t_city_buildings`, `t_clemente`, `t_tile_greece`,
+  `t_tile_atlantis`, `t_tile_artmuseum`, `t_hightech`, `t_tile_animated_stars`, `t_tile_los_angeles`,
+  `t_space_tokarz2`, `t_clouds`. Also the backdrops and background-object sprites used by `survivor_worlds` and
+  `survivor_landmarks`, and the set-piece layers in `survivor_set_pieces`.
+- Each tileset is cut into a texture atlas per biome. 3D kit pieces (street slab, curb, building facade, rooftop,
+  ledge, kiosk, stairs, rail, pillar) are UV-mapped onto those tiles at a fixed texel density: **one 32 px tile =
+  one 1 m world tile**, which is also the physics grid, so the texture lines up with the gameplay.
+- Nearest-neighbour filtering with mipmaps off near the camera keeps the pixels crisp. Faces QFS never drew (the
+  tops and sides of buildings, car roofs) get matching patterns extended from the same palette.
+- QFS's survivor skin data (ground, pit, block, ledge, props and decor per world) already says which tiles make
+  which part. The kit builder reads the same structure, so a QFS skin becomes a 3D biome with little hand work.
+- Animated tiles (stars, Atlantis waves) become animated textures; QFS backdrops become skybox and far-plane cards.
+- Vehicles and props are new low-poly models textured from the same palettes.
+
+**Skater animation from Lou Gnar sprites**
+
+Lou Gnar's player sheets are 66 × 75 px frames in `public/images/` of excaliburSkate. Each one becomes a 3D clip
+on a rigged human, keyframed pose for pose from the sprite frames and keeping their timing:
+
+| Sprite sheet | Frames | Timing in Lou Gnar | 3D clip |
+| --- | --- | --- | --- |
+| `idle.png` | 4 | 100 ms each | Idle (title and shop) |
+| `push.png` | 14 | loop | Push loop while rolling |
+| `ollie.png` | 10 | 4 × 40 ms, then 6 × 100 ms | Ollie (pop, rise, tuck) |
+| `kickflip.png` | 7 | loop while airborne | Kickflip |
+| `heelflip.png` | 6 | loop while airborne | Heelflip |
+| `shuv1.png`, `shuv2.png` | 7 each | loop while airborne | Shuvit, 360 shuvit |
+| `grind1.png`, `grind2.png` | 3 each | loop | 50-50, 5-0 (two more grind poses are new) |
+| `impact.png` | 7 | 50 ms each (350 ms) | Landing |
+| `freefall.png` | 4 | loop | Falling / bail |
+| (none) | | | Slam, car-hop, 360 flip, hardflip, crooked and boardslide: new clips in the same style |
+
+Workflow in Blender:
+
+1. Rig a humanoid (a standard Mixamo-compatible skeleton, so clips can be retargeted to the QFS skaters later).
+2. Load each sprite sheet as a reference image behind the side-view camera, one frame per keyframe.
+3. Pose the rig to match each frame's silhouette in side view, then add the depth the sprite doesn't show
+   (shoulder rotation, the back arm, the board's tilt and flip axis).
+4. Keep Lou Gnar's frame timing on the keyframes, with optional stepped interpolation for a snappy, sprite-like feel
+   that can be blended toward smooth later.
+5. The board is its own object with its own clips (pop, flip spin, catch), so tricks can mix body and board clips.
+6. Export one GLB with all clips (Draco-compressed), checked against the sprite in a side-by-side preview page.
+
+The 3D clips then line up with the existing game logic: the same states (push, ollie, trick, grind, impact,
+freefall) pick the same clips Lou Gnar's `player.ts` picks today.
 
 ### Immersion
 
@@ -466,10 +517,10 @@ src/
 
 | | Goal | Done when |
 | --- | --- | --- |
-| M0 | Physics port | A Three.js scene with a placeholder skater; QFS ollie, variable jump, double jump flip, flat/sloped/curved grinds and bombs feel right with one button on a test level on a phone |
+| M0 | Physics port | A Three.js scene with a placeholder skater and one Stoken-textured kit (Chicago); QFS ollie, variable jump, double jump flip, flat/sloped/curved grinds and bombs feel right with one button on a test level on a phone |
 | M1 | Floors | Generator ports all 20 QFS pieces, validates reachability, exit portal and floor counter work |
 | M2 | Run loop | Traffic, car-hop, slams and Heat, bail, boon pick with ~12 boons, game over, leaderboard |
-| M3 | Biomes | 3 biomes with gravity and 3D kits, biome change every 3 floors |
+| M3 | Biomes and art | Skater rig with the Lou Gnar clips; 3 biomes built from QFS tilesets with gravity; biome change every 3 floors |
 | M4 | Meta | Stoken, unlock tree, decks, saves |
 | M5 | Board build | Skate Shop, 3-slot boards, first triggers and effects |
 | M6 | Polish | Duo boons, curses, daily seed, PWA, tutorial floor, audio |
