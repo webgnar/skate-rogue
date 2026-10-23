@@ -278,9 +278,10 @@ vehicles in the skate lane can hit you; the others are there for life and noise,
   lowriders and a freeway floor. High-Tech City is all robotaxis and delivery drones. Greece has chariots,
   Atlantis has submarines and Outer Space has UFO traffic.
 
-Open: does traffic follow the level pieces (cars placed by the generator) or run on a timer (a traffic director
-spawning by time with guaranteed gaps)? The draft leans toward a director with the generator marking
-intersections, bus stops and parking.
+**Spawning** (decided Oct 23, 2026): the generator places static things and marks spots (parked cars, intersections
+`X`, bus stops `B`), and a **traffic director** spawns moving cars over time. The director guarantees a clear gap
+the base-physics skater can make, reacts to speed and Heat, and draws from the floor's seeded RNG so daily runs stay
+the same for everyone.
 
 ### Getting hit and ending a run
 
@@ -641,8 +642,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 1. ~~How much steering?~~ Decided: pure auto-run, one button (see Controls).
 2. ~~Which 3D?~~ Decided: 2.5D side view (see Presentation).
 3. ~~Which world?~~ Decided: the Stoken world (see Setting).
-4. **Traffic.** Decided: car traffic is the main hazard. Still open: does a traffic director spawn cars on a
-   timer, or does the generator place them? How do cars that brake when you're close actually feel?
+4. ~~Traffic.~~ Decided: car traffic is the main hazard, spawned by a seeded director with the generator marking
+   spots. Still to find out in the prototype: how robotaxis braking near you feels.
 5. ~~Health.~~ Decided: one life, hits cost speed and raise Heat, and a gap or full Heat ends the run.
 6. **Run structure** (see that section). To hash out together:
    a. ~~Choosing the next floor.~~ Decided: skate the fork (high road or low road).
