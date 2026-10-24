@@ -1,7 +1,9 @@
 // Score, combo, stoke and the run's money (GDD: Scoring and stoke). Pure, stepped with the floor's events.
 //
 // - Tricks, grinds and car-hops build a combo while you stay off the ground; landing banks it as
-//   points x combo count x speed. A slam loses the combo.
+//   points x combo count x speed. A slam loses the combo. How you land counts: a sketchy landing (the flip caught
+//   late, or a drop too big to soak up) banks half; a heavy one (a big drop landed) adds a big-drop bonus.
+//   Popping right at the lip of the ground is a little style of its own.
 // - A long combo also pays cash when you land it (the stoke cash-out): greedy combos pay, slams pay nothing.
 // - Banked points fill the stoke meter. Full stoke is the gnar state: faster cruising, and slams cost no Heat.
 // - Clearing a floor pays 250 x floor (QFS). Stoken pickups add to the score too.
@@ -34,12 +36,16 @@ export const SCORE = {
   gnarSecs: 8,
   gnarBoost: 1.2, // cruising speed in the gnar state
   slamStoke: 0.25, // a slam knocks this much off the meter
+  sketchy: 0.5, // share of the combo a sketchy landing banks
+  bigDrop: 100, // a heavy landing: a big drop, landed
+  lip: 30, // an ollie popped right at the edge
 };
 
 export interface Bank {
   points: number; // added to the score
   count: number;
   cash: number; // cash-out
+  how?: 'sketchy' | 'big'; // how it was landed, for the callout
 }
 
 export class RunScore {
@@ -91,8 +97,12 @@ export class RunScore {
       case 'near':
         this.add(SCORE.nearMiss * this.nearScale);
         break;
+      case 'ollie':
+        if (e.lip) this.add(SCORE.lip);
+        break;
       case 'land':
-        return this.bank(hsp);
+        if (e.quality === 'heavy') this.add(SCORE.bigDrop);
+        return this.bank(hsp, e.quality === 'sketchy' ? 'sketchy' : e.quality === 'heavy' ? 'big' : undefined);
       case 'slam':
       case 'tuck':
         if (this.slamStoke) {
@@ -131,10 +141,10 @@ export class RunScore {
     this.comboPoints += points;
   }
 
-  private bank(hsp: number): Bank | null {
+  private bank(hsp: number, how?: Bank['how']): Bank | null {
     if (this.combo === 0) return null;
     const mult = Math.min(SCORE.speedMultMax, Math.max(1, hsp / PHYS.baseSpeed));
-    const points = Math.round(this.comboPoints * this.combo * mult * this.scoreScale);
+    const points = Math.round(this.comboPoints * this.combo * mult * this.scoreScale * (how === 'sketchy' ? SCORE.sketchy : 1));
     const cash = Math.max(0, this.combo - SCORE.cashOutFrom + 1) * SCORE.cashOutPer;
     const count = this.combo;
     this.score += points;
@@ -143,7 +153,7 @@ export class RunScore {
     this.comboPoints = 0;
     this.idle = 0;
     this.fill(points / SCORE.stokeFull);
-    return { points, count, cash };
+    return { points, count, cash, ...(how ? { how } : {}) };
   }
 
   // fill the stoke meter; full is the gnar state (not while already in it)
