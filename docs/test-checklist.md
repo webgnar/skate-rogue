@@ -447,6 +447,11 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] `?biome=space`: flight suits, most wearing white helmets with dark visors.
 - [ ] `?biome=atlantis`, `museum`, `hightech`: sea colours, muted coats, black and neon respectively. Chicago looks as before.
 
+**Fixes: feet on the deck, car colours (the PR after #102)**
+- [ ] Lou's shoes sit on top of the grip tape in every clip (ride, push, ollie, flips, grinds), not sunk into the board.
+- [ ] Parked cars, cruisers and buses show their windows, lights and trim (a cruiser is black and white with a light bar, not a flat black blob; a bus is red with windows).
+- [ ] The roadblock at the end of act 1 shows proper cruisers and buses.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

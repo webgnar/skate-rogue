@@ -21,6 +21,12 @@ function clipNames() {
   return [...body.matchAll(/^ {2}(\w+): \{$/gm)].map((m) => m[1]);
 }
 
+// BOARD.deckTop in src/render/poses.ts: the deck's top above the ground
+function deckTop() {
+  const src = fs.readFileSync(path.join(ROOT, 'src', 'render', 'poses.ts'), 'utf8');
+  return Number(/deckTop: ([\d.]+)/.exec(src)[1]);
+}
+
 // the sim mode each clip is shown in, so the rig doesn't switch away from it
 function modeFor(name) {
   if (/^(grind\d|crooked|smith|feeble|fiveO)$/.test(name)) return 'grind';
@@ -37,7 +43,7 @@ function modeFor(name) {
   await p.waitForTimeout(1500);
   const names = clipNames();
   const data = await p.evaluate(
-    ([names, FPS, modes]) => {
+    ([names, FPS, modes, deckTop]) => {
       const g = window.game;
       g.loop.advance = () => {};
       const s = g.sprite;
@@ -73,14 +79,16 @@ function modeFor(name) {
           s.update(0, sk, 0);
           const fr = {};
           for (const bone of bones) fr[bone.name] = round(rel(bone));
-          fr.Board = round(rel(board));
+          // the Board bone carries the board's move from its rest pose; the game adds the deck height back on
+          // (SkaterRig.applyBaked), so record the board at its ground point, not its deck top
+          fr.Board = round(rel(board).multiply(new board.matrix.constructor().makeTranslation(0, -deckTop, 0)));
           frames.push(fr);
         }
         clips[name] = { loop: clip.loop, length: len, frames };
       }
       return { fps: FPS, rest, clips };
     },
-    [names, FPS, Object.fromEntries(names.map((n) => [n, modeFor(n)]))],
+    [names, FPS, Object.fromEntries(names.map((n) => [n, modeFor(n)])), deckTop()],
   );
   await b.close();
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
