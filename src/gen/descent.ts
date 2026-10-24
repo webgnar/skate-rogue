@@ -15,6 +15,7 @@ import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } fr
 import { makeRng, randInt, type Rng } from './rng';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
 import { floorEdit } from './level-edits';
+import { assignLanes, laneSwitches } from './lanes';
 import { elPlan } from '../traffic/el';
 
 export const DESCENT = {
@@ -246,16 +247,11 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
       pickups.push({ kind: 'cash', x: p.x, y: p.y - PICKUPS.ride });
     }
   }
-  //the fork: an overpass over the last street piece up to just past the exit gate; ollie and flip up to take it
+  //the fork: two depth lanes with lane switches along the street (src/gen/lanes.ts), placed once the level is put
+  //together. x0 still keeps the last stretch clear (the L, side lines, doors)
   const exitX = finale.exitX + off;
   let fork: Level['fork'] = null;
-  if (opts.fork) {
-    //starts 6 tiles into the runway piece and runs past the gate in the exit piece
-    const x0 = finale.width + off - 26 * TILE;
-    const y = finale.streetY - PICKUPS.fork;
-    fork = { x0, x1: exitX + 4 * TILE, y, ...opts.fork };
-    for (let x = x0 + 2 * TILE; x < exitX - TILE; x += 2 * TILE) pickups.push({ kind: 'cash', x, y: y - PICKUPS.ride });
-  }
+  if (opts.fork) fork = { x0: finale.width + off - 26 * TILE, x1: exitX + 4 * TILE, y: finale.streetY - PICKUPS.fork, switches: [], ...opts.fork };
   const level: Level = {
     ...finale,
     width: finale.width + off,
@@ -264,7 +260,6 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
       ...d.surfaces,
       ...hillSurfaces,
       ...finale.surfaces.map((s) => ({ ...s, x0: s.x0 + off, x1: s.x1 + off })),
-      ...(fork ? [{ kind: 'overpass' as const, x0: fork.x0, x1: fork.x1, y: fork.y, row: -1 }] : []),
     ],
     rails,
     cars: finale.cars.map((c) => ({ ...c, x0: c.x0 + off, x1: c.x1 + off })),
@@ -283,6 +278,10 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   if (opts.hills) level.el = elPlan(level, level.layout.seed);
   addSideLine(level, level.layout.seed);
   applyTwist(level, opts.twist, level.layout.seed);
+  if (level.fork) {
+    level.fork.switches = laneSwitches(level, level.layout.seed);
+    assignLanes(level, level.fork.switches, level.layout.seed);
+  }
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);
   level.doors = doorPlan(level, level.layout.seed);

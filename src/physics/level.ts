@@ -25,9 +25,24 @@ export interface Surface {
   el?: boolean; // the L's running rails (src/traffic/el.ts): drawn with the track, not as a bar on posts
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
   tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
+  track?: Lane; // only in this depth lane (src/gen/lanes.ts); left out, in both
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
+// 0 the front (skate) lane, 1 the back lane
+export type Lane = 0 | 1;
+
+// a lane switch: `to` forces that lane (the other one is closed off there); left out, it's a hop switch
+export interface LaneSwitch {
+  x: number;
+  to?: Lane;
+}
+
+// is a lane-only thing in this lane (things without a lane are in both)
+export function inLane(o: { track?: Lane }, lane: Lane): boolean {
+  return o.track === undefined || o.track === lane;
+}
+
 export function surfaceMaterial(s: Surface): Material {
   return s.material ?? (s.kind === 'rail' ? 'metal' : 'concrete');
 }
@@ -49,11 +64,13 @@ export interface Car {
   bottom: number;
   model?: 'cruiser' | 'bus'; // parked roadblock vehicles; plain parked cars leave it out
   kicker?: number; // a box truck's dropped tailgate: this far behind x0 it launches you (px)
+  track?: Lane;
 }
 
 export interface Glass {
   x0: number;
   x1: number;
+  track?: Lane;
 }
 
 // a curved rail, sampled into a polyline with arc length (QFS o_grind_rail)
@@ -64,6 +81,7 @@ export class CurvedRail {
   readonly length: number;
   material: Material = 'metal'; // handrails and curved rails are steel
   wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
+  track?: Lane;
 
   constructor(
     readonly x0: number,
@@ -131,13 +149,18 @@ export interface Pickup {
   x: number;
   y: number;
   kind: PickupKind;
+  track?: Lane;
 }
 
-// the high road at the end of a floor: an overpass over the street, and where each road leads
+// The fork: where each road leads. Lane switches (src/gen/lanes.ts): past the first switch the street runs as two
+// depth lanes, lane A in front (the low road) and lane B at the back (the high road). At a hop switch, being in the
+// air hops you across; a forced switch puts everyone in its lane. Without switches it's the old overpass over the
+// last piece (ollie up to it for the high road).
 export interface ForkSite {
   x0: number;
   x1: number;
   y: number;
+  switches?: LaneSwitch[];
   high: Road;
   low: Road;
 }

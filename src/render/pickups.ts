@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { inkify } from './toon';
 import type { Level } from '../physics/level';
-import { toX, toY } from './kit';
+import { laneZ, toX, toY } from './kit';
 import { flatGeometry } from './models';
 
 const POP_SECS = 0.18;
@@ -11,7 +11,7 @@ export class PickupView {
   readonly group = new THREE.Group();
   private coins: THREE.InstancedMesh | null = null;
   private gems: THREE.InstancedMesh | null = null;
-  private slots: { mesh: THREE.InstancedMesh; i: number; x: number; y: number; popT: number; gone: boolean }[] = [];
+  private slots: { mesh: THREE.InstancedMesh; i: number; x: number; y: number; z: number; popT: number; gone: boolean }[] = [];
   private t = 0;
   private readonly m = new THREE.Matrix4();
   private readonly q = new THREE.Quaternion();
@@ -48,7 +48,7 @@ export class PickupView {
     for (const p of level.pickups) {
       const mesh = p.kind === 'cash' ? this.coins : this.gems;
       const i = p.kind === 'cash' ? c++ : g++;
-      this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), popT: 0, gone: false });
+      this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), z: 0.25 + laneZ(p), popT: 0, gone: false });
     }
     inkify(this.coins);
     inkify(this.gems);
@@ -80,7 +80,7 @@ export class PickupView {
       const spin = this.t * 4 + s.x * 0.7;
       this.e.set(0, spin, s.mesh === this.gems ? 0.3 : 0);
       this.q.setFromEuler(this.e);
-      this.v.set(s.x, s.y + lift + Math.sin(this.t * 3 + s.x) * 0.05, 0.25);
+      this.v.set(s.x, s.y + lift + Math.sin(this.t * 3 + s.x) * 0.05, s.z);
       this.s.setScalar(scale);
       this.m.compose(this.v, this.q, this.s);
       s.mesh.setMatrixAt(s.i, this.m);

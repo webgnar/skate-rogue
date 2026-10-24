@@ -3,7 +3,7 @@
 // to shake out states the reference line never reaches. Pure, so the validator, the sim playtest and the game's
 // ?bot autopilot all press the same way.
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, surfaceY, type Car, type Level } from '../physics/level';
+import { inLane, isStreetAt, surfaceY, type Car, type Lane, type Level } from '../physics/level';
 import type { Skater, StepInput } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
@@ -12,12 +12,12 @@ import { makeRng } from '../gen/rng';
 
 export type PilotStyle = 'ref' | 'mash';
 
-function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: Car[], cross: CrossCar[]): boolean {
+function danger(level: Level, lane: Lane, x: number, hsp: number, movers: Vehicle[], still: Car[], cross: CrossCar[]): boolean {
   for (let dx = 20; dx <= 70; dx += 4) {
     if (!isStreetAt(level, x + dx)) return true;
-    if (level.cars.some((c) => x + dx >= c.x0 && x + dx <= c.x1)) return true;
+    if (level.cars.some((c) => x + dx >= c.x0 && x + dx <= c.x1 && inLane(c, lane))) return true;
     if (still.some((c) => x + dx >= c.x0 && x + dx <= c.x1)) return true;
-    if (level.glass.some((g) => x + dx >= g.x0 && x + dx <= g.x1)) return true;
+    if (level.glass.some((g) => x + dx >= g.x0 && x + dx <= g.x1 && inLane(g, lane))) return true;
     //where moving cars will be by the time we get there
     const t = dx / Math.max(1, hsp);
     if (movers.some((v) => x + dx >= v.x0 + v.speed * t && x + dx <= v.x1 + v.speed * t)) return true;
@@ -43,7 +43,7 @@ function landsOn(level: Level, sk: Skater, x: number, y: number, vsp: number, an
     if (any && ny >= level.streetY && isStreetAt(level, x)) return true;
     for (const s of level.surfaces) {
       //a few px in from the ends: the projection is a guess, and a corner isn't a landing to count on
-      if ((!any && !s.manual) || x < s.x0 + EDGE || x > s.x1 - EDGE) continue;
+      if ((!any && !s.manual) || x < s.x0 + EDGE || x > s.x1 - EDGE || !inLane(s, sk.lane)) continue;
       const sy = surfaceY(s, x);
       if (y <= sy && ny >= sy) return true;
     }
@@ -96,13 +96,14 @@ export class Pilot {
   private ref(sim: FloorSim): boolean {
     const level = sim.level;
     const sk = sim.skater;
-    const movers = sim.traffic.inLane;
+    //moving traffic is in the front lane only
+    const movers = sk.lane === 0 ? sim.traffic.inLane : [];
     //the drone swarm: drones on their way down count as already there
     const drones = sim.swarm ? sim.swarm.drones.filter((d) => d.state === 'dive' || d.state === 'hover').map((d) => d.box) : [];
     const onSurface = sk.mode === 'grind' || (sk.mode === 'roll' && sk.surface !== null);
     let pressed = false;
-    if (sk.mode === 'roll' && !sk.surface && danger(level, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
-    if (onSurface && sk.surface && sk.x > sk.surface.x1 - 24 && danger(level, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
+    if (sk.mode === 'roll' && !sk.surface && danger(level, sk.lane, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
+    if (onSurface && sk.surface && sk.x > sk.surface.x1 - 24 && danger(level, sk.lane, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30) pressed = true;
     // falling with no street ahead: flip for more air
     //(unless this fall already lands on a manual pad)
@@ -112,7 +113,7 @@ export class Pilot {
       else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true) && !landsOn(level, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
     }
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
-    if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.y)) pressed = true;
+    if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars.filter((c) => inLane(c, sk.lane)), ...drones, ...movers], sk.x, sk.y)) pressed = true;
     return pressed;
   }
 }

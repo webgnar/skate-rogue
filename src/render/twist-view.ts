@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { Level, Surface } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { FX } from './fx-settings';
-import { toX, toY } from './kit';
+import { laneZ, toX, toY } from './kit';
 import { inkify } from './toon';
 
 const STREAKS = 28; // per current
@@ -118,7 +118,7 @@ export class TwistView {
     inkify(g);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
-    g.position.set(x, y, 0);
+    g.position.set(x, y, laneZ(s));
     g.userData.x = x;
     this.group.add(g);
     this.ruins.push({ s, mesh: g, y, drop: 0 });
