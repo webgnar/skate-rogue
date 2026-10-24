@@ -1,5 +1,5 @@
 // Effect settings: a quality tier for older phones and two accessibility switches. One shared object the
-// effects read each frame. Saved in browser storage, and set from the URL until the game has a settings menu:
+// effects read each frame. Saved in browser storage, and set from the pause card's settings or the URL:
 //   ?fx=low | ?fx=high   force a tier (auto by default: the view drops to low when frames stay slow)
 //   ?calm                reduce motion and reduce flashing
 //   ?nomotion ?noflash   either one alone
@@ -34,13 +34,16 @@ export function initFx(params: URLSearchParams, prefersReducedMotion = false): v
   }
   Object.assign(FX, applyParams({ ...defaults(prefersReducedMotion), ...saved }, params));
   FX.tier = FX.quality === 'low' ? 'low' : 'high';
-  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue'].some((k) => params.has(k))) {
-    try {
-      const { quality, reduceMotion, reduceFlashing, heatCue } = FX;
-      localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue }));
-    } catch {
-      //not remembered in a private window
-    }
+  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue'].some((k) => params.has(k))) saveFx();
+}
+
+// remember the settings (the URL flags, or the pause card)
+export function saveFx(): void {
+  try {
+    const { quality, reduceMotion, reduceFlashing, heatCue } = FX;
+    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue }));
+  } catch {
+    //not remembered in a private window
   }
 }
 

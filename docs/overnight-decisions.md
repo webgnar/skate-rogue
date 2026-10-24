@@ -361,6 +361,15 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Tutorial floor.** A new phone (no best score, no tutorial cleared) starts on a fixed seven-piece street with a
   prompt per move and no traffic or Heat; through its gate the run starts fresh on floor 1. Any test URL flag skips
   it, and `?tutorial` brings it back. Busting on it just restarts it.
+- **Sound, using Lou Gnar's sounds (GDD: music, reuse the title and gameplay tracks first).** I converted
+  excaliburSkate's ten sounds to mp3 (Ogg doesn't play on older iPhones) and mapped them to the sim's events, pitched
+  to stretch them: the impact sample is landings, slams and car hops; ufo_explode is smashes and drones. The rolling
+  wheels and the siren are synthesized (noise and an oscillator), so they need no new files. The gameplay track plays
+  during runs and the title track on the run summary. Per-surface wheel sounds, Doppler cars and horns are next once
+  there are samples for them.
+- **Pause card settings and Quit run.** Sound and music sliders, vibration, effects quality and the three
+  accessibility switches all moved from URL flags onto the pause card (the flags still work). Quit run ends the run
+  with its summary and keeps its Stoken. The HUD thread can restyle the card to the mockups.
 
 ## Models thread: animation
 

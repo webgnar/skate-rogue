@@ -19,6 +19,9 @@ import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
 import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
+import { Sound } from './audio/sound';
+import { buzz, loadSettings } from './ui/settings';
+import { SettingsPanel } from './ui/settings-panel';
 
 const base = import.meta.env.BASE_URL;
 
@@ -178,7 +181,7 @@ function makeHud(): Hud {
       //escalation steps: 50 lights, 75 drone, 90 the screen edge pulses and the phone buzzes once
       const next = value >= 90 ? 3 : value >= 75 ? 2 : value >= 50 ? 1 : 0;
       if (next === level) return;
-      if (next === 3) navigator.vibrate?.([60, 60, 60]);
+      if (next === 3) buzz([60, 60, 60]);
       appEl.dataset.heat = String(next);
       level = next;
     },
@@ -288,8 +291,12 @@ async function start() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
-  document.getElementById('app')!.classList.toggle('noflash', FX.reduceFlashing);
-  document.getElementById('app')!.classList.toggle('calm', FX.reduceMotion);
+  loadSettings();
+  const look = () => {
+    document.getElementById('app')!.classList.toggle('noflash', FX.reduceFlashing);
+    document.getElementById('app')!.classList.toggle('calm', FX.reduceMotion);
+  };
+  look();
   //the meta tree: what's unlocked, and the skater and deck you ride (?unlockall opens everything for testing)
   const save = loadSave();
   const all = params.has('unlockall');
@@ -360,6 +367,18 @@ async function start() {
     else if (t?.closest('[data-daily]')) reloadWith('daily', !daily);
   });
   tapOnly('resume', () => game.setPaused(false));
+  tapOnly('quitrun', () => game.quitRun());
+  //sound starts on the first press (browsers need a tap first); the pause card's settings change it live
+  const sound = new Sound(base);
+  game.sound = sound;
+  const unlock = () => sound.unlock();
+  window.addEventListener('pointerdown', unlock, { capture: true });
+  window.addEventListener('keydown', unlock, { capture: true });
+  new SettingsPanel(document.querySelector<HTMLElement>('#paused .settings')!, {
+    volumes: () => sound.applyVolumes(),
+    tier: (tier) => view.setTier(tier),
+    look,
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) game.setPaused(true);
   });

@@ -761,7 +761,8 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
   (sirens, light, edge glow) as well as the bar.
 - **Boon pick:** three large cards, tap to pick, long-press to read. Reuse QFS's card layout and deal animation.
 - **Shop:** board slots across the top, mods below, drag to place. Must work with one thumb.
-- **Pause:** resume, settings, run summary (boons, mods), abandon run.
+- **Pause:** resume, settings, run summary (boons, mods), abandon run. Built Oct 24, 2026: sound and music sliders,
+  vibration, effects quality, reduce motion, reduce flashing, Heat stripes, and QUIT RUN.
 - Every touch target is at least 48 × 48 px. Nothing important near the notch or the home bar.
 
 ## Technical design

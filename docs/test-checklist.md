@@ -152,6 +152,18 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 - [ ] **Through the gate:** "YOU'RE READY. LET'S GO!" and the real run starts on floor 1 with score 0. Reload: it doesn't come back (`?tutorial` brings it back).
 - [ ] *Feel:* is it too long, too short, or missing a move you'd want taught (fakie, a car hop for Heat)?
 
+## Sound, vibration and settings
+
+- [ ] **Sound starts on your first tap:** with the phone's sound on, the gameplay music (Lou Gnar's track) comes in, plus a quiet rolling sound from the wheels that gets louder as you speed up and stops in the air.
+- [ ] **Every move sounds:** an ollie pops, a flip trick swishes, landings thud (a big drop is louder than a small one), a grind scrapes for as long as you're on the rail, a car hop bonks, coins chime, Stoken chimes higher, smashing props crunches and a stomped drone explodes. A slam is a deep crunch.
+- [ ] **The siren:** from Heat 25 a far-off police wail comes in, louder and faster as Heat climbs.
+- [ ] **Busted and the summary:** busted plays the game-over sting; the run summary switches to the title music. The gate plays a chime.
+- [ ] **Pausing silences everything,** and it comes back on resume. Switching apps pauses too.
+- [ ] **Vibration (Android):** a tiny buzz on landings, a longer one on slams, three pulses at Heat 90. iPhones can't vibrate from a web page.
+- [ ] **Settings on the pause card:** Sound and Music sliders, Vibration, Effects (AUTO, HIGH, LOW), Reduce motion, Reduce flashing and Heat stripes. Each one changes at once and is remembered after a reload.
+- [ ] **Quit run:** on the pause card, ends the run and shows the summary (Stoken earned is kept).
+- [ ] *Feel:* is the music too loud against the effects? Is the rolling sound annoying? Is the siren too quiet to notice?
+
 ## Gear and the shop
 
 - [ ] **Gear wear:** four bars on the HUD (bottom right) for the deck, shoes, trucks and wheels. The deck wears from ollies, the shoes from flip tricks, the trucks from grinding and the wheels from going fast. A part turns yellow below 50 and red and blinking at 15, with a callout at each.
