@@ -13,6 +13,9 @@ import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, writeSave } from '../run/save';
 import { tutorialLevel } from '../gen/tutorial';
+import { buzzFor, cueFor, MOMENT } from '../audio/cues';
+import type { Sound } from '../audio/sound';
+import { buzz } from '../ui/settings';
 import { cashScale, dayKey, DECK_SLOTS, FULL_LIBRARY, firstPick, STOCK, withLoadout, type Library, type Loadout } from '../run/meta';
 import { PickupView } from '../render/pickups';
 
@@ -149,6 +152,7 @@ export class Game {
   private boons: Held[] = [];
   private state: State = 'skate';
   paused = false; // frozen by the pause button, Esc / P, or the page going hidden
+  sound: Sound | null = null; // set by main once the page is up
   private menuAt = 0;
   private offer: Boon[] = [];
   private last = performance.now();
@@ -269,6 +273,7 @@ export class Game {
     this.level = this.makeLevel();
     this.hud.over(null);
     this.startFloor();
+    this.sound?.play(MOMENT.start);
   }
 
   // through the tutorial's gate: remember it, then the run proper starts on its first floor (no score carried)
@@ -382,6 +387,7 @@ export class Game {
   private finishFloor(now: number): void {
     this.carry = carriedHeat(this.sim.heat.value);
     this.gear = { ...this.sim.gear };
+    this.sound?.play(MOMENT.gate);
     if (this.tutorial) return this.endTutorial();
     if (this.road.kind === 'escape') return this.clearAct(now, this.road.act);
     const pts = this.run.clearFloor(this.floor);
@@ -612,6 +618,7 @@ export class Game {
     this.hud.pick(null);
     this.advance();
     this.hud.callout(boon.name.toUpperCase(), 'good');
+    this.sound?.play(MOMENT.pick);
   }
 
   private endRun(now: number, caught: boolean, won = false): void {
@@ -663,6 +670,13 @@ export class Game {
     this.hud.pause(on);
   }
 
+  // the pause card's QUIT RUN: the run ends here, with its summary (it still banks its Stoken)
+  quitRun(): void {
+    if (!this.paused || this.state !== 'skate') return;
+    this.setPaused(false);
+    this.endRun(performance.now(), false);
+  }
+
   frame(now: number): void {
     //never negative: a frame's timestamp can come from before the game was made, and a negative step would
     //poison the time warp (and through it the camera and the physics clock) with NaN
@@ -671,6 +685,7 @@ export class Game {
     //paused: the street holds its last frame and presses are dropped
     if (this.paused) {
       this.input.clear();
+      this.sound?.update({ mode: 'roll', speed: 0, heat: 0, skating: false, over: false, paused: true });
       return;
     }
     //game time: frozen on a slam's hit-stop, then slow motion
@@ -715,7 +730,8 @@ export class Game {
       this.state = 'caught';
       this.menuAt = now;
       this.hud.callout(this.sim.chaser?.caught ? CHASER_CALLS[chaserLook(this.biome)].caught : 'BUSTED!', 'bad');
-      navigator.vibrate?.(200);
+      buzz(200);
+      this.sound?.play(MOMENT.busted);
     }
 
     //traffic, the cruiser and the warnings
@@ -725,6 +741,14 @@ export class Game {
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, this.skater.y);
     this.hud.heat(heat);
+    this.sound?.update({
+      mode: this.skater.mode,
+      speed: Math.max(Math.abs(this.skater.hsp), this.skater.railV),
+      heat,
+      skating: this.state === 'skate',
+      over: this.state === 'over',
+      paused: false,
+    });
     this.heatCue.update(heat, dt);
     this.view.night.update(dt, this.skater.x / TILE, heat);
     this.view.gates.setRoad(this.sim.roadAhead);
@@ -965,6 +989,9 @@ export class Game {
   }
 
   private handle(e: FloorSim['events'][number]): void {
+    this.sound?.play(cueFor(e));
+    const b = buzzFor(e);
+    if (b) buzz(b);
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type === 'smash') return this.smashed(e);
@@ -1007,7 +1034,6 @@ export class Game {
       case 'tuck':
         this.hud.callout('TUCK AND ROLL!', 'good');
         this.view.shake(0.15);
-        navigator.vibrate?.(40);
         break;
       case 'slip':
         this.hud.callout('SLIPSTREAM!', 'trick');
@@ -1065,7 +1091,6 @@ export class Game {
       case 'slam':
         this.flip = null;
         this.slam();
-        navigator.vibrate?.(60);
         break;
       case 'pickup':
         this.pickups.take(e.index);
