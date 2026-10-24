@@ -547,6 +547,11 @@ and listed it here for review. Any of these can be flipped in the morning.
   frame: the pole is fixed toward the camera (a little outward per leg) and only turns with the body (a
   boardslide turns Lou's chest down or up the rail, so his knees go with it). The landing squash and slopes
   use the same pole. Clips re-baked.
+- **L train cars (for the level design thread).** art/street.py now builds `ElCar` and `ElCarFront` in street.glb:
+  a CTA 5000-series style stainless car, 4 tiles long (x 0..4, running +x), 1.7 tall from the wheel bottoms (its
+  origin, on the running rail heads), 1.9 wide between the rails (game z 0.2). Blue and red stripe, dark window
+  band, two door pairs a side, low roof gear. The front variant has the cab at +x with a windshield, an amber
+  destination sign and headlights. The other end of each car is a plain end door, for coupling. About 700 tris each.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 
