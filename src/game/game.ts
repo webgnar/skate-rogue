@@ -253,6 +253,7 @@ export class Game {
   setBiome(id: BiomeId): void {
     this.biome = id;
     this.applyMood();
+    void this.view.setBiome(id); // its kit, once the tiles are in
   }
 
   //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level
