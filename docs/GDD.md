@@ -272,6 +272,15 @@ Input buffering (100 ms) and coyote time (80 ms) are on for everyone; touch late
 - Grind poses (50-50, 5-0, crooked, boardslide) change automatically every rail length, as Lou Gnar's random grind
   animations do. Each change counts as a grind trick for stoke and for boons that trigger on grind tricks.
 
+### Manual pads
+
+- A short floating ledge (3 tiles or less) over a water gap is a **manual pad**. Land on it clean and Lou rides it in
+  a manual (back wheels down, nose up, like a 5-0 on flat ground), then ollies off the end to the next pad or the
+  street.
+- The manual is a trick: +120 stoke, and it keeps the combo going instead of banking it. A slam on a pad is still a
+  slam. Two pieces are built around them: `manual pads` (two 3-tile pads over one canal) and `pad line` (three
+  2-tile pads across a wide canal).
+
 ### Traffic (the main hazard)
 
 Car traffic is the hazard (decided Oct 23, 2026; details still being designed). Because the game is 2.5D, the

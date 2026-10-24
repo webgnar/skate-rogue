@@ -423,6 +423,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   quarter of the time. After this, `npm run playtest:sim` finds no unclearable floors. I left the Sky Line climbing
   warning alone: it's a boon working as intended (a ghost rail under your feet), just very high.
 
+- **Manual pads (zack: "short platforms like the ones over water gaps should act as manual pads").** Any floating
+  ledge of 3 tiles or less with water under its middle is a pad; that's marked when the level is built, so every
+  floor and the validator agree. Landing clean on one starts a manual (the rig's existing `manual` clip: back
+  wheels, nose up), worth +120 and continuing the combo rather than banking it, the way a grind does. Long ledges
+  and ledges over street stay plain landings. Pads were rare (one stepping-stone piece), so I added two pieces:
+  `manual pads` (tier 1) and `pad line` (tier 2). The reference bot now follows its fall and skips the rescue flip
+  when it's already coming down on a pad; before that it flipped over them, and at gnar speed overshot one floor.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

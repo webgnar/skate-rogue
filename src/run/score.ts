@@ -1,6 +1,7 @@
 // Score, combo, stoke and the run's money (GDD: Scoring and stoke). Pure, stepped with the floor's events.
 //
-// - Tricks, grinds and car-hops build a combo while you stay off the ground; landing banks it as
+// - Tricks, grinds, car-hops and manuals build a combo while you stay off the ground (a manual pad counts as off
+//   it: landing into a manual adds to the combo instead of banking it); landing banks it as
 //   points x combo count x speed. A slam loses the combo. How you land counts: a sketchy landing (the flip caught
 //   late, or a drop too big to soak up) banks half; a heavy one (a big drop landed) adds a big-drop bonus.
 //   Popping right at the lip of the ground is a little style of its own.
@@ -39,6 +40,7 @@ export const SCORE = {
   sketchy: 0.5, // share of the combo a sketchy landing banks
   bigDrop: 100, // a heavy landing: a big drop, landed
   lip: 30, // an ollie popped right at the edge
+  manual: 120, // landing into a manual on a manual pad: a trick, and the combo carries on
 };
 
 export interface Bank {
@@ -112,6 +114,10 @@ export class RunScore {
         if (e.lip) this.add(SCORE.lip);
         break;
       case 'land':
+        if (e.manual) {
+          this.add(SCORE.manual);
+          return null;
+        }
         if (e.quality === 'heavy') this.add(SCORE.bigDrop);
         return this.bank(hsp, e.quality === 'sketchy' ? 'sketchy' : e.quality === 'heavy' ? 'big' : undefined);
       case 'slam':

@@ -608,7 +608,7 @@ export class SkaterRig {
         this.play(e.name in CLIPS ? e.name : 'ollie');
         break;
       case 'land':
-        this.play('land');
+        this.play(e.manual ? 'manual' : 'land');
         break;
       case 'grind': // flat bars are rails; a parked car's roof (row -1, physics roofLedge) is not
         if (this.sk?.surface?.row === -1) this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
@@ -654,8 +654,11 @@ export class SkaterRig {
       if (this.clipName !== this.held) this.play(this.held, 0.25);
     } else if (this.clipName === 'idle' || this.clipName === 'busted') {
       this.play(sk.mode === 'air' ? 'air' : 'ride', 0.2);
+    } else if (sk.manualing) {
+      //a manual pad: back wheels, nose up, the 5-0 look
+      if (this.clipName !== 'manual') this.play('manual', 0.1);
     } else if (sk.mode === 'roll') {
-      if (done || this.clipName === 'air' || this.clipName === 'freefall' || GRINDS.has(this.clipName)) {
+      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
       } else if (this.clipName === 'push') {
         // finish the stroke, with the back foot back near the board, before rolling

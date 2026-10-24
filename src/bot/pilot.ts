@@ -2,9 +2,9 @@
 // canals and cars, rides rails to their ends, flips when falling short); 'mash' presses at random like a new player,
 // to shake out states the reference line never reaches. Pure, so the validator, the sim playtest and the game's
 // ?bot autopilot all press the same way.
-import { TILE } from '../physics/constants';
+import { PHYS, TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
-import type { StepInput } from '../physics/skater';
+import type { Skater, StepInput } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
 import type { CrossCar } from '../traffic/cross';
@@ -30,6 +30,20 @@ function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: 
 // the next roof within a few tiles is above our feet
 function blocked(cars: Car[], x: number, y: number): boolean {
   return cars.some((c) => c.x0 > x && c.x0 - x < 2.5 * TILE && c.roof < y - 4);
+}
+
+// follow the fall as it goes (no more presses): does it come down on a manual pad?
+function landsOnPad(level: Level, sk: Skater): boolean {
+  const pads = level.surfaces.filter((s) => s.manual && s.y >= sk.y);
+  let { x, y, vsp } = sk;
+  for (let f = 0; f < 120 && y < level.streetY; f++) {
+    vsp = Math.min(vsp + sk.grav, PHYS.maxFall);
+    const ny = y + vsp;
+    x += sk.hsp;
+    if (pads.some((s) => y <= s.y && ny >= s.y && x >= s.x0 && x <= s.x1)) return true;
+    y = ny;
+  }
+  return false;
 }
 
 export class Pilot {
@@ -70,7 +84,8 @@ export class Pilot {
     if (onSurface && sk.surface && sk.x > sk.surface.x1 - 24 && danger(level, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30) pressed = true;
     // falling with no street ahead: flip for more air
-    if (sk.mode === 'air' && sk.vsp > 0.5 && sk.jumps > 0 && !isStreetAt(level, sk.x + 40)) pressed = true;
+    //(unless this fall already lands on a manual pad)
+    if (sk.mode === 'air' && sk.vsp > 0.5 && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOnPad(level, sk)) pressed = true;
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.y)) pressed = true;
     return pressed;
