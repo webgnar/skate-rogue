@@ -805,7 +805,7 @@ export class Game {
       if (ch) this.escapeFx.chopper(toX(ch.x), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
       if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, street, this.chaserView.surging, dt);
     }
-    this.pedView.update(this.level, this.skater, dt, toX(this.skater.x));
+    this.pedView.update(this.level, this.skater, dt, toX(this.skater.x), this.biome);
     this.phoneFx.update(this.pedView.phones());
     if (this.level.bounty && !this.bountySeen && this.state === 'skate' && this.skater.x >= this.level.bounty.x - 4 * TILE) {
       this.bountySeen = true;

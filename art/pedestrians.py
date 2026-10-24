@@ -10,8 +10,9 @@
 #   PedLeg        one leg and shoe, origin at the hip joint (the game uses it for both)
 #   PedArmL/R     arm and hand, origin at the shoulder; the right hand holds a phone
 #   PedHeadShort / PedHeadLong / PedHeadCap   neck, head and hair, origin at the base of the neck
+#   PedHeadWreath (Greece: short hair and a laurel wreath), PedHeadHelmet (space: a white helmet with a dark visor)
 # Materials are named for what the game recolours: pedTop, pedPants, pedSkin, pedHair, pedShoe (and pedPhone,
-# pedScreen, which keep their colour).
+# pedScreen, pedLeaf, pedHelm, pedVisor, which keep their colour).
 import math
 import os
 import sys
@@ -40,6 +41,9 @@ COLORS = {
     'pedShoe': 0xF0F0F0,
     'pedPhone': 0x16161C,
     'pedScreen': 0x8AD8FF,  # glows
+    'pedLeaf': 0x5A9A3A,
+    'pedHelm': 0xF2F2F4,
+    'pedVisor': 0x1A2A48,
 }
 
 
@@ -119,6 +123,29 @@ def head(m, hair):
         parts.append(link('pedTop', bm, m['pedTop']))
         bm = bmesh.new()
         blob(bm, (0.15, 0.16, 0.1), (0, 0.02, 0.24), 8, 5, keep=lambda c: c.y > 0.02)  # hair at the back
+    elif hair == 'wreath':
+        blob(bm, (0.155, 0.165, 0.15), (0, 0.015, 0.27), 10, 6, keep=lambda c: c.z > 0.02 or c.y > 0.05)
+        parts.append(link('pedHair', bm, m['pedHair']))
+        bm = bmesh.new()
+        for i in range(14):  # leaves round the crown, a gap at the front
+            a = 2 * math.pi * (i + 0.5) / 16 + math.pi / 2 + math.pi / 8
+            c = (0.16 * math.cos(a), 0.17 * math.sin(a), 0.31 + 0.02 * (i % 2))
+            box(bm, c[0] - 0.03, c[0] + 0.03, c[1] - 0.03, c[1] + 0.03, c[2] - 0.02, c[2] + 0.02)
+        ob = join(parts + [link('pedLeaf', bm, m['pedLeaf'])], 'PedHeadWreath')
+        return ob
+    elif hair == 'helmet':
+        blob(bm, (0.155, 0.165, 0.15), (0, 0.015, 0.27), 10, 6, keep=lambda c: c.z > 0.02 or c.y > 0.05)
+        parts.append(link('pedHair', bm, m['pedHair']))
+        bm = bmesh.new()
+        blob(bm, (0.23, 0.23, 0.23), (0, 0, 0.25), 12, 8)  # the shell
+        parts.append(link('pedHelm', bm, m['pedHelm']))
+        bm = bmesh.new()
+        blob(bm, (0.17, 0.06, 0.12), (0, -0.19, 0.26), 10, 6)  # the visor, a dark dome on the front
+        parts.append(link('pedVisor', bm, m['pedVisor']))
+        bm = bmesh.new()
+        box(bm, -0.17, 0.17, -0.17, 0.17, 0.0, 0.06)  # the collar ring, in the top's colour
+        parts.append(link('pedTop', bm, m['pedTop']))
+        return join(parts, 'PedHeadHelmet')
     elif hair == 'long':
         blob(bm, (0.16, 0.17, 0.16), (0, 0.02, 0.27), 10, 6, keep=lambda c: c.z > 0.0 or c.y > 0.02)
         box(bm, -0.15, 0.15, 0.02, 0.16, -0.05, 0.25)  # down the back to the shoulders
@@ -132,11 +159,12 @@ def head(m, hair):
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     m = {k: material(k, v) for k, v in COLORS.items()}
-    obs = [torso(m), leg(m), arm(m, 'L'), arm(m, 'R'), head(m, 'short'), head(m, 'long'), head(m, 'cap')]
+    obs = [torso(m), leg(m), arm(m, 'L'), arm(m, 'R'), head(m, 'short'), head(m, 'long'), head(m, 'cap'),
+           head(m, 'wreath'), head(m, 'helmet')]
     # assembled in the file as one person standing, for a look; the game reads each part from its origin
     at = {'PedTorso': (0, 0, HIP_Z), 'PedLeg': (HIP_X, 0, HIP_Z), 'PedArmL': (-SHOULDER[0], 0, SHOULDER[1]),
           'PedArmR': (SHOULDER[0], 0, SHOULDER[1]), 'PedHeadShort': (0, 0, NECK_Z), 'PedHeadLong': (1, 0, NECK_Z),
-          'PedHeadCap': (2, 0, NECK_Z)}
+          'PedHeadCap': (2, 0, NECK_Z), 'PedHeadWreath': (3, 0, NECK_Z), 'PedHeadHelmet': (4, 0, NECK_Z)}
     for ob in obs:
         ob.location = at[ob.name]
     return obs
