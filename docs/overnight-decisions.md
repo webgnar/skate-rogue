@@ -472,6 +472,11 @@ and listed it here for review. Any of these can be flipped in the morning.
   back foot reaching beside the front truck, sweeping back past the tail) and left as is. Re-baking also fixed
   art/bake_clips.cjs, which had baked from the Blender actions instead of the code clips (it now clears them
   first); the re-baked actions match the code clips frame for frame.
+- **The L and the traffic signals are Blender models** (art/street.py, street.glb). The L over the helicopter
+  escape is riveted lattice girders in dark green steel with rust X-bracing, ties and running rails (and a third
+  rail), in 3-tile spans squeezed to fit each cover, on H columns with a bracket out under the back girder. The
+  cross-street signal is a dark green pole and a three-lamp head with hoods; the red and green lenses light as
+  before, amber stays dark. The code-built versions stay as the fallback.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

@@ -298,7 +298,31 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
   }
 
   //--- the L: elevated train tracks over the street on a helicopter escape (you hide under them) ------
-  if (level.escape?.covers.length) {
+  if (level.escape?.covers.length && model('ElSpan')) {
+    //art/street.py: riveted lattice girders in 3-tile spans (the last one squeezed to fit), columns stretched down
+    //to the street with a bracket out under the back girder
+    for (const c of level.escape.covers) {
+      const x0 = toX(c.x0);
+      const x1 = toX(c.x1);
+      const y = toY(level, c.y);
+      const spans = Math.max(1, Math.round((x1 - x0) / 3));
+      const len = (x1 - x0) / spans;
+      for (let i = 0; i < spans; i++) {
+        const span = model('ElSpan')!;
+        span.position.set(x0 + i * len, y, 0);
+        span.scale.x = len / 3;
+        kit.add(span);
+      }
+      for (let x = x0 + 0.6; x < x1; x += 3) {
+        const col = model('ElColumn')!;
+        col.position.set(x, 0, 0);
+        col.scale.y = y - 0.08;
+        const cap = model('ElColumnCap')!;
+        cap.position.set(x, y, 0);
+        kit.add(col, cap);
+      }
+    }
+  } else if (level.escape?.covers.length) {
     const steel = new THREE.MeshLambertMaterial({ color: 0x2f3a33 });
     const rust = new THREE.MeshLambertMaterial({ color: 0x5a3a2a });
     const tie = new THREE.MeshLambertMaterial({ color: 0x3a2a20 });
