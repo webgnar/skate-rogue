@@ -477,6 +477,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   rail), in 3-tile spans squeezed to fit each cover, on H columns with a bracket out under the back girder. The
   cross-street signal is a dark green pole and a three-lamp head with hoods; the red and green lenses light as
   before, amber stays dark. The code-built versions stay as the fallback.
+- **Coins, Stoken gems and the wanted board are Blender models** (art/pickups.py, art/street.py `WantedBoard`). A
+  gold coin with a rim and a raised $ on both faces (the back one mirrored so it reads right as it spins), and a
+  brilliant-cut purple gem, table up. Still one instanced draw each (colours baked into the vertices), 284 and 30
+  triangles. The bounty's poster now hangs on a board with two posts, a plank panel, a frame and a little roof.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

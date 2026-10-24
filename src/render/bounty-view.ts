@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import type { Level } from '../physics/level';
 import { BOUNTY } from '../run/bounty';
 import { toX, toY } from './kit';
+import { model } from './models';
 import { inkify } from './toon';
 
 let posterTex: THREE.CanvasTexture | null = null;
@@ -47,15 +48,19 @@ export class BountyView {
     this.group.clear();
     if (!level.bounty) return;
     const board = new THREE.Group();
-    const wood = new THREE.MeshLambertMaterial({ color: 0x4a3020 });
-    for (const x of [-0.5, 0.5]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.2, 0.08), wood);
-      leg.position.set(x, 0.6, 0);
-      board.add(leg);
+    const built = model('WantedBoard'); // art/street.py: posts, a framed plank panel, a little roof
+    if (built) board.add(built);
+    else {
+      const wood = new THREE.MeshLambertMaterial({ color: 0x4a3020 });
+      for (const x of [-0.5, 0.5]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.2, 0.08), wood);
+        leg.position.set(x, 0.6, 0);
+        board.add(leg);
+      }
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.7, 0.08), wood);
+      back.position.y = 1.95;
+      board.add(back);
     }
-    const back = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.7, 0.08), wood);
-    back.position.y = 1.95;
-    board.add(back);
     inkify(board);
     const face = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.6), new THREE.MeshBasicMaterial({ map: poster() }));
     face.position.set(0, 1.95, 0.05);

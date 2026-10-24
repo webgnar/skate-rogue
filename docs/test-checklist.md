@@ -411,6 +411,12 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Act 2's helicopter escape: the L tracks overhead are dark green riveted girders with rusty X-bracing, ties and rails on top, standing on columns in the back lane. You can still hide under them from the spotlight.
 - [ ] Floor 5 and later, at a cross street: the signal has a hooded three-lamp head; red or green lights up as the cross traffic changes.
 
+**Coins, gems and the wanted board as models (the PR after #93)**
+- [ ] Cash coins are gold with a rim and a raised $ that reads the right way round on both sides as they spin.
+- [ ] Stoken gems are faceted purple diamonds, table up.
+- [ ] A bounty floor's WANTED poster hangs on a wooden board with posts, a frame and a little roof.
+- [ ] *Check:* no frame-rate drop on a floor with lots of coins.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
