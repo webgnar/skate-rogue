@@ -1,11 +1,11 @@
+import '@fontsource/bangers/latin-400.css';
 import './style.css';
 import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
 import { GEAR, GEAR_PARTS, wornness, type Gear } from './run/gear';
 import { modDef, type ModId } from './board/mods';
-import { label } from './gen/roads';
-import { actOf } from './gen/escape';
+import { HudView } from './ui/hud';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
@@ -109,14 +109,9 @@ function shopHtml(v: ShopView): { slots: string; stock: string; hint: string } {
   return { slots, stock, hint };
 }
 
-// the gear strip and the shop's gear row: a bar per part, green to red as it wears
+// the shop's gear row: a bar per part, green to red as it wears (the HUD's bars are in src/ui/hud.ts)
 function gearTone(c: number): string {
   return c <= GEAR.busted ? 'busted' : wornness(c) > 0 ? 'worn' : 'fresh';
-}
-
-function gearStrip(g: Gear): string {
-  return GEAR_PARTS.map((p) => `<span class="part ${gearTone(g[p])}" title="${GEAR.names[p]}: worn by ${GEAR.wornBy[p]}">
-    ${GEAR.names[p].toUpperCase()}<i style="--c:${Math.round(g[p])}%"></i></span>`).join('');
 }
 
 function gearShop(g: Gear, cash: number): string {
@@ -131,7 +126,6 @@ function gearShop(g: Gear, cash: number): string {
 }
 
 function makeHud(): Hud {
-  const floorEl = document.getElementById('floortext')!;
   const calloutEl = document.getElementById('callout')!;
   const debugEl = document.getElementById('debug')!;
   const boonsEl = document.getElementById('boons')!;
@@ -139,18 +133,11 @@ function makeHud(): Hud {
   const overEl = document.getElementById('over')!;
   const appEl = document.getElementById('app')!;
   const warnEl = document.getElementById('warn')!;
-  const cashEl = document.getElementById('cash')!;
-  const stokenEl = document.getElementById('stoken')!;
-  const scoreEl = document.getElementById('score')!;
-  const comboEl = document.getElementById('combo')!;
-  const stokeEl = document.getElementById('stoke')!;
-  const stokeFill = stokeEl.querySelector('i')!;
-  const roadEl = document.getElementById('road')!;
-  const boardEl = document.getElementById('board')!;
   const shopEl = document.getElementById('shop')!;
   const underEl = document.getElementById('under')!;
-  const gearEl = document.getElementById('gear')!;
-  let gearKey = '';
+  const pausedEl = document.getElementById('paused')!;
+  const hintEl = document.getElementById('hint')!;
+  const view = new HudView();
   let level = 0;
   let held: Held[] = [];
   let timer = 0;
@@ -170,20 +157,11 @@ function makeHud(): Hud {
   });
   return {
     floor: (n, road) => {
-      floorEl.textContent = road.kind === 'escape' ? `ACT ${road.act} ESCAPE` : `ACT ${actOf(n)} · FLOOR ${n}`;
-      roadEl.textContent = label(road);
-      roadEl.dataset.kind = road.kind;
+      view.setFloor(n, road);
+      hintEl.hidden = n > 1; // the controls line only on the first floor
     },
-    money: (cash, stoken) => {
-      cashEl.textContent = `$${cash}`;
-      stokenEl.textContent = `◆ ${stoken}`;
-    },
-    score: (score, combo, stoke, gnar) => {
-      scoreEl.textContent = score.toLocaleString();
-      comboEl.textContent = combo > 1 ? `x${combo}` : '';
-      stokeFill.style.width = `${Math.round((gnar > 0 ? gnar : stoke) * 100)}%`;
-      stokeEl.classList.toggle('gnar', gnar > 0);
-    },
+    money: (cash, stoken) => view.money(cash, stoken),
+    score: (score, combo, stoke, gnar, pending) => view.setScore(score, combo, stoke, gnar, pending),
     callout: (text, kind = 'trick') => {
       calloutEl.textContent = text;
       calloutEl.className = `show ${kind}`;
@@ -192,6 +170,7 @@ function makeHud(): Hud {
     },
     debug: (text) => (debugEl.textContent = text),
     heat: (value) => {
+      view.setHeat(value);
       //escalation steps: 50 lights, 75 drone, 90 the screen edge pulses and the phone buzzes once
       const next = value >= 90 ? 3 : value >= 75 ? 2 : value >= 50 ? 1 : 0;
       if (next === level) return;
@@ -200,16 +179,8 @@ function makeHud(): Hud {
       level = next;
     },
     warn: (show) => (warnEl.hidden = !show),
-    board: (slots) => {
-      boardEl.innerHTML = slots.some(Boolean) ? slots.map((id) => `<span class="slot ${modKind(id)}">${id ? esc(modDef(id).short) : ''}</span>`).join('') : '';
-    },
-    fire: (i) => {
-      const el = boardEl.children[i] as HTMLElement | undefined;
-      if (!el) return;
-      el.classList.remove('fire');
-      void el.offsetWidth; // restart the flash
-      el.classList.add('fire');
-    },
+    board: (slots) => view.board(slots),
+    fire: (i) => view.fire(i),
     shop: (v) => {
       shopEl.hidden = !v;
       if (!v) {
@@ -248,12 +219,10 @@ function makeHud(): Hud {
       re.textContent = `RESTOCK $${v.restockPrice}`;
       re.disabled = v.shop.cash < v.restockPrice;
     },
-    gear: (g) => {
-      //redrawn only when a part's whole percent changes
-      const key = GEAR_PARTS.map((p) => Math.round(g[p])).join();
-      if (key === gearKey) return;
-      gearKey = key;
-      gearEl.innerHTML = gearStrip(g);
+    gear: (g) => view.gear(g),
+    pause: (on) => {
+      pausedEl.hidden = !on;
+      if (on) pausedEl.querySelector('.held')!.innerHTML = held.length ? held.map(chip).join('') : '<span class="none">no boons yet</span>';
     },
     boons: (h) => {
       held = h;
@@ -329,7 +298,23 @@ async function start() {
   if (params.has('debug')) Object.assign(window, { game, props });
   const biome = params.get('biome');
   if (isBiome(biome)) game.setBiome(biome);
+  //pause: the button, Esc or P, and whenever the page is hidden. The buttons stop their press reaching the one
+  //button, so pausing and resuming never ollie.
+  const tapOnly = (id: string, fn: () => void) => {
+    const el = document.getElementById(id)!;
+    el.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      fn();
+    });
+  };
+  tapOnly('pausebtn', () => game.setPaused(true));
+  tapOnly('resume', () => game.setPaused(false));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) game.setPaused(true);
+  });
   window.addEventListener('keydown', (e) => {
+    if (e.code === 'Escape' || e.code === 'KeyP') game.setPaused(!game.paused);
     if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') game.choose(Number(e.code.slice(5)) - 1);
   });
 
@@ -337,6 +322,8 @@ async function start() {
   window.addEventListener('resize', resize);
   resize();
   document.getElementById('seed')!.textContent = `seed ${seed}`;
+  document.querySelector('#paused .seed')!.textContent = `seed ${seed}`;
+  document.getElementById('app')!.classList.toggle('debug', params.has('debug'));
   document.getElementById('loading')!.remove();
 
   const tick = (now: number) => {

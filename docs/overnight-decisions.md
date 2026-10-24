@@ -302,3 +302,22 @@ and listed it here for review. Any of these can be flipped in the morning.
   the skinned model the ground angle now tilts only the board; the feet stay on it, the legs re-aim by two-bone IK
   and the hips sink a little, over any clip. The physics feel thread's `feel` values (squash, lean, wobble) feed the
   same hook, and its `feel.pitch` becomes the board angle.
+
+## HUD thread: ui1-hud (zack's HUD mockup)
+
+- **Heat gets a bar after all.** The GDD said Heat is shown by the world, not a bar; zack's mockup has one, so the
+  mockup wins. The world cues stay. Four stars light at 25, 50, 75 and 90 Heat, and the cruiser's lights flash
+  from 50.
+- **The combo's "+ 820"** is the live combo's points before the speed bonus (what you'd bank at cruising speed),
+  so the number you actually bank can be bigger.
+- **Board mod tiles show the mod's short name, not an icon.** There are 14 mods and no icon art yet; triggers are
+  purple ("ON OLLIE"), effects cyan ("DO KICK"), empty slots dashed. The mockup's charge pips under each mod have no
+  meaning in the game yet, so they're left out.
+- **Gear wear runs green / yellow / red by condition**, not a colour per part as in the mockup, so a worn part reads
+  at a glance. Parts are in the mockup's order: deck, trucks, wheels, shoes.
+- **Boons you hold** stay as small chips under the logo and are listed in full on the pause card.
+- **The fps line now only shows with `?debug`**, the seed moved to the pause card, and the controls hint only shows
+  on floor 1.
+- **Pause** is the top right button, Esc or P, and it pauses itself when you switch apps. Resume is a button so a
+  stray tap doesn't drop you back in.
+- **Font:** Bangers (OFL), bundled with the game, so there is no font request at runtime.

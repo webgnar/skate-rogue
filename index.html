@@ -13,19 +13,48 @@
     <div id="app">
       <canvas id="game"></canvas>
       <div id="hud">
-        <div id="floor"><span id="floortext">FLOOR 1</span><span id="road"></span></div>
-        <div id="money"><span id="cash">$0</span><span id="stoken">&#9670; 0</span></div>
-        <div id="scorebox"><span id="score">0</span><span id="combo"></span></div>
-        <div id="stoke"><i></i></div>
+        <div id="top">
+          <div id="logo">
+            <div class="mark"><b class="gnar">GNAR</b><b class="run">RUN</b></div>
+            <div class="sub"><span id="floortext">ACT 1-1 · FLOOR 1</span><span id="road"></span></div>
+          </div>
+          <div id="center">
+            <div id="scorebox" class="panel"><small>SCORE</small><span id="score">0</span></div>
+            <div id="combobox" class="panel" data-live="0"><span class="c">COMBO <em id="combo"></em></span><span id="pending"></span></div>
+          </div>
+          <div id="right">
+            <div id="money" class="panel">
+              <span class="cash"><svg viewBox="0 0 24 16" aria-hidden="true"><rect x="1" y="1" width="22" height="14" rx="2" fill="#1fd67a" stroke="#000" stroke-width="2"/><circle cx="12" cy="8" r="3.6" fill="#0b6b3a"/><path d="M12 5.3v5.4M10.6 6.6h2.2a.9.9 0 0 1 0 1.8h-1.6a.9.9 0 0 0 0 1.8h2.2" stroke="#9dffc8" stroke-width="1.2" fill="none"/></svg><span id="cash">$0</span></span>
+              <span class="stoken"><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M5 1h14l4 6-11 12L1 7z" fill="#e04cff" stroke="#000" stroke-width="2" stroke-linejoin="round"/><path d="M1 7h22M8 1l-2 6 6 12 6-12-2-6" stroke="#ffb8ff" stroke-width="1.2" fill="none"/></svg><span id="stoken">0</span></span>
+            </div>
+            <button id="pausebtn" class="panel" aria-label="Pause"><svg viewBox="0 0 16 18" aria-hidden="true"><rect x="1" y="1" width="5" height="16" fill="#fff" stroke="#000" stroke-width="2"/><rect x="10" y="1" width="5" height="16" fill="#fff" stroke="#000" stroke-width="2"/></svg></button>
+          </div>
+          <div id="meters">
+            <div id="stoke" data-gnar="0">
+              <span class="tag">STOKE</span><span id="stokebar" class="meter"></span>
+              <span class="badge"><svg viewBox="0 0 24 26" aria-hidden="true"><path d="M12 1c1 4 6 5 6 2 3 4 4 8 3 12a9 9 0 0 1-18 0c-1-4 1-8 4-11 0 3 2 4 3 3-1-3 0-5 2-6z" fill="#ff7a1a" stroke="#000" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="16" r="6" fill="#ffd23a" stroke="#000" stroke-width="1.6"/><path d="M8.6 14.6l2 1.2M15.4 14.6l-2 1.2M9.5 18.5q2.5 1.8 5 0" stroke="#000" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg><span>GNAR<br />MODE</span></span>
+            </div>
+            <div id="heat" data-stars="0" data-hot="0">
+              <span class="cruiser"><svg viewBox="0 0 40 20" aria-hidden="true"><rect class="l1" x="15" y="1" width="5" height="3" fill="#ff2a3a" stroke="#000"/><rect class="l2" x="20" y="1" width="5" height="3" fill="#2a8cff" stroke="#000"/><path d="M3 11l5-6h22l6 6h2v6H2v-6z" fill="#f4f4f4" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 6h8v5H7zM20 6h9l4 5H20z" fill="#5a7fb0" stroke="#000"/><rect x="2" y="12" width="36" height="2.4" fill="#111"/><circle cx="10" cy="17" r="2.6" fill="#111" stroke="#666"/><circle cx="30" cy="17" r="2.6" fill="#111" stroke="#666"/></svg></span>
+              <span class="tag">HEAT</span><span id="heatbar" class="meter"></span><span id="stars"></span>
+            </div>
+          </div>
+        </div>
+        <div id="board"><span class="tag">BOARD MODS</span><div id="slots"></div></div>
+        <div id="gear"><span class="tag">GEAR WEAR</span><div id="gearbars"></div></div>
         <div id="callout"></div>
         <div id="hint">TAP / HOLD = OLLIE &middot; TAP IN THE AIR = FLIP</div>
         <div id="boons"></div>
-        <div id="board"></div>
-        <div id="gear"></div>
         <div id="warn" hidden>&#9664;</div>
         <div id="debug"></div>
         <div id="seed"></div>
         <div id="rotate">Turn your phone sideways</div>
+      </div>
+      <div id="paused" hidden>
+        <div class="title">PAUSED</div>
+        <div class="held"></div>
+        <button id="resume">RESUME &#9654;</button>
+        <div class="seed"></div>
       </div>
       <div id="pick" hidden>
         <div class="title">PICK A BOON</div>
