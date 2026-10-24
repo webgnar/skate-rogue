@@ -419,6 +419,10 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] A bounty floor's WANTED poster hangs on a wooden board with posts, a frame and a little roof.
 - [ ] *Check:* no frame-rate drop on a floor with lots of coins.
 
+**Ducking pedestrians and the overpass (the PR after #94)**
+- [ ] Fly low past people on the sidewalk (an ollie off a kicker or a car near them): they fold over with their arms over their heads. People filming keep filming.
+- [ ] The overpass on the low road has concrete pillars with flared caps and a railing with balusters along the back of its deck.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
