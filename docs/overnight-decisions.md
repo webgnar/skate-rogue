@@ -91,6 +91,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   `?biome=atlantis` (or clemente, greece, museum, hightech, space, hive).
 - **Gravity per biome is listed in the look table for reference only.** The sim owns gravity.
 
+## Effects thread: fx7 leftovers
+
+- **Neon shop signs**: words like BAR, PIZZA, OPEN, LIQUOR, 24H and ARCADE sit above the wall on about 60% of the
+  street lamp spots. They are all one merged mesh, so one draw call. Now and then one tired tube dims for a third of a
+  second; this is off with reduce flashing.
+- **Tail lights** smear a red glow behind each car from dusk.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor
