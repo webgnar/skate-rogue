@@ -32,3 +32,16 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Helicopter (act 2), from the card I sent:** going with my recommendation, "outrun it, hide under the L": the
   spotlight chases you a little slower than cruising speed, rail speed and kicks pull away, slams let it catch
   up, and the L-train tracks overhead block the light. Will switch if zack picks another option.
+
+## Models thread: animation
+
+- **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)
+  live in the project's shared files under `reference/`. `art/reference/README.md` describes each move and links
+  to them by name.
+- **Animations are keyed in Blender on the skinned Lou Gnar, exported in `lou-gnar.glb`.** The game plays them and
+  falls back to the code clips in `src/render/poses.ts` for any move without one. This follows the "code clips now,
+  Blender later" choice.
+- **Fakie is a flip of the rig, not a second set of clips.** After a 180 Lou rides fakie. The rig turns Lou and the
+  board half a turn about vertical, so a regular clip pops the leading end. Switch tricks (opposite stance, forward)
+  would need mirrored clips and wait until gameplay adds them.
+- **The 360 flip is keyed from zack's slow-mo clip, mirrored** (the clip travels left; Lou rolls right).
