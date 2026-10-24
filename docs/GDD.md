@@ -43,6 +43,10 @@ about social credit, cameras that turn to follow you, and sirens that grow loude
 5. **Short, replayable, shareable.** Fast restarts, a daily seed, and a leaderboard.
 6. **Immersive streets.** Living traffic, city sound, weather and surveillance make the street feel real and
    dangerous, and they always serve readability first.
+7. **Smash everything (visual juice).** The streets are full of cheap stuff that breaks as you skate through
+   it: bottles, cones, boxes, AI signage, glass. Breaking things is never the goal and never blocks you; it's
+   the feedback that makes speed, landings and grinds feel loud. (zack, Oct 24 2026: "we want lots of shit to
+   smash for visual juice". See Smashables.)
 
 ## What we're borrowing
 
@@ -295,6 +299,62 @@ vehicles in the skate lane can hit you; the others are there for life and noise,
 `X`, bus stops `B`), and a **traffic director** spawns moving cars over time. The director guarantees a clear gap
 the base-physics skater can make, reacts to speed and Heat, and draws from the floor's seeded RNG so daily runs stay
 the same for everyone.
+
+### Smashables (visual juice)
+
+Decided Oct 24, 2026 (zack): lots of stuff to smash. Every floor is dressed with small breakables, placed by the
+generator on sidewalks, roofs, ledges, rails and stair sets. They are **juice, not hazards**: they never slow
+you, never slam you and never stand in the way of a line. Skating well breaks more of them, so a great line
+leaves a trail of wreckage behind it.
+
+**How things break** (each prop lists which of these break it):
+
+| Verb | What it does |
+| --- | --- |
+| **Roll through** | Rolling into small props at speed knocks them flying, in the direction you're going |
+| **Land on** | A landing on or next to a prop crushes it; a big drop (about 4 tiles) breaks everything around you in a burst |
+| **Grind** | Props on a ledge or rail get kicked off ahead of your trucks, one after another, with sparks |
+| **Car-hop** | Landing on a roof pops what's on it (roof boxes, light bars) and shatters a sunroof or windscreen crack |
+| **Slam** | A slam explodes whatever you hit, so even a bail looks spectacular |
+| **Kicker / bomb** | A bomb's burst of speed blows props away in a cone in front of you |
+
+**What breaks** (launch set, Chicago first; each biome gets its own dressing later):
+
+| Prop | Where | Breaks into |
+| --- | --- | --- |
+| Bottles and cans | Ledges, stairs, roofs | Glass shards and a spray, a clink sound |
+| Traffic cones and barrels | Street edges, roadblocks | Cones tumble and bounce; barrels spill |
+| Cardboard boxes and crates | Sidewalks, alley roofs, the box truck | Flaps and splinters |
+| Newspaper boxes and trash cans | Sidewalks | Lid flies off, paper flutters down |
+| Planters and pots | Plazas, terraces | Terracotta chunks and dirt |
+| Fruit stand / food cart awnings | Street corners | Fruit rolls, the awning tears |
+| AI signage: "REPORT ALL SKATERS" boards, kiosks, delivery bots | Plazas, the street | Screens crack and glitch out, sparks |
+| Flock cameras on poles | Above rails and ledges | Camera head snaps off with sparks (a COOL hook: see below) |
+| Windows and glass panels | Shopfronts beside the lane, bus shelters | Big shatter, glinting shards that keep falling |
+| Car glass and mirrors | Parked cars, roadblocks | Windscreen cracks on a hop, mirrors snap off on a near-miss |
+
+**What it gives back:**
+
+- **Feel first:** every break has a hit of particles (in the shared pool), a small camera kick scaled by speed,
+  a sound, and sometimes a comic sound word (CRUNCH, KRSSH, TONK). Pieces stay on the ground for a few seconds.
+- **Style points:** each prop adds a little style into the current combo (small, so smashing never beats
+  skating well). A chain of smashes without touching the ground is a **Wrecking Ball** callout.
+- **Cash and Stoken:** some props hide coins (newspaper boxes, crates); a rare golden prop per floor drops
+  Stoken.
+- **The AI's stuff:** smashing AI signage or a Flock camera cools Heat a little (the surveillance loses you),
+  which gives COOL builds and STREET builds something to hunt. A boon or board mod can build on this later
+  (for example a Shockwave that clears every prop on screen).
+- **Never a cost:** smashing never adds Heat and never slows you.
+
+**Rules and budget:**
+
+- Props are tiny and readable at speed: they must never be mistaken for a hazard (no car-sized props, no
+  props in the dark red hazard colours). Glass on the ground (`^`) stays the only glass that slams you.
+- Old iPhone budget: props are instanced per type, breaks use the shared particle pool and a few pooled debris
+  pieces, and a floor keeps a cap on live debris. No physics engine: debris is scripted arcs.
+- Placement comes from the floor's seed, so a daily run's wreckage is the same for everyone.
+- Work split: the gameplay thread places props and reports breaks as sim events; the effects thread makes the
+  breaks (particles, debris, sound words, camera); the models thread builds the props in Blender.
 
 ### Getting hit and ending a run
 
