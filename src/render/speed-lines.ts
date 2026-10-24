@@ -3,7 +3,7 @@
 // burn gold and magenta.
 import * as THREE from 'three';
 
-const N = 28;
+const N = 18;
 
 const vertex = /* glsl */ `
   attribute vec2 aUv;
@@ -32,7 +32,7 @@ const fragment = /* glsl */ `
     if (a < 0.02) discard;
     vec3 gnar = mix(vec3(1.0, 0.82, 0.2), vec3(1.0, 0.25, 0.75), 0.5 + 0.5 * sin(uTime * 9.0 + vFade * 20.0));
     vec3 col = mix(vec3(1.0), gnar, uGnar);
-    gl_FragColor = vec4(col, a * 0.9);
+    gl_FragColor = vec4(col, a * 0.55);
   }
 `;
 
@@ -99,7 +99,7 @@ export class SpeedLines {
 
   // `flow` 0..1 is how far past cruising speed the skater is; gnar forces them on
   update(dt: number, camera: THREE.PerspectiveCamera, flow: number, gnar: boolean): void {
-    const target = Math.max(flow, gnar ? 0.85 : 0);
+    const target = Math.max(flow, gnar ? 0.45 : 0);
     this.amount += (target - this.amount) * Math.min(1, dt * 5);
     this.gnar += ((gnar ? 1 : 0) - this.gnar) * Math.min(1, dt * 4);
     this.time += dt;
@@ -121,7 +121,7 @@ export class SpeedLines {
       const x0 = cam.x + l.dx * hw;
       const x1 = x0 + l.len * hw;
       const y = cam.y - d * 0.18 + l.dy * hh; // the camera looks a little down
-      const t = hh * 0.02; // thickness
+      const t = hh * 0.014; // thickness
       const v = i * 4;
       this.pos.setXYZ(v, x0, y - t, l.z);
       this.pos.setXYZ(v + 1, x1, y - t, l.z);
