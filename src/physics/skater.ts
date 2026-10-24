@@ -83,6 +83,20 @@ export class Skater {
     this.tucks = this.mods.tuckAndRoll;
   }
 
+  // the world's gravity: QFS's, scaled by the floor's biome (GDD: Atlantis 0.8, Outer Space 0.6)
+  get grav(): number {
+    return PHYS.grav * (this.level.gravity ?? 1);
+  }
+
+  // worn trucks (loose bushings) rock you more on rails, worn wheels (coned, flat-spotted) on landings
+  private get looseTrucks(): number {
+    return 1 + FEEL.wornRock * (1 - this.gear.grind);
+  }
+
+  private get looseWheels(): number {
+    return 1 + FEEL.wornRock * 1.5 * (1 - this.gear.speed);
+  }
+
   get maxJumps(): number {
     return PHYS.jumps + this.mods.jumps;
   }
@@ -252,7 +266,7 @@ export class Skater {
       //a slope: gravity along it adds flow speed downhill and takes it away uphill (base speed holds)
       const m = this.surface ? surfaceSlope(this.surface) : 0;
       if (m !== 0) {
-        const pull = PHYS.grav * FEEL.slopeGrav * (m / Math.hypot(1, m));
+        const pull = this.grav * FEEL.slopeGrav * (m / Math.hypot(1, m));
         this.carry = pull > 0 ? Math.max(this.carry, this.hsp) + pull : Math.max(0, this.carry + pull);
       }
       const excess = Math.max(0, this.carry - PHYS.baseSpeed);
@@ -271,11 +285,11 @@ export class Skater {
 
     //vertical speed
     if (this.mode === 'air') {
-      let grav = PHYS.grav;
+      let grav = this.grav;
       if (this.floatT > 0) grav *= 0.5; // Floaty Flip
       if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Pressure Flip
       //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
-      if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - PHYS.grav));
+      if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - this.grav));
       else this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
       //Rocket Grind: at the top, every jump comes back
       if (this.rocket && this.vsp >= 0) {
@@ -371,37 +385,44 @@ export class Skater {
     const x = this.x;
     let bestY = Infinity;
     let best: (() => void) | null = null;
-    //rising, only a slope that climbs faster than you can catch you (you fly into the face of a bank)
-    const falling = this.vsp >= 0;
-    const consider = (y: number, act: () => void, crossed = falling && py <= y + 0.01 && this.y >= y) => {
-      if (crossed && y < bestY) {
+    const consider = (y: number, act: () => void) => {
+      if (y < bestY) {
         bestY = y;
         best = act;
       }
     };
+    //Where the feet's path this step goes from on or above the line through (x0, y0) with slope m to on or under it
+    //(null if it doesn't). Swept, so nothing slips through between two frames: not the face of a bank that climbs
+    //faster than you're rising, not the corner of a roof you drop past at speed.
+    const crossAt = (x0: number, y0: number, m: number): number | null => {
+      const f0 = py - (y0 + m * (px - x0));
+      const f1 = this.y - (y0 + m * (x - x0));
+      if (f0 > 0.01 || f1 < 0) return null;
+      const t = f1 - f0 > 1e-9 ? Math.min(1, Math.max(0, -f0 / (f1 - f0))) : 0;
+      return px + t * (x - px);
+    };
+    //...over [a, b], where it crossed or (as before) where the feet ended up, so clipping a near corner still lands
+    const hits = (x0: number, y0: number, m: number, a: number, b: number): boolean => {
+      const cx = crossAt(x0, y0, m);
+      return cx !== null && ((cx >= a && cx <= b) || (x >= a && x <= b));
+    };
 
-    if (isStreetAt(this.level, x)) consider(this.level.streetY, () => this.touchDown(null));
+    const sx = crossAt(0, this.level.streetY, 0);
+    if (sx !== null && (isStreetAt(this.level, sx) || isStreetAt(this.level, x))) consider(this.level.streetY, () => this.touchDown(null));
     const magnet = this.mods.railMagnet;
     for (const s of this.surfaces()) {
       //Rail Magnet: rails reach out for you before their start
-      const x0 = s.kind === 'rail' ? s.x0 - magnet : s.x0;
-      if (x >= x0 && x <= s.x1) {
-        //sloped: crossed if we were on or above the slope where we were last step, and are on or under it where we
-        //are now. Measured against the slope at each x, so flying into a bank that climbs faster than you lands you on
-        //it, rising or falling, instead of passing through its face
-        const crossed = s.y1 !== undefined ? py <= surfaceY(s, px) + 0.01 && this.y >= surfaceY(s, x) : undefined;
-        consider(
-          surfaceY(s, x),
-          () => {
-            this.x = Math.max(this.x, s.x0);
-            this.touchDown(s);
-          },
-          crossed,
-        );
-      }
+      if (!hits(s.x0, s.y, surfaceSlope(s), s.kind === 'rail' ? s.x0 - magnet : s.x0, s.x1)) continue;
+      //touched down on it this step: if the step carried you past its far end, you land on the edge
+      const lx = Math.min(Math.max(x, s.x0), s.x1);
+      consider(surfaceY(s, lx), () => {
+        this.x = lx;
+        this.touchDown(s);
+      });
     }
+    const half = PHYS.width / 2;
     for (const car of this.cars()) {
-      if (x + PHYS.width / 2 < car.x0 || x - PHYS.width / 2 > car.x1) continue;
+      if (!hits(0, car.roof, 0, car.x0 - half, car.x1 + half)) continue;
       //Roof Rider: a parked roof is a ledge to grind
       const parked = this.mods.roofRider && this.level.cars.includes(car);
       consider(car.roof, parked ? () => this.touchDown(roofLedge(car)) : () => this.carHop());
@@ -413,8 +434,8 @@ export class Skater {
       const ry = near ? start.y : rail.yAt(x);
       const pry = near ? start.y : rail.yAt(px);
       if (ry === undefined) continue;
-      //compare against the rail's height where we were last step too, so a sloped rail can't slip past
-      if (falling && (pry === undefined || py <= pry + 0.01) && this.y >= ry && ry < bestY) {
+      //compare against the rail's height where we were last step too, so a sloped rail can't slip past (rising or falling)
+      if ((pry === undefined || py <= pry + 0.01) && this.y >= ry && ry < bestY) {
         bestY = ry;
         best = () => {
           if (near) this.x = start.x;
@@ -446,7 +467,7 @@ export class Skater {
       const enter = this.mods.grindInstant ? PHYS.grindSpeed * this.mods.grindScale : PHYS.grindMin;
       this.hsp = Math.max(this.hsp, enter);
       this.bankSpare();
-      this.feel.railEntry(impact, surfaceMaterial(s));
+      this.feel.railEntry(impact, surfaceMaterial(s), this.looseTrucks);
       this.events.push({ type: 'grind' });
     } else {
       this.spare = 0;
@@ -468,7 +489,7 @@ export class Skater {
       //a hard landing to flat costs flow speed (never base speed); Butter soaks it up, not a sketchy one
       if (quality === 'heavy' && m === 0 && !this.mods.butter) this.carry *= Math.max(0, 1 - FEEL.heavyScrub * (impact - FEEL.heavy));
       if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
-      this.feel.land(impact, quality);
+      this.feel.land(impact, quality, this.looseWheels);
       this.events.push({ type: 'land', impact, quality });
       if (quality === 'slam') this.slam();
     }
@@ -490,7 +511,7 @@ export class Skater {
     this.railD = d;
     //speed along the rail: our velocity projected on its direction, always rolling forward
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.hsp * t.tx + this.vsp * t.ty));
-    this.feel.railEntry(Math.abs(this.vsp * t.tx - this.hsp * t.ty), rail.material);
+    this.feel.railEntry(Math.abs(this.vsp * t.tx - this.hsp * t.ty), rail.material, this.looseTrucks);
     this.trickCatch = 0;
     this.mode = 'rail';
     this.onRailT = 0;
@@ -506,9 +527,9 @@ export class Skater {
     const rail = this.rail!;
     const t = rail.at(this.railD);
     //gravity pulls along the rail: downhill (ty > 0 in y-down) speeds you up (QFS player_rail_state)
-    this.railV += PHYS.grav * t.ty * PHYS.railGravMult;
+    this.railV += this.grav * t.ty * PHYS.railGravMult;
     //and friction under the trucks, from how hard the rail pushes back (the cos of its angle)
-    this.railV -= PHYS.grav * MATERIALS[rail.material].mu * t.tx;
+    this.railV -= this.grav * MATERIALS[rail.material].mu * t.tx;
     //Feeble Frenzy: a little more speed every 30 frames on the same rail
     if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0) this.railV *= 1 + PHYS.frenzyStep;
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.railV));

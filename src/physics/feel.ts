@@ -32,7 +32,20 @@ export const FEEL = {
   lean: { k: 0.08, c: 0.45, slope: 0.35, accel: 4, max: 0.25 },
   wobble: { k: 0.09, c: 0.05, sketchy: 0.05, rail: 0.006, max: 0.3 },
   airLevel: 0.12, // in the air the board eases back to level this share a frame
+  wornRock: 2, // worn gear rocks you more: x(1 + this x what the part costs you), wheels 1.5 times that
 } as const;
+
+// gravity by district (GDD: Biomes), as a share of QFS's; a floor carries its own in Level.gravity
+export const BIOME_GRAVITY: Record<string, number> = {
+  chicago: 1,
+  clemente: 1,
+  greece: 1,
+  atlantis: 0.8,
+  museum: 1,
+  hightech: 1,
+  space: 0.6,
+  hive: 1,
+};
 
 export class Feel {
   squash = 0; // 0..1, how far the knees are bent soaking something up
@@ -48,17 +61,17 @@ export class Feel {
   private lastHsp: number = PHYS.baseSpeed;
 
   // a landing: the knees take the impact, a sketchy one rocks you
-  land(impact: number, quality: LandQuality): void {
+  land(impact: number, quality: LandQuality, loose = 1): void {
     this.impact = impact;
     this.quality = quality;
     this.squashV += impact * FEEL.squash.kick;
-    if (quality === 'sketchy') this.rock(FEEL.wobble.sketchy);
+    if (quality === 'sketchy') this.rock(FEEL.wobble.sketchy * loose);
   }
 
   // locking onto a rail or bar: the harder you come in across it, the more you rock
-  railEntry(impact: number, material: Material): void {
+  railEntry(impact: number, material: Material, loose = 1): void {
     this.squashV += impact * FEEL.squash.kick * 0.6;
-    this.rock(impact * FEEL.wobble.rail * MATERIALS[material].wobble);
+    this.rock(impact * FEEL.wobble.rail * MATERIALS[material].wobble * loose);
   }
 
   private rock(v: number): void {

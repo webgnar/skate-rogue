@@ -16,3 +16,10 @@
 ## 3. Ship
 
 - [ ] 3.1 Merge to main and tell zack
+
+## 4. Round 2
+
+- [x] 4.1 Swept landings (path crossing plus end point) for surfaces, the street and car roofs; rising onto climbing rails; fuzz test
+- [x] 4.2 `Level.gravity` and `BIOME_GRAVITY`; the skater's gravity scales by it
+- [x] 4.3 Worn trucks and wheels rock you more
+
