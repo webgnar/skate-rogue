@@ -463,30 +463,61 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       d.position.set(px, 0.012, dividerZ);
       kit.add(d);
     }
-    const yellow = new THREE.MeshBasicMaterial({ color: 0xffd23f });
-    const stripe = new THREE.MeshBasicMaterial({ map: barrierTexture() });
+    //city road works: painted lane-change arrows, a yellow diamond warning sign and flexi posts at a hop switch;
+    //a Chicago Type III barricade with its amber lamp and a taper of cones closing the lane at a forced one
+    const paint = lambert(laneShiftPaint(), 0xffffff, true);
+    const warn = lambert(laneShiftSign(), 0xffffff, true);
+    const flexi = lambert(null, 0xffc21a);
+    const board = lambert(barrierTexture());
+    const white = lambert(null, 0xf2f0e8);
+    const orange = lambert(null, 0xff6a1a);
+    const amber = new THREE.MeshBasicMaterial({ color: 0xffb020 });
     for (const s of sw) {
       const x = toX(s.x);
       if (s.to === undefined) {
-        //a hop switch: chevrons on the divider, pointing both ways across it
-        for (const dz of [-0.45, 0.45]) {
-          const c = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.35).rotateX(-Math.PI / 2), yellow);
-          c.rotation.y = dz > 0 ? 0.6 : -0.6;
-          c.position.set(x, 0.015, dividerZ + dz);
-          kit.add(c);
+        const arrows = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.8).rotateX(-Math.PI / 2), paint);
+        arrows.position.set(x, 0.015, dividerZ);
+        arrows.userData.inked = true;
+        kit.add(arrows);
+        for (const dx of [-1.6, 1.6]) {
+          const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.7, 6), flexi);
+          p.position.set(x + dx, 0.35, dividerZ);
+          kit.add(p);
         }
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.6), postMat);
-        post.position.set(x - 0.6, 0.8, dividerZ);
-        const sign = new THREE.Mesh(new THREE.CircleGeometry(0.4, 16), yellow);
-        sign.position.set(x - 0.6, 1.75, dividerZ + 0.07);
+        //the sign stands at the back of lane B, so it never covers the skater
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 6), postMat);
+        post.position.set(x - 1.2, 1.1, LANE_B_Z - 0.85);
+        const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 1.35), warn);
+        sign.position.set(x - 1.2, 2.2, LANE_B_Z - 0.8);
+        sign.userData.inked = true;
         kit.add(post, sign);
       } else {
-        //a forced switch: the closed lane gets a run of striped barriers
         const z = s.to === 1 ? 0 : LANE_B_Z;
+        //the barricade: two legs, three striped boards, a lamp on top
+        for (const dx of [-0.8, 0.8]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.3, 0.08), white);
+          leg.position.set(x + dx, 0.65, z);
+          kit.add(leg);
+        }
         for (let i = 0; i < 3; i++) {
-          const bar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.7, 0.25), stripe);
-          bar.position.set(x - 0.4 + i * 1.3, 0.45, z + (i % 2 ? 0.35 : -0.35));
-          kit.add(bar);
+          const b = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.22, 0.06), board);
+          b.position.set(x, 0.4 + i * 0.36, z + 0.05);
+          kit.add(b);
+        }
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.12), amber);
+        lamp.position.set(x - 0.8, 1.42, z + 0.05);
+        kit.add(lamp);
+        //cones tapering in across the lane before it
+        for (let i = 0; i < 3; i++) {
+          const cx = x - 3 + i * 0.85;
+          const cz = z + (i - 1) * 0.35;
+          const cone = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.75, 8), orange);
+          cone.position.set(cx, 0.41, cz);
+          const band = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.105, 0.12, 8), white);
+          band.position.set(cx, 0.48, cz);
+          const base = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.04, 0.38), orange);
+          base.position.set(cx, 0.02, cz);
+          kit.add(cone, band, base);
         }
       }
     }
@@ -861,6 +892,73 @@ function roadSign(road: Road, high: boolean): THREE.Mesh {
 // is there street under this x (in tiles)
 function isStreetAtTile(level: Level, x: number): boolean {
   return level.street[Math.floor(x)] ?? false;
+}
+
+// lane-change road paint: two yellow chevrons pointing across the street, one each way (texture v runs along z)
+function laneShiftPaint(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 48;
+  c.height = 36;
+  const ctx = c.getContext('2d')!;
+  const chevron = (cx: number, dir: number) => {
+    ctx.beginPath();
+    ctx.moveTo(cx - 9, 18 - dir * 4);
+    ctx.lineTo(cx, 18 + dir * 12);
+    ctx.lineTo(cx + 9, 18 - dir * 4);
+    ctx.lineTo(cx + 9, 18 - dir * 12);
+    ctx.lineTo(cx, 18 + dir * 2);
+    ctx.lineTo(cx - 9, 18 - dir * 12);
+    ctx.closePath();
+    ctx.fillStyle = '#ffd23f';
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#1a1420';
+    ctx.stroke();
+  };
+  chevron(13, -1);
+  chevron(35, 1);
+  return pixelTexture(c);
+}
+
+// a yellow diamond warning sign with the lane-shift arrow, black border, on a transparent square
+function laneShiftSign(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 32;
+  c.height = 32;
+  const ctx = c.getContext('2d')!;
+  const diamond = (r: number) => {
+    ctx.beginPath();
+    ctx.moveTo(16, 16 - r);
+    ctx.lineTo(16 + r, 16);
+    ctx.lineTo(16, 16 + r);
+    ctx.lineTo(16 - r, 16);
+    ctx.closePath();
+  };
+  ctx.fillStyle = '#1a1420';
+  diamond(15.5);
+  ctx.fill();
+  ctx.fillStyle = '#ffd23f';
+  diamond(13.5);
+  ctx.fill();
+  ctx.strokeStyle = '#1a1420';
+  diamond(11.5);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  //the lane-shift arrow: up, jog over, up
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(13, 24);
+  ctx.lineTo(13, 18);
+  ctx.lineTo(19, 13);
+  ctx.lineTo(19, 10);
+  ctx.stroke();
+  ctx.fillStyle = '#1a1420';
+  ctx.beginPath();
+  ctx.moveTo(15.5, 11);
+  ctx.lineTo(19, 6);
+  ctx.lineTo(22.5, 11);
+  ctx.fill();
+  return pixelTexture(c);
 }
 
 // orange and white road-works stripes for a lane closure
