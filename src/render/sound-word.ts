@@ -70,6 +70,14 @@ export class SoundWords {
     this.words.push({ sprite, age: 0, aspect, x, y });
   }
 
+  // the world moved (the next floor took over): move the words with it
+  shift(dx: number, dy: number): void {
+    for (const w of this.words) {
+      w.x += dx;
+      w.y += dy;
+    }
+  }
+
   // real seconds
   update(dt: number): void {
     for (const w of this.words) {

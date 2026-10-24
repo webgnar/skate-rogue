@@ -403,4 +403,15 @@ export class Particles {
   clear(): void {
     this.pool.life.fill(0);
   }
+
+  // the world moved under the particles (a floor handed over to the next, src/game/game.ts): move them with it
+  shift(dx: number, dy: number): void {
+    const p = this.pool;
+    for (let i = 0; i < p.size; i++) {
+      if (!p.life[i]) continue;
+      p.px[i] += dx;
+      p.py[i] += dy;
+      p.floor[i] += dy;
+    }
+  }
 }

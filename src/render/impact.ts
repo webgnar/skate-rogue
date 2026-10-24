@@ -93,6 +93,11 @@ export class Impacts {
     this.bursts.push({ mesh, mat, age: 0 });
   }
 
+  // the world moved (the next floor took over): move the bursts with it
+  shift(dx: number, dy: number): void {
+    for (const b of this.bursts) b.mesh.position.add(new THREE.Vector3(dx, dy, 0));
+  }
+
   update(dt: number): void {
     for (const b of this.bursts) {
       b.age += dt;

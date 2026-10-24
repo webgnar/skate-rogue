@@ -65,7 +65,11 @@ export function moodAt(clock: number): Mood {
   while (i < KEYS.length - 2 && clock > KEYS[i + 1][0]) i++;
   const [t0, a] = KEYS[i];
   const [t1, b] = KEYS[i + 1];
-  const t = Math.min(1, Math.max(0, (clock - t0) / (t1 - t0)));
+  return mixMood(a, b, Math.min(1, Math.max(0, (clock - t0) / (t1 - t0))));
+}
+
+// a mood part way from a to b (t 0..1): colours blend, numbers ease
+export function mixMood(a: Mood, b: Mood, t: number): Mood {
   const out = { ...a } as Mood;
   for (const k of Object.keys(a) as (keyof Mood)[]) {
     const va = a[k];

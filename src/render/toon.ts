@@ -53,6 +53,7 @@ const outlineVertex = /* glsl */ `
   uniform float uDepth; // push back in depth, so a wider glow sits behind the ink
   #include <skinning_pars_vertex>
   #include <fog_pars_vertex>
+  #include <clipping_planes_pars_vertex>
   void main() {
     vec3 transformed = position;
     vec3 objectNormal = inkNormal;
@@ -73,6 +74,7 @@ const outlineVertex = /* glsl */ `
     if (len > 1e-5) clip.xy += dir / len * uWidth * 2.0 / uRes * clip.w;
     clip.z += uDepth * clip.w;
     gl_Position = clip;
+    #include <clipping_planes_vertex>
     #include <fog_vertex>
   }
 `;
@@ -80,7 +82,9 @@ const outlineVertex = /* glsl */ `
 const outlineFragment = /* glsl */ `
   uniform vec3 uColor;
   #include <fog_pars_fragment>
+  #include <clipping_planes_pars_fragment>
   void main() {
+    #include <clipping_planes_fragment>
     gl_FragColor = vec4(uColor, 1.0);
     #include <fog_fragment>
   }
@@ -102,6 +106,7 @@ export function outlineMaterial(): THREE.ShaderMaterial {
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {}]),
     side: THREE.BackSide,
     fog: true,
+    clipping: true, // a floor's kit is cut where the next floor joins on (StreetView's clipping planes)
   });
   Object.assign(inkMat.uniforms, inkUniforms);
   return inkMat;
@@ -120,19 +125,46 @@ export function inkNormals(geo: THREE.BufferGeometry): void {
   if (!geo.getAttribute('normal')) geo.computeVertexNormals();
   const pos = geo.getAttribute('position');
   const nor = geo.getAttribute('normal');
-  const sums = new Map<string, THREE.Vector3>();
-  const key = (i: number) => `${pos.getX(i).toFixed(4)},${pos.getY(i).toFixed(4)},${pos.getZ(i).toFixed(4)}`;
-  for (let i = 0; i < pos.count; i++) {
-    const k = key(i);
-    const s = sums.get(k) ?? sums.set(k, new THREE.Vector3()).get(k)!;
-    s.x += nor.getX(i);
-    s.y += nor.getY(i);
-    s.z += nor.getZ(i);
+  //vertices are matched on their position rounded to 1e-4, in an open-addressed hash table (a Map of string keys
+  //took most of a floor's build time on the hillside's big meshes)
+  const n = pos.count;
+  let size = 1;
+  while (size < n * 2) size <<= 1;
+  const mask = size - 1;
+  const keys = new Int32Array(size * 3);
+  const used = new Uint8Array(size);
+  const sums = new Float32Array(size * 3);
+  const slotOf = new Int32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = Math.round(pos.getX(i) * 1e4);
+    const y = Math.round(pos.getY(i) * 1e4);
+    const z = Math.round(pos.getZ(i) * 1e4);
+    //rounded positions are often multiples of a power of two: scramble the bits so the low ones vary too
+    let h = Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791);
+    h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+    h = (h ^ (h >>> 16)) & mask;
+    while (used[h] && (keys[h * 3] !== x || keys[h * 3 + 1] !== y || keys[h * 3 + 2] !== z)) h = (h + 1) & mask;
+    if (!used[h]) {
+      used[h] = 1;
+      keys[h * 3] = x;
+      keys[h * 3 + 1] = y;
+      keys[h * 3 + 2] = z;
+    }
+    sums[h * 3] += nor.getX(i);
+    sums[h * 3 + 1] += nor.getY(i);
+    sums[h * 3 + 2] += nor.getZ(i);
+    slotOf[i] = h;
   }
-  const out = new Float32Array(pos.count * 3);
-  for (let i = 0; i < pos.count; i++) {
-    const s = sums.get(key(i))!.clone().normalize();
-    out.set([s.x, s.y, s.z], i * 3);
+  const out = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const h = slotOf[i] * 3;
+    const sx = sums[h];
+    const sy = sums[h + 1];
+    const sz = sums[h + 2];
+    const len = Math.hypot(sx, sy, sz) || 1;
+    out[i * 3] = sx / len;
+    out[i * 3 + 1] = sy / len;
+    out[i * 3 + 2] = sz / len;
   }
   geo.setAttribute('inkNormal', new THREE.BufferAttribute(out, 3));
 }

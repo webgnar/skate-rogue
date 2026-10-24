@@ -4,7 +4,8 @@ import { addBoon, type Boon, type Held } from '../boons/defs';
 import { carriedHeat, cursesHeld, dropBoon, startHeat, type UnderView } from '../run/spot';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
-import { floorLevel } from '../run/floor-level';
+import { floorLevel, type FloorSpec } from '../run/floor-level';
+import { FloorPrefetch, specKey } from '../run/prefetch';
 import { ACTS, actOf, endsAct, ESCAPE } from '../gen/escape';
 import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
@@ -40,7 +41,7 @@ import { VisorGlint, VISOR_TINT } from '../render/visor-glint';
 import { propPieces } from '../render/models';
 import { hideProp, props, restyle } from '../render/props';
 import { BIOMES, biomeMood, type BiomeId } from '../render/biomes';
-import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
+import { clockFor, mixMood, moodAt, rainLevel, rainy, type Mood } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
@@ -152,6 +153,10 @@ export interface Hud {
 type State = 'skate' | 'caught' | 'pick' | 'shop' | 'under' | 'over';
 
 const CAUGHT_BEAT_MS = 800;
+//one street: the floor ahead comes into view this far before the join (tiles), and the light and weather blend
+//from one floor's to the next's over this long after it
+const AHEAD_TILES = 44;
+const MOOD_BLEND_SECS = 4;
 
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
 const SMASH_CHAIN = 4; // smashes in quick succession for a Wrecking Ball
@@ -214,6 +219,7 @@ export class Game {
   private floorStoken = 0; // Stoken at the floor's start, for a bounty
   private bountySeen = false;
   private tutorial = false; // on the tutorial floor, before the run's first floor
+  private tutorialOut = false; // through the tutorial's gate, rolling on to the run's first floor
   private lesson = 0; // the next tutorial prompt
   private get gnar(): number {
     return this.meta.gnar ?? 0;
@@ -248,6 +254,13 @@ export class Game {
   private shopPick: ShopPick = null;
   private shopVisits = 0;
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
+  // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
+  // next one is already there, built in the background while you skated this one
+  private readonly prefetch = new FloorPrefetch();
+  private pending: { floor: number; road: Road } | null = null; // where the run goes at the end of this floor
+  private finished = false; // through this floor's gate, rolling on to the next
+  private shown: { mood: Mood; rain: number } | null = null; // the light and weather on screen
+  private moodBlend: { from: Mood; fromRain: number; to: Mood; toRain: number; t: number } | null = null;
   // the playtest bot (?bot): it skates and picks in place of the button, checking every step as it goes
   private autopilot: Pilot | null = null;
   private checks: FloorChecks | null = null;
@@ -385,10 +398,7 @@ export class Game {
     this.run = new RunScore();
     this.gear = freshGear();
     this.carry = 0;
-    this.floor = this.startAt;
-    this.road = this.firstRoad();
-    this.level = this.makeLevel();
-    this.startFloor();
+    this.goTo(this.startAt, this.firstRoad());
     this.hud.callout("YOU'RE READY. LET'S GO!", 'good');
   }
 
@@ -421,30 +431,58 @@ export class Game {
     void this.view.setBiome(id); // its kit, once the tiles are in
   }
 
-  //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level
-  private applyMood(): number {
+  //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level.
+  //`blend`: ease into it from what's on screen (rolling on from the last floor) rather than switch
+  private applyMood(blend = false): number {
     const rain = BIOMES[this.biome].dry ? 0 : rainLevel(this.seed, this.floor); // no rain under the sea, indoors or in space
     const mood = moodAt(clockFor(this.floor));
     const look = biomeMood(rain > 0 ? rainy(mood) : mood, this.biome);
+    if (blend && this.shown) this.moodBlend = { from: this.shown.mood, fromRain: this.shown.rain, to: look, toRain: rain, t: 0 };
+    else {
+      this.moodBlend = null;
+      this.setLook(look, rain);
+    }
+    return rain;
+  }
+
+  private setLook(look: Mood, rain: number): void {
+    this.shown = { mood: look, rain };
     this.view.setMood(look, rain);
     this.view.ambience.set(this.biome);
     this.trafficView.beams.setNight(look.neon);
     this.visor.setNight(look.neon, VISOR_TINT[this.biome]);
     this.phoneFx.setNight(look.neon);
-    return rain;
   }
 
-  private startFloor(): void {
+  private blendMood(dt: number): void {
+    const b = this.moodBlend;
+    if (!b) return;
+    b.t = Math.min(1, b.t + dt / MOOD_BLEND_SECS);
+    const t = b.t * b.t * (3 - 2 * b.t);
+    this.setLook(mixMood(b.from, b.to, t), b.fromRain + (b.toRain - b.fromRain) * t);
+    if (b.t >= 1) this.moodBlend = null;
+  }
+
+  // a floor begins: from a standstill at its start (a new run), or rolling on from the last floor (`from`, the
+  // skater as they crossed the join; `dx`, `dy` move them into this floor's space, px)
+  private startFloor(from?: { skater: Skater; dx: number; dy: number }): void {
     this.state = 'skate';
-    this.warp.reset();
-    this.particles.clear();
-    this.smashFx.clear();
-    this.input.clear();
+    this.finished = false;
+    this.pending = null;
+    if (!from) {
+      this.warp.reset();
+      this.particles.clear();
+      this.smashFx.clear();
+      this.input.clear();
+    }
     this.boonFx.setBoons(this.boons);
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
     const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
+    if (from) this.sim.skater.carryOn(from.skater, from.dx, from.dy);
+    //the last escape ends the run at its gate; every other floor rolls on into the next
+    this.sim.rollOn = this.following().length > 0;
     if (this.autopilot) {
       this.checks = new FloorChecks(this.sim);
       this.reported = 0;
@@ -464,17 +502,20 @@ export class Game {
     this.floorStoken = this.run.stoken;
     this.bountySeen = false;
     this.lesson = 0;
-    this.prev = { x: this.skater.x, y: this.skater.y };
-    this.view.setLevel(this.level, this.seed, this.floor);
-    const rain = this.applyMood();
+    this.prev = from ? { x: this.prev.x + from.dx, y: this.prev.y + from.dy } : { x: this.skater.x, y: this.skater.y };
+    if (!from) this.view.setLevel(this.level, this.seed, this.floor);
+    const rain = this.applyMood(!!from);
     this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
     this.dripEdges = this.level.surfaces
       .filter((s) => s.kind === 'roof' || s.kind === 'overpass')
       .flatMap((s) => [toX(s.x0), toX(s.x1)].map((x) => ({ x, y: toY(this.level, s.y) })))
       .filter((e) => e.y > 0.5);
-    this.view.zoom.reset();
-    this.view.follow(this.skater.x, this.skater.y);
-    this.sprite.play('push');
+    if (!from) {
+      this.view.zoom.reset();
+      this.view.follow(this.skater.x, this.skater.y);
+      this.sprite.play('push');
+    }
+    this.wantAhead();
     this.hud.floor(this.floor, this.road);
     this.hud.boons(this.boons);
     this.hud.board(this.board);
@@ -567,12 +608,7 @@ export class Game {
 
   private advance(): void {
     //an act ends with its escape, before the road picked at the third floor's fork
-    if (endsAct(this.floor) && this.road.kind !== 'escape') {
-      this.road = { kind: 'escape', act: actOf(this.floor), danger: 3 };
-      this.level = this.makeLevel();
-      this.startFloor();
-      return;
-    }
+    if (endsAct(this.floor) && this.road.kind !== 'escape') return this.goTo(this.floor, { kind: 'escape', act: actOf(this.floor), danger: 3 });
     //the shop road: shop first, then the boon street after it; the same for the underground spot
     if (this.nextRoad.kind === 'shop') {
       this.openShop();
@@ -583,10 +619,86 @@ export class Game {
       this.hud.under({ step: 'menu', heat: this.carry, canSwap: this.boons.length > 0, curses: cursesHeld(this.boons).length });
       return;
     }
-    this.floor++;
-    this.road = this.nextRoad;
-    this.level = this.makeLevel();
-    this.startFloor();
+    this.goTo(this.floor + 1, this.nextRoad);
+  }
+
+  // the next floor is decided: skate on to it (the menus are closed; the switch itself is at the join, in cross)
+  private goTo(floor: number, road: Road): void {
+    this.pending = { floor, road };
+    this.state = 'skate';
+    this.input.clear();
+    if (this.tutorial) {
+      this.tutorial = false;
+      this.tutorialOut = true;
+    }
+  }
+
+  // what comes after this floor, by the road you leave it on (the same choices advance makes): the tutorial leads to
+  // the run's first floor, the third floor of an act to its escape, the shop and the spot to the boon street after
+  private next(road: Road): { floor: number; road: Road } {
+    if (this.tutorial || this.tutorialOut) return { floor: this.startAt, road: this.firstRoad() };
+    if (endsAct(this.floor) && this.road.kind !== 'escape') return { floor: this.floor, road: { kind: 'escape', act: actOf(this.floor), danger: 3 } };
+    return { floor: this.floor + 1, road: floorRoad(road) };
+  }
+
+  // every floor this one can lead to: one per road at its fork (an escape goes on by the road picked before it)
+  private following(): { floor: number; road: Road }[] {
+    if (this.pending) return [{ ...this.pending, road: floorRoad(this.pending.road) }];
+    if (this.road.kind === 'escape') return this.road.act >= ACTS ? [] : [this.next(this.nextRoad)];
+    const fork = this.level.fork;
+    return fork ? [this.next(fork.high), this.next(fork.low)] : [this.next(FIRST_ROAD)];
+  }
+
+  private spec(n: { floor: number; road: Road }): FloorSpec {
+    return { seed: this.seed, floor: n.floor, road: n.road, library: this.meta.library, gnar: this.gnar, tutorial: false };
+  }
+
+  // start building every floor this one can lead to, in the background
+  private wantAhead(): void {
+    const specs = this.following().map((n) => this.spec(n));
+    this.prefetch.keep(specs);
+    for (const s of specs) this.prefetch.want(s);
+    this.view.dropAheads(specs.map(specKey));
+  }
+
+  // the floor ahead on screen: the one the skater's road leads to (the low road until they take the high one).
+  // Its scenery builds a step a frame once it's back from the worker, and shows when the skater nears the join
+  private showAhead(): void {
+    const all = this.following();
+    if (!all.length) return this.view.showAhead(null);
+    const road = this.sim.road ?? this.sim.roadAhead ?? 'low';
+    const pick = all.length === 1 ? all[0] : all[road === 'high' ? 0 : 1];
+    const key = specKey(this.spec(pick));
+    //the picked road's floor builds first, then the other road's, so switching roads never waits on a build
+    for (const n of [pick, ...all.filter((n) => n !== pick)]) {
+      const spec = this.spec(n);
+      const k = specKey(spec);
+      if (this.view.hasAhead(k)) continue;
+      const level = this.prefetch.ready(spec);
+      if (level) this.view.buildAhead(k, level, this.seed, n.floor, this.level.width / TILE, -(level.streetY - level.startY) / TILE);
+      break;
+    }
+    this.view.showAhead(this.skater.x > this.level.width - AHEAD_TILES * TILE ? key : null);
+  }
+
+  // the skater reached the end of the floor: the next one takes over where they are, at their speed. The world
+  // moves back by the next floor's origin (the view, the effects and the skater alike), so nothing on screen jumps
+  private cross(): void {
+    const next = this.pending!;
+    const old = this.level;
+    const road = floorRoad(next.road);
+    const spec = this.spec({ floor: next.floor, road });
+    const level = this.prefetch.get(spec);
+    const x = old.width / TILE;
+    const y = -(level.streetY - level.startY) / TILE;
+    this.view.promote(specKey(spec), level, this.seed, next.floor, x, y);
+    for (const fx of [this.particles, this.impacts, this.words, this.smashFx]) fx.shift(-x, -y);
+    const skater = this.skater;
+    this.floor = next.floor;
+    this.road = road;
+    this.level = level;
+    this.tutorialOut = false;
+    this.startFloor({ skater, dx: -old.width, dy: level.startY - old.streetY });
   }
 
   private openShop(): void {
@@ -845,11 +957,19 @@ export class Game {
         } else this.sim.step(this.input.sample());
         this.run.step(this.skater.mode);
         for (const e of this.sim.events) this.handle(e);
+        //rolled off the end of the floor: the next one carries on from here
+        if (this.finished && this.pending && this.skater.x >= this.level.width) this.cross();
       }, 5 * this.timeScale);
     }
+    if (this.state !== 'over') {
+      this.showAhead();
+      this.view.tick();
+    }
+    this.blendMood(dt);
 
-    if (this.state === 'skate' && this.sim.state !== 'skate') this.logFloor(this.sim.state === 'exit' ? 'exit' : `${this.sim.state} at col ${Math.floor(this.skater.x / TILE)}`);
-    if (this.state === 'skate' && this.sim.state === 'exit') {
+    if (this.state === 'skate' && this.sim.state !== 'skate' && !this.finished) this.logFloor(this.sim.state === 'exit' ? 'exit' : `${this.sim.state} at col ${Math.floor(this.skater.x / TILE)}`);
+    if (this.state === 'skate' && this.sim.state === 'exit' && !this.finished) {
+      this.finished = true;
       this.finishFloor(now);
     } else if (this.state === 'skate' && this.sim.state === 'bail') {
       this.endRun(now, false);

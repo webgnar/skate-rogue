@@ -29,6 +29,15 @@ owns it will pick it up.
 
 Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 
+## One street: floors flow into each other (no stop, no cut)
+
+- [ ] **Through the gate you keep skating.** The boon pick, shop or underground spot opens as you pass the gate, over the street as it is. When you close it, you carry on from that spot at the same speed. Floors with no menu (cash, stash, escapes) don't pause at all.
+- [ ] **The next floor is already there.** As you near the end of the street, the next floor's hilltop appears past it at the same height, and you roll straight on and down the hill. There's no jump back to the top and no restart from zero speed. Quickest check: `?floor=3`, then clear the floor, the escape and the floor after.
+- [ ] **Air carries over.** Ollie off the end of the street and you land on the next floor's hilltop with your trick and combo still going.
+- [ ] **The light and rain blend** into the next floor's over a few seconds, rather than switching on the spot. The skyline drifts back down behind the city.
+- [ ] **The high road:** take the overpass at a fork, and the floor after it (a shop or a hot street, say) is the one waiting past the end.
+- [ ] *Perf:* the next floor is generated in the background and its scenery is built a slice per frame, so there should be no stutter mid-floor or at the join. With `?debug`, the "worst" frame time near the end of a floor should look like the middle of one.
+
 ## Run shape and roads
 
 - [ ] **Side lines (from floor 2, most floors):** a chain of four floating ledges climbing over the street, with coins along it and a Stoken at the top. An ollie plus a flip from the street gets you onto the first one, and plain ollies take you up the rest. Skipping it costs nothing. *Feel:* too easy to miss, or too easy to reach?
