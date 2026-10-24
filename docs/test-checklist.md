@@ -157,6 +157,14 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
       red scan beam down the street.
 - [ ] Nothing ever flashes the whole screen, at any Heat.
 
+**District backdrops** (`?biome=clemente`, `atlantis`, `museum`, `hightech`, `space`)
+
+- [ ] Each district has its own far backdrop from QFS: Clemente's park wall and trees, Atlantis's wave band with
+      the dragon, the museum's night-city photo with sculptures, High-Tech's green skyline, Space's stars and
+      planet. Chicago and the Hive keep the pink skyline, and Greece has only its sky.
+- [ ] **Tuning:** does any backdrop look too big, too high, or float oddly? Clemente's wall card is the one I'm
+      least sure about.
+
 **Speed lines**
 
 - [ ] They only show at high speed and stay subtle (toned down after your note).
