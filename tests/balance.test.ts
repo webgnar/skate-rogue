@@ -22,18 +22,22 @@ function floorRuns(floor: number): BotRun[] {
 
 describe('balance (bot runs)', () => {
   it('floors: cleared, 15 to 35 seconds, about 4 floors to half-worn gear, Heat in hand', () => {
+    const checks: { sec: number; worn: number; heat: number }[] = [];
     const rows: string[] = ['floor   sec  coins  stoken  slams  maxHeat  wornest'];
     for (let floor = 1; floor <= 15; floor++) {
       const rs = floorRuns(floor);
       for (const r of rs) expect(r.result).toBe('exit');
       const row = { sec: avg(rs, (r) => r.frames / 60), coins: avg(rs, (r) => r.cash), stoken: avg(rs, (r) => r.stoken), slams: avg(rs, (r) => r.slams), heat: avg(rs, (r) => r.maxHeat), worn: avg(rs, wornest) };
       rows.push(`${floor}`.padEnd(6) + Object.values(row).map((v) => v.toFixed(1).padStart(7)).join(' '));
+      checks.push(row);
+    }
+    if (process.env.BALANCE) process.stderr.write(rows.join('\n') + '\n');
+    for (const row of checks) {
       expect(row.sec).toBeGreaterThan(15);
       expect(row.sec).toBeLessThan(35);
       expect(row.worn).toBeLessThan(18); // the worst part: half-worn takes about 3 floors or more
       expect(row.heat).toBeLessThan(60);
     }
-    if (process.env.BALANCE) process.stderr.write(rows.join('\n') + '\n');
   }, 120000);
 
   it('escapes: cleared in 20 to 50 seconds', () => {

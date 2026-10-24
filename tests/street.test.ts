@@ -47,7 +47,8 @@ describe('bus stops', () => {
     sim.traffic.vehicles.length = 0;
     sim.traffic.step(stop.trigger);
     for (let f = 0; f < STOP.pullFrames; f++) sim.traffic.step(stop.trigger);
-    Object.assign(sim.skater, { x: stop.x - 3 * TILE, y: l.streetY, surface: null, mode: 'roll', hsp: PHYS.baseSpeed });
+    //inside the stop's clear street (STOP.clear), so we roll straight in
+    Object.assign(sim.skater, { x: stop.x - STOP.clear + 4, y: l.streetY, surface: null, mode: 'roll', hsp: PHYS.baseSpeed });
     let slam = false;
     for (let f = 0; f < 60; f++) {
       sim.step(idle);

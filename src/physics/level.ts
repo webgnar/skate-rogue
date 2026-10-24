@@ -18,6 +18,7 @@ export interface Surface {
   y1?: number;
   row: number;
   material?: Material; // what it grinds like; left out, it goes by kind (see surfaceMaterial)
+  manual?: boolean; // a manual pad (buildLevel): you ride it in a manual
   side?: boolean; // part of a floor's side line (src/gen/sidelines.ts)
   crumble?: boolean; // Greece's ruins: it falls a moment after you land on it
   conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
@@ -181,6 +182,7 @@ export interface Level {
 
 const CAR_W = 2 * TILE;
 const CAR_H = 40;
+export const MANUAL_PAD_MAX = 3 * TILE; // the longest ledge that counts as a manual pad
 
 export function buildLevel(layout: Layout): Level {
   const streetY = STREET_ROW * TILE;
@@ -237,6 +239,12 @@ export function buildLevel(layout: Layout): Level {
         else glass.push({ x0: c * TILE, x1: (c + 1) * TILE });
       }
     }
+  }
+
+  //manual pads: a short ledge with water under it is ridden in a manual, not just landed on
+  for (const s of surfaces) {
+    const mid = Math.floor((s.x0 + s.x1) / 2 / TILE);
+    if (s.kind === 'ledge' && s.x1 - s.x0 <= MANUAL_PAD_MAX && !street[mid]) s.manual = true;
   }
 
   return {

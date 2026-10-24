@@ -12,7 +12,7 @@ export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 export type SkaterEvent =
   | { type: 'ollie'; spin: 0 | 180; lip?: boolean } // lip: popped right at the edge of the ground (or just off it)
   | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean } // fakie: the stance it was thrown from
-  | { type: 'land'; impact?: number; quality?: LandQuality } // impact: px/frame into the surface, along its normal
+  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean } // impact: px/frame into the surface, along its normal; manual: onto a manual pad
   | { type: 'grind' }
   | { type: 'rail' }
   | { type: 'hop' }
@@ -102,6 +102,11 @@ export class Skater {
 
   get maxJumps(): number {
     return PHYS.jumps + this.mods.jumps;
+  }
+
+  // riding a manual pad in a manual
+  get manualing(): boolean {
+    return this.mode === 'roll' && !!this.surface?.manual;
   }
 
   get grounded(): boolean {
@@ -529,7 +534,8 @@ export class Skater {
       if (quality === 'heavy' && m === 0 && !this.mods.butter) this.carry *= Math.max(0, 1 - FEEL.heavyScrub * (impact - FEEL.heavy));
       if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
       this.feel.land(impact, quality, this.looseWheels);
-      this.events.push({ type: 'land', impact, quality });
+      //a manual pad: you ride it in a manual (unless you slammed onto it)
+      this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}) });
       if (quality === 'slam') this.slam();
     }
   }

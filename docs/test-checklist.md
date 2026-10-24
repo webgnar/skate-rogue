@@ -90,6 +90,9 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 
 - [ ] **Trick suite:** 360 flip, hardflip, varials, 180s riding away fakie (callouts say FAKIE), 5-0 and feeble grinds.
 - [ ] **Floating ledges** stick out toward the camera like roofs, so Lou rides on top of them, not along the edge.
+- [ ] **Manual pads:** the short platforms over water gaps. Land on one and Lou rides it nose up on the back wheels
+      (callout MANUAL x2, x3...), the combo keeps counting, and ollying off to the next pad or the street works.
+      The new `manual pads` and `pad line` pieces should show up from floor 1. Landing a slam on a pad still slams.
 
 ## Physics feel (pf1, PR #65)
 
