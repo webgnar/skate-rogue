@@ -10,3 +10,9 @@
 - [x] 2.2 `?skater=` picks one
 - [ ] 2.3 Deck shop unlock (gameplay thread) passes the chosen skater to `SkaterRig.create`
 - [ ] 3.1 Hair and shirt physics (later): spring bones under Head and Spine1, stepped after absorb()
+
+## 4. Gear wear looks
+
+- [x] 4.1 Deck chips and rubbed graphic, rusty ground-down trucks, coned flat-spotted wheels
+- [x] 4.2 Ollie scuff and hole decals on every skater's lead shoe
+- [x] 4.3 Tests for chipping, flat spots and the shoe decals

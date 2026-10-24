@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
+import { wearBoard, wearShoes } from './wear';
+import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
@@ -48,7 +50,6 @@ interface Feel {
 const BASE_HIP_Y = 0.9; // pelvis height in the model's bind pose
 const SLOPE_DROP = 0.35; // on a slope the hips sink by this times the sine of the angle, so the low leg still reaches
 const SQUASH_DROP = 0.18; // how far a full landing squash sinks the hips
-const SLOPE_RATE = 14; // how fast the board settles to a new slope, per second
 
 export const SKATERS = ['lou-gnar', 'webster', 'keanu', 'roxy', 'goldie'] as const;
 export type SkaterId = (typeof SKATERS)[number];
@@ -92,7 +93,8 @@ export class SkaterRig {
 
   // skinned model bones and the joints they follow
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
-  private slope = 0; // the ground's angle the board is tilted to, eased
+  private board: THREE.Object3D | null = null; // the Blender board, which shows gear wear
+  private worn = ''; // the gear the wear was last drawn for, in steps of 5
   // the bones and board as the clip posed them, before the slope; crossfades start from these
   private raw: { pos: THREE.Vector3[]; rot: THREE.Quaternion[]; board: THREE.Matrix4 } | null = null;
   // Clips keyed in Blender (lou-gnar.glb's animations, art/lou_gnar.py): sampled straight onto the bones, and they
@@ -239,6 +241,7 @@ export class SkaterRig {
   // The Blender board (art/board.py) has its origin at the middle of the deck's top, like boardSpin.
   private fitBoard(board: THREE.Object3D): void {
     for (const part of this.boardSpin.children) part.visible = false;
+    this.board = board;
     this.boardSpin.add(board);
     this.toonMaterials(board);
   }
@@ -251,6 +254,7 @@ export class SkaterRig {
       mesh.frustumCulled = false; // bind-pose bounds don't follow flips and slams
       const swap = (src: THREE.Material) => {
         const std = src as THREE.MeshStandardMaterial;
+        mesh.userData.mat = std.name; // the Blender material's name, for the gear wear (wear.ts)
         if (std.name === 'VisorGlint') {
           // a streak of light across the visor; the effects drive its opacity with the night's neon
           mesh.name = 'VisorGlint';
@@ -276,6 +280,7 @@ export class SkaterRig {
       const mesh = o as THREE.Mesh;
       const mat = mesh.material as THREE.MeshToonMaterial;
       if (!mesh.isMesh || Array.isArray(mat) || !(mat instanceof THREE.MeshToonMaterial) || mat.map || !mesh.parent) return;
+      if (String(mesh.userData.mat).startsWith('Wear')) return; // wear decals stay their own, hidden till worn
       groups.set(mesh.parent, [...(groups.get(mesh.parent) ?? []), mesh]);
     });
     for (const [parent, meshes] of groups) {
@@ -294,8 +299,16 @@ export class SkaterRig {
         g.setAttribute('color', new THREE.BufferAttribute(col, 3));
         return g.index ? g : g.toNonIndexed();
       });
-      const geo = mergeGeometries(geos.every((g) => g.index) ? geos : geos.map((g) => (g.index ? g.toNonIndexed() : g)));
+      const parts = geos.every((g) => g.index) ? geos : geos.map((g) => (g.index ? g.toNonIndexed() : g));
+      const geo = mergeGeometries(parts);
       if (!geo) continue;
+      // which vertices came from which material, for the gear wear
+      let start = 0;
+      geo.userData.parts = parts.map((g, i) => {
+        const part = { mat: String(meshes[i].userData.mat ?? ''), start, count: g.attributes.position.count };
+        start += part.count;
+        return part;
+      });
       const mat = this.lambert(0xffffff);
       mat.vertexColors = true;
       let merged: THREE.Mesh;
@@ -622,12 +635,11 @@ export class SkaterRig {
     }
     // turned half round about the vertical first, then tilted with the slope: the skinned model tilts only its
     // board, and its legs soak up the slope with the torso kept upright over the board
-    this.slope += (angle - this.slope) * Math.min(1, dt * SLOPE_RATE);
     if (this.bound.length) {
       this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, 0);
       const feel = (sk as { feel?: Feel }).feel;
       const turn = this.fakie ? -1 : 1;
-      this.absorb(turn * this.slope, feel?.squash ?? 0, turn * (feel?.lean ?? 0), feel?.wobble ?? 0);
+      this.absorb(turn * angle, feel?.squash ?? 0, turn * (feel?.lean ?? 0), feel?.wobble ?? 0);
     } else {
       this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, angle, 'ZYX');
     }
@@ -699,6 +711,15 @@ export class SkaterRig {
   private setInRig(o: THREE.Object3D, m: THREE.Matrix4): void {
     const parent = o.parent && o.parent !== this.mesh ? this.inRig(o.parent) : new THREE.Matrix4();
     parent.invert().multiply(m).decompose(o.position, o.quaternion, o.scale);
+  }
+
+  // show how worn the deck, trucks, wheels and shoes are (wear.ts); redrawn only when a part crosses a step of 5
+  setGear(g: Gear): void {
+    const key = GEAR_PARTS.map((p) => Math.round(g[p] / 5)).join();
+    if (key === this.worn) return;
+    this.worn = key;
+    if (this.board) wearBoard(this.board, g);
+    wearShoes(this.mesh, g.shoes);
   }
 
   // push at cruising speed, roll when carrying extra speed from rails or drops

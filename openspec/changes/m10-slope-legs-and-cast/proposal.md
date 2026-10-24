@@ -29,3 +29,11 @@ Roxy and Goldie's manes, Keanu's hood) is its own mesh part skinned rigidly to `
 under `Head` can take it over without touching the body, and the clips only key the 20 body bones and `Board`, so
 new secondary bones need no re-bake. Shirts would get a few bones under `Spine1` (hem, sleeves) driven by a spring
 step in the rig after `absorb()`, using the sim's speed and the physics feel values.
+
+## Gear wear looks (added)
+
+The gameplay thread's gear wear (`src/run/gear.ts`) now shows on the rig (`src/render/wear.ts`, fed from
+`game.sim.gear`, redrawn in steps of 5): the deck's nose and tail chip and its graphic rubs through to the wood at
+the tips and rails; the trucks dull, rust in blotches and the hangers grind flat underneath; the wheels go grubby,
+cone on the inner edge and flat-spot; the lead shoe gets an ollie scuff (below 65) and then a hole (below 30), as
+decals built into every skater's GLB (`WearScuff`, `WearHole`, `art/lou_gnar.py wear_decals`).
