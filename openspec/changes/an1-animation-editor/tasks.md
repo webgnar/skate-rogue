@@ -1,0 +1,6 @@
+- [x] Editor UI: clip picker, playback, timeline, key add/delete/retime, pose panel, undo
+- [x] Drag handles for hips, feet (deck-sliding when on the board) and board
+- [x] Ghost of the previous key, reference photo overlay
+- [x] clip-edits.json merged over CLIPS; edited clips skip baked actions
+- [x] Dev-server save endpoint; download fallback; ?drafts
+- [x] Tests for the clip working copy (tests/clip-doc.test.ts)

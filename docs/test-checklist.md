@@ -20,6 +20,8 @@ owns it will pick it up.
 | `?gnar=3` | Plays at that Gnar level without winning first (1 to 5) |
 | `?tutorial` | Starts on the tutorial floor again (a brand new phone gets it automatically) |
 | `?debug` | Shows fps, draws and speed; exposes `window.game` |
+| `?editor` | The animation editor: keyframe Lou's clips (see docs/animation-editor.md). `?editor&clip=kickflip` opens a clip |
+| `?drafts` | Plays the editor's unsaved clips from this browser |
 
 Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 
@@ -360,6 +362,13 @@ Test on the iPhone in landscape, both ways round (notch on the left, then on the
 
 Quickest way in for most of these: `?debug&seed=7` and play floor 1 (it starts up on the roofs, so stairs, rails,
 banks and drops come fast). Add `?skater=roxy` to see any item on another skater.
+
+**Animation editor** (`npm run dev`, then http://localhost:5173/?editor)
+- [ ] Pick a clip, press space: it plays on Lou at half speed. Scrub the timeline and step frames with the arrow keys.
+- [ ] Click the yellow hips dot and drag it down: the knees bend and the feet stay on the board. Drag the cyan front foot along the board, then set its "on board" to 0 and lift it off.
+- [ ] Change a slider between two keys: a new key appears there. Drag a key diamond to retime it; ctrl+z undoes.
+- [ ] Save (ctrl+s): src/render/clip-edits.json changes and an open game tab reloads and plays the new version. "revert clip" and save puts the code clip back.
+- [ ] Drop one of the reference photos on the view and mirror or fade it to key against it; tick "ghost" to see the previous key.
 
 **Lou and the tricks**
 - [ ] **Lou's moves come from Blender now** (PR #57): push, ride, ollie, every flip, grind, slam and land. Nothing should pop or snap between moves, including into and out of grinds.

@@ -13,6 +13,8 @@ import { FX, initFx } from './render/fx-settings';
 import { isBiome } from './render/biomes';
 import { props } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
+import { applyClipEdits } from './render/poses';
+import { loadDrafts } from './editor/drafts';
 import { dailySeed, dayKey, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
 import { loadSave, writeSave } from './run/save';
 import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
@@ -291,6 +293,14 @@ function makeHud(): Hud {
 async function start() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
+  if (params.has('editor')) {
+    // the animation editor (src/editor): keyframe the skater's clips on the rig
+    const { startEditor } = await import('./editor/editor');
+    return startEditor(base);
+  }
+  // clips saved from the editor: reload to play them; ?drafts plays the editor's unsaved ones
+  import.meta.hot?.on('clip-edits', () => location.reload());
+  if (params.has('drafts')) applyClipEdits(loadDrafts());
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   loadSettings();
   const look = () => {
