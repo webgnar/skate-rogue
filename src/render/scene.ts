@@ -124,7 +124,8 @@ export class StreetView {
   private camY = 2;
   private dist = 22;
   private baseH = 16;
-  private pixelRatio: number;
+  private pixelRatio: number; // what the renderer draws at: autoRatio, or coarser for the chunky look (FX.pixel)
+  private autoRatio: number; // the device's ratio, lowered when frames stay slow
   private slowMs = 0;
   private shakeAmt = 0;
   private punchAmt = 0;
@@ -136,8 +137,8 @@ export class StreetView {
     private level: Level,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-    this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    this.renderer.setPixelRatio(this.pixelRatio);
+    this.autoRatio = this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    this.applyPixel();
     this.renderer.info.autoReset = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.localClippingEnabled = true; // floors' kits are cut where they join (clipKit)
@@ -501,12 +502,24 @@ export class StreetView {
     if (this.slowMs > 2000 && FX.quality === 'auto' && FX.tier === 'high' && this.pixelRatio * 0.8 < 1) {
       this.setTier('low');
       this.slowMs = 0;
-    } else if (this.slowMs > 2000 && this.pixelRatio > 0.6) {
-      this.pixelRatio = Math.max(0.6, this.pixelRatio * 0.8);
-      this.renderer.setPixelRatio(this.pixelRatio);
-      this.resize();
+    } else if (this.slowMs > 2000 && this.autoRatio > 0.6) {
+      this.autoRatio = Math.max(0.6, this.autoRatio * 0.8);
+      this.setPixel();
       this.slowMs = 0;
     }
+  }
+
+  // the chunky low-res look (FX.pixel): draw fewer pixels and scale them up hard-edged. Applies at once
+  setPixel(): void {
+    this.applyPixel();
+    this.resize();
+  }
+
+  private applyPixel(): void {
+    const chunky = FX.pixel > 1;
+    this.pixelRatio = chunky ? Math.min(this.autoRatio, 1 / FX.pixel) : this.autoRatio;
+    this.renderer.setPixelRatio(this.pixelRatio);
+    this.canvas.style.imageRendering = chunky ? 'pixelated' : '';
   }
 
   setTier(tier: 'high' | 'low'): void {

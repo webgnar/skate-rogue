@@ -4,6 +4,7 @@
 //   ?calm                reduce motion and reduce flashing
 //   ?nomotion ?noflash   either one alone
 //   ?heatcue             a striped edge that shows Heat without relying on red and blue
+//   ?pixel=4             the chunky low-res look: each rendered pixel covers 4 x 4 screen pixels (1: sharp)
 // Add =0 to turn one back off (?calm=0). The device's "reduce motion" setting turns reduce motion on.
 const KEY = 'gnar-run-fx';
 
@@ -14,13 +15,17 @@ export interface FxSettings {
   reduceMotion: boolean; // no camera punch or shake, focus lines, hit-stop or speed lines
   reduceFlashing: boolean; // no impact flash or lightning; police flares glow steady
   heatCue: boolean;
+  pixel: number; // the low-res look: screen pixels per rendered pixel, 1 (sharp) to PIXEL_MAX
 }
+
+export const PIXEL_MAX = 4; // past 4 the one-pixel ink swallows the skater
 
 export const FX: FxSettings & { tier: Tier } = {
   quality: 'auto',
   reduceMotion: false,
   reduceFlashing: false,
   heatCue: false,
+  pixel: 1,
   tier: 'high',
 };
 
@@ -34,21 +39,21 @@ export function initFx(params: URLSearchParams, prefersReducedMotion = false): v
   }
   Object.assign(FX, applyParams({ ...defaults(prefersReducedMotion), ...saved }, params));
   FX.tier = FX.quality === 'low' ? 'low' : 'high';
-  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue'].some((k) => params.has(k))) saveFx();
+  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue', 'pixel'].some((k) => params.has(k))) saveFx();
 }
 
 // remember the settings (the URL flags, or the pause card)
 export function saveFx(): void {
   try {
-    const { quality, reduceMotion, reduceFlashing, heatCue } = FX;
-    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue }));
+    const { quality, reduceMotion, reduceFlashing, heatCue, pixel } = FX;
+    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue, pixel }));
   } catch {
     //not remembered in a private window
   }
 }
 
 function defaults(prefersReducedMotion: boolean): FxSettings {
-  return { quality: 'auto', reduceMotion: prefersReducedMotion, reduceFlashing: false, heatCue: false };
+  return { quality: 'auto', reduceMotion: prefersReducedMotion, reduceFlashing: false, heatCue: false, pixel: 1 };
 }
 
 export function applyParams(s: FxSettings, params: URLSearchParams): FxSettings {
@@ -60,5 +65,13 @@ export function applyParams(s: FxSettings, params: URLSearchParams): FxSettings 
   if (params.has('nomotion')) out.reduceMotion = on('nomotion');
   if (params.has('noflash')) out.reduceFlashing = on('noflash');
   if (params.has('heatcue')) out.heatCue = on('heatcue');
+  if (params.has('pixel')) out.pixel = Number(params.get('pixel')) || 1;
+  out.pixel = clampPixel(out.pixel);
   return out;
+}
+
+// a whole number from 1 to PIXEL_MAX (bad saved values and URL junk come back sharp)
+export function clampPixel(n: unknown): number {
+  const v = Math.round(Number(n));
+  return Number.isFinite(v) ? Math.min(PIXEL_MAX, Math.max(1, v)) : 1;
 }

@@ -10,7 +10,7 @@ import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
 import { landDust, landKick } from '../src/render/land-fx';
 import { FEEL } from '../src/physics/feel';
-import { applyParams, FX } from '../src/render/fx-settings';
+import { applyParams, clampPixel, FX, PIXEL_MAX } from '../src/render/fx-settings';
 import { VisorGlint, VISOR, VISOR_TINT } from '../src/render/visor-glint';
 import { mergeInk, splitSlabs } from '../src/render/kit-merge';
 import { batchStatic } from '../src/render/batch';
@@ -144,7 +144,7 @@ describe('puddles', () => {
 });
 
 describe('effect settings from the URL', () => {
-  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false } as const;
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1 } as const;
   const q = (s: string) => applyParams({ ...base }, new URLSearchParams(s));
   it('calm turns on both accessibility switches, calm=0 turns them off', () => {
     expect(q('calm')).toMatchObject({ reduceMotion: true, reduceFlashing: true });
@@ -155,6 +155,15 @@ describe('effect settings from the URL', () => {
     expect(q('fx=nonsense').quality).toBe('auto');
     expect(q('noflash')).toMatchObject({ reduceMotion: false, reduceFlashing: true });
     expect(q('heatcue').heatCue).toBe(true);
+  });
+  it('sets the chunky pixel look, kept to a whole 1 to PIXEL_MAX', () => {
+    expect(q('').pixel).toBe(1);
+    expect(q('pixel=4').pixel).toBe(4);
+    expect(q('pixel=99').pixel).toBe(PIXEL_MAX);
+    expect(q('pixel=0').pixel).toBe(1);
+    expect(q('pixel=junk').pixel).toBe(1);
+    expect(q('pixel=2.6').pixel).toBe(3);
+    expect(clampPixel(undefined)).toBe(1);
   });
 });
 

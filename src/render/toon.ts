@@ -115,7 +115,7 @@ export function outlineMaterial(): THREE.ShaderMaterial {
 // keep the outline width in pixels as the canvas resizes; pixelRatio scales CSS px to buffer px
 export function setInkResolution(width: number, height: number, pixelRatio: number): void {
   inkUniforms.uRes.value.set(width, height);
-  inkUniforms.uWidth.value = INK.width * pixelRatio;
+  inkUniforms.uWidth.value = Math.max(1, INK.width * pixelRatio); // at least a whole pixel in the chunky look
 }
 
 // smoothed normals: every vertex at the same spot gets the average of their normals, so the hull of a box has no
