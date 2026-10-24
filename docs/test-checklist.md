@@ -230,6 +230,17 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] Act 3's escape is always the guards: "GUARDS! RUN!" at the start, "COLLARED!" if they catch you.
 - [ ] Gear wears about 10% slower than before (hill floors are longer); half-worn should still take 3 or 4 floors.
 
+## Level editor (?levels, docs/level-editor.md)
+
+- [ ] Open `skate-rogue.vercel.app/?levels` on the phone: floor 1 of seed 2026 is drawn with the bot's line, and
+      the line under it says the bot reaches the gate at cruising and gnar speed.
+- [ ] Tap a beat in the recipe or drag a dial: the floor redraws within a moment, the panel says "edited", and the
+      floors 1–15 strip at the bottom updates.
+- [ ] **play in game** skates that floor with your edits; a plain `?floor=1` doesn't have them.
+- [ ] **save** on the phone copies the edits; pasting them to Claude gets them merged. On `npm run dev`, save writes
+      src/gen/level-edits.json.
+- [ ] *Feel:* can you make the floor you want with these knobs? What's missing?
+
 ## Gnar levels (harder runs after a win)
 
 - [ ] **Locked until you win:** the run summary has no GNAR button until you've beaten act 5 once (or use `?unlockall`).

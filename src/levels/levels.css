@@ -1,0 +1,120 @@
+/* the level editor (?levels) */
+#levels {
+  --bg: #141020;
+  --panel: #1f1830;
+  --panel-2: #2a2140;
+  --line: #3e2f6a;
+  --text: #ece6ff;
+  --dim: #9a8cc8;
+  --hot: #ffd23a;
+  --pink: #ff3d9a;
+  --cyan: #3fdcff;
+  --green: #6ee7a0;
+  --red: #ff5a5a;
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 system-ui, -apple-system, sans-serif;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 0 max(10px, env(safe-area-inset-right, 0px)) 40px max(10px, env(safe-area-inset-left, 0px));
+}
+#levels button,
+#levels select,
+#levels input[type='number'] {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 5px 9px;
+  font: inherit;
+}
+#levels input[type='number'] { width: 64px; }
+#levels button:disabled { opacity: 0.35; }
+#levels button.hot { background: var(--hot); color: #000; border-color: #000; font-weight: 700; }
+#levels button:focus-visible, #levels input:focus-visible, #levels select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+#levels input[type='range'] { accent-color: var(--hot); }
+#levels .lv-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 0 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+#levels .lv-bar label { display: flex; gap: 6px; align-items: center; color: var(--dim); }
+#levels .lv-title { color: var(--hot); letter-spacing: 0.12em; }
+#levels .lv-grow { flex: 1; }
+#levels .lv-view {
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: linear-gradient(#141020, #1d1530 70%, #191623);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+#levels .lv-view svg { display: block; }
+#levels .lv-result { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--dim); }
+#levels .lv-result b { color: var(--text); }
+#levels .ok { color: var(--green); }
+#levels .bad { color: var(--red); }
+#levels .warn { color: var(--hot); }
+#levels .lv-result > div { flex-basis: 100%; }
+#levels .lv-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; }
+#levels .lv-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+#levels .lv-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+#levels .lv-head h2 { margin: 0; font-size: 15px; }
+#levels .lv-head button { margin-left: auto; }
+#levels .lv-tag { font-size: 11px; color: var(--dim); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; }
+#levels .lv-tag.on { color: #000; background: var(--hot); border-color: var(--hot); }
+#levels .lv-help { margin: 0; color: var(--dim); font-size: 12px; }
+#levels .lv-slots { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+#levels .lv-slots li { display: grid; grid-template-columns: 22px 1fr auto; gap: 6px; align-items: center; }
+#levels .lv-slots .n { color: var(--dim); text-align: right; }
+#levels .beats { display: flex; flex-wrap: wrap; gap: 4px; }
+#levels .beat { padding: 3px 7px; font-size: 12px; color: var(--dim); }
+#levels .beat.lit { background: var(--cyan); color: #000; border-color: #000; }
+#levels .beat.pick { box-shadow: 0 0 0 2px var(--hot); }
+#levels .beat:disabled { opacity: 1; }
+#levels .beat:disabled:not(.lit) { opacity: 0.25; }
+#levels .tools { display: flex; gap: 3px; }
+#levels .tool { padding: 3px 7px; }
+#levels .lv-peak { font-size: 11px; color: var(--hot); }
+#levels .lv-dials { display: grid; gap: 10px; }
+#levels .dial { display: grid; gap: 3px; padding-left: 8px; border-left: 3px solid transparent; }
+#levels .dial.on { border-left-color: var(--hot); }
+#levels .dn { display: flex; gap: 8px; justify-content: space-between; align-items: baseline; }
+#levels .dn span { color: var(--dim); font-size: 11px; }
+#levels .dv { display: flex; gap: 8px; align-items: center; color: var(--dim); }
+#levels .dv input[type='range'] { flex: 1; min-width: 0; }
+#levels .dv output { width: 40px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+#levels .dh { color: var(--dim); font-size: 11px; }
+#levels button.link { background: none; border: 0; padding: 0; color: var(--cyan); text-decoration: underline; font-size: 11px; }
+#levels .lv-strip { display: grid; gap: 2px; overflow-x: auto; }
+#levels .lv-strip .row { display: grid; grid-template-columns: 170px 1fr; gap: 8px; align-items: end; min-width: 560px; text-align: left; background: none; border: 1px solid transparent; padding: 2px 4px; }
+#levels .lv-strip .row.cur { border-color: var(--hot); }
+#levels .lv-strip .lab { color: var(--dim); font-size: 12px; padding-bottom: 2px; }
+#levels .lv-strip .lab b { color: var(--text); }
+#levels .lv-strip .lab i { color: var(--hot); font-style: normal; }
+#levels .lv-strip svg { display: block; width: 100%; height: auto; }
+#levels .lv-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  background: var(--hot);
+  color: #000;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  max-width: calc(100% - 32px);
+  z-index: 3;
+}
+#levels .lv-out { width: 100%; min-height: 160px; background: var(--panel); color: var(--text); border: 1px solid var(--line); font: 12px ui-monospace, Menlo, monospace; }
+#levels [hidden] { display: none !important; }

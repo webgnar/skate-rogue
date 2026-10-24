@@ -16,6 +16,8 @@ import { props } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
 import { applyClipEdits } from './render/poses';
 import { loadDrafts } from './editor/drafts';
+import { loadLevelDrafts } from './levels/drafts';
+import { useLevelEdits } from './gen/level-edits';
 import { dailySeed, dayKey, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
 import { loadSave, writeSave } from './run/save';
 import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
@@ -308,6 +310,17 @@ async function start() {
     // the animation editor (src/editor): keyframe the skater's clips on the rig
     const { startEditor } = await import('./editor/editor');
     return startEditor(base);
+  }
+  if (params.has('levels')) {
+    // the level editor (src/levels): see and shape the generated floors
+    const { startLevels } = await import('./levels/levels');
+    return startLevels();
+  }
+  // level edits saved from the editor: reload to skate them; ?leveldrafts skates the editor's unsaved ones
+  import.meta.hot?.on('level-edits', () => location.reload());
+  if (params.has('leveldrafts')) {
+    const drafts = loadLevelDrafts();
+    if (drafts) useLevelEdits(drafts);
   }
   // clips saved from the editor: reload to play them; ?drafts plays the editor's unsaved ones
   import.meta.hot?.on('clip-edits', () => location.reload());
