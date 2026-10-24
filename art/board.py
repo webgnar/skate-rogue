@@ -9,7 +9,7 @@
 #
 # From zack's references (2026-10-24): a popsicle deck with curved kicks and real concave, colored plies on the
 # edge and hardware bolt heads in the grip; Venture-style trucks (polished baseplate and hanger, purple bushings,
-# gold washers and nuts, bronze kingpin and axle, red V on the hanger); Spitfire-style cream wheels with the black
+# gold washers and nuts, bronze kingpin and axle, a red V on the outside of the hanger); Spitfire-style cream wheels with the black
 # and silver swirl on the outer face. 1 unit is about 0.85 m (the deck is 32" long).
 import math
 import os
@@ -46,7 +46,7 @@ COLORS = {
     'grip': 0x1C1C20,
     'deck': 0xC8312B,
     'bolt': 0xB9BDC4,
-    'metal': 0xD3D6DC,  # polished aluminium
+    'metal': 0xE4E7EC,  # polished aluminium
     'steel': 0x8A7550,  # kingpin and axles
     'bushing': 0x3A2FA8,
     'gold': 0xD7A93A,
@@ -225,7 +225,7 @@ def cyl(bm, r, depth, at, axis='Y', segs=10, r2=None):
 def truck(mats, x, s):
     """s = +1 for the front truck, -1 for the back. The kingpins face the middle of the board."""
     parts = []
-    k = -s  # toward the middle
+    k = -s  # inward: toward the middle of the board, away from the nose or tail
     pivot_x = x - k * 0.022  # pivot cup toward the outside, kingpin toward the middle
     king_x = x + k * 0.016
     hang_top = AXLE_Z + 0.022
@@ -243,6 +243,16 @@ def truck(mats, x, s):
     # bushing seat on top of the hanger, toward the kingpin
     prism(bm, [(king_x - 0.016, hang_top - 0.004), (king_x + 0.016, hang_top - 0.004), (king_x + 0.016, hang_top + 0.004), (king_x - 0.016, hang_top + 0.004)], 'y', -0.017, 0.017)
     parts.append(link('metal', bm, [mats['metal']]))
+
+    bm = bmesh.new()  # the red V on the outside face of the hanger, its point toward the baseplate as on the real truck
+    fx = x + s * 0.0115
+    for dy in (-1, 1):
+        arm = [(dy * 0.026, AXLE_Z - 0.002), (dy * 0.016, AXLE_Z - 0.002), (0, hang_top - 0.002), (dy * 0.007, hang_top - 0.002)]
+        vs = [bm.verts.new((fx, py, pz)) for py, pz in arm]
+        face = bm.faces.new((vs[0], vs[1], vs[2], vs[3]))
+        if face.normal.x * s < 0:
+            face.normal_flip()
+    parts.append(link('logo', bm, [mats['logo']]))
 
     bm = bmesh.new()  # bushings above and below the seat
     cyl(bm, 0.013, 0.012, (king_x, 0, BASE_Z - 0.036), axis='Z', segs=8)
@@ -262,13 +272,6 @@ def truck(mats, x, s):
         cyl(bm, 0.0075, 0.007, (x, y * (TRACK + WHEEL_W / 2 + 0.006), AXLE_Z), segs=6)
     parts.append(link('gold', bm, [mats['gold']]))
 
-    bm = bmesh.new()  # the red V on both faces of the hanger body
-    for fx in (x - 0.0115, x + 0.0115):
-        for dy in (-1, 1):
-            arm = [(dy * 0.026, hang_top - 0.002), (dy * 0.016, hang_top - 0.002), (0, AXLE_Z - 0.002), (dy * 0.007, AXLE_Z - 0.002)]
-            vs = [bm.verts.new((fx, py, pz)) for py, pz in arm]
-            bm.faces.new((vs[0], vs[1], vs[2], vs[3]))
-    parts.append(link('logo', bm, [mats['logo']]))
 
     for y in (TRACK, -TRACK):
         parts.append(wheel(mats, x, y))
