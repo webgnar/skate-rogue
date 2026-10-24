@@ -4,6 +4,10 @@ import { addBoon, type Boon, type Held } from '../boons/defs';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
+import { FIRST_ROAD, label, rollFork, ROADS, type Road } from '../gen/roads';
+import { RunScore, SCORE } from '../run/score';
+import { loadSave, writeSave } from '../run/save';
+import { PickupView } from '../render/pickups';
 
 import { surfaceSlope, type Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
@@ -17,13 +21,32 @@ import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
 
+export interface PickInfo {
+  title: string;
+  rerollCost: number;
+  canReroll: boolean;
+}
+
+export interface RunResult {
+  floor: number;
+  boons: Held[];
+  caught: boolean;
+  score: number;
+  best: number;
+  newBest: boolean;
+  stoken: number; // earned this run
+  bank: number; // Stoken kept across runs
+}
+
 export interface Hud {
-  floor(n: number): void;
+  floor(n: number, road: Road): void;
   callout(text: string, kind?: 'trick' | 'good' | 'bad'): void;
   debug(text: string): void;
   boons(held: Held[]): void;
-  pick(offer: Boon[] | null): void; // null hides the cards
-  over(result: { floor: number; boons: Held[]; caught: boolean } | null): void;
+  pick(offer: Boon[] | null, info?: PickInfo): void; // null hides the cards
+  over(result: RunResult | null): void;
+  money(cash: number, stoken: number): void;
+  score(score: number, combo: number, stoke: number, gnar: number): void; // stoke and gnar 0..1
   heat(value: number): void;
   warn(show: boolean): void; // an oncoming car is on its way
 }
@@ -47,7 +70,11 @@ export class Game {
   private menuAt = 0;
   private offer: Boon[] = [];
   private last = performance.now();
-  private combo = 0;
+  private run = new RunScore();
+  private road: Road = FIRST_ROAD; // what this floor is
+  private rerolls = 0;
+  private readonly pickups = new PickupView();
+  private nextRoad: Road = FIRST_ROAD;
   private fallSpeed = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
   private ghostMesh: THREE.Mesh;
@@ -66,6 +93,7 @@ export class Game {
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group);
     this.view.scene.add(this.trafficView.group);
+    this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.12, 0.14),
       new THREE.MeshBasicMaterial({ color: 0x9ff3ff, transparent: true, opacity: 0.6 }),
@@ -76,13 +104,19 @@ export class Game {
   }
 
   private makeLevel(): Level {
-    return validatedFloor(this.seed, this.floor).level;
+    return validatedFloor(this.seed, this.floor, {
+      fork: rollFork(this.seed, this.floor),
+      danger: this.road.danger,
+      short: this.road.kind === 'stash',
+    }).level;
   }
 
   private newRun(): void {
     if (!this.fixedSeed) this.seed = Math.floor(Math.random() * 1e6);
     this.floor = 1;
     this.boons = [];
+    this.run = new RunScore();
+    this.road = FIRST_ROAD;
     this.level = this.makeLevel();
     this.hud.over(null);
     this.startFloor();
@@ -97,15 +131,77 @@ export class Game {
   private startFloor(): void {
     this.state = 'skate';
     this.input.clear();
-    this.sim = new FloorSim(this.level, skaterMods(this.boons));
+    this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : 0);
     this.trafficView.clear();
+    this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level);
     this.view.follow(this.skater.x, this.skater.y, this.skater.hsp, true);
     this.sprite.play('push');
-    this.hud.floor(this.floor);
+    this.hud.floor(this.floor, this.road);
     this.hud.boons(this.boons);
-    this.combo = 0;
+    this.hud.money(this.run.cash, this.run.stoken);
+    if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
+  }
+
+  // the floor's gate: pay floor clear, then this floor's reward; the road taken is the next floor
+  private finishFloor(now: number): void {
+    const pts = this.run.clearFloor(this.floor);
+    const fork = this.level.fork;
+    this.nextRoad = fork ? (this.sim.road === 'high' ? fork.high : fork.low) : FIRST_ROAD;
+    const road = this.road;
+    if (road.kind === 'boon' || road.kind === 'hot') {
+      if (road.kind === 'hot') this.run.cash += ROADS.hotCash(this.floor);
+      this.rerolls = 0;
+      this.showOffer();
+      this.openMenu('pick', now);
+    } else if (road.kind === 'cash') {
+      const pay = ROADS.cashPayout(this.floor);
+      this.run.cash += pay;
+      this.advance();
+      this.hud.callout(`+${pay} CASH`, 'good');
+    } else {
+      const pay = ROADS.stashStoken(this.floor);
+      this.run.stoken += pay;
+      this.advance();
+      this.hud.callout(`+${pay} STOKEN`, 'good');
+    }
+    if (road.kind !== 'cash' && road.kind !== 'stash') this.hud.callout(`FLOOR CLEAR +${pts}`, 'good');
+  }
+
+  private rerollCost(): number {
+    return 15 + 10 * this.rerolls;
+  }
+
+  private showOffer(): void {
+    const road = this.road;
+    const run = { floor: this.floor, boons: this.boons };
+    this.offer =
+      road.kind === 'hot'
+        ? offerBoons(this.seed, run, 4, undefined, this.rerolls)
+        : offerBoons(this.seed, run, 3, road.kind === 'boon' ? road.boonType : undefined, this.rerolls);
+    const cost = this.rerollCost();
+    this.hud.pick(this.offer, {
+      title: road.kind === 'hot' ? 'HOT STREET: PICK ANY BOON' : `PICK A ${label(road)}`,
+      rerollCost: cost,
+      canReroll: this.run.cash >= cost,
+    });
+    this.hud.money(this.run.cash, this.run.stoken);
+  }
+
+  private reroll(): void {
+    const cost = this.rerollCost();
+    if (this.run.cash < cost) return;
+    this.run.cash -= cost;
+    this.rerolls++;
+    this.showOffer();
+  }
+
+  private advance(): void {
+    this.floor++;
+    this.road = this.nextRoad;
+    this.level = this.makeLevel();
+    this.startFloor();
   }
 
   private pickBoon(i: number): void {
@@ -113,10 +209,26 @@ export class Game {
     if (!boon) return;
     this.boons = addBoon(this.boons, boon.id);
     this.hud.pick(null);
-    this.floor++;
-    this.level = this.makeLevel();
-    this.startFloor();
+    this.advance();
     this.hud.callout(boon.name.toUpperCase(), 'good');
+  }
+
+  private endRun(now: number, caught: boolean): void {
+    this.openMenu('over', now);
+    const save = loadSave();
+    const newBest = this.run.score > save.best;
+    const next = { best: Math.max(save.best, this.run.score), stoken: save.stoken + this.run.stoken };
+    writeSave(next);
+    this.hud.over({
+      floor: this.floor,
+      boons: this.boons,
+      caught,
+      score: this.run.score,
+      best: next.best,
+      newBest,
+      stoken: this.run.stoken,
+      bank: next.stoken,
+    });
   }
 
   private get skater(): Skater {
@@ -136,30 +248,31 @@ export class Game {
       const press = this.input.takePress();
       const card = press ? this.input.lastTarget?.closest<HTMLElement>('[data-pick]') : null;
       if (card) this.choose(Number(card.dataset.pick));
+      else if (press && this.input.lastTarget?.closest('[data-reroll]')) this.reroll();
     } else if (this.state === 'over') {
       if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.newRun();
     } else if (this.state === 'caught') {
       //the cruiser cuts in, then the summary
       if (now - this.menuAt >= CAUGHT_BEAT_MS) {
-        this.openMenu('over', now);
-        this.hud.over({ floor: this.floor, boons: this.boons, caught: true });
+        this.endRun(now, true);
       }
     } else {
       this.loop.advance(dt, () => {
         this.prev = { x: this.skater.x, y: this.skater.y };
         this.fallSpeed = this.skater.mode === 'air' ? this.skater.vsp : 0;
+        //the gnar state: faster cruising, slams cost no Heat
+        this.skater.boost = this.run.gnar ? SCORE.gnarBoost : 1;
+        this.sim.heat.slamFree = this.run.gnar;
         this.sim.step(this.input.sample());
+        this.run.step(this.skater.mode);
         for (const e of this.sim.events) this.handle(e);
       });
     }
 
     if (this.state === 'skate' && this.sim.state === 'exit') {
-      this.offer = offerBoons(this.seed, { floor: this.floor, boons: this.boons });
-      this.openMenu('pick', now);
-      this.hud.pick(this.offer);
+      this.finishFloor(now);
     } else if (this.state === 'skate' && this.sim.state === 'bail') {
-      this.openMenu('over', now);
-      this.hud.over({ floor: this.floor, boons: this.boons, caught: false });
+      this.endRun(now, false);
     } else if (this.state === 'skate' && this.sim.state === 'caught') {
       this.state = 'caught';
       this.menuAt = now;
@@ -200,6 +313,8 @@ export class Game {
           : 0;
     this.sprite.update(dt * 1000, this.skater, angle);
     this.impacts.update(dt);
+    this.pickups.update(dt);
+    this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs);
     this.view.follow(x, y, this.skater.hsp);
     this.view.adapt(dt * 1000);
     this.view.render();
@@ -212,40 +327,42 @@ export class Game {
   }
 
   private handle(e: FloorSim['events'][number]): void {
-    this.sprite.onEvent(e);
+    if (e.type !== 'pickup') this.sprite.onEvent(e);
+    const wasGnar = this.run.gnar;
+    const bank = this.run.onEvent(e, this.skater.hsp);
+    const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
     switch (e.type) {
       case 'trick':
-        this.combo++;
-        this.hud.callout(TRICK_NAMES[TRICKS[e.index % TRICKS.length]] + (this.combo > 1 ? ` x${this.combo}` : ''), 'trick');
+        this.hud.callout(TRICK_NAMES[TRICKS[e.index % TRICKS.length]] + combo, 'trick');
         break;
       case 'grind':
-        this.combo++;
-        this.hud.callout(this.sprite.grindName, 'trick');
+        this.hud.callout(this.sprite.grindName + combo, 'trick');
         break;
       case 'rail':
-        this.combo++;
-        this.hud.callout('BOARDSLIDE', 'trick');
+        this.hud.callout('BOARDSLIDE' + combo, 'trick');
         break;
       case 'hop':
-        this.combo++;
-        this.hud.callout('CAR HOP!', 'good');
+        this.hud.callout('CAR HOP!' + combo, 'good');
         break;
       case 'land':
-        this.combo = 0;
+        if (bank) {
+          this.hud.callout(`+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), 'good');
+          this.hud.money(this.run.cash, this.run.stoken);
+        }
         //a big drop lands with a smaller burst
         if (this.fallSpeed >= BIG_LANDING) this.burst(0.6, 0.12);
         break;
       case 'slam':
-        this.combo = 0;
         this.hud.callout('SLAM!', 'bad');
         this.burst(1, 0.45);
         navigator.vibrate?.(60);
         break;
-      case 'bail':
-        this.combo = 0;
+      case 'pickup':
+        this.pickups.take(e.index);
+        this.hud.money(this.run.cash, this.run.stoken);
+        if (e.kind === 'stoken') this.hud.callout('STOKEN!', 'good');
         break;
     }
+    if (!wasGnar && this.run.gnar) this.hud.callout('GNAR!', 'good');
   }
 }
-
-

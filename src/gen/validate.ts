@@ -4,7 +4,7 @@ import { TILE } from '../physics/constants';
 import { isStreetAt, type Level } from '../physics/level';
 import { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
-import { buildFloor } from './descent';
+import { buildFloor, type FloorOptions } from './descent';
 import { maxTier } from './layout';
 import { PIECES } from './pieces';
 
@@ -60,16 +60,16 @@ export interface Validated {
   tierDrops: number;
 }
 
-export function validatedFloor(seed: number, floor: number): Validated {
+export function validatedFloor(seed: number, floor: number, opts: FloorOptions = {}): Validated {
   let tries = 0;
   for (let top = maxTier(floor), drops = 0; top >= 1; top--, drops++) {
     const library = PIECES.filter((p) => p.tier <= top);
     for (let k = 0; k <= REROLLS; k++) {
       tries++;
-      const level = buildFloor(seed + k * 15485863 + drops * 32452843, floor, library);
+      const level = buildFloor(seed + k * 15485863 + drops * 32452843, floor, library, opts);
       if (clearable(level)) return { level, tries, tierDrops: drops };
     }
   }
   //nothing passed (should not happen); hand back the original
-  return { level: buildFloor(seed, floor), tries, tierDrops: -1 };
+  return { level: buildFloor(seed, floor, PIECES, opts), tries, tierDrops: -1 };
 }

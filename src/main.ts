@@ -1,6 +1,7 @@
 import './style.css';
 import { BOON_COLORS, boonById, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud } from './game/game';
+import { label } from './gen/roads';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
@@ -42,11 +43,32 @@ function makeHud(): Hud {
   const overEl = document.getElementById('over')!;
   const appEl = document.getElementById('app')!;
   const warnEl = document.getElementById('warn')!;
+  const cashEl = document.getElementById('cash')!;
+  const stokenEl = document.getElementById('stoken')!;
+  const scoreEl = document.getElementById('score')!;
+  const comboEl = document.getElementById('combo')!;
+  const stokeEl = document.getElementById('stoke')!;
+  const stokeFill = stokeEl.querySelector('i')!;
+  const roadEl = document.getElementById('road')!;
   let level = 0;
   let held: Held[] = [];
   let timer = 0;
   return {
-    floor: (n) => (floorEl.textContent = `FLOOR ${n}`),
+    floor: (n, road) => {
+      floorEl.textContent = `FLOOR ${n}`;
+      roadEl.textContent = label(road);
+      roadEl.dataset.kind = road.kind;
+    },
+    money: (cash, stoken) => {
+      cashEl.textContent = `$${cash}`;
+      stokenEl.textContent = `◆ ${stoken}`;
+    },
+    score: (score, combo, stoke, gnar) => {
+      scoreEl.textContent = score.toLocaleString();
+      comboEl.textContent = combo > 1 ? `x${combo}` : '';
+      stokeFill.style.width = `${Math.round((gnar > 0 ? gnar : stoke) * 100)}%`;
+      stokeEl.classList.toggle('gnar', gnar > 0);
+    },
     callout: (text, kind = 'trick') => {
       calloutEl.textContent = text;
       calloutEl.className = `show ${kind}`;
@@ -67,15 +89,24 @@ function makeHud(): Hud {
       held = h;
       boonsEl.innerHTML = h.map(chip).join('');
     },
-    pick: (offer) => {
+    pick: (offer, info) => {
       pickEl.hidden = !offer;
-      if (offer) pickEl.querySelector('.cards')!.innerHTML = offer.map((b, i) => card(b, i, held)).join('');
+      if (!offer) return;
+      pickEl.querySelector('.cards')!.innerHTML = offer.map((b, i) => card(b, i, held)).join('');
+      if (info) {
+        pickEl.querySelector('.title')!.textContent = info.title;
+        const btn = pickEl.querySelector<HTMLButtonElement>('.reroll')!;
+        btn.textContent = `REROLL $${info.rerollCost}`;
+        btn.disabled = !info.canReroll;
+      }
     },
     over: (result) => {
       overEl.hidden = !result;
       if (!result) return;
       overEl.querySelector('b')!.textContent = result.caught ? 'BUSTED' : 'BAILED';
       overEl.querySelector('.reached')!.textContent = `You made it to floor ${result.floor}`;
+      overEl.querySelector('.final')!.textContent = `${result.score.toLocaleString()}${result.newBest ? ' · NEW BEST' : ''}`;
+      overEl.querySelector('.best')!.textContent = `best ${result.best.toLocaleString()} · ◆ ${result.stoken} Stoken this run (${result.bank} banked)`;
       overEl.querySelector('.held')!.innerHTML = result.boons.length ? result.boons.map(chip).join('') : '<span class="none">no boons</span>';
     },
   };

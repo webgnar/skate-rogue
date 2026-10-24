@@ -14,6 +14,10 @@
       <canvas id="game"></canvas>
       <div id="hud">
         <div id="floor">FLOOR 1</div>
+        <div id="road"></div>
+        <div id="money"><span id="cash">$0</span><span id="stoken">&#9670; 0</span></div>
+        <div id="scorebox"><span id="score">0</span><span id="combo"></span></div>
+        <div id="stoke"><i></i></div>
         <div id="callout"></div>
         <div id="hint">TAP / HOLD = OLLIE &middot; TAP IN THE AIR = FLIP</div>
         <div id="boons"></div>
@@ -25,10 +29,13 @@
       <div id="pick" hidden>
         <div class="title">PICK A BOON</div>
         <div class="cards"></div>
+        <button class="reroll" data-reroll>REROLL</button>
       </div>
       <div id="over" hidden>
         <b>BAILED</b>
+        <span class="final"></span>
         <span class="reached"></span>
+        <span class="best"></span>
         <div class="held"></div>
         <span class="again">tap for a new run</span>
       </div>

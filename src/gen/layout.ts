@@ -23,7 +23,8 @@ export function maxTier(floor: number): number {
   return Math.min(3, 1 + Math.floor((floor - 1) / 2));
 }
 
-export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES, count = floorLength(floor)): Layout {
+// `tail` pieces go just before the exit (the fork's runway)
+export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES, count = floorLength(floor), tail: Piece[] = []): Layout {
   const rng = makeRng(seed + floor * 7919);
   const top = maxTier(floor);
   //pieces of the newest tier come up three times as often, so the floor feels harder
@@ -43,7 +44,7 @@ export function makeLayout(seed: number, floor: number, library: Piece[] = PIECE
     pieces.push(pick);
     last = pick;
   }
-  pieces.push(EXIT_PIECE);
+  pieces.push(...tail, EXIT_PIECE);
 
   const grid = new Array<string>(ROWS).fill('');
   for (const p of pieces) {

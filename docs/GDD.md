@@ -151,6 +151,11 @@ spot; gap challenge and Shredtoshi's mark come in a later update):
 | **Underground spot** | A safe DIY skate spot: start the next floor at 0 Heat, swap one boon, or remove a curse |
 | **Shredtoshi's mark** (post-launch) | Graffiti shrine: trade cash or a boon for a cursed boon or a duo boon |
 
+Built Oct 24, 2026 (first version): the high road is an overpass 2 tiles up over a plain runway (ollie + flip to get
+on it), signs on a gantry before it, a gate on each road. Launch roads so far: boon street (POP or GRIND), cash
+street, hot street and Stoken stash. Skate shop and underground spot come with board mods and carried-over Heat.
+Until the shop exists, cash buys boon rerolls.
+
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
 

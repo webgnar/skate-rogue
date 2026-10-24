@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
+import { label, type Road } from '../gen/roads';
 import { makeRng, randInt } from '../gen/rng';
 import { CITY, paintTexture, tileTexture, type TileCell } from './textures';
 
@@ -125,6 +126,19 @@ export function buildKit(level: Level): THREE.Group {
       const b = slab(w, y, 3, lambert(tileTexture(facade(Math.round(w), Math.ceil(y), t))), lambert(null, 0x6a6478), sideMat);
       b.position.set(x, y / 2, -1.6);
       kit.add(b);
+    } else if (s.kind === 'overpass') {
+      //a concrete deck over the street on pillars behind the lane, with a railing at the back
+      const deck = slab(w, 0.45, 2.2, lambert(null, 0x6f6a7a), lambert(null, 0x8d889a), sideMat);
+      deck.position.set(x, y - 0.225, -0.4);
+      kit.add(deck);
+      for (let px = toX(s.x0) + 1; px < toX(s.x1); px += 5) {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.5, y - 0.45, 0.5), concrete);
+        pillar.position.set(px, (y - 0.45) / 2, -1.2);
+        kit.add(pillar);
+      }
+      const railing = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, 0.08), metal);
+      railing.position.set(x, y + 0.7, -1.4);
+      kit.add(railing);
     } else if (s.kind === 'ledge') {
       const row = new Array(Math.round(w)).fill(CITY.ledge[1]);
       row[0] = CITY.ledge[0];
@@ -207,6 +221,27 @@ export function buildKit(level: Level): THREE.Group {
   gate.position.set(toX(level.exitX) + 0.5, 0, 0);
   kit.add(gate);
 
+  //--- the fork: a second gate up on the overpass and signs for both roads ----------------------
+  if (level.fork) {
+    const fork = level.fork;
+    const hy = toY(level, fork.y);
+    const high = gate.clone();
+    high.material = new THREE.MeshBasicMaterial({ color: 0xffd23f });
+    high.scale.setScalar(0.8);
+    high.position.set(toX(level.exitX) + 0.5, hy, -0.2);
+    kit.add(high);
+    //signs a few tiles before the overpass, on a gantry over the street: high road on top, low road under it
+    const sx = toX(fork.x0) - 7;
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, hy + 3.2, 0.18), postMat);
+    post.position.set(sx - 2.1, (hy + 3.2) / 2, -1.3);
+    kit.add(post);
+    const top = roadSign(fork.high, true);
+    top.position.set(sx, hy + 2.2, -1.25);
+    const bottom = roadSign(fork.low, false);
+    bottom.position.set(sx, hy + 0.65, -1.25);
+    kit.add(top, bottom);
+  }
+
   return kit;
 }
 
@@ -251,4 +286,41 @@ export function makeCar(x0: number, x1: number, bottom: number, roof: number, pa
   }
   car.position.x = x0 + w / 2;
   return car;
+}
+
+const ROAD_COLORS: Record<Road['kind'], string> = { boon: '#ffd23f', cash: '#5fe08a', hot: '#ff4a3a', stash: '#b98cff' };
+
+// a street sign for one road: arrow, where it leads, and its danger in car icons
+function roadSign(road: Road, high: boolean): THREE.Mesh {
+  const W = 256;
+  const H = 96;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const g = canvas.getContext('2d')!;
+  g.fillStyle = high ? '#1f6b3a' : '#20406e';
+  g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 4;
+  g.strokeRect(4, 4, W - 8, H - 8);
+  g.fillStyle = '#ffffff';
+  g.font = 'bold 18px Arial Black, Arial, sans-serif';
+  g.textBaseline = 'top';
+  g.fillText(high ? '\u25B2 HIGH ROAD' : '\u25B6 LOW ROAD', 14, 12);
+  g.font = '12px Arial, sans-serif';
+  g.fillText(high ? 'ollie + flip up' : 'keep rolling', 150, 16);
+  g.fillStyle = road.kind === 'boon' ? (road.boonType === 'GRIND' ? '#ff8c2b' : '#ffd23f') : ROAD_COLORS[road.kind];
+  g.font = 'bold 26px Arial Black, Arial, sans-serif';
+  g.fillText(label(road), 14, 38);
+  //danger: car icons
+  for (let i = 0; i < 3; i++) {
+    g.fillStyle = i < road.danger ? '#ff5a5a' : 'rgba(255,255,255,0.25)';
+    const x = 14 + i * 30;
+    g.fillRect(x, 72, 24, 9);
+    g.fillRect(x + 5, 67, 14, 6);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return new THREE.Mesh(new THREE.PlaneGeometry(4, 1.5), new THREE.MeshBasicMaterial({ map: tex }));
 }
