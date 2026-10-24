@@ -337,6 +337,14 @@ export const START_PIECE: Piece = {
   ],
 };
 
+// plain street before the exit when the floor ends in a fork: a clean runway to ollie up to the high road
+export const FORK_PIECE: Piece = {
+  name: 'fork', tier: 0, rows: [
+    '................', '................', '................', '................', '................',
+    '................', '................', '................', '................', '################',
+  ],
+};
+
 export const EXIT_PIECE: Piece = {
   name: 'exit', tier: 0, rows: [
     '................', '................', '................', '................', '................',

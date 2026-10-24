@@ -31,6 +31,7 @@ export class Skater {
   jumps: number = PHYS.jumps;
   carry = 0; // speed above the cap, from rails (QFS rail_carry)
   slamT = 0; // frames left of slam recovery
+  boost = 1; // cruising speed multiplier (the gnar state)
   buffer = 0; // frames a press stays valid
   coyote = 0;
   tricks = 0; // counts flip tricks, so the animation choice is deterministic
@@ -147,7 +148,7 @@ export class Skater {
   private baseSpeed(): number {
     //after a slam you're back to full speed over slamFrames
     const k = this.slamT > 0 ? 1 - (1 - PHYS.slamSpeed) * (this.slamT / PHYS.slamFrames) : 1;
-    return PHYS.baseSpeed * k;
+    return PHYS.baseSpeed * k * this.boost;
   }
 
   private stepMove(held: boolean): void {

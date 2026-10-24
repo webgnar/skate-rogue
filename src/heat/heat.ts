@@ -18,12 +18,13 @@ export class Heat {
   value = 0;
   sinceSlam = Infinity; // frames
   holdT = 0; // the cruiser holds still while the skater remounts
+  slamFree = false; // gnar state: slams cost no Heat
 
   step(sk: Skater, events: readonly SkaterEvent[]): void {
     let d = 0;
     for (const e of events) {
       if (e.type === 'slam') {
-        d += HEAT.slam;
+        if (!this.slamFree) d += HEAT.slam;
         this.sinceSlam = 0;
         this.holdT = PHYS.slamFrames;
       } else if (e.type === 'trick') d += HEAT.trick;

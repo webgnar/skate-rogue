@@ -1,8 +1,9 @@
 // A floor as the physics sees it: street columns, one-way surfaces, curved rails and parked cars, in pixels.
 import { CHUNK_W, STREET_ROW, cell, type Layout } from '../gen/layout';
+import type { Road } from '../gen/roads';
 import { TILE } from './constants';
 
-export type SurfaceKind = 'roof' | 'ledge' | 'rail' | 'stairs' | 'bank';
+export type SurfaceKind = 'roof' | 'ledge' | 'rail' | 'stairs' | 'bank' | 'overpass';
 
 // a one-way surface you land on from above: x0..x1 at height y, or sloping from y to y1 (stairs, banks)
 export interface Surface {
@@ -102,6 +103,24 @@ export class CurvedRail {
   }
 }
 
+export type PickupKind = 'cash' | 'stoken';
+
+// cash and Stoken floating along lines: over gaps, along rails, up high on side lines
+export interface Pickup {
+  x: number;
+  y: number;
+  kind: PickupKind;
+}
+
+// the high road at the end of a floor: an overpass over the street, and where each road leads
+export interface ForkSite {
+  x0: number;
+  x1: number;
+  y: number;
+  high: Road;
+  low: Road;
+}
+
 export interface Level {
   layout: Layout;
   width: number;
@@ -115,6 +134,9 @@ export interface Level {
   startY: number;
   finaleX: number; // where the street begins (after a descent); 0 for a street-only floor
   exitX: number;
+  pickups: Pickup[];
+  fork: ForkSite | null;
+  danger: number; // traffic 1 (light) to 3 (rush hour)
 }
 
 const CAR_W = 2 * TILE;
@@ -190,6 +212,9 @@ export function buildLevel(layout: Layout): Level {
     startY: streetY,
     finaleX: 0,
     exitX: (layout.cols - 6) * TILE,
+    pickups: [],
+    fork: null,
+    danger: 2,
   };
 }
 

@@ -40,11 +40,12 @@ export function spawnPlan(level: Level, seed: number): Spawn[] {
   const floor = level.layout.floor;
   const rng = makeRng(seed * 31 + floor * 31337);
   const pieces = level.layout.pieces.length;
-  const density = Math.min(0.67, 0.3 + 0.06 * (floor - 1));
+  //danger 1-3 (the road's sign) scales it; rush hour also brings oncoming cars early
+  const density = Math.min(0.67, 0.3 + 0.06 * (floor - 1)) * [0.7, 1, 1.5][(level.danger ?? 2) - 1];
   const plan: Spawn[] = [];
   for (let p = 1; p < pieces - 2; p++) {
     if (rng() >= density) continue;
-    const oncoming = floor >= 3 && rng() < 0.4;
+    const oncoming = (floor >= 3 || level.danger >= 3) && rng() < 0.4;
     const [lo, hi] = TRAFFIC.robotaxiSpeed;
     plan.push({
       at: level.finaleX + p * 16 * TILE + randInt(rng, 8) * TILE,
