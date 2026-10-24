@@ -189,3 +189,17 @@ describe('fixed step', () => {
     expect(idle(0)).toEqual({ pressed: false, held: false });
   });
 });
+
+describe('rail speed', () => {
+  it('fades gradually on the ground instead of dropping off', () => {
+    const sk = new Skater(levelOf(FLAT));
+    sk.carry = 9;
+    sk.hsp = 9;
+    run(sk, 30);
+    // still well above base speed after half a second, and lower than at the start
+    expect(sk.hsp).toBeGreaterThan(PHYS.baseSpeed + 3);
+    expect(sk.hsp).toBeLessThan(9);
+    run(sk, 300);
+    expect(sk.hsp).toBeLessThan(PHYS.baseSpeed + 0.6);
+  });
+});
