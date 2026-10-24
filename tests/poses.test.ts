@@ -126,6 +126,16 @@ describe('rig poses', () => {
     expect(p.yaw).toBeGreaterThan(1);
   });
 
+  it('frontside boardslide: board across the other way, back leading down the rail', () => {
+    const p = sample(CLIPS.fsBoardslide, 0);
+    expect(p.boardYaw).toBeCloseTo(-Math.PI / 2);
+    expect(footTarget(p, true).z).toBeGreaterThan(0.2); // nose toward the camera
+    expect(footTarget(p, false).z).toBeLessThan(-0.2);
+    expect(p.boardY + BOARD.deckTop - 0.03).toBeCloseTo(0);
+    expect(p.yaw).toBeLessThan(-1); // chest turned away from the way he slides
+    expect(p.head).toBeGreaterThan(0.5); // looking back down the rail
+  });
+
   it('blends between clips take the short way round for spun boards', () => {
     const landed = { ...BASE, boardRoll: -2 * Math.PI, boardYaw: -Math.PI };
     const half = mix(landed, BASE, 0.5);

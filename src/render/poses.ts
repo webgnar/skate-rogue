@@ -139,6 +139,9 @@ const CROOKED: Key = {
   boardZ: BOARD.bolts * Math.sin(CROOK_YAW), boardRoll: 0.3,
 };
 const BOARDSLIDE: Key = { yaw: 1.2, head: 0.2, boardYaw: Math.PI / 2, boardY: -(BOARD.deckTop - 0.03) };
+// frontside: the rail came up on the toe side, so the nose went over it toward the camera and the body turned the
+// other way: back to the way you're sliding, head turned over the lead shoulder to watch down the rail
+const FS_BOARDSLIDE: Key = { yaw: -1.2, head: 1.4, boardYaw: -Math.PI / 2, boardY: -(BOARD.deckTop - 0.03) };
 // side = -1 flicks off the heel side (kickflip), +1 kicks out the toe side (heelflip)
 const flick = (side: 1 | -1): Key => ({
   hipY: 1.05, boardY: 0.3, bend: 0.3,
@@ -418,6 +421,17 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.6, pose: { ...BOARDSLIDE, hipY: 0.72, bend: 0.12, lean: -0.1, armLRaise: 1.3, armRRaise: 1.4, armLElbow: 0.4, armRElbow: 0.3 } },
     ],
   },
+  // frontside boardslide: the same slide on the middle of the deck, but the rail was on the toe side, so the nose
+  // crossed it toward the camera and Lou slides backward, his back leading down the rail, looking back over his
+  // lead shoulder to see where it ends; toes point up the rail (fsBoardslide)
+  fsBoardslide: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { ...FS_BOARDSLIDE, hipY: 0.72, bend: 0.14, lean: 0.1, armLRaise: 1.4, armRRaise: 1.2, armLElbow: 0.35, armRElbow: 0.4 } },
+      { t: 0.3, pose: { ...FS_BOARDSLIDE, hipY: 0.69, bend: 0.16, lean: 0.13, armLRaise: 1.3, armRRaise: 1.3, armLElbow: 0.4, armRElbow: 0.3 } },
+      { t: 0.6, pose: { ...FS_BOARDSLIDE, hipY: 0.72, bend: 0.14, lean: 0.1, armLRaise: 1.4, armRRaise: 1.2, armLElbow: 0.35, armRElbow: 0.4 } },
+    ],
+  },
   // landing: feet over the bolts, knees soak it up, stand back up (impact, 7 x 50 ms)
   land: {
     loop: false,
@@ -543,15 +557,18 @@ export function clipLength(clip: Clip): number {
   return clip.keys[clip.keys.length - 1].t;
 }
 
-// grinds on ledges and flat bars take turns; handrails are boardslides
+// Grinds take turns. Rails (flat bars and handrails) get every grind, both boardslides among them; anything that
+// isn't a rail (a parked car's roof) gets every grind but the boardslides, which only work across a rail (zack).
 export const LEDGE_GRINDS = ['grind1', 'crooked', 'fiveO', 'smith', 'feeble'] as const;
+export const RAIL_GRINDS = ['grind2', 'grind1', 'fsBoardslide', 'fiveO', 'smith', 'grind2', 'crooked', 'fsBoardslide', 'feeble'] as const;
 export const GRIND_NAMES: Record<string, string> = {
   grind1: '50-50',
   crooked: 'CROOKED GRIND',
   fiveO: '5-0',
   smith: 'BS SMITH',
   feeble: 'BS FEEBLE',
-  grind2: 'BOARDSLIDE',
+  grind2: 'BS BOARDSLIDE',
+  fsBoardslide: 'FS BOARDSLIDE',
 };
 // spins that leave the skater riding the other way round (fakie): the clip ends turned this far
 export const SPINS: Record<string, number> = { bs180: -Math.PI, fs180: Math.PI };

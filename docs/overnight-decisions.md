@@ -530,6 +530,15 @@ and listed it here for review. Any of these can be flipped in the morning.
   board now plays where the code clips put it. (2) Cars, cruisers and buses rendered one flat colour: splitSlabs
   split a model's material groups with a draw range, which batchStatic's merge ignores, so every piece drew the
   whole car in one material. It now copies out each group's vertices.
+- **Grinds by obstacle, FS boardslide, knee poles (zack, 2026-10-24).** Rails (flat bars and handrails) now cycle
+  every grind: BS boardslide, 50-50, FS boardslide, 5-0, BS smith, crooked, BS feeble. A parked car's roof (not a
+  rail) gets every grind but the boardslides. The callout names the grind Lou is doing instead of always
+  "BOARDSLIDE". FS boardslide follows the real trick: the rail comes up on the toe side, the nose crosses it toward
+  the camera and Lou slides backward with his back leading down the rail, head turned over his lead shoulder;
+  that matches zack's "back in front". Knee IK no longer takes the knee's bend from the toes or from the last
+  frame: the pole is fixed toward the camera (a little outward per leg) and only turns with the body (a
+  boardslide turns Lou's chest down or up the rail, so his knees go with it). The landing squash and slopes
+  use the same pole. Clips re-baked.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

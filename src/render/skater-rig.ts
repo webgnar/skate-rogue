@@ -12,7 +12,7 @@ import { wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
-import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, LEDGE_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, LEDGE_GRINDS, RAIL_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
@@ -90,6 +90,8 @@ export class SkaterRig {
   private pushes = 0;
   private rideT = 0;
   private ledgeGrinds = 0;
+  private railGrinds = 0;
+  private sk: Skater | null = null; // the skater as of the last update, for what an event landed on
   private fakie = false; // shown riding fakie: the whole skater and board turned half round
 
   // skinned model bones and the joints they follow
@@ -608,11 +610,12 @@ export class SkaterRig {
       case 'land':
         this.play('land');
         break;
-      case 'grind': // ledges and flat bars: 50-50, crooked, smith in turn
-        this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
+      case 'grind': // flat bars are rails; a parked car's roof (row -1, physics roofLedge) is not
+        if (this.sk?.surface?.row === -1) this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
+        else this.play(RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length]);
         break;
-      case 'rail': // handrails: a boardslide
-        this.play('grind2');
+      case 'rail': // handrails
+        this.play(RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length]);
         break;
       case 'slam':
         this.flash = 0.6;
@@ -641,6 +644,7 @@ export class SkaterRig {
   }
 
   update(dtMs: number, sk: Skater, angle: number): void {
+    this.sk = sk;
     const dt = dtMs / 1000;
     const len = clipLength(this.clip);
     const done = !this.clip.loop && this.t >= len;
@@ -668,7 +672,7 @@ export class SkaterRig {
     } else if (sk.mode === 'air' && (done || ON_GROUND.has(this.clipName))) {
       this.play('air', 0.15);
     } else if (grinding && !GRINDS.has(this.clipName)) {
-      this.play(sk.mode === 'rail' ? 'grind2' : 'grind1');
+      this.play('grind1');
     }
 
     // the sim's stance wins, except while a 180 is turning the rig round
@@ -751,8 +755,11 @@ export class SkaterRig {
       const goal = new THREE.Vector3().setFromMatrixPosition(target);
       const thigh = knee.distanceTo(hip);
       const shin = ankle.distanceTo(knee);
-      // bend the knee the way it already bends
-      const pole = knee.clone().sub(hip.clone().add(ankle).multiplyScalar(0.5));
+      // knees bend toward the camera, splayed out from the middle of the stance (see kneePole), turned with the
+      // body when the clip has it turned (the clip's knees, flattened, steer it; a straight leg has none to give)
+      const p = kneePole(goal.x >= 0);
+      const bend = knee.clone().sub(hip.clone().add(ankle).multiplyScalar(0.5)).setY(0).multiplyScalar(8);
+      const pole = new THREE.Vector3(p.x, p.y, p.z).add(bend);
       const k = kneePoint(hip, goal, thigh, shin, pole);
       this.aim(up, hip, knee, new THREE.Vector3(k.x, k.y, k.z));
       this.aim(low, at(low), at(foot), goal);
@@ -827,14 +834,22 @@ export class SkaterRig {
       foot.rotation.set(0, yaw, pitch);
       const ankle = new THREE.Vector3(0, ANKLE, -0.05).applyEuler(foot.rotation).add(foot.position);
       const hip = this.hips[i].position.clone().applyMatrix4(this.pelvis.matrix);
-      const toes: Vec = { x: Math.sin(yaw) + (front ? 0.35 : -0.35), y: 0.1, z: Math.cos(yaw) };
-      const knee = kneePoint(hip, ankle, THIGH, SHIN, toes);
+      const knee = kneePoint(hip, ankle, THIGH, SHIN, kneePole(front, p.yaw - BASE.yaw));
       const k = new THREE.Vector3(knee.x, knee.y, knee.z);
       place(this.thighs[i], hip, k);
       place(this.shins[i], k, ankle);
     }
     this.followJoints();
   }
+}
+
+// Knees bend the way the chest faces, which in the riding stance is toward the camera (+z in the rig), a touch
+// outward from the stance's middle, whatever the feet do, so a squash, a slope or a landing never folds a knee
+// backward or sideways (zack). turn: the body's yaw away from the stance (a boardslide turns it down the rail).
+const KNEE_SPLAY = 0.15;
+function kneePole(front: boolean, turn = 0): Vec {
+  const x = front ? KNEE_SPLAY : -KNEE_SPLAY;
+  return { x: x * Math.cos(turn) + Math.sin(turn), y: 0, z: Math.cos(turn) - x * Math.sin(turn) };
 }
 
 // point a segment that hangs down its local -y from a to b
