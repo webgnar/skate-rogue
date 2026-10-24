@@ -121,6 +121,15 @@ and listed it here for review. Any of these can be flipped in the morning.
   Building fronts keep one draw each because each has its own window map; an atlas could cut those later.
   Anything that moves keeps its own outline: gates, fork signs, and props.
 - **Cardboard boxes break like paper**, not wood. The name matched wood's "board" first.
+- **Gear wear puffs (gameplay's wear event, #61).** Each part puffs from where it sits on Lou. The deck throws
+  wood splinters, the shoes scuff up a grey puff at the feet, the trucks spark, and the wheels drop rubber crumbs
+  behind him. "Busted" uses about 1.8x the particles of "worn". There's no flash and no camera kick, so it reads as
+  a nudge, not a hit.
+- **Landing dust follows the sim's impact (physics feel, #65).** It reads FEEL's thresholds instead of
+  hard-coded numbers. A kiss (under FEEL.soft) barely puffs, and a normal landing dusts. A heavy one (FEEL.heavy and
+  up) bursts and kicks the camera from 0.06, growing to a 0.2 cap, which stays well under a slam's kick. A sketchy
+  landing without a flip still gets the lopsided scuff. Grind sparks now follow what you grind (skater.material)
+  instead of rail versus ledge mode.
 
 ## Effects thread: fx6 leftovers
 
