@@ -4,10 +4,11 @@
 import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
-import { CrossCar, type Intersection } from './cross';
+import { CROSS, CrossCar, type Intersection } from './cross';
 
-// robotaxis, buses and box trucks drive your way (slower than you); oncoming cars come at you
-export type VehicleKind = 'robotaxi' | 'oncoming' | 'bus' | 'truck';
+// robotaxis, buses and box trucks drive your way (slower than you); oncoming cars come at you; a 'car' turned
+// onto your road from a cross street, a human driver who doesn't brake for you
+export type VehicleKind = 'robotaxi' | 'oncoming' | 'bus' | 'truck' | 'car';
 
 export interface Vehicle extends Car {
   id: number;
@@ -16,6 +17,7 @@ export interface Vehicle extends Car {
   cruise: number;
   lane: number; // 0 = the skate lane, 1 = pulled out to the back lane (no contact)
   leaving: boolean;
+  look?: number; // which paint, for a car that came from a cross street (it keeps its colour)
 }
 
 export interface Spawn {
@@ -116,11 +118,15 @@ export class Traffic {
   }
 
   step(skaterX: number): void {
-    for (const c of this.cross) c.step(skaterX);
+    for (const [i, c] of this.cross.entries()) {
+      c.step(skaterX);
+      if (c.turned) this.turnIn(c, i);
+    }
     while (this.next < this.plan.length && skaterX >= this.plan[this.next].at) this.spawn(this.plan[this.next++]);
 
     for (const v of this.vehicles) {
-      if (v.speed > 0 && !v.leaving && !(this.noBrake && v.kind === 'robotaxi')) {
+      if (v.kind === 'car') v.speed += (v.cruise - v.speed) * 0.04; // pulling away from the corner
+      else if (v.speed > 0 && !v.leaving && !(this.noBrake && v.kind === 'robotaxi')) {
         //brake hard when the skater rolls up behind
         const gap = v.x0 - skaterX;
         const target = gap > 0 && gap < TRAFFIC.brakeRange ? PHYS.baseSpeed * TRAFFIC.brakeSpeed : v.cruise;
@@ -137,6 +143,15 @@ export class Traffic {
     }
     //drop vehicles far behind the skater or gone from the lane long ago
     this.vehicles = this.vehicles.filter((v) => v.x1 > skaterX - 40 * TILE && v.x0 < skaterX + 60 * TILE);
+  }
+
+  // a cross street's car has turned onto the road: from here it's traffic, driving your way
+  private turnIn(c: CrossCar, i: number): void {
+    const cruise = PHYS.baseSpeed * CROSS.speed;
+    this.vehicles.push({
+      id: this.ids++, kind: 'car', speed: cruise * 0.3, cruise, lane: 0, leaving: false, look: i,
+      x0: c.box.x0, x1: c.box.x1, bottom: c.box.bottom, roof: c.box.roof,
+    });
   }
 
   // vehicles the skater can touch

@@ -1,9 +1,10 @@
-// Cross traffic (GDD: Traffic): at intersections, cars cut across the skate lane from the back lanes to the front.
+// Cross traffic (GDD: Traffic): at intersections, cars come out of the cross street and turn onto your road.
 // Logged overnight (2026-10-24): from floor 5, a floor gets an intersection or two on open street. Each has a
-// traffic light and a car that starts across when the skater comes within range, timed from the floor seed so it
-// sometimes blocks the lane as you arrive (ollie it, or land on its roof for a car hop), sometimes is just clearing,
-// and sometimes you beat it across. The light turns red for the cross street's car the moment it pulls off, and the
-// car shows in the back lane for over a second first, so it's always readable. Then it keeps cycling. Pure.
+// traffic light and a car that pulls out when the skater comes within range, timed from the floor seed so it
+// sometimes blocks the lane as you arrive (ollie it, or land on its roof for a car hop), sometimes is just turning,
+// and sometimes you beat it out. zack: it turns onto the skater's road, your way, and drives off as a car you catch
+// and can car-hop like any other. The light turns red the moment it pulls off, and the car shows in the back lane
+// for over a second first, so it's always readable. Then it keeps cycling. Pure.
 import { makeRng } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
@@ -14,16 +15,20 @@ export const CROSS = {
   h: 40,
   laneZ: 0.9, // tiles either side of the skate lane's middle that count as in the lane
   startZ: -9, // tiles: up the cross street it comes from
-  endZ: 4, // and the front lane it goes to
-  speedZ: 0.06, // tiles per frame across
-  period: 260, // frames between cars once it starts cycling: 217 across, then a gap on green
+  speedZ: 0.06, // tiles per frame out to the skate lane
+  turnFrames: 30, // then it swings round onto your road, your way
+  period: 260, // frames between cars once it starts cycling: 180 out and turning, then a gap on green
+  speed: 0.45, // share of base speed it drives off at, once it's turned
+  stopPast: 30 * TILE, // no more cars once the skater is this far past
   clear: 4 * TILE, // open street needed either side
   every: 40 * TILE, // at most one intersection per this much street
   street: 1.6, // tiles: half the cross street's width, either side of the car's middle
 };
 
-// frames from pulling off to reaching the skate lane
+// frames from pulling off to reaching the skate lane, and to its middle (where it turns)
 export const ARRIVE = (-CROSS.laneZ - CROSS.startZ) / CROSS.speedZ;
+export const TURN_AT = Math.round(-CROSS.startZ / CROSS.speedZ);
+const GONE_AT = TURN_AT + CROSS.turnFrames;
 
 export interface Intersection {
   x: number; // the car's left edge
@@ -32,45 +37,66 @@ export interface Intersection {
 
 export class CrossCar {
   z: number = CROSS.startZ;
+  turn = 0; // 0 nose to the camera, 1 turned onto your road
   t = -1; // frames since it pulled off; -1 waiting
+  turned = false; // this step it finished turning: the traffic takes it from here
+  stopped = false; // the skater is well past: no more cars
   readonly box: Car;
+  private readonly mid: number;
 
   constructor(
     readonly at: Intersection,
     streetY: number,
   ) {
+    this.mid = at.x + CROSS.w / 2;
     this.box = { x0: at.x, x1: at.x + CROSS.w, roof: streetY - CROSS.h, bottom: streetY };
   }
 
+  // out on the street this cycle (not yet handed to the traffic)
+  get out(): boolean {
+    return this.t >= 0 && this.t % CROSS.period < GONE_AT && !this.stopped;
+  }
+
   get inLane(): boolean {
-    return Math.abs(this.z) < CROSS.laneZ;
+    return this.out && Math.abs(this.z) < CROSS.laneZ;
   }
 
   // will it be in the lane `frames` from now?
   inLaneIn(frames: number): boolean {
-    if (this.t < 0) return false;
-    const z = this.zAt(this.t + frames);
-    return Math.abs(z) < CROSS.laneZ;
+    if (this.t < 0 || this.stopped) return false;
+    const k = (this.t + frames) % CROSS.period;
+    return k >= ARRIVE && k < GONE_AT;
   }
 
   zAt(t: number): number {
-    const k = t % CROSS.period;
-    return Math.min(CROSS.endZ, CROSS.startZ + k * CROSS.speedZ);
+    return Math.min(0, CROSS.startZ + (t % CROSS.period) * CROSS.speedZ);
   }
 
-  // red for the skater's street while a car is crossing or about to
+  // red for the skater's street while a car is pulling out or about to
   get red(): boolean {
-    return this.t >= 0 && this.z < CROSS.endZ;
+    return this.out;
   }
 
   step(skaterX: number): void {
+    this.turned = false;
     if (this.t < 0) {
       if (skaterX >= this.at.trigger) this.t = 0;
       else return;
     } else this.t++;
+    const k = this.t % CROSS.period;
+    //a new car pulls out only while the skater is still near
+    if (k === 0 && skaterX > this.mid + CROSS.stopPast) this.stopped = true;
     this.z = this.zAt(this.t);
+    this.turn = Math.min(1, Math.max(0, (k + 1 - TURN_AT) / CROSS.turnFrames));
+    //its length swings from nose-on to side-on as it turns
+    const w = CROSS.w + (TRAFFIC_CAR_W - CROSS.w) * this.turn;
+    this.box.x0 = this.mid - w / 2;
+    this.box.x1 = this.mid + w / 2;
+    if (k === GONE_AT - 1 && !this.stopped) this.turned = true;
   }
 }
+
+const TRAFFIC_CAR_W = 2 * TILE; // the length of a car on the road (TRAFFIC.carW)
 
 // where a floor's intersections go: open flat street, away from canals, parked cars, glass and the gate
 export function crossPlan(level: Level, seed: number): Intersection[] {
