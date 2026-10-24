@@ -825,6 +825,8 @@ export class Game {
   private worn(part: GearPart, level: 'worn' | 'busted'): void {
     const name = GEAR.names[part].toUpperCase();
     this.hud.callout(level === 'busted' ? `${name} BUSTED!` : `${name} WORN`, 'bad');
+    const p = this.sprite.mesh.position;
+    this.particles.gearWear(part, level === 'busted', p.x, p.y);
     this.hud.gear(this.sim.gear);
   }
 

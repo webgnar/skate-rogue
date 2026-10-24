@@ -121,6 +121,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   Building fronts keep one draw each because each has its own window map; an atlas could cut those later.
   Anything that moves keeps its own outline: gates, fork signs, and props.
 - **Cardboard boxes break like paper**, not wood. The name matched wood's "board" first.
+- **Gear wear puffs (gameplay's wear event, #61).** Each part puffs from where it sits on Lou. The deck throws
+  wood splinters, the shoes scuff up a grey puff at the feet, the trucks spark, and the wheels drop rubber crumbs
+  behind him. "Busted" uses about 1.8x the particles of "worn". There's no flash and no camera kick, so it reads as
+  a nudge, not a hit.
 
 ## Effects thread: fx6 leftovers
 

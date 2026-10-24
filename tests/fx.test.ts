@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
-import type { Particles } from '../src/render/particles';
+import { Particles } from '../src/render/particles';
 import { applyParams, FX } from '../src/render/fx-settings';
 import { VisorGlint, VISOR, VISOR_TINT } from '../src/render/visor-glint';
 import { mergeInk, splitSlabs } from '../src/render/kit-merge';
@@ -335,5 +335,19 @@ describe('kit merge', () => {
   it('cardboard breaks like paper', () => {
     expect(stuffOf('CardboardBox')).toBe('paper');
     expect(stuffOf('SandwichBoard')).toBe('wood');
+  });
+});
+
+describe('gear wear', () => {
+  it('puffs from the worn part, more when busted', () => {
+    const calls: { y: number; n: number }[] = [];
+    const fake = { spray: (_x: number, y: number, o: { n: number }) => calls.push({ y, n: o.n }) };
+    for (const part of ['deck', 'shoes', 'trucks', 'wheels'] as const) {
+      Particles.prototype.gearWear.call(fake as unknown as Particles, part, false, 0, 1);
+      Particles.prototype.gearWear.call(fake as unknown as Particles, part, true, 0, 1);
+    }
+    expect(calls).toHaveLength(8);
+    for (let i = 0; i < 8; i += 2) expect(calls[i + 1].n).toBeGreaterThan(calls[i].n);
+    expect(calls[2].y).toBeGreaterThan(calls[0].y); // shoes scuff higher than the deck
   });
 });
