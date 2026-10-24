@@ -4,7 +4,9 @@ import { addBoon, type Boon, type Held } from '../boons/defs';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
-import { FIRST_ROAD, label, rollFork, ROADS, type Road } from '../gen/roads';
+import { FIRST_ROAD, floorRoad, label, rollFork, ROADS, type Road } from '../gen/roads';
+import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
+import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { RunScore, SCORE } from '../run/score';
 import { loadSave, writeSave } from '../run/save';
 import { PickupView } from '../render/pickups';
@@ -44,6 +46,16 @@ export interface RunResult {
   bank: number; // Stoken kept across runs
 }
 
+export type ShopPick = { stock: number } | { slot: number } | null;
+
+export interface ShopView {
+  shop: ShopState;
+  picked: ShopPick;
+  slotPrice: number;
+  restockPrice: number;
+  maxSlots: number;
+}
+
 export interface Hud {
   floor(n: number, road: Road): void;
   callout(text: string, kind?: 'trick' | 'good' | 'bad'): void;
@@ -55,9 +67,12 @@ export interface Hud {
   score(score: number, combo: number, stoke: number, gnar: number): void; // stoke and gnar 0..1
   heat(value: number): void;
   warn(show: boolean): void; // an oncoming car is on its way
+  board(slots: Slots): void;
+  fire(slot: number): void; // a board slot just fired
+  shop(view: ShopView | null): void; // null hides the shop
 }
 
-type State = 'skate' | 'caught' | 'pick' | 'over';
+type State = 'skate' | 'caught' | 'pick' | 'shop' | 'over';
 
 const CAUGHT_BEAT_MS = 800;
 
@@ -103,6 +118,10 @@ export class Game {
   private gnarGlow = 0; // 0..1, eases with the gnar state
   private clock = 0;
   private ghostMesh: THREE.Mesh;
+  private board: Slots = newBoard();
+  private shop: ShopState | null = null;
+  private shopPick: ShopPick = null;
+  private shopVisits = 0;
 
   constructor(
     private seed: number,
@@ -144,6 +163,8 @@ export class Game {
     if (!this.fixedSeed) this.seed = Math.floor(Math.random() * 1e6);
     this.floor = 1;
     this.boons = [];
+    this.board = newBoard();
+    this.shopVisits = 0;
     this.run = new RunScore();
     this.road = FIRST_ROAD;
     this.level = this.makeLevel();
@@ -162,7 +183,7 @@ export class Game {
     this.warp.reset();
     this.particles.clear();
     this.input.clear();
-    this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : 0);
+    this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : 0, this.board);
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
@@ -172,6 +193,7 @@ export class Game {
     this.sprite.play('push');
     this.hud.floor(this.floor, this.road);
     this.hud.boons(this.boons);
+    this.hud.board(this.board);
     this.hud.money(this.run.cash, this.run.stoken);
     if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
   }
@@ -230,10 +252,83 @@ export class Game {
   }
 
   private advance(): void {
+    //the shop road: shop first, then the boon street after it
+    if (this.nextRoad.kind === 'shop') {
+      this.openShop();
+      return;
+    }
     this.floor++;
     this.road = this.nextRoad;
     this.level = this.makeLevel();
     this.startFloor();
+  }
+
+  private openShop(): void {
+    this.shopVisits++;
+    this.shop = { cash: this.run.cash, board: this.board.slice(), stock: rollStock(this.seed, this.shopVisits, 0), restocks: 0 };
+    this.shopPick = null;
+    this.openMenu('shop', performance.now());
+    this.showShop();
+  }
+
+  private showShop(): void {
+    if (!this.shop) return;
+    this.hud.shop({
+      shop: this.shop,
+      picked: this.shopPick,
+      slotPrice: BOARD.slotPrice,
+      restockPrice: restockPrice(this.shop),
+      maxSlots: BOARD.maxSlots,
+    });
+    this.hud.money(this.shop.cash, this.run.stoken);
+  }
+
+  // a tap in the shop: pick a mod then a slot to buy it there, or two slots to swap them
+  private shopTap(target: Element): void {
+    const s = this.shop;
+    if (!s) return;
+    const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-done]');
+    if (!el) return;
+    const pick = this.shopPick;
+    let next: ShopState | null = s;
+    if (el.dataset.stock !== undefined) {
+      const i = Number(el.dataset.stock);
+      this.shopPick = pick && 'stock' in pick && pick.stock === i ? null : s.stock[i] ? { stock: i } : null;
+    } else if (el.dataset.slot !== undefined) {
+      const j = Number(el.dataset.slot);
+      if (pick && 'stock' in pick) next = buy(s, pick.stock, j);
+      else if (pick && 'slot' in pick) next = pick.slot === j ? s : swap(s, pick.slot, j);
+      else {
+        this.shopPick = { slot: j };
+        next = s;
+      }
+      if (pick) this.shopPick = null;
+      if (!next) {
+        this.hud.callout('NOT ENOUGH CASH', 'bad');
+        next = s;
+      }
+    } else if (el.dataset.buyslot !== undefined) {
+      next = buySlot(s) ?? s;
+      this.shopPick = null;
+    } else if (el.dataset.restock !== undefined) {
+      next = restock(s, this.seed, this.shopVisits) ?? s;
+      this.shopPick = null;
+    } else if (el.dataset.done !== undefined) {
+      this.leaveShop();
+      return;
+    }
+    this.shop = next;
+    this.showShop();
+  }
+
+  private leaveShop(): void {
+    if (!this.shop) return;
+    this.run.cash = this.shop.cash;
+    this.board = this.shop.board;
+    this.shop = null;
+    this.hud.shop(null);
+    this.nextRoad = floorRoad(this.nextRoad);
+    this.advance();
   }
 
   private pickBoon(i: number): void {
@@ -273,7 +368,9 @@ export class Game {
   }
 
   frame(now: number): void {
-    const realDt = Math.min(0.1, (now - this.last) / 1000);
+    //never negative: a frame's timestamp can come from before the game was made, and a negative step would
+    //poison the time warp (and through it the camera and the physics clock) with NaN
+    const realDt = Math.max(0, Math.min(0.1, (now - this.last) / 1000));
     this.last = now;
     //game time: frozen on a slam's hit-stop, then slow motion
     const dt = realDt * this.warp.scale;
@@ -284,6 +381,8 @@ export class Game {
       const card = press ? this.input.lastTarget?.closest<HTMLElement>('[data-pick]') : null;
       if (card) this.choose(Number(card.dataset.pick));
       else if (press && this.input.lastTarget?.closest('[data-reroll]')) this.reroll();
+    } else if (this.state === 'shop') {
+      if (this.input.takePress() && this.input.lastTarget && now - this.menuAt >= MENU_LOCK_MS) this.shopTap(this.input.lastTarget);
     } else if (this.state === 'over') {
       if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.newRun();
     } else if (this.state === 'caught') {
@@ -417,12 +516,36 @@ export class Game {
     this.particles.debris(x, y, 1);
   }
 
+  // a board mod fired: the effects the sim can't do itself
+  private fire(effect: EffectId, slot: number): void {
+    this.hud.fire(slot);
+    switch (effect) {
+      case 'sparks':
+        this.run.addStyle(BOARD.sparkStyle);
+        this.particles.grindStart(...this.backTruck(), 1);
+        this.particles.grindStart(...this.backTruck(), 1);
+        break;
+      case 'cashBurst':
+        this.run.cash += BOARD.cashBurst;
+        this.hud.money(this.run.cash, this.run.stoken);
+        break;
+      case 'slowMo':
+        //no freeze: drop to half speed and ease back over the half second
+        this.warp.hit(0, BOARD.slowMoScale, BOARD.slowMoSecs);
+        break;
+      case 'shockwave':
+        this.burst(0.5, 0.15);
+        break;
+    }
+  }
+
   private burst(size: number, shake: number): void {
     this.impacts.spawn(toX(this.skater.x), toY(this.level, this.skater.y), size);
     this.view.shake(shake);
   }
 
   private handle(e: FloorSim['events'][number]): void {
+    if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type !== 'pickup') this.sprite.onEvent(e);
     const wasGnar = this.run.gnar;
     const bank = this.run.onEvent(e, this.skater.hsp);

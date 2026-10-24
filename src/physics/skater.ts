@@ -51,6 +51,7 @@ export class Skater {
   spare = 0; // banked bonus jump (Spare Change)
   onRailT = 0; // frames on the current rail (Feeble Frenzy)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
+  gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
 
   constructor(
@@ -79,6 +80,7 @@ export class Skater {
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
     if (this.floatT > 0) this.floatT--;
+    if (this.gravFlipT > 0) this.gravFlipT--;
     if (this.ghost && --this.ghost.ttl <= 0 && this.surface !== this.ghost) this.ghost = null;
     this.holdT = input.held && this.holdT > 0 ? this.holdT + 1 : 0;
 
@@ -171,9 +173,11 @@ export class Skater {
       let grav = PHYS.grav;
       if (this.floatT > 0) grav *= 0.5; // Floaty Flip
       if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Pressure Flip
-      this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
+      //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
+      if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - PHYS.grav));
+      else this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
       //let go while rising: a short hop (QFS variable jump); Late Flip keeps flips full height
-      const cut = !(this.flipped && this.mods.lateFlip);
+      const cut = !(this.flipped && this.mods.lateFlip) && this.gravFlipT === 0;
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
     } else {

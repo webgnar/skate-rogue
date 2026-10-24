@@ -1,6 +1,7 @@
 import './style.css';
 import { BOON_COLORS, boonById, stacksOf, type Boon, type Held } from './boons/defs';
-import { Game, type Hud } from './game/game';
+import { Game, type Hud, type ShopView } from './game/game';
+import { modDef, type ModId } from './board/mods';
 import { label } from './gen/roads';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
@@ -34,6 +35,42 @@ function card(b: Boon, i: number, held: Held[]): string {
   </button>`;
 }
 
+function modKind(id: ModId | null): string {
+  return id ? modDef(id).kind : 'empty';
+}
+
+// a board slot: the mod's short name, coloured by trigger or effect
+function slot(id: ModId | null, i: number, cls = ''): string {
+  return `<button class="slot ${modKind(id)} ${cls}" data-slot="${i}">${id ? esc(modDef(id).short) : ''}</button>`;
+}
+
+function shopHtml(v: ShopView): { slots: string; stock: string; hint: string } {
+  const { shop, picked } = v;
+  const sel = (i: number) => (picked && 'slot' in picked && picked.slot === i ? 'picked' : picked && 'stock' in picked ? 'target' : '');
+  let slots = shop.board.map((id, i) => slot(id, i, sel(i))).join('<i class="arrow">›</i>');
+  if (shop.board.length < v.maxSlots) {
+    slots += `<button class="slot add" data-buyslot ${shop.cash < v.slotPrice ? 'disabled' : ''}>+ SLOT<small>$${v.slotPrice}</small></button>`;
+  }
+  const stock = shop.stock
+    .map((id, i) => {
+      if (!id) return `<div class="mod sold">SOLD</div>`;
+      const m = modDef(id);
+      const on = picked && 'stock' in picked && picked.stock === i ? 'picked' : '';
+      const poor = shop.cash < m.price ? 'poor' : '';
+      return `<button class="mod ${m.kind} ${on} ${poor}" data-stock="${i}">
+        <span class="kind">${m.kind === 'trigger' ? 'TRIGGER' : 'EFFECT'}</span>
+        <b>${esc(m.name)}</b><span class="text">${esc(m.text)}</span><span class="price">$${m.price}</span>
+      </button>`;
+    })
+    .join('');
+  const hint = !picked
+    ? 'Tap a mod, then a slot to put it in · tap two slots to swap · triggers fire the effects to their right'
+    : 'stock' in picked
+      ? `Tap a slot for ${modDef(shop.stock[picked.stock]!).name}`
+      : 'Tap another slot to swap';
+  return { slots, stock, hint };
+}
+
 function makeHud(): Hud {
   const floorEl = document.getElementById('floor')!;
   const calloutEl = document.getElementById('callout')!;
@@ -50,6 +87,8 @@ function makeHud(): Hud {
   const stokeEl = document.getElementById('stoke')!;
   const stokeFill = stokeEl.querySelector('i')!;
   const roadEl = document.getElementById('road')!;
+  const boardEl = document.getElementById('board')!;
+  const shopEl = document.getElementById('shop')!;
   let level = 0;
   let held: Held[] = [];
   let timer = 0;
@@ -85,6 +124,28 @@ function makeHud(): Hud {
       level = next;
     },
     warn: (show) => (warnEl.hidden = !show),
+    board: (slots) => {
+      boardEl.innerHTML = slots.some(Boolean) ? slots.map((id) => `<span class="slot ${modKind(id)}">${id ? esc(modDef(id).short) : ''}</span>`).join('') : '';
+    },
+    fire: (i) => {
+      const el = boardEl.children[i] as HTMLElement | undefined;
+      if (!el) return;
+      el.classList.remove('fire');
+      void el.offsetWidth; // restart the flash
+      el.classList.add('fire');
+    },
+    shop: (v) => {
+      shopEl.hidden = !v;
+      if (!v) return;
+      const h = shopHtml(v);
+      shopEl.querySelector('.slots')!.innerHTML = h.slots;
+      shopEl.querySelector('.stock')!.innerHTML = h.stock;
+      shopEl.querySelector('.hint')!.textContent = h.hint;
+      shopEl.querySelector('.cash')!.textContent = `$${v.shop.cash}`;
+      const re = shopEl.querySelector<HTMLButtonElement>('.restock')!;
+      re.textContent = `RESTOCK $${v.restockPrice}`;
+      re.disabled = v.shop.cash < v.restockPrice;
+    },
     boons: (h) => {
       held = h;
       boonsEl.innerHTML = h.map(chip).join('');

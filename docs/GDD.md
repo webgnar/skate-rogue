@@ -153,8 +153,9 @@ spot; gap challenge and Shredtoshi's mark come in a later update):
 
 Built Oct 24, 2026 (first version): the high road is an overpass 2 tiles up over a plain runway (ollie + flip to get
 on it), signs on a gantry before it, a gate on each road. Launch roads so far: boon street (POP or GRIND), cash
-street, hot street and Stoken stash. Skate shop and underground spot come with board mods and carried-over Heat.
-Until the shop exists, cash buys boon rerolls.
+street, hot street and Stoken stash. The skate shop followed the same day with board mods: it can turn up from the
+floor 2 fork and is always offered at the end of every third floor, beside a boon street; after shopping you skate
+that boon street. The underground spot comes with carried-over Heat.
 
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
@@ -490,6 +491,12 @@ unlocked in the meta tree. The shop also sells a Heat cool-down, a boon reroll a
 This is the deepest system and the riskiest one for scope. Decided Oct 23, 2026: a **light version ships at launch**
 (3 slots, about 6 triggers and 8 effects, no modifiers), built after boons are fun (see Milestones). Modifiers,
 extra slots and a bigger mod pool come in updates.
+
+Built Oct 24, 2026 (light version): 3 slots (up to 5 at $60 each), 6 triggers and the 8 effects above. A trigger
+fires the effects to its right until the next trigger; an effect with no trigger to its left does nothing. The shop
+stocks 4 mods (at least one trigger and one effect) for $15 to $45, a slot and a restock ($10, then +5). Tap a mod
+then a slot to buy it there; tap two slots to swap them for free. The board shows as a strip of slots bottom left,
+and a slot flashes when it fires. No Heat cool-down or boon reroll in the shop yet.
 
 ## Meta progression
 

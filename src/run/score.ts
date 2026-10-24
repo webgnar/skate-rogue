@@ -91,6 +91,12 @@ export class RunScore {
     return null;
   }
 
+  // style from a board mod (Spark Trail): into the combo when there is one, straight to the score when not
+  addStyle(points: number): void {
+    if (this.combo > 0) this.comboPoints += points;
+    else this.score += points;
+  }
+
   clearFloor(floor: number): number {
     const pts = SCORE.floorClear * floor;
     this.score += pts;
