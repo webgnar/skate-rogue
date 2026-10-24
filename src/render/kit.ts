@@ -480,7 +480,7 @@ export function makeCar(x0: number, x1: number, bottom: number, roof: number, pa
   return car;
 }
 
-const ROAD_COLORS: Record<Road['kind'], string> = { boon: '#ffd23f', cash: '#5fe08a', hot: '#ff4a3a', stash: '#b98cff', shop: '#4ad8ff', escape: '#ff4a3a' };
+const ROAD_COLORS: Record<Road['kind'], string> = { boon: '#ffd23f', cash: '#5fe08a', hot: '#ff4a3a', stash: '#b98cff', shop: '#4ad8ff', spot: '#9cf05a', escape: '#ff4a3a' };
 
 // a street sign for one road: arrow, where it leads, and its danger in car icons
 function roadSign(road: Road, high: boolean): THREE.Mesh {
