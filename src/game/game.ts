@@ -521,8 +521,20 @@ export class Game {
     this.hud.money(this.shop.cash, this.run.stoken);
   }
 
+  // a card dropped in the shop (src/ui/shop-drag.ts): a mod onto a slot buys it there, a slot onto a slot swaps
+  // them; the slot and gear cards buy as they land on the board or the gear
+  shopDrop(card: HTMLElement, target: HTMLElement): void {
+    if (this.state !== 'shop' || !this.shop) return;
+    if (card.dataset.stock !== undefined || card.dataset.slot !== undefined) {
+      if (target.dataset.slot === undefined) return;
+      this.shopPick = card.dataset.stock !== undefined ? { stock: Number(card.dataset.stock) } : { slot: Number(card.dataset.slot) };
+      this.shopTap(target);
+    } else this.shopTap(card);
+  }
+
   // a tap in the shop: pick a mod then a slot to buy it there, or two slots to swap them
-  private shopTap(target: Element): void {
+  shopTap(target: Element): void {
+    if (this.state !== 'shop') return;
     const s = this.shop;
     if (!s) return;
     const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-gear],[data-done]');

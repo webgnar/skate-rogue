@@ -16,7 +16,7 @@ export const HEAT_STARS = [25, 50, 75, 90]; // Heat for each star
 export const GEAR_ORDER: GearPart[] = ['deck', 'trucks', 'wheels', 'shoes']; // the mockup's order
 
 // small inked icons for the gear bars
-const GEAR_ICONS: Record<GearPart, string> = {
+export const GEAR_ICONS: Record<GearPart, string> = {
   deck: '<svg viewBox="0 0 24 24"><rect x="9" y="1" width="6" height="22" rx="3" transform="rotate(35 12 12)" fill="#e8e0d0" stroke="#000" stroke-width="2"/><circle cx="8" cy="7" r="1.4" fill="#000"/><circle cx="16" cy="17" r="1.4" fill="#000"/></svg>',
   trucks: '<svg viewBox="0 0 24 24"><path d="M2 12h20v3H2zM9 8h6v4H9z" fill="#c9ced6" stroke="#000" stroke-width="1.8" stroke-linejoin="round"/><circle cx="3.5" cy="13.5" r="2.5" fill="#f2e8d0" stroke="#000" stroke-width="1.5"/><circle cx="20.5" cy="13.5" r="2.5" fill="#f2e8d0" stroke="#000" stroke-width="1.5"/></svg>',
   wheels: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f2e8d0" stroke="#000" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#9aa0a8" stroke="#000" stroke-width="1.6"/></svg>',

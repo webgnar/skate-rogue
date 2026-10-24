@@ -3,9 +3,10 @@ import './style.css';
 import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
-import { GEAR, GEAR_PARTS, wornness, type Gear } from './run/gear';
+import { GEAR, wornness } from './run/gear';
 import { modDef, type ModId } from './board/mods';
-import { HudView } from './ui/hud';
+import { GEAR_ICONS, GEAR_ORDER, HudView } from './ui/hud';
+import { bindShopDrag } from './ui/shop-drag';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
@@ -92,47 +93,52 @@ function slot(id: ModId | null, i: number, cls = ''): string {
   return `<button class="slot ${modKind(id)} ${cls}" data-slot="${i}">${id ? esc(modDef(id).short) : ''}</button>`;
 }
 
-function shopHtml(v: ShopView): { slots: string; stock: string; hint: string } {
+const KIND_TAG = { trigger: 'TRIGGER', effect: 'EFFECT', modifier: 'MODIFIER' } as const;
+
+// the skate shop as a card game (src/ui/shop-drag.ts): your setup across the top is where cards land, the hand of
+// cards along the bottom is the stock
+function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hint: string } {
   const { shop, picked } = v;
   const sel = (i: number) => (picked && 'slot' in picked && picked.slot === i ? 'picked' : picked && 'stock' in picked ? 'target' : '');
-  let slots = shop.board.map((id, i) => slot(id, i, sel(i))).join('<i class="arrow">›</i>');
+  const slots = shop.board.map((id, i) => slot(id, i, sel(i))).join('<i class="arrow">›</i>');
+  const parts = GEAR_ORDER.map((p) => {
+    const c = Math.round(v.gear[p]);
+    return `<div class="part ${gearTone(c)}" data-part="${p}"><span class="icon">${GEAR_ICONS[p]}</span>
+      <span class="name">${GEAR.names[p].toUpperCase()}</span><span class="cond"><i style="--c:${c}%"></i>${c}%</span></div>`;
+  }).join('');
+  const cards: string[] = shop.stock.map((id, i) => {
+    if (!id) return `<div class="card-shop sold"><b>SOLD</b></div>`;
+    const m = modDef(id);
+    const on = picked && 'stock' in picked && picked.stock === i ? 'picked' : '';
+    const poor = shop.cash < m.price ? 'poor' : '';
+    return `<button class="card-shop mod ${m.kind} ${on} ${poor}" data-stock="${i}">
+      <span class="kind">${KIND_TAG[m.kind]}</span><b>${esc(m.name)}</b><span class="text">${esc(m.text)}</span><span class="price">$${m.price}</span>
+    </button>`;
+  });
   if (shop.board.length < v.maxSlots) {
-    slots += `<button class="slot add" data-buyslot ${shop.cash < v.slotPrice ? 'disabled' : ''}>+ SLOT<small>$${v.slotPrice}</small></button>`;
+    cards.push(`<button class="card-shop extra ${shop.cash < v.slotPrice ? 'poor' : ''}" data-buyslot>
+      <span class="kind">BOARD</span><b>+1 SLOT</b><span class="text">Room for one more mod</span><span class="price">$${v.slotPrice}</span>
+    </button>`);
   }
-  const stock = shop.stock
-    .map((id, i) => {
-      if (!id) return `<div class="mod sold">SOLD</div>`;
-      const m = modDef(id);
-      const on = picked && 'stock' in picked && picked.stock === i ? 'picked' : '';
-      const poor = shop.cash < m.price ? 'poor' : '';
-      return `<button class="mod ${m.kind} ${on} ${poor}" data-stock="${i}">
-        <span class="kind">${m.kind === 'trigger' ? 'TRIGGER' : m.kind === 'modifier' ? 'MODIFIER' : 'EFFECT'}</span>
-        <b>${esc(m.name)}</b><span class="text">${esc(m.text)}</span><span class="price">$${m.price}</span>
-      </button>`;
-    })
-    .join('');
+  for (const p of GEAR_ORDER) {
+    const c = Math.round(v.gear[p]);
+    if (c >= 100) continue; // only worn parts are for sale
+    cards.push(`<button class="card-shop gearcard ${shop.cash < GEAR.price[p] ? 'poor' : ''}" data-gear="${p}">
+      <span class="kind">GEAR</span><span class="icon">${GEAR_ICONS[p]}</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>
+      <span class="text">Yours is at ${c}%</span><span class="price">$${GEAR.price[p]}</span>
+    </button>`);
+  }
   const hint = !picked
-    ? 'Tap a mod, then a slot to put it in · tap two slots to swap · triggers fire the effects to their right · a modifier changes the next effect'
+    ? 'Drag a card onto your board or gear to buy it · drag slots to swap them · triggers fire the effects to their right'
     : 'stock' in picked
-      ? `Tap a slot for ${modDef(shop.stock[picked.stock]!).name}`
+      ? `Drop or tap a slot for ${modDef(shop.stock[picked.stock]!).name}`
       : 'Tap another slot to swap';
-  return { slots, stock, hint };
+  return { slots, parts, hand: cards.join(''), hint };
 }
 
-// the shop's gear row: a bar per part, green to red as it wears (the HUD's bars are in src/ui/hud.ts)
+// the shop's gear tones: green to red as a part wears (the HUD's bars are in src/ui/hud.ts)
 function gearTone(c: number): string {
   return c <= GEAR.busted ? 'busted' : wornness(c) > 0 ? 'worn' : 'fresh';
-}
-
-function gearShop(g: Gear, cash: number): string {
-  return GEAR_PARTS.map((p) => {
-    const c = Math.round(g[p]);
-    const off = c >= 100 || cash < GEAR.price[p];
-    return `<button class="gearbuy ${gearTone(c)}" data-gear="${p}" ${off ? 'disabled' : ''}>
-      <b>NEW ${GEAR.names[p].toUpperCase()}</b><span class="cond"><i style="--c:${c}%"></i>${c}%</span>
-      <span class="text">worn by ${GEAR.wornBy[p]}</span><span class="price">${c >= 100 ? 'FRESH' : `$${GEAR.price[p]}`}</span>
-    </button>`;
-  }).join('');
 }
 
 function makeHud(): Hud {
@@ -208,8 +214,12 @@ function makeHud(): Hud {
       }
       const slotsEl = shopEl.querySelector('.slots')!;
       slotsEl.innerHTML = h.slots;
-      const now = [...slotsEl.querySelectorAll('.slot')].map((el) => el.className.replace(/ ?(target|picked)/g, '') + el.textContent);
-      slotsEl.querySelectorAll('.slot').forEach((el, i) => {
+      const partsEl = shopEl.querySelector('.parts')!;
+      partsEl.innerHTML = h.parts;
+      //a slot or a part that changed stamps in
+      const tiles = [...slotsEl.querySelectorAll('.slot'), ...partsEl.children];
+      const now = tiles.map((el) => el.className.replace(/ ?(target|picked)/g, '') + el.textContent);
+      tiles.forEach((el, i) => {
         if (shopSlots.length && shopSlots[i] !== now[i]) el.classList.add('pop');
       });
       shopSlots = now;
@@ -221,8 +231,7 @@ function makeHud(): Hud {
         window.setTimeout(() => spent.remove(), 900);
       }
       shopCash = v.shop.cash;
-      shopEl.querySelector('.stock')!.innerHTML = h.stock;
-      shopEl.querySelector('.gearshop')!.innerHTML = gearShop(v.gear, v.shop.cash);
+      shopEl.querySelector('.hand')!.innerHTML = h.hand;
       shopEl.querySelector('.hint')!.textContent = h.hint;
       shopEl.querySelector('.cash')!.textContent = `$${v.shop.cash}`;
       const re = shopEl.querySelector<HTMLButtonElement>('.restock')!;
@@ -358,6 +367,7 @@ async function start() {
       fn();
     });
   };
+  bindShopDrag(document.getElementById('shop')!, { tap: (el) => game.shopTap(el), drop: (card, to) => game.shopDrop(card, to) }, () => FX.reduceMotion);
   tapOnly('pausebtn', () => game.setPaused(true));
   //between runs: the unlock tree, and the daily run once it's unlocked. A change reloads into the new setup.
   const reloadWith = (key: string, on: boolean) => {
