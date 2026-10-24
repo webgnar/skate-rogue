@@ -13,7 +13,7 @@ puffy suit, and can later carry Blender-keyed clips and be retargeted to the QFS
   humanoid skeleton with Mixamo-style bone names.
 - The existing clips and leg IK keep posing the joint hierarchy; each frame the GLB's bones copy those joints, so
   every trick and the feet-on-board rule work unchanged. The board stays procedural for now.
-- The rigid capsule body stays as the fallback if the GLB fails to load.
+- The capsule body and the code-built board stay as fallbacks if a GLB fails to load.
 
 ## Capabilities
 
