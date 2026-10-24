@@ -570,18 +570,26 @@ export function deckPoint(p: Pose, x: number): Vec {
   };
 }
 
+// The board's turn as the feet see it. Nose and tail are alike, so after a shove-it (the board turned half round
+// under the skater) the feet land where they were, on what is now the other end. Only a turn of the body too (a 180)
+// takes the feet round with the board.
+export function feetYaw(p: Pose): number {
+  const body = p.yaw - BASE.yaw;
+  return body + wrap(p.boardYaw - body, Math.PI);
+}
+
 // where a foot's sole goes: on the deck, or its free target, blended by its "on" weight
 export function footTarget(p: Pose, front: boolean): Vec {
   const on = front ? p.footFOn : p.footBOn;
   const fx = front ? p.footFX : p.footBX;
   const free = { x: fx, y: front ? p.footFY : p.footBY, z: front ? p.footFZ : p.footBZ };
-  const deck = deckPoint(p, fx);
+  const deck = deckPoint({ ...p, boardYaw: feetYaw(p) }, fx);
   return { x: free.x + (deck.x - free.x) * on, y: free.y + (deck.y - free.y) * on, z: free.z + (deck.z - free.z) * on };
 }
 
 // which way a foot's toes point (yaw about y, 0 = toward the camera): its own turn, plus the board's spin while on it
 export function footYaw(p: Pose, front: boolean): number {
-  return (front ? p.footFTurn : p.footBTurn) + (front ? p.footFOn : p.footBOn) * p.boardYaw;
+  return (front ? p.footFTurn : p.footBTurn) + (front ? p.footFOn : p.footBOn) * feetYaw(p);
 }
 
 // Two-bone IK: where the knee goes for a hip and an ankle, bending toward `pole` (the way the toes point). The leg

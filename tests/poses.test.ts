@@ -70,6 +70,53 @@ describe('rig poses', () => {
     expect(sample(CLIPS.shuv2, clipLength(CLIPS.shuv2)).boardYaw).toBeCloseTo(-2 * Math.PI);
   });
 
+  it('after a shove-it the feet land where they were, on the other ends of the board', () => {
+    for (const name of ['shuv1', 'fsShuv', 'hardflip', 'varial', 'varialHeel']) {
+      const p = sample(CLIPS[name], clipLength(CLIPS[name]));
+      expect(Math.abs(Math.abs(p.boardYaw) - Math.PI), name).toBeLessThan(1e-6);
+      expect(footTarget(p, true).x, name).toBeGreaterThan(0.2);
+      expect(footTarget(p, false).x, name).toBeLessThan(-0.2);
+    }
+  });
+
+  it('180s turn the skater with the board: they land fakie, front foot trailing, back foot leading', () => {
+    for (const name of ['bs180', 'fs180']) {
+      const p = sample(CLIPS[name], clipLength(CLIPS[name]));
+      expect(Math.abs(p.yaw - BASE.yaw), name).toBeCloseTo(Math.PI);
+      expect(footTarget(p, true).x, name).toBeLessThan(-0.2);
+      expect(footTarget(p, false).x, name).toBeGreaterThan(0.2);
+      expect(p.footFOn + p.footBOn).toBe(2); // feet stay on, it's not a shove-it
+    }
+    expect(sample(CLIPS.bs180, 0.2).boardYaw).toBeLessThan(0); // backside: the tail swings behind the heels
+    expect(sample(CLIPS.fs180, 0.2).boardYaw).toBeGreaterThan(0);
+  });
+
+  it('360 flip: a full backside spin and a full kickflip roll together; hardflip: frontside half spin and kickflip roll', () => {
+    const tre = sample(CLIPS.tre, clipLength(CLIPS.tre));
+    expect(tre.boardYaw).toBeCloseTo(-2 * Math.PI);
+    expect(tre.boardRoll).toBeCloseTo(-2 * Math.PI);
+    const mid = sample(CLIPS.tre, 0.15);
+    expect(mid.boardYaw).toBeLessThan(-1);
+    expect(mid.boardRoll).toBeLessThan(-1);
+    expect(CLIPS.tre.keys[1].pose.footBZ!).toBeLessThan(0); // scooped behind
+    const hard = sample(CLIPS.hardflip, clipLength(CLIPS.hardflip));
+    expect(hard.boardYaw).toBeCloseTo(Math.PI);
+    expect(hard.boardRoll).toBeCloseTo(-2 * Math.PI);
+    expect(sample(CLIPS.hardflip, 0.15).boardPitch).toBeGreaterThan(1); // up on end between the legs
+  });
+
+  it('smith: the nose dips toward the camera (the side skated from); feeble: over the far side of the rail', () => {
+    const smith = sample(CLIPS.smith, 0);
+    expect(deckPoint(smith, BOARD.tail).z).toBeGreaterThan(0.1);
+    expect(deckPoint(smith, BOARD.tail).y).toBeLessThan(deckPoint(smith, -BOARD.bolts).y);
+    expect(Math.abs(deckPoint(smith, -BOARD.bolts).z)).toBeLessThan(1e-6); // back truck on the rail
+    const feeble = sample(CLIPS.feeble, 0);
+    expect(deckPoint(feeble, BOARD.tail).z).toBeLessThan(-0.1);
+    expect(Math.abs(deckPoint(feeble, -BOARD.bolts).z)).toBeLessThan(1e-6);
+    const fiveO = sample(CLIPS.fiveO, 0);
+    expect(deckPoint(fiveO, BOARD.tail).y).toBeGreaterThan(deckPoint(fiveO, -BOARD.bolts).y); // nose up
+  });
+
   it('boardslide: board across the rail on its middle, feet either side, chest down the rail', () => {
     const p = sample(CLIPS.grind2, 0);
     expect(p.boardYaw).toBeCloseTo(Math.PI / 2);
