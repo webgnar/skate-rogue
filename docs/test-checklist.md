@@ -109,10 +109,54 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 
 ## Effects and look
 
-- [ ] Neon shop signs and tail light smears at night; rain darkens the street and drips off roof edges.
-- [ ] Smash pieces fly from the prop's depth; chips and dust match the material.
-- [ ] Landing dust scales with the impact; grind sparks change with the surface; a puff when gear wears past a line.
-- [ ] The visor glint follows the neon.
+Quick ways in for these: `?seed=5&floor=12` is a dry night, `?seed=7&floor=12` a rainy night and `?seed=5&floor=6` a
+downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a district look. `?noflash` and
+`?nomotion` are the two halves of `?calm`, and `?heatcue` adds an edge pulse for Heat.
+
+**Smashing**
+
+- [ ] Each prop bursts into pieces, chips and dust where it stood, not off to one side or behind the wall. The
+      broken prop disappears and doesn't pop back.
+- [ ] Each material reads right: glass glitters, wood splinters with dust, metal sparks (CLANG!), cardboard puffs
+      like paper.
+- [ ] Only big hits get a comic word and a small camera kick: landing on a prop, a car-hop into one, a slam, or
+      rolling through fast. A row of cones at cruising speed just bursts, without filling the screen with words.
+- [ ] Hydrants and mailboxes don't break. They ring and spark.
+- [ ] **Tuning:** too many words or too few? Is the kick strong enough? Do the pieces last long enough (1.1 s)?
+
+**Landings, grinds and gear**
+
+- [ ] A kiss barely puffs. A heavy landing bursts dust and kicks the camera a little, and a huge drop kicks a bit
+      more, but never as much as a slam. A sketchy landing scuffs dust out lopsided.
+- [ ] A metal rail throws hot white-yellow sparks. A concrete ledge throws warmer sparks with grit.
+- [ ] Land in a rain puddle: a crown of water, and SPLSH! on a big drop.
+- [ ] When gear wears past a line, a puff comes from that part: splinters off the deck, a scuff from the shoes,
+      sparks off the trucks, rubber crumbs from the wheels. Busted is bigger than worn.
+- [ ] **Tuning:** is the heavy-landing kick too much over many landings in a row?
+
+**Night city** (`?floor=12`)
+
+- [ ] Windows light up, lamp cones pool on the sidewalk and roofs, and neon shop signs flicker gently. With
+      `?noflash` the signs hold steady.
+- [ ] Cars have headlight cones and red tail-light smears.
+- [ ] Lou's visor has a soft streak of light. It's pinker and brighter at night, cyan in `hightech`, and amber in
+      `hive`. It gleams for a moment on tricks and landings, but not with `?noflash`.
+- [ ] Exit gates glow and swell as you roll up to them.
+
+**Rain** (`?seed=7&floor=12`)
+
+- [ ] The street and buildings go darker and wet while the windows still glow. Water drips off roof edges, and
+      puddles shine and splash.
+
+**Heat**
+
+- [ ] From about Heat 45 a cop searchlight hunts around you, and by about 85 it holds on you. The drone sweeps a
+      red scan beam down the street.
+- [ ] Nothing ever flashes the whole screen, at any Heat.
+
+**Speed lines**
+
+- [ ] They only show at high speed and stay subtle (toned down after your note).
 
 ## HUD (PR #63, openspec ui1-hud)
 
@@ -175,4 +219,8 @@ Test on the iPhone in landscape, both ways round (notch on the left, then on the
 
 ## Performance
 
-- [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`.
+- [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
+      should show roughly 45 to 80 draws. Note the fps and the floor if it stutters.
+- [ ] If it stutters, does `?fx=low` fix it? That tier halves the particles, hides the lamp cones and drops the
+      street kit's outlines.
+- [ ] Buildings keep their black outlines after the draw-call cut, and their windows still light at night.
