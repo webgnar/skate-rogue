@@ -205,9 +205,10 @@ export class Traffic {
     return this.vehicles.filter((v) => v.stop && v.stop.t < STOP.pullFrames + STOP.dwell);
   }
 
-  // vehicles the skater can touch: not pulled out, and not still out in the back lane
+  // vehicles the skater can touch: under half out in the back lane. One pulling out stays solid until it's half
+  // out, the way a bus pulling in turns solid at half in (a roof doesn't vanish under you the frame it signals)
   get inLane(): Vehicle[] {
-    return this.vehicles.filter((v) => !v.leaving && v.lane < 0.5);
+    return this.vehicles.filter((v) => v.lane < 0.5);
   }
 
   // open car doors, as boxes to hit or land on
