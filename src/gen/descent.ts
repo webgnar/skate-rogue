@@ -4,6 +4,7 @@
 import { placeProps } from './props';
 import { crossPlan } from '../traffic/cross';
 import { doorPlan, stopPlan } from '../traffic/street';
+import { bountyPlan } from '../run/bounty';
 import { TILE } from '../physics/constants';
 import { buildLevel, CurvedRail, type Level, type Pickup, type Surface } from '../physics/level';
 import type { Fork } from './roads';
@@ -252,6 +253,8 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);
   level.doors = doorPlan(level, level.layout.seed);
+  const bounty = bountyPlan(level, level.layout.seed);
+  if (bounty && !opts.short) level.bounty = bounty;
   level.props = placeProps(level);
   return level;
 }

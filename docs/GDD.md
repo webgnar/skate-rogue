@@ -197,7 +197,7 @@ on every slam, and three close together catch you. See docs/overnight-decisions.
   at the end.
 - **Stoke cash-out:** a long combo pays cash when you land it and nothing if you slam, so you decide how greedy to be.
 - **Wanted posters:** an AI poster on a floor offers a bounty: finish the floor with Heat above 50 for double
-  Stoken.
+  Stoken. Built Oct 24, 2026 (src/run/bounty.ts): from floor 2, one floor in three; at least 3 Stoken.
 
 ### 4. Boons for traffic and the chase
 
