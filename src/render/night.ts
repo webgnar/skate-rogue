@@ -1,0 +1,319 @@
+// The night city (fx7): windows that light up, street lamps, headlight beams, and the AI's billboards and Flock
+// cameras that turn to watch the skater. Every light here is fake (additive meshes sharing a few materials), so
+// night costs a handful of draw calls and no real lights. How lit it all is follows the mood's neon value.
+import * as THREE from 'three';
+import type { Level } from '../physics/level';
+import { toX, toY } from './kit';
+import { cityTiles } from './textures';
+import { inkify, toon } from './toon';
+
+export const NIGHT = {
+  windowsLit: 0.42, // share of window cells lit
+  windowGlow: 1.3, // emissive strength at full night
+  lampEvery: 8, // tiles between street lamps
+  roofLampEvery: 7,
+  camEvery: 3, // a Flock camera on every third lamp
+  billboards: 3, // per floor
+  watch: 10, // tiles: billboards and cameras turn to the skater inside this
+};
+
+// window pixels in each QFS facade tile
+const WINDOW_COLORS: Record<number, number[][]> = {
+  108: [[0, 0, 0]],
+  111: [[0, 0, 0]],
+  109: [[125, 125, 125], [102, 102, 102]],
+  123: [[41, 41, 41], [34, 34, 34]],
+  110: [[71, 136, 178], [28, 70, 97]],
+  124: [[71, 136, 178], [28, 70, 97]],
+};
+const LIGHTS = [
+  [255, 206, 130],
+  [255, 190, 110],
+  [255, 224, 170],
+  [170, 210, 255],
+  [120, 170, 255], // a TV
+];
+
+export const SLOGANS = ['SKATING IS A CRIME', 'STAY IN YOUR LANE', 'REPORT ALL SKATERS', 'COMPLIANCE IS FREEDOM', "WALK. DON'T ROLL.", 'THE AI LOVES YOU'];
+
+function rng(seed: number): () => number {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s ^= s << 13;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 4294967296;
+  };
+}
+
+// a 4 x 4 tile mask of lit windows for a facade tile, repeated over a building front
+const masks = new Map<string, THREE.Texture>();
+function windowMask(t: number, variant: number): THREE.Texture | null {
+  const key = `${t}:${variant}`;
+  const hit = masks.get(key);
+  if (hit) return hit;
+  const sheet = cityTiles();
+  const colors = WINDOW_COLORS[t];
+  if (!sheet || !colors) return null;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d', { willReadFrequently: true })!;
+  for (let i = 0; i < 16; i++) g.drawImage(sheet, (t % 15) * 32, Math.floor(t / 15) * 32, 32, 32, (i % 4) * 32, Math.floor(i / 4) * 32, 32, 32);
+  const img = g.getImageData(0, 0, 128, 128);
+  const r = rng(t * 131 + variant * 977 + 7);
+  const cells = Array.from({ length: 16 }, () => (r() < NIGHT.windowsLit ? LIGHTS[Math.floor(r() * LIGHTS.length)] : null));
+  for (let y = 0; y < 128; y++) {
+    for (let x = 0; x < 128; x++) {
+      const o = (y * 128 + x) * 4;
+      const lit = cells[Math.floor(y / 32) * 4 + Math.floor(x / 32)];
+      const win = colors.some(([cr, cg, cb]) => img.data[o] === cr && img.data[o + 1] === cg && img.data[o + 2] === cb);
+      const [lr, lg, lb] = lit && win ? lit : [0, 0, 0];
+      img.data[o] = lr;
+      img.data[o + 1] = lg;
+      img.data[o + 2] = lb;
+      img.data[o + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.magFilter = tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  masks.set(key, tex);
+  return tex;
+}
+
+// a soft additive beam: brightest at its source (the cone's tip), fading down
+function beamMaterial(color: number): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        #ifdef USE_INSTANCING
+          gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        #else
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        #endif
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uColor;
+      uniform float uAmt;
+      uniform float uPool; // 1: a round pool on the ground, 0: a cone
+      varying vec2 vUv;
+      void main() {
+        float a = uPool > 0.5 ? pow(max(0.0, 1.0 - length(vUv - 0.5) * 2.0), 1.6) * 0.55 : pow(vUv.y, 1.8) * 0.3;
+        gl_FragColor = vec4(uColor * a * uAmt, 1.0);
+        #include <colorspace_fragment>
+      }
+    `,
+    uniforms: { uColor: { value: new THREE.Color(color) }, uAmt: { value: 0 }, uPool: { value: 0 } },
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+
+const lampCone = beamMaterial(0xffc87a);
+const lampPool = beamMaterial(0xffc87a);
+lampPool.uniforms.uPool.value = 1;
+const headCone = beamMaterial(0xfff2c8);
+const headPool = beamMaterial(0xfff2c8);
+headPool.uniforms.uPool.value = 1;
+const BEAMS = [lampCone, lampPool, headCone, headPool];
+
+const coneGeo = new THREE.ConeGeometry(1.1, 2.6, 16, 1, true).translate(0, -1.3, 0); // tip at the origin
+const poolGeo = new THREE.PlaneGeometry(3, 3).rotateX(-Math.PI / 2);
+const headConeGeo = new THREE.ConeGeometry(1.1, 5, 12, 1, true).translate(0, -2.5, 0).rotateZ(Math.PI / 2); // along +x
+const headPoolGeo = new THREE.PlaneGeometry(5, 2.2).rotateX(-Math.PI / 2).translate(3, 0, 0);
+
+// headlight beams for a car whose front is +x, wheels on y = 0
+export function headlights(len: number): THREE.Group {
+  const g = new THREE.Group();
+  const cone = new THREE.Mesh(headConeGeo, headCone);
+  cone.position.set(len / 2, 0.45, 0.3);
+  cone.scale.set(1, 0.35, 0.6);
+  const pool = new THREE.Mesh(headPoolGeo, headPool);
+  pool.position.set(len / 2, 0.02, 0.3);
+  g.add(cone, pool);
+  return g;
+}
+
+function billboardTexture(text: string): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 128;
+  const g = c.getContext('2d')!;
+  const grad = g.createLinearGradient(0, 0, 0, 128);
+  grad.addColorStop(0, '#1a1036');
+  grad.addColorStop(1, '#3a0f4a');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 256, 128);
+  //the AI's eye
+  g.fillStyle = '#ff2a4a';
+  g.beginPath();
+  g.arc(36, 64, 18, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#ffffff';
+  g.beginPath();
+  g.arc(36, 64, 6, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#e8f4ff';
+  g.textAlign = 'left';
+  g.textBaseline = 'middle';
+  const words = text.split(' ');
+  const half = Math.ceil(words.length / 2);
+  g.font = 'italic 900 26px "Arial Black", "Helvetica Neue", sans-serif';
+  g.fillText(words.slice(0, half).join(' '), 64, 46, 184);
+  g.fillText(words.slice(half).join(' '), 64, 82, 184);
+  //scanlines
+  g.fillStyle = 'rgba(0,0,0,0.25)';
+  for (let y = 0; y < 128; y += 4) g.fillRect(0, y, 256, 1);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+interface Watcher {
+  obj: THREE.Object3D; // turns to face the skater
+  x: number;
+  base: number; // resting yaw
+  screen?: THREE.MeshBasicMaterial;
+}
+
+export class NightCity {
+  readonly group = new THREE.Group();
+  private windowMats: THREE.MeshToonMaterial[] = [];
+  private watchers: Watcher[] = [];
+  private amount = 0;
+  private t = 0;
+  private readonly poleMat = toon({ color: 0x2c2a34 });
+  private readonly headMat = toon({ color: 0x3a3844, emissive: 0x000000 });
+  private readonly camMat = toon({ color: 0xd8dbe2 });
+  private readonly eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2030 });
+
+  // lamps, cameras and billboards for a floor, and the window masks on its kit
+  build(level: Level, kit: THREE.Object3D, seed: number, floor: number): void {
+    for (const c of [...this.group.children]) this.group.remove(c);
+    this.watchers = [];
+    const r = rng(seed * 4241 + floor * 613);
+
+    //windows
+    this.windowMats = [];
+    kit.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      for (const m of [o.material].flat()) {
+        const f = m.userData?.facade as { w: number; h: number; t: number } | undefined;
+        if (!f || !(m instanceof THREE.MeshToonMaterial)) continue;
+        const mask = windowMask(f.t, Math.floor(r() * 3));
+        if (!mask) continue;
+        const tex = mask.clone();
+        tex.repeat.set(f.w / 4, f.h / 4);
+        tex.offset.set(Math.floor(r() * 4) / 4, Math.floor(r() * 4) / 4);
+        tex.needsUpdate = true;
+        m.emissiveMap = tex;
+        m.emissive.setRGB(1, 1, 1);
+        m.emissiveIntensity = this.amount * NIGHT.windowGlow;
+        m.needsUpdate = true;
+        this.windowMats.push(m);
+      }
+    });
+
+    //lamp spots: along the back of the sidewalk, and the back of wide roofs
+    const lamps: { x: number; y: number; z: number }[] = [];
+    let c = Math.round(toX(level.finaleX));
+    for (let x = c + 3; x < level.street.length - 2; x += NIGHT.lampEvery) if (level.street[Math.floor(x)]) lamps.push({ x, y: 0, z: -2.9 });
+    for (const s of level.surfaces) {
+      if (s.kind !== 'roof') continue;
+      const y = toY(level, s.y);
+      if (y < 0.5) continue;
+      for (let x = toX(s.x0) + 2; x < toX(s.x1) - 1.5; x += NIGHT.roofLampEvery) lamps.push({ x, y, z: -2.6 });
+    }
+    const n = lamps.length;
+    if (n) {
+      const pole = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 3, 0.12).translate(0, 1.5, 0), this.poleMat, n);
+      const head = new THREE.InstancedMesh(new THREE.BoxGeometry(0.22, 0.12, 0.9).translate(0, 3, 0.35), this.headMat, n);
+      const cone = new THREE.InstancedMesh(coneGeo, lampCone, n);
+      const pool = new THREE.InstancedMesh(poolGeo, lampPool, n);
+      const m = new THREE.Matrix4();
+      lamps.forEach((l, i) => {
+        m.makeTranslation(l.x, l.y, l.z);
+        pole.setMatrixAt(i, m);
+        head.setMatrixAt(i, m);
+        m.makeTranslation(l.x, l.y + 2.94, l.z + 0.7);
+        cone.setMatrixAt(i, m);
+        m.makeTranslation(l.x, l.y + 0.03, l.z + 1.6);
+        pool.setMatrixAt(i, m);
+      });
+      for (const im of [cone, pool]) {
+        im.frustumCulled = false;
+        im.renderOrder = 3;
+      }
+      inkify(pole, { toon: false });
+      inkify(head, { toon: false });
+      this.group.add(pole, head, cone, pool);
+      //Flock cameras on some poles: a white box with a red eye, turning to follow the skater
+      lamps.forEach((l, i) => {
+        if (i % NIGHT.camEvery !== 1) return;
+        const cam = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.2, 0.2), this.camMat);
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), this.eyeMat);
+        eye.position.set(0.18, -0.02, 0);
+        cam.add(body, eye);
+        cam.position.set(l.x, l.y + 2.55, l.z + 0.12);
+        inkify(cam);
+        this.group.add(cam);
+        this.watchers.push({ obj: cam, x: l.x, base: Math.PI / 2 });
+      });
+    }
+
+    //the AI's billboards on posts behind the street and on roofs
+    const spots = lamps.filter((_, i) => i % NIGHT.camEvery === 0).sort(() => r() - 0.5).slice(0, NIGHT.billboards);
+    for (const s of spots) {
+      const b = new THREE.Group();
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.2, 0.16).translate(0, 1.1, 0), this.poleMat);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.75, 0.16), this.poleMat);
+      frame.position.y = 3;
+      const screen = new THREE.MeshBasicMaterial({ map: billboardTexture(SLOGANS[Math.floor(r() * SLOGANS.length)]) });
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 1.55), screen);
+      face.position.set(0, 3, 0.09);
+      const turn = new THREE.Group();
+      turn.add(frame, face);
+      b.add(post, turn);
+      b.position.set(s.x + 3.5, s.y, s.z - 0.3);
+      inkify(b);
+      this.group.add(b);
+      this.watchers.push({ obj: turn, x: s.x + 3.5, base: 0, screen });
+    }
+  }
+
+  // night 0..1 (from the mood)
+  setNight(amount: number): void {
+    this.amount = amount;
+    for (const m of this.windowMats) m.emissiveIntensity = amount * NIGHT.windowGlow;
+    for (const b of BEAMS) {
+      b.uniforms.uAmt.value = amount;
+      b.visible = amount > 0.02;
+    }
+    this.headMat.emissive.setRGB(amount, amount * 0.8, amount * 0.5);
+  }
+
+  // skater x in world units; heat 0..100 brightens the billboards
+  update(dt: number, skaterX: number, heat: number): void {
+    this.t += dt;
+    for (const w of this.watchers) {
+      const dx = skaterX - w.x;
+      const near = Math.abs(dx) < NIGHT.watch;
+      //cameras face along +x by default: yaw them toward the skater; billboards swing a little either way
+      const want = w.screen ? (near ? THREE.MathUtils.clamp(dx * 0.06, -0.55, 0.55) : 0) : near ? (dx < 0 ? Math.PI * 0.85 : Math.PI * 0.15) - Math.PI / 2 : 0;
+      w.obj.rotation.y += (want - w.obj.rotation.y) * Math.min(1, dt * 4);
+      if (w.screen) {
+        const k = 0.75 + 0.25 * this.amount + (heat / 100) * 0.5 * (0.8 + 0.2 * Math.sin(this.t * 10));
+        w.screen.color.setRGB(k, k, k);
+      }
+    }
+  }
+}

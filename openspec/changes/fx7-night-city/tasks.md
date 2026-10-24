@@ -1,8 +1,8 @@
 # Tasks
 
-- [ ] 1.1 Window masks from the QFS facade tiles; lit windows by mood with flicker
-- [ ] 1.2 Lamp posts with fake cones, pools and halos (seeded placement)
-- [ ] 1.3 Headlight cones and pools, brake light trails, from dusk
-- [ ] 1.4 Neon signs, AI billboards that track and brighten with Heat, Flock cameras
+- [x] 1.1 Window masks from the QFS facade tiles; lit windows by mood with flicker
+- [x] 1.2 Lamp posts with fake cones, pools and halos (seeded placement)
+- [ ] 1.3 Headlight cones and pools, brake light trails, from dusk (cones and pools done; brake trails left)
+- [ ] 1.4 Neon signs, AI billboards that track and brighten with Heat, Flock cameras (billboards and cameras done; neon signs left)
 - [ ] 1.5 Visor highlight and neon rim light on Lou
-- [ ] 1.6 Screenshots at dusk and night; draw calls
+- [x] 1.6 Screenshots at dusk and night (headless, floors 9 to 16, seed 5); 37 draw calls on the night street

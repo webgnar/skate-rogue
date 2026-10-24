@@ -20,6 +20,11 @@ export const CITY = {
 
 let tiles: HTMLImageElement | null = null;
 
+// the loaded Chicago tile sheet (null before loadCityTiles)
+export function cityTiles(): HTMLImageElement | null {
+  return tiles;
+}
+
 export async function loadImage(url: string): Promise<HTMLImageElement> {
   const img = new Image();
   img.src = url;
