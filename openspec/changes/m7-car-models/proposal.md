@@ -15,6 +15,7 @@ visible models: traffic is the main hazard and the enforcer cruiser is the Heat 
   lines up. `makeCar` stretches a model to other hitbox sizes and falls back to the box car if the GLB is missing.
 - `public/models/drone.glb` (`art/drone.py`): the high-Heat enforcer drone, with four rotors the game spins.
 - `src/render/models.ts` loads the GLBs at startup; the cruiser's flashing light bar stays code-built on the roof.
+- A CTA-style bus (`Bus`) and a box truck (`BoxTruck`, roll-up door open, box in the truck's paint) in `cars.glb`, at their hitbox sizes (6 x 2.25 and 4 x 2 tiles). The truck's tailgate ramp stays code-built because its length comes from the level.
 
 ## Capabilities
 

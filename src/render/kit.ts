@@ -337,6 +337,14 @@ export function makeBus(x0: number, x1: number, bottom: number, roof: number): T
   const bus = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;
+  const body3d = model('Bus'); // art/cars.py: 6 long, roof 2.25 up
+  if (body3d) {
+    body3d.scale.set(w / 6, h / 2.25, 1);
+    body3d.position.y = bottom;
+    bus.add(body3d);
+    bus.position.x = x0 + w / 2;
+    return bus;
+  }
   const body = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.25, 1.9), new THREE.MeshLambertMaterial({ color: 0xeeeef2 }));
   body.position.y = bottom + 0.25 + (h - 0.25) / 2;
   const stripe = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.22, 1.92), new THREE.MeshLambertMaterial({ color: 0x1f5fbf }));
@@ -368,6 +376,22 @@ export function makeTruck(x0: number, x1: number, bottom: number, roof: number, 
   const floorY = bottom + 0.45;
   const cabW = 1.1;
   const boxW = w - cabW;
+  //the tailgate: a diamond-plate ramp down to the street, its lip a hazard-striped edge (its length is the level's)
+  const len = Math.hypot(gate, floorY - bottom);
+  const ramp = new THREE.Mesh(new THREE.BoxGeometry(len, 0.06, 1.6), new THREE.MeshLambertMaterial({ color: 0xb8bcc4 }));
+  ramp.position.set(-w / 2 - gate / 2, bottom + (floorY - bottom) / 2, 0);
+  ramp.rotation.z = Math.atan2(floorY - bottom, gate);
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.6), new THREE.MeshBasicMaterial({ color: 0xffb020 }));
+  lip.position.set(-w / 2 - gate + 0.04, bottom + 0.04, 0);
+  truck.add(ramp, lip);
+  const body3d = model('BoxTruck', paint); // art/cars.py: 4 long, box floor 0.45 and roof 2 up
+  if (body3d) {
+    body3d.scale.set(w / 4, h / 2, 1);
+    body3d.position.y = bottom;
+    truck.add(body3d);
+    truck.position.x = x0 + w / 2;
+    return truck;
+  }
   const boxMat = new THREE.MeshLambertMaterial({ color: paint });
   const box = new THREE.Mesh(new THREE.BoxGeometry(boxW, h - 0.45, 1.9), boxMat);
   box.position.set(-w / 2 + boxW / 2, floorY + (h - 0.45) / 2, 0);
@@ -380,14 +404,7 @@ export function makeTruck(x0: number, x1: number, bottom: number, roof: number, 
   glass.position.set(w / 2 - 0.35, bottom + 0.3 + h * 0.5, 0);
   const chassis = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, 1.7), new THREE.MeshLambertMaterial({ color: 0x222228 }));
   chassis.position.y = bottom + 0.35;
-  //the tailgate: a diamond-plate ramp down to the street, its lip a hazard-striped edge
-  const len = Math.hypot(gate, floorY - bottom);
-  const ramp = new THREE.Mesh(new THREE.BoxGeometry(len, 0.06, 1.6), new THREE.MeshLambertMaterial({ color: 0xb8bcc4 }));
-  ramp.position.set(-w / 2 - gate / 2, bottom + (floorY - bottom) / 2, 0);
-  ramp.rotation.z = Math.atan2(floorY - bottom, gate);
-  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.6), new THREE.MeshBasicMaterial({ color: 0xffb020 }));
-  lip.position.set(-w / 2 - gate + 0.04, bottom + 0.04, 0);
-  truck.add(box, inside, cab, glass, chassis, ramp, lip);
+  truck.add(box, inside, cab, glass, chassis);
   const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.24, 12).rotateX(Math.PI / 2);
   const tire = new THREE.MeshLambertMaterial({ color: 0x111114 });
   for (const wx of [-w / 2 + 0.6, w / 2 - 0.6]) {
