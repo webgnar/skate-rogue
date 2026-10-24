@@ -1,5 +1,6 @@
 # Builds Gnar Run's street structures and exports public/models/street.glb: the Chicago L (the elevated train
-# tracks you hide under on the helicopter escape) and the traffic signal at each cross street.
+# tracks you hide under on the helicopter escape), the traffic signal at each cross street and the bounty's
+# wanted board.
 #
 #   blender -b -P art/street.py            (or run it from Blender's Text Editor; it rebuilds the scene)
 #
@@ -11,6 +12,8 @@
 #   ElColumnCap   the bracket at the top of a column reaching out under the girder, origin at the column's top
 #   TrafficSignal the pole and three-lamp head, origin at the foot of the pole, lenses unlit
 #   SignalRed / SignalGreen   the lit lenses, in place over the unlit ones (the game shows one at a time)
+#   WantedBoard   the bounty's notice board: two posts, a framed plank panel and a little roof, origin on the ground;
+#                 the game pins its poster (a canvas texture) over the panel, 1.2 x 1.6 centred 1.95 up
 import math
 import os
 import sys
@@ -42,6 +45,9 @@ COLORS = {
     'sigHead': 0x1C2420,
     'sigLens': 0x2A2622,  # an unlit lens
     'sigAmber': 0x5A4418,
+    'boardWood': 0x6A4428,
+    'boardPlank': 0x7E5634,
+    'boardRoof': 0x3A2A1E,
     'sigRed': 0xFF2A2A,  # glow
     'sigGreen': 0x3AFF7A,  # glow
 }
@@ -151,13 +157,31 @@ def lens(m, name, mat, z):
     return join([link(mat, bm, m[mat])], name)
 
 
+def wanted_board(m):
+    wood, plank, roof = bmesh.new(), bmesh.new(), bmesh.new()
+    for x in (-0.62, 0.62):  # posts, sunk in the sidewalk, up past the panel
+        box(wood, x - 0.05, x + 0.05, -0.05, 0.05, 0, 2.95)
+    for i in range(6):  # the panel's planks, behind the poster
+        z = 1.1 + i * 1.7 / 6
+        box(plank, -0.66, 0.66, -0.035 + (i % 2) * 0.005, 0.04, z + 0.008, z + 1.7 / 6 - 0.008)
+    # a frame round the poster (1.2 x 1.6), standing just proud of it
+    box(wood, -0.7, 0.7, -0.08, -0.02, 2.75, 2.83)
+    box(wood, -0.7, 0.7, -0.08, -0.02, 1.07, 1.15)
+    for x in (-0.66, 0.66):
+        box(wood, x - 0.04, x + 0.04, -0.08, -0.02, 1.07, 2.83)
+    # a little gabled roof over it
+    prism(roof, [(-0.85, 2.92), (0.85, 2.92), (0, 3.18)], -0.2, 0.14)
+    return join([link('boardWood', wood, m['boardWood']), link('boardPlank', plank, m['boardPlank']),
+                 link('boardRoof', roof, m['boardRoof'])], 'WantedBoard')
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     m = {k: material(k, v) for k, v in COLORS.items()}
-    obs = [el_span(m), el_column(m), el_column_cap(m), signal(m), lens(m, 'SignalRed', 'sigRed', 3.33), lens(m, 'SignalGreen', 'sigGreen', 2.87)]
+    obs = [el_span(m), el_column(m), el_column_cap(m), signal(m), lens(m, 'SignalRed', 'sigRed', 3.33), lens(m, 'SignalGreen', 'sigGreen', 2.87), wanted_board(m)]
     # laid out in the file for a look: a span on a column, the signal beside it
     at = {'ElSpan': (0, 0, 4), 'ElColumn': (0.6, 0, 0), 'ElColumnCap': (0.6, 0, 3.9), 'TrafficSignal': (-2, 0, 0),
-          'SignalRed': (-2, 0, 0), 'SignalGreen': (-2, 0, 0)}
+          'SignalRed': (-2, 0, 0), 'SignalGreen': (-2, 0, 0), 'WantedBoard': (-4, 0, 0)}
     obs[1].scale = (1, 1, 3.9)
     for ob in obs:
         ob.location = at[ob.name]

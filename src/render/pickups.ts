@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { inkify } from './toon';
 import type { Level } from '../physics/level';
 import { toX, toY } from './kit';
+import { flatGeometry } from './models';
 
 const POP_SECS = 0.18;
 
@@ -27,14 +28,17 @@ export class PickupView {
     this.slots = [];
     const cash = level.pickups.filter((p) => p.kind === 'cash').length;
     const stoken = level.pickups.length - cash;
+    //art/pickups.py: a coin with a rim and a raised $, a brilliant-cut gem; colours baked into the vertices
+    const coin = flatGeometry('Coin');
+    const gem = flatGeometry('Stoken');
     this.coins = new THREE.InstancedMesh(
-      new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12).rotateX(Math.PI / 2),
-      new THREE.MeshLambertMaterial({ color: 0xffcf3a, emissive: 0x6a4a00 }),
+      coin ?? new THREE.CylinderGeometry(0.2, 0.2, 0.06, 12).rotateX(Math.PI / 2),
+      new THREE.MeshLambertMaterial(coin ? { vertexColors: true, emissive: 0x3a2800 } : { color: 0xffcf3a, emissive: 0x6a4a00 }),
       Math.max(1, cash),
     );
     this.gems = new THREE.InstancedMesh(
-      new THREE.OctahedronGeometry(0.32),
-      new THREE.MeshLambertMaterial({ color: 0xb98cff, emissive: 0x4a2a9a }),
+      gem ?? new THREE.OctahedronGeometry(0.32),
+      new THREE.MeshLambertMaterial(gem ? { vertexColors: true, emissive: 0x2a1460 } : { color: 0xb98cff, emissive: 0x4a2a9a }),
       Math.max(1, stoken),
     );
     this.coins.count = cash;

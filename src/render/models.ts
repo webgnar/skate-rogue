@@ -11,7 +11,7 @@ const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlu
 export async function loadModels(base: string): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
-    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb'].map(async (file) => {
+    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb'].map(async (file) => {
       try {
         const gltf = await loader.loadAsync(`${base}models/${file}`);
         gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));
