@@ -32,6 +32,7 @@ export function floorLevel(s: FloorSpec): Level {
     short: s.road.kind === 'stash',
     gravity: BIOME_GRAVITY[district] ?? 1,
     twist: DISTRICT_TWIST[district],
+    hills: district === 'chicago',
   }).level;
 }
 

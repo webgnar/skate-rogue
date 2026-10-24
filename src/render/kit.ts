@@ -12,6 +12,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
+import { buildForeground, buildHill } from './hillside';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
@@ -57,7 +58,10 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
 
   //--- the alley far below the descent: you only see it if you fall ---------------------------
   const first = Math.round(toX(level.finaleX));
-  if (first > 0) {
+  //act 1's hillside and the near side of the street (hillside.ts)
+  if (level.hills) buildHill(level, kit);
+  if (city) buildForeground(level, kit);
+  if (first > 0 && !level.hills) {
     const alley = slab(first, 3, STREET_DEPTH, lambert(null, 0x18121f), lambert(null, 0x221a2c), sideMat);
     alley.position.set(first / 2, -2.5, STREET_BACK + STREET_DEPTH / 2);
     kit.add(alley);
@@ -156,7 +160,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
 
   //the world's landmark stands in for a building every few screens, the first one soon after the start
   let mark = skin.landmark ? first + 6 + randInt(rng, 8) : Infinity;
-  for (let bx = -8; bx < cols + 20; ) {
+  for (let bx = level.hills ? first - 2 : -8; bx < cols + 20; ) {
     if (bx >= mark) {
       const lm = model(skin.landmark!);
       if (lm && !inGap(bx, bx + LANDMARK_W)) {
@@ -191,6 +195,8 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
     const w = toX(s.x1 - s.x0);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
+    //the hill draws its own ground
+    if (level.hills && s.x0 < level.finaleX && !s.side && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
     if (s.kind === 'roof') {
       //a roof at street level is just more street (the descent's last run-out)
       if (y < 0.5) {

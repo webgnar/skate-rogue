@@ -13,6 +13,7 @@ import type { Fork } from './roads';
 import { makeLayout } from './layout';
 import { FORK_PIECE, PIECES, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
+import { buildHills } from './hills';
 
 export const DESCENT = {
   stepRise: 16, // px per step
@@ -39,7 +40,7 @@ function finaleCount(floor: number): number {
 
 const range = (rng: Rng, lo: number, hi: number) => lo + randInt(rng, hi - lo + 1);
 
-interface Builder {
+export interface Builder {
   x: number; // px, where the next section starts
   h: number; // tiles above the street
   surfaces: Surface[];
@@ -55,6 +56,7 @@ export interface FloorOptions {
   fork?: Fork; // where the roads at the end lead
   gravity?: number; // the district's (BIOME_GRAVITY): validation skates the floor in it
   twist?: Twist; // the district's twist (src/gen/twists.ts): validation skates that too
+  hills?: boolean; // act 1's San Francisco hillside instead of rooftops (src/gen/hills.ts)
 }
 
 export const PICKUPS = {
@@ -65,7 +67,7 @@ export const PICKUPS = {
 };
 
 // a line of coins along a straight run, one per tile
-function coinLine(b: Builder, x0: number, y0: number, x1: number, y1: number): void {
+export function coinLine(b: Builder, x0: number, y0: number, x1: number, y1: number): void {
   const n = Math.max(1, Math.round((x1 - x0) / TILE));
   for (let i = 0; i <= n; i++) {
     const t = i / n;
@@ -74,7 +76,7 @@ function coinLine(b: Builder, x0: number, y0: number, x1: number, y1: number): v
 }
 
 // an arc of coins from one edge to another, like the jump that clears it
-function coinArc(b: Builder, x0: number, y0: number, x1: number, y1: number, peak: number): void {
+export function coinArc(b: Builder, x0: number, y0: number, x1: number, y1: number, peak: number): void {
   const n = Math.max(3, Math.round((x1 - x0) / TILE));
   for (let i = 0; i <= n; i++) {
     const t = i / n;
@@ -82,11 +84,11 @@ function coinArc(b: Builder, x0: number, y0: number, x1: number, y1: number, pea
   }
 }
 
-function yOf(streetY: number, h: number): number {
+export function yOf(streetY: number, h: number): number {
   return streetY - h * TILE;
 }
 
-function terrace(b: Builder, streetY: number, tiles: number, rng: Rng, features: boolean): void {
+export function terrace(b: Builder, streetY: number, tiles: number, rng: Rng, features: boolean): void {
   const y = yOf(streetY, b.h);
   b.surfaces.push({ kind: 'roof', x0: b.x, x1: b.x + tiles * TILE, y, row: -1 });
   if (features && tiles >= 8) {
@@ -104,7 +106,7 @@ function terrace(b: Builder, streetY: number, tiles: number, rng: Rng, features:
   b.x += tiles * TILE;
 }
 
-function stairs(b: Builder, streetY: number, steps: number, rail: boolean): void {
+export function stairs(b: Builder, streetY: number, steps: number, rail: boolean): void {
   const y = yOf(streetY, b.h);
   const x1 = b.x + steps * DESCENT.stepRun;
   const y1 = y + steps * DESCENT.stepRise;
@@ -204,7 +206,7 @@ export function buildDescent(seed: number, floor: number, streetY: number, short
 // the whole floor: descent, then the street finale (its start piece is the runway where the last roof meets the street)
 export function buildFloor(seed: number, floor: number, library: Piece[] = PIECES, opts: FloorOptions = {}): Level {
   const finale = buildLevel(makeLayout(seed, floor, districtPieces(library, opts.twist), finaleCount(floor), opts.fork ? [FORK_PIECE] : []));
-  const d = buildDescent(seed, floor, finale.streetY, opts.short);
+  const d = opts.hills ? buildHills(seed, floor, finale.streetY, opts.short) : buildDescent(seed, floor, finale.streetY, opts.short);
   //every floor has a Stoken somewhere: if the sections rolled none, one goes up high over the first stair set
   if (!d.pickups.some((p) => p.kind === 'stoken')) {
     const set = d.surfaces.find((s) => s.kind === 'stairs')!;
@@ -251,6 +253,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     pickups,
     fork,
     danger: opts.danger ?? 2,
+    ...(opts.hills ? { hills: true } : {}),
     ...(opts.gravity !== undefined && opts.gravity !== 1 ? { gravity: opts.gravity } : {}),
   };
   addSideLine(level, level.layout.seed);

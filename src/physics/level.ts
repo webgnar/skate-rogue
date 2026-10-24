@@ -22,6 +22,7 @@ export interface Surface {
   side?: boolean; // part of a floor's side line (src/gen/sidelines.ts)
   crumble?: boolean; // Greece's ruins: it falls a moment after you land on it
   conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
+  hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
@@ -178,6 +179,7 @@ export interface Level {
   tutorial?: { x: number; text: string }[]; // the tutorial floor's prompts (src/gen/tutorial.ts)
   currents?: { x0: number; x1: number; push: number }[]; // Atlantis: the water pushes you in the air (src/gen/twists.ts)
   ceiling?: { x0: number; x1: number; y: number }[]; // the Art Museum's low ceilings: their undersides
+  hills?: boolean; // the descent is a hillside you skate down (src/gen/hills.ts), not floating rooftops
 }
 
 const CAR_W = 2 * TILE;
