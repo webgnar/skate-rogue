@@ -109,6 +109,13 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Placement has one source: the sim's level.props.** I asked gameplay and models to agree on this, so the
   index in a smash event hides the right prop.
 
+## Effects thread: fx6 leftovers
+
+- **The wet look is darker kit, not a shine.** Toon materials have no specular, and a gloss shader on every kit
+  material would cost too much, so in rain the street kit goes up to 22% darker. The puddles carry the
+  reflections.
+- **Drips fall from roof and overpass corners** near the camera, scaled by how hard it rains.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor

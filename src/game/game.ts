@@ -108,6 +108,8 @@ const SLAM_EASE = 0.55;
 const FLOW_FROM = 1.8;
 //flip trails show for this long after a trick; a landing this soon after the trick is sketchy
 const FLIP_TRAIL_SECS = 0.35;
+//drips a second off the roof edges in a downpour-strength rain
+const DRIPS = 6;
 const SKETCHY_SECS = 0.3;
 const FLOW_RANGE = 0.7;
 const GNAR_TRAIL = 40; // sparkles per second
@@ -136,7 +138,9 @@ export class Game {
   private carry = 0; // Heat carried into the next floor
   private swapping = false; // the pick on screen is the underground spot's swap
   private flip: { rgb: number[]; left: number; at: number } | null = null; // the last trick thrown this air
-  private fallSpeed = 0; // how fast the skater was falling before this step
+  private fallSpeed = 0;
+  private dripEdges: { x: number; y: number }[] = []; // roof corners water drips from
+  private dripT = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
   private readonly chopper = new ChopperView();
   private readonly droneView = new DroneView();
@@ -268,6 +272,10 @@ export class Game {
     this.view.setLevel(this.level, this.seed, this.floor);
     const rain = this.applyMood();
     this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
+    this.dripEdges = this.level.surfaces
+      .filter((s) => s.kind === 'roof' || s.kind === 'overpass')
+      .flatMap((s) => [toX(s.x0), toX(s.x1)].map((x) => ({ x, y: toY(this.level, s.y) })))
+      .filter((e) => e.y > 0.5);
     this.view.zoom.reset();
     this.view.follow(this.skater.x, this.skater.y);
     this.sprite.play('push');
@@ -666,6 +674,17 @@ export class Game {
     const p = this.sprite.mesh.position;
     const wading = this.state === 'skate' && sk.mode === 'roll' && this.view.puddles.at(p.x, p.y) !== null;
     if (wading) this.particles.wade(p.x, p.y, Math.abs(sk.hsp) / PHYS.baseSpeed, dt);
+    //in the rain, water drips off the roof edges round the view
+    const rain = this.view.rain.amount;
+    if (rain > 0 && this.dripEdges.length) {
+      this.dripT -= dt * rain * DRIPS;
+      while (this.dripT <= 0) {
+        this.dripT += 1;
+        const near = this.dripEdges.filter((e) => Math.abs(e.x - p.x) < 10);
+        const e = near[Math.floor(Math.random() * near.length)];
+        if (e) this.particles.spray(e.x + (Math.random() - 0.5) * 0.15, e.y - 0.05, { n: 1, colors: [[0.8, 0.9, 1]], life: [0.6, 0.9], size: [0.07, 0.09], speed: [0, 0.1], angle: [-Math.PI / 2, -Math.PI / 2], grav: 16, drag: 0, alpha: 0.8, z: 0.2, floor: 0 });
+      }
+    }
     const glow = this.trafficView.heatLights.glow;
     this.view.puddles.update(dt, this.view.renderer.getDrawingBufferSize(this.puddleRes), glow.k > 0 ? [glow] : [], p, wading);
   }
