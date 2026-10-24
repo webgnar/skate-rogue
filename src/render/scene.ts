@@ -17,6 +17,7 @@ export class StreetView {
   private lead = 4;
   private pixelRatio: number;
   private slowMs = 0;
+  private shakeAmt = 0;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -86,9 +87,17 @@ export class StreetView {
     this.camY = snap ? ty : this.camY + (ty - this.camY) * k;
     //pull back a little at speed
     const dist = 19 + Math.max(0, hsp - 3.5) * 0.8;
-    this.camera.position.set(this.camX, this.camY + 4, dist);
-    this.camera.lookAt(this.camX, this.camY, 0);
+    //a slam shakes the camera, dying off fast
+    const sx = (Math.random() - 0.5) * this.shakeAmt;
+    const sy = (Math.random() - 0.5) * this.shakeAmt;
+    this.shakeAmt *= 0.86;
+    this.camera.position.set(this.camX + sx, this.camY + 4 + sy, dist);
+    this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0);
     if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
+  }
+
+  shake(amount: number): void {
+    this.shakeAmt = Math.max(this.shakeAmt, amount);
   }
 
   resize(): void {
