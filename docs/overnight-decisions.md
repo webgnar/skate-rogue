@@ -410,3 +410,19 @@ and listed it here for review. Any of these can be flipped in the morning.
   two trucks), the models thread's `absorb()` in the rig animates them, and the effects thread scales landing dust and
   camera kick by impact. Sketchy landings don't touch score or combo; that's the gameplay thread's call.
 
+## Physics feel thread, round 2 (collisions, gravity, gear)
+
+- **Landings are swept now.** A fuzz test (random button mashing on 64 floors with three boon builds) found you
+  could drop past the far corner of a roof, ledge or bar in one step at speed, and miss a car roof's near corner. The
+  sim now checks where your path crosses a surface during the step, as well as where your feet end up. Landing past
+  the far end puts you on the edge, and you roll off from there. Rising onto a curved rail that climbs faster than you
+  now catches you too, like the bank fix. The fuzz test stays in the suite (tests/collision.test.ts).
+- **District gravity is ready in the physics, not wired yet.** `Level.gravity` scales everything gravity touches (air,
+  slopes, rail pull, friction). `BIOME_GRAVITY` has the GDD's numbers (Atlantis 0.8, Outer Space 0.6). The gameplay
+  thread sets it when acts get their districts, and must set it before the validator runs: a floor that clears at
+  normal gravity doesn't always clear at 0.8, because you overshoot landings.
+- **Worn gear rocks you more.** Worn trucks (loose bushings) rock you more on rail entries, and worn wheels (coned,
+  flat-spotted) rock you more on sketchy landings: up to 1.6x at fully worn. It's feel only, with no extra speed loss.
+- **Manual balance: skipped.** The GDD only mentions manualing on a bus roof in passing. There's no manual mechanic
+  in a one-button game yet, so it's a design question for zack, not a physics gap.
+

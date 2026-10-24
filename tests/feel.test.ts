@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PHYS, TILE } from '../src/physics/constants';
-import { FEEL, landQuality, normalImpact } from '../src/physics/feel';
+import { BIOME_GRAVITY, FEEL, landQuality, normalImpact } from '../src/physics/feel';
 import { CurvedRail, type Level, type Surface } from '../src/physics/level';
 import { Skater, type SkaterEvent } from '../src/physics/skater';
 import { TRICK_CATCH, TRICK_ROLL } from '../src/physics/tricks';
@@ -298,5 +298,66 @@ describe('flying into a bank', () => {
       for (let f = 0; f < 200 && sk.mode !== 'bail'; f++) sk.step({ pressed: f === at, held: f >= at && f < at + 20 });
       expect(sk.mode, `ollie on frame ${at}`).not.toBe('bail');
     }
+  });
+});
+
+describe('district gravity', () => {
+  it("an ollie goes 1/g as high: Outer Space's 0.6 about 1.67x", () => {
+    const apex = (gravity?: number) => {
+      const sk = new Skater({ ...levelOf(FLAT), gravity });
+      let top = sk.y;
+      run(sk, 80, (f) => {
+        top = Math.min(top, sk.y);
+        return { pressed: f === 0, held: true };
+      });
+      return sk.level.streetY - top;
+    };
+    expect(apex(0.6) / apex()).toBeCloseTo(1 / 0.6, 1);
+    expect(BIOME_GRAVITY.space).toBe(0.6);
+    expect(BIOME_GRAVITY.atlantis).toBe(0.8);
+  });
+
+  it('the same drop lands softer in low gravity', () => {
+    const street = levelOf(FLAT).streetY;
+    const drop = (gravity?: number) => {
+      const y = street - 4 * TILE;
+      const base = withExtras([{ kind: 'roof', x0: 0, x1: 4 * TILE, y, row: -1 }], [], { x: TILE, y });
+      const sk = new Skater({ ...base, gravity });
+      run(sk, 140);
+      return lands(sk)[0].impact!;
+    };
+    expect(drop(0.6)).toBeLessThan(drop() * 0.85);
+  });
+});
+
+describe('worn gear', () => {
+  it('worn wheels rock you more on a sketchy landing, worn trucks on a rail', () => {
+    const street = levelOf(FLAT).streetY;
+    const rockLanding = (speed: number) => {
+      const y = street - 8 * TILE;
+      const sk = new Skater(withExtras([{ kind: 'roof', x0: 0, x1: 4 * TILE, y, row: -1 }], [], { x: TILE, y }));
+      sk.gear = { ollie: 1, trick: 1, grind: 1, speed };
+      let w = 0;
+      for (let f = 0; f < 200; f++) {
+        sk.step({ pressed: false, held: false });
+        w = Math.max(w, Math.abs(sk.feel.wobble));
+      }
+      return w;
+    };
+    expect(rockLanding(0.8)).toBeGreaterThan(rockLanding(1) * 1.2);
+    const rockRail = (grind: number) => {
+      const rail = new CurvedRail(3 * TILE, street - 40, 30 * TILE, street - 40, 0);
+      const sk = new Skater(withExtras([], [rail], { x: 3 * TILE + 4, y: street - 50 }));
+      sk.gear = { ollie: 1, trick: 1, grind, speed: 1 };
+      sk.mode = 'air';
+      sk.vsp = 8;
+      let w = 0;
+      for (let f = 0; f < 30; f++) {
+        sk.step({ pressed: false, held: false });
+        w = Math.max(w, Math.abs(sk.feel.wobble));
+      }
+      return w;
+    };
+    expect(rockRail(0.7)).toBeGreaterThan(rockRail(1) * 1.2);
   });
 });

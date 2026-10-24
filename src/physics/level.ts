@@ -165,6 +165,7 @@ export interface Level {
   escape?: EscapeSite; // an escape floor
   props: Prop[]; // street props, scenery and smashables (src/gen/props.ts)
   crossings: Intersection[]; // cross streets with cross traffic (src/traffic/cross.ts)
+  gravity?: number; // the district's gravity, a share of QFS's (BIOME_GRAVITY in src/physics/feel.ts); left out = 1
 }
 
 const CAR_W = 2 * TILE;

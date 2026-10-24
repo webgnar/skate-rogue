@@ -104,6 +104,18 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 - [ ] **Open design question:** should ledges be grindable (a concrete 50-50 that bites harder and wobbles less)? It's
       ready in the physics; ledges are only platforms today.
 
+**Collisions (physics round 2)**
+
+- [ ] Clip the near corner of a roof, ledge, bar or car roof as you come down: you land on it rather than slipping
+      past. Drop off the far end of something at speed with your feet still over it: you land on the edge, then roll off.
+- [ ] With fast builds (New Wheels, Slingshot, Kicker Boost) you never fall through a roof, bar, bank or car roof.
+
+**Worn gear and gravity**
+
+- [ ] With worn wheels (red on the HUD) a sketchy landing rocks Lou more, and with worn trucks a hard rail landing does too.
+- [ ] Low gravity districts (Atlantis 0.8, Outer Space 0.6) aren't wired to floors yet. When they are, an ollie should
+      go much higher and drops land softer.
+
 **Lip pops**
 
 - [ ] Ollie right at the edge of a roof or the top of a stair set: a "lip" pop gives +30 style and counts in the combo.
