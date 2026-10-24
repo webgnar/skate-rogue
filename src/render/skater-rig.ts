@@ -229,6 +229,11 @@ export class SkaterRig {
       mesh.frustumCulled = false; // bind-pose bounds don't follow flips and slams
       const swap = (src: THREE.Material) => {
         const std = src as THREE.MeshStandardMaterial;
+        if (std.name === 'VisorGlint') {
+          // a streak of light across the visor; the effects drive its opacity with the night's neon
+          mesh.name = 'VisorGlint';
+          return new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false });
+        }
         if (std.name === 'visor') {
           return new THREE.MeshPhongMaterial({ color: COLORS.visor, shininess: 90, specular: 0x8899ff, flatShading: true });
         }

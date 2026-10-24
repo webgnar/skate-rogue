@@ -48,6 +48,7 @@ COLORS = {
     'visor': 0x0D0D14,
     'shoe': 0x17171B,
     'sole': 0xEEEEEE,
+    'VisorGlint': 0xFFFFFF,
 }
 
 # name: (head, tail, parent)
@@ -195,11 +196,19 @@ def helmet(mats):
     bmesh.ops.delete(bm, geom=drop, context='FACES')
     bmesh.ops.translate(bm, verts=bm.verts, vec=c)
     visor = link('visor', bm, [mats['visor']])
+    # a glint across the visor: a thin diagonal streak just proud of it, which the game lights up with the neon
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=30, radius=0.226)
+    def streak(p):
+        return p.y < -0.12 and -0.15 < p.x < 0.02 and abs((p.z - 0.075) + 0.45 * (p.x + 0.06)) < 0.016
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not streak(f.calc_center_median())], context='FACES')
+    bmesh.ops.translate(bm, verts=bm.verts, vec=c)
+    glint = link('VisorGlint', bm, [mats['VisorGlint']])
     rim = bmesh.new()  # trim ring where the helmet meets the suit
     bmesh.ops.create_cone(rim, cap_ends=False, segments=12, radius1=0.14, radius2=0.12, depth=0.06)
     bmesh.ops.translate(rim, verts=rim.verts, vec=(0, 0, HEAD_Z + 0.0))
     collar = link('collar', rim, [mats['trim']])
-    return [(ob, 'Head'), (visor, 'Head'), (collar, 'Neck')]
+    return [(ob, 'Head'), (visor, 'Head'), (glint, 'Head'), (collar, 'Neck')]
 
 
 def box(name, size, at, mat, bevel=0.0):
