@@ -4,12 +4,15 @@
 // Roadblock (act 1, and until their own set pieces exist acts 2-4): the cruisers have closed the street. A parked
 // car, a CTA bus and a line of cruisers bumper to bumper, then a second bus: ollie onto the first car and car-hop
 // across the roofs (every hop refills your jumps), or slam into the side and lose your speed with the Heat climbing.
-// The finale (act 5) doubles it, and its gate is the way out of the city: clear it and the run is won.
+// The helicopter (act 2) hunts you along the street; the drone swarm (act 4) dives into the lane in patterns to be
+// stomped (src/sim/drones.ts). The finale (act 5) doubles the roadblock under the helicopter, and its gate is the
+// way out of the city: clear it and the run is won.
 import { TILE } from '../physics/constants';
 import { buildLevel, type Car, type EscapeKind, type Level } from '../physics/level';
 import { EXIT_PIECE, PIECES, START_PIECE, type Piece } from './pieces';
 import { CHUNK_W, makeLayout } from './layout';
 import { clearable } from './validate';
+import { droneSpots } from '../sim/drones';
 import { makeRng, randInt } from './rng';
 
 export const ACTS = 5;
@@ -20,6 +23,7 @@ export const ESCAPE = {
   streetPieces: 5,
   carH: 40, // a parked car's roof
   cruiserH: 44,
+  droneFlats: 5, // pieces of flat street for the drone waves
   busH: 72, // a bus: past a plain ollie (50 px), within an ollie and a flip, or a hop off a car roof
   actCash: (act: number) => 30 + 15 * act,
   actStoken: (act: number) => 3 * act,
@@ -34,13 +38,19 @@ export function endsAct(floor: number): boolean {
   return floor % FLOORS_PER_ACT === 0;
 }
 
-// acts 3 and 4 get their own set pieces with their biomes; until then they repeat 1 and 2
+// act 3 gets its own set piece with its biome; until then it repeats the roadblock
 export function escapeKind(act: number): EscapeKind {
   if (act >= ACTS) return 'finale';
+  if (act === 4) return 'drones';
   return act % 2 === 0 ? 'chopper' : 'roadblock';
 }
 
-export const ESCAPE_NAMES: Record<EscapeKind, string> = { roadblock: 'ROADBLOCK', chopper: 'HELICOPTER', finale: 'THE LAST ROADBLOCK' };
+export const ESCAPE_NAMES: Record<EscapeKind, string> = {
+  roadblock: 'ROADBLOCK',
+  chopper: 'HELICOPTER',
+  drones: 'DRONE SWARM',
+  finale: 'THE LAST ROADBLOCK',
+};
 
 export const L_TRACKS = {
   height: 3.5 * TILE, // underside above the street: clear of an ollie and a flip, so you can't hit it
@@ -74,10 +84,11 @@ export function buildEscape(seed: number, act: number): Level {
   const kind = escapeKind(act);
   const floor = act * FLOORS_PER_ACT;
   //the street run: library pieces at this act's depth, then flat street for the set piece and the gate
-  const chopper = kind !== 'roadblock';
+  const chopper = kind === 'chopper' || kind === 'finale';
+  const swarm = kind === 'drones';
   const run = makeLayout(seed * 3 + act * 92821, floor, PIECES, ESCAPE.streetPieces + (chopper ? 3 : 0));
   const blocks = kind === 'finale' ? 2 : kind === 'roadblock' ? 1 : 0;
-  const flats = Math.max(1, blocks * 3);
+  const flats = swarm ? ESCAPE.droneFlats : Math.max(1, blocks * 3);
   const pieces = [START_PIECE, ...run.pieces.slice(1, -1), ...new Array<Piece>(flats).fill(FLAT), EXIT_PIECE];
   const grid = run.grid.map((_, r) =>
     pieces.map((p) => (r === 0 ? '.'.repeat(CHUNK_W) : p.rows[Math.min(r - 1, 9)])).join(''),
@@ -97,6 +108,12 @@ export function buildEscape(seed: number, act: number): Level {
     for (let c = chopperFrom + 14 * TILE; c < level.exitX - 10 * TILE; c += (e0 + randInt(rng, e1 - e0 + 1)) * TILE) {
       covers.push({ x0: c, x1: c + (l0 + randInt(rng, l1 - l0 + 1)) * TILE, y: level.streetY - L_TRACKS.height });
     }
+  }
+  //the swarm: waves of drones over the flat street before the gate
+  if (swarm) {
+    const rng = makeRng(seed * 7 + act * 4093);
+    const drones = droneSpots(x0, level.exitX - 4 * TILE, rng);
+    return { ...level, danger: 3, escape: { kind, act, x0, x1: level.exitX, covers, drones } };
   }
   return {
     ...level,

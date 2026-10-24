@@ -17,6 +17,7 @@ export const SCORE = {
   railStart: 75,
   grindPerSec: 60,
   carHop: 150,
+  drone: 250, // stomping a drone out of the sky, on top of the hop
   stoken: 100,
   cashCoin: 1,
   floorClear: 250,

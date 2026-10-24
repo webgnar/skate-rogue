@@ -68,9 +68,18 @@ and listed it here for review. Any of these can be flipped in the morning.
   and Speed Kicks pull out of it, and a slam lets it sit on you. Being lit adds 14 Heat a second. L-train tracks
   overhead (3.5 tiles up, 5-8 tiles long, every 16-24 tiles) block it: duck under one and it loses you,
   overshoots and turns back. "SPOTTED!" / "LOST 'EM" callouts. The street run is 8 pieces with no roadblock.
-- **Acts 3 and 4** reuse the roadblock and the helicopter (3 = roadblock, 4 = helicopter) until their biome set
-  pieces exist (the flood / chariots / guards, and the drone swarm). **The finale** is two roadblocks with the
+- **Act 3** reuses the roadblock until its biome set pieces exist (the flood / chariots / guards). Act 4 has the
+  drone swarm (below). **The finale** is two roadblocks with the
   helicopter hunting the whole way.
+
+- **Drone swarm (act 4).** The GDD line is "drones dive in patterns; car-hop them to stay ahead", so a drone is a
+  car roof in the air. The street run (5 pieces) is followed by 5 pieces of flat street with a wave of drones every
+  10-14 tiles. Each drone waits 6 tiles up and dives in when you're 11 tiles away, swooping back toward you, then
+  hovers across the skate lane (a 1.5-tile box). Land on one: it's a car hop (jumps refilled, -8 Heat) and it goes
+  down spinning, "DRONE DOWN!" +250 style. Ride into one: a slam. Patterns: single (car-roof height, one ollie),
+  pair (chain two hops), step (low, high, low) and wall (head high at 56 px, past a plain ollie, so ollie and
+  flip, or hop onto it off the drone before). The first two waves are always a single then a pair, to teach it.
+  The act 3 escape stays the roadblock until the act 3 biomes exist.
 
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
