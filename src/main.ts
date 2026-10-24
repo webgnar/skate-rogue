@@ -293,7 +293,7 @@ async function start() {
   const skater = params.get('skater');
   const sprite = await SkaterRig.create(base, isSkater(skater) ? skater : undefined);
   const input = new OneButton(document.getElementById('app')!);
-  const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud());
+  const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud(), Math.max(1, Math.floor(Number(params.get('floor')) || 1)));
   //?debug exposes the game for headless checks
   if (params.has('debug')) Object.assign(window, { game, props });
   const biome = params.get('biome');
