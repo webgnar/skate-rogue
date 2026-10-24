@@ -39,6 +39,7 @@ function toToon(m: THREE.Material): THREE.Material {
     alphaTest: m.alphaTest,
     side: m.side,
     fog: m.fog,
+    vertexColors: m.vertexColors,
   });
   t.name = m.name;
   t.userData = { ...m.userData };

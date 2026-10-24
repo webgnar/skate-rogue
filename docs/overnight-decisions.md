@@ -180,3 +180,7 @@ and listed it here for review. Any of these can be flipped in the morning.
   every bone and the board at 30 fps; `art/lou_gnar.py` keys them as one action per clip in `art/lou-gnar.blend`,
   with the board on a new `Board` bone. The legs come in as baked FK keys (the game's IK result), not IK controls.
   Easy to edit a pose in Blender, but not yet a full animator's rig with foot controls.
+- **Street props are scenery only**, along the back of the sidewalk (z -3.2), one every 3 to 7 tiles: hydrants,
+  benches, Chicago blue garbage carts, rows of newspaper boxes, USPS mailboxes, parking meters, street-name sign
+  poles and the odd cone. Nothing collides with them; a floor's props merge into one mesh (one draw call). Making
+  any of them skateable (benches and hydrants to ollie over) is a gameplay call, left for zack.
