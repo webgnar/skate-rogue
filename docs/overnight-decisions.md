@@ -166,6 +166,12 @@ and listed it here for review. Any of these can be flipped in the morning.
     Ghost Mode: half the Heat from skating slow.
 - LUCK and STREET boons are next.
 
+- **Smashables written into the GDD (zack asked).** New pillar 7, "Smash everything", and a Smashables section:
+  props are juice, never hazards (they never slow or slam you); roll through, land on, grind, car-hop, slam or
+  bomb to break them; a launch prop list; they give particles, small style, hidden cash, a rare Stoken prop,
+  and smashing the AI's signage or Flock cameras cools Heat a little. Split: gameplay places props and emits
+  break events, effects makes the breaks, models builds the props.
+
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
   shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin
