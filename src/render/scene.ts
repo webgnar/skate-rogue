@@ -4,6 +4,8 @@ import type { Level } from '../physics/level';
 import { LouZoom, viewHeight } from './camera';
 import { buildKit, toX, toY } from './kit';
 import { NightCity } from './night';
+import { FX } from './fx-settings';
+import { batchStatic } from './batch';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution } from './toon';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
@@ -45,6 +47,7 @@ export class StreetView {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     this.renderer.setPixelRatio(this.pixelRatio);
+    this.renderer.info.autoReset = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.scene.background = new THREE.Color(0x2a1d4a);
     this.scene.fog = new THREE.Fog(0x3a2a5c, 40, 140);
@@ -131,7 +134,9 @@ export class StreetView {
       });
     }
     this.kit = buildKit(level);
+    batchStatic(this.kit);
     inkify(this.kit);
+    this.kitInk();
     this.scene.add(this.kit);
     this.night.build(level, this.kit, seed, floor);
   }
@@ -161,7 +166,7 @@ export class StreetView {
   // a downpour now and then lights the sky: one soft glow that rises fast and fades over a second, never a strobe
   private lightning(dt: number): void {
     const sky = (this.sky.material as THREE.ShaderMaterial).uniforms;
-    if (this.rain.amount < RAIN.downpour) {
+    if (this.rain.amount < RAIN.downpour || FX.reduceFlashing) {
       sky.uFlash.value = 0;
       return;
     }
@@ -176,10 +181,12 @@ export class StreetView {
   }
 
   shake(amount: number): void {
+    if (FX.reduceMotion) return;
     this.shakeAmt = Math.max(this.shakeAmt, amount);
   }
 
   punch(amount: number): void {
+    if (FX.reduceMotion) return;
     this.punchAmt = Math.max(this.punchAmt, amount);
     this.punchRoll = Math.random() < 0.5 ? -1 : 1;
   }
@@ -204,10 +211,14 @@ export class StreetView {
     setInkResolution(buf.x, buf.y, this.pixelRatio);
   }
 
-  // lower the resolution when frames stay slow (over 20 ms for 2 s)
+  // when frames stay slow (over 20 ms for 2 s): lower the resolution, and before it drops below 1, switch to the
+  // low effects tier (unless the tier was chosen by hand)
   adapt(frameMs: number): void {
     this.slowMs = frameMs > 20 ? this.slowMs + frameMs : 0;
-    if (this.slowMs > 2000 && this.pixelRatio > 0.6) {
+    if (this.slowMs > 2000 && FX.quality === 'auto' && FX.tier === 'high' && this.pixelRatio * 0.8 < 1) {
+      this.setTier('low');
+      this.slowMs = 0;
+    } else if (this.slowMs > 2000 && this.pixelRatio > 0.6) {
       this.pixelRatio = Math.max(0.6, this.pixelRatio * 0.8);
       this.renderer.setPixelRatio(this.pixelRatio);
       this.resize();
@@ -215,11 +226,25 @@ export class StreetView {
     }
   }
 
+  setTier(tier: 'high' | 'low'): void {
+    FX.tier = tier;
+    this.kitInk();
+    this.night.setNight(this.mood?.neon ?? 0);
+  }
+
+  // the low tier keeps outlines on the skater, cars and pickups but drops them from the street kit
+  private kitInk(): void {
+    this.kit?.traverse((o) => {
+      if (o.userData.ink) o.visible = FX.tier === 'high';
+    });
+  }
+
   get resolution(): number {
     return this.pixelRatio;
   }
 
   render(): void {
+    this.renderer.info.reset(); // count both passes
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
     this.renderer.clearDepth();

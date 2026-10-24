@@ -1,6 +1,7 @@
 // Manga focus lines for the slam freeze: black wedges rushing in from the screen edges toward the skater, with a
 // white impact flash for the first few frames. A screen-space quad drawn only while active.
 import * as THREE from 'three';
+import { FX } from './fx-settings';
 
 const LIFE = 0.32; // seconds, real time
 
@@ -15,7 +16,8 @@ const vertex = /* glsl */ `
 const fragment = /* glsl */ `
   uniform vec2 uCentre; // skater in NDC
   uniform float uAspect;
-  uniform float uT; // 0..1
+  uniform float uT;
+  uniform float uFlashK; // 0..1
   uniform float uSeed;
   varying vec2 vNdc;
   float hash(float n) { return fract(sin(n * 78.233 + uSeed) * 43758.5453); }
@@ -34,7 +36,7 @@ const fragment = /* glsl */ `
     float flash = (1.0 - smoothstep(0.0, 0.3, uT)) * smoothstep(0.28, 0.6, r);
     if (!line && flash < 0.02) discard;
     vec3 col = line ? vec3(0.04, 0.02, 0.06) : vec3(1.0, 0.98, 0.9);
-    gl_FragColor = vec4(col, line ? 0.92 : flash * 0.55);
+    gl_FragColor = vec4(col, line ? 0.92 : flash * 0.55 * uFlashK);
   }
 `;
 
@@ -52,6 +54,7 @@ export class FocusLines {
         uAspect: { value: 1 },
         uT: { value: 1 },
         uSeed: { value: 0 },
+        uFlashK: { value: 1 },
       },
       transparent: true,
       depthTest: false,
@@ -66,6 +69,7 @@ export class FocusLines {
   trigger(): void {
     this.age = 0;
     this.mat.uniforms.uSeed.value = Math.random() * 100;
+    this.mat.uniforms.uFlashK.value = FX.reduceFlashing ? 0 : 1;
   }
 
   // real seconds; `at` is the world point to focus on

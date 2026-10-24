@@ -258,7 +258,18 @@ html, body {
 }
 #app[data-heat='2']::after { opacity: 0.35; }
 #app[data-heat='3']::after { opacity: 1; animation: pulse 0.5s ease-in-out infinite alternate; }
+#app.noflash[data-heat='3']::after { animation: none; opacity: 0.8; }
 @keyframes pulse { from { opacity: 0.4; } }
+/* the Heat cue that isn't colour: hazard stripes on the edges (src/render/heat-cue.ts) */
+.heat-cue {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --edge: 8px;
+  --stripes: repeating-linear-gradient(45deg, #111 0 8px, #f4f4f4 8px 16px);
+  background: var(--stripes) top / 100% var(--edge) no-repeat, var(--stripes) bottom / 100% var(--edge) no-repeat,
+    var(--stripes) left / var(--edge) 100% no-repeat, var(--stripes) right / var(--edge) 100% no-repeat;
+}
 @keyframes blink { 50% { opacity: 0.2; } }
 
 /* board strip (bottom left) and the skate shop */

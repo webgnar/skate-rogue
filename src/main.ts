@@ -7,6 +7,7 @@ import { actOf } from './gen/escape';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
+import { FX, initFx } from './render/fx-settings';
 import { SkaterRig } from './render/skater-rig';
 import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
@@ -181,6 +182,8 @@ function makeHud(): Hud {
 async function start() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
+  initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+  document.getElementById('app')!.classList.toggle('noflash', FX.reduceFlashing);
   const fixedSeed = Number(params.get('seed')) || 0;
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 
