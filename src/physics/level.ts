@@ -18,6 +18,7 @@ export interface Surface {
   y1?: number;
   row: number;
   material?: Material; // what it grinds like; left out, it goes by kind (see surfaceMaterial)
+  side?: boolean; // part of a floor's side line (src/gen/sidelines.ts)
   crumble?: boolean; // Greece's ruins: it falls a moment after you land on it
   conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
 }

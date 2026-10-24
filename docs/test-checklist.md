@@ -25,6 +25,8 @@ Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 
 ## Run shape and roads
 
+- [ ] **Side lines (from floor 2, most floors):** a chain of four floating ledges climbing over the street, with coins along it and a Stoken at the top. An ollie plus a flip from the street gets you onto the first one, and plain ollies take you up the rest. Skipping it costs nothing. *Feel:* too easy to miss, or too easy to reach?
+
 - [ ] *Run length:* the bot's floors take 17 to 28 seconds and escapes 23 to 40, so a winning run is about 12 minutes with menus. The GDD guessed 20. Too short, too long, or right for a phone? (Longer floors are an easy change.)
 
 - [ ] **Underground spot** (a green road sign from floor 3, about 1 fork in 7). Taking it shows three choices: Lay low (the next floor starts at 0 Heat), Swap a boon, Remove a curse. *Check:* the swap only offers boons other than the one you dropped.
@@ -174,7 +176,7 @@ Each act's district now changes the street, not just the look. Quickest check: `
 - [ ] **Locked until you win:** the run summary has no GNAR button until you've beaten act 5 once (or use `?unlockall`).
 - [ ] **Picking a level:** tap GNAR on the run summary to step through GNAR 1, 2 and so on (up to one past the highest you've won), then GNAR OFF. The page reloads and the next run is at that level. The run opens with a callout naming the new rule, and the seed line and pause card show the level and its rules.
 - [ ] **The rules stack:** 1 heavier traffic, 2 Heat rises 20% faster, 3 three quarters of your Heat carries to the next floor, 4 one fewer boon card, 5 gear wears 50% faster.
-- [ ] **The payoff:** each level adds 15% to score and 20% to Stoken. Winning at a level opens the next. Daily runs are never at a Gnar level.
+- [ ] **The payoff:** each level adds 15% to score and 20% to Stoken. On the leaderboard a Gnar run shows its level next to the floor (F12 · G3). Winning at a level opens the next. Daily runs are never at a Gnar level.
 - [ ] *Feel:* is level 1 noticeably harder? Is 5 brutal but fair?
 
 ## Sound, vibration and settings
