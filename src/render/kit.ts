@@ -2,6 +2,7 @@
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
 import { model } from './models';
+import { buildProps } from './props';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
@@ -99,6 +100,8 @@ export function buildKit(level: Level): THREE.Group {
   const wall = slab(cols - first, 2, 0.5, lambert(tileTexture(wallRows.map((row) => row.slice(first)))), lambert(null, 0x6b5a55), sideMat);
   wall.position.set(first + (cols - first) / 2, 1, STREET_BACK - 0.25);
   kit.add(wall);
+  const props = buildProps(level); // hydrants, benches, newspaper boxes... along the back of the sidewalk
+  if (props) kit.add(props);
 
   for (let bx = -8; bx < cols + 20; ) {
     const w = 4 + randInt(rng, 5);

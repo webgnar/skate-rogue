@@ -10,7 +10,7 @@ const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlu
 export async function loadModels(base: string): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
-    ['cars.glb', 'drone.glb'].map(async (file) => {
+    ['cars.glb', 'drone.glb', 'props.glb'].map(async (file) => {
       try {
         const gltf = await loader.loadAsync(`${base}models/${file}`);
         gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));
@@ -79,4 +79,26 @@ export function model(name: string, paint?: number): THREE.Mesh | null {
   const mesh = new THREE.Mesh(src.geometry, mats.length === 1 ? mats[0] : mats);
   mesh.position.copy(src.position);
   return mesh;
+}
+
+// a model's geometry with each material's colour baked into a vertex colour, for merging many into one mesh
+const flat = new Map<string, THREE.BufferGeometry>();
+export function flatGeometry(name: string): THREE.BufferGeometry | null {
+  const cached = flat.get(name);
+  if (cached) return cached;
+  const src = parts.get(name);
+  if (!src) return null;
+  const geo = src.geometry.clone();
+  const mats = [src.material].flat() as THREE.MeshStandardMaterial[];
+  const n = geo.getAttribute('position').count;
+  const col = new Float32Array(n * 3);
+  const groups = geo.groups.length ? geo.groups : [{ start: 0, count: n, materialIndex: 0 }];
+  for (const g of groups) {
+    const c = mats[g.materialIndex ?? 0].color;
+    for (let i = g.start; i < g.start + g.count; i++) col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.clearGroups();
+  flat.set(name, geo);
+  return geo;
 }
