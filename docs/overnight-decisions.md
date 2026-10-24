@@ -392,6 +392,10 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Each world's smashables stand in for Chicago's by size.** The sim still places cones, crates and barrels, and the
   render shows the world's small, medium or large breakable in their place, so no gameplay code changed. The
   AI's kiosks, bots and Flock poles stay in every world: the AI is everywhere.
+- **The escape helicopter is a Blender model now** (art/chopper.py): a dark pod with a tinted canopy, the AI's red
+  eye slit across the nose, a searchlight under the chin, skids, a tail boom with a fin and the AI's red livery. Its
+  rotors are spun slower than a real one's so the blades read instead of strobing, with a faint blur disc over
+  them. The code-built chopper stays as the fallback. The spotlight and its behaviour are unchanged.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

@@ -1,4 +1,4 @@
-// Models built in Blender (art/*.py, exported to public/models): the cars and the drone. Loaded once at startup; anything that fails to load
+// Models built in Blender (art/*.py, exported to public/models): the cars, the drone, the helicopter and the props. Loaded once at startup; anything that fails to load
 // falls back to the code-built version.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -10,7 +10,7 @@ const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlu
 export async function loadModels(base: string): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
-    ['cars.glb', 'drone.glb', 'props.glb'].map(async (file) => {
+    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb'].map(async (file) => {
       try {
         const gltf = await loader.loadAsync(`${base}models/${file}`);
         gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));
@@ -25,7 +25,7 @@ export async function loadModels(base: string): Promise<void> {
 function asMesh(o: THREE.Object3D): THREE.Mesh {
   if ((o as THREE.Mesh).isMesh) return o as THREE.Mesh;
   const mesh = new THREE.Mesh();
-  mesh.position.copy(o.position); // where the part sits in its model (the drone's rotors)
+  mesh.position.copy(o.position); // where the part sits in its model (the drone's and chopper's rotors)
   const geos: THREE.BufferGeometry[] = [];
   const mats: THREE.Material[] = [];
   o.children.forEach((c) => {

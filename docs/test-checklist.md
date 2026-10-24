@@ -319,6 +319,10 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] **Each world has its own smashables:** soda cups, pumpkins and hay bales in Clemente; oil jugs, kraters and amphorae in Greece; shells, coral and treasure chests in Atlantis; mugs, porcelain vases and marble busts in the museum; batteries, glowing holo-cubes and server racks in High-Tech City and the Hive; crystals and fuel cells in space. They stand where Chicago's cones, crates and barrels would, and break into their own pieces (pottery chips like stone, crystal like glass). The AI's kiosks, bots and Flock poles stay in every world. Chicago's hydrants, benches and meters only show in Chicago.
 - [ ] *Open question:* the city skyline behind is still Chicago in every biome. Should each world get its own backdrop next (QFS's skies and far layers)?
 
+**The AI helicopter (the PR after #78)**
+- [ ] On a helicopter escape, the chopper overhead is a proper model: a dark pod with a tinted canopy, a red eye slit across its nose, red stripes, skids, a searchlight under its chin where the spotlight comes from, and a tail with a fin. Its main rotor's four blades turn under a faint blur and the tail rotor spins. It banks the way it flies, as before.
+- [ ] *Open question:* does it read against the night skyline, or should it get lights (a belly strobe) or a lighter hull?
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
