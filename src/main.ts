@@ -4,7 +4,7 @@ import { Game, type Hud } from './game/game';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
-import { SkaterSprite } from './render/skater-sprite';
+import { SkaterRig } from './render/skater-rig';
 import { loadCityTiles } from './render/textures';
 
 const base = import.meta.env.BASE_URL;
@@ -90,7 +90,7 @@ async function start() {
   await loadCityTiles(`${base}tex/chicago_tiles.png`);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await view.loadBackdrop(base);
-  const sprite = await SkaterSprite.create(base);
+  const sprite = await SkaterRig.create(base);
   const input = new OneButton(document.getElementById('app')!);
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud());
   //?debug exposes the game for headless checks

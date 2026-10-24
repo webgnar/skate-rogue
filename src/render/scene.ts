@@ -7,6 +7,8 @@ import { loadImage, pixelTexture } from './textures';
 export class StreetView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
+  // the skater draws in its own pass over the level: always in front of what they ride, still occluding itself
+  readonly front = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
   private skyline: THREE.Mesh | null = null;
@@ -31,6 +33,8 @@ export class StreetView {
     const sun = new THREE.DirectionalLight(0xffd8b0, 1.4);
     sun.position.set(-6, 12, 10);
     this.scene.add(sun);
+    this.front.add(new THREE.HemisphereLight(0xffe8f0, 0x403050, 1.6), sun.clone());
+    this.renderer.autoClear = false;
   }
 
   async loadBackdrop(base: string): Promise<void> {
@@ -113,6 +117,9 @@ export class StreetView {
   }
 
   render(): void {
+    this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
+    this.renderer.clearDepth();
+    this.renderer.render(this.front, this.camera);
   }
 }
