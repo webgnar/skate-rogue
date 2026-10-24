@@ -12,6 +12,9 @@
 #   ElColumnCap   the bracket at the top of a column reaching out under the girder, origin at the column's top
 #   TrafficSignal the pole and three-lamp head, origin at the foot of the pole, lenses unlit
 #   SignalRed / SignalGreen   the lit lenses, in place over the unlit ones (the game shows one at a time)
+#   OverpassPillar  a concrete pillar 1 tall (stretched to the deck), origin at its foot, behind the lane
+#   OverpassCap     the flared head under the deck, origin at the pillar's top
+#   OverpassRail    2 tiles of railing along the back of the deck, origin at the deck top
 #   WantedBoard   the bounty's notice board: two posts, a framed plank panel and a little roof, origin on the ground;
 #                 the game pins its poster (a canvas texture) over the panel, 1.2 x 1.6 centred 1.95 up
 import math
@@ -45,6 +48,8 @@ COLORS = {
     'sigHead': 0x1C2420,
     'sigLens': 0x2A2622,  # an unlit lens
     'sigAmber': 0x5A4418,
+    'opConcrete': 0x8C8794,
+    'opMetal': 0xB8BCC8,
     'boardWood': 0x6A4428,
     'boardPlank': 0x7E5634,
     'boardRoof': 0x3A2A1E,
@@ -157,6 +162,38 @@ def lens(m, name, mat, z):
     return join([link(mat, bm, m[mat])], name)
 
 
+PILLAR_Y = 1.2  # game z -1.2
+RAIL_Y = 1.4
+
+
+def overpass_pillar(m):
+    bm = bmesh.new()
+    box(bm, -0.25, 0.25, PILLAR_Y - 0.25, PILLAR_Y + 0.25, 0, 1)
+    for x in (-0.25, 0.25):  # chamfer strips standing proud at the front corners catch the ink
+        box(bm, x - 0.03, x + 0.03, PILLAR_Y - 0.28, PILLAR_Y - 0.22, 0, 1)
+    return join([link('opConcrete', bm, m['opConcrete'])], 'OverpassPillar')
+
+
+def overpass_cap(m):
+    bm = bmesh.new()
+    prism(bm, [(-0.25, -0.45), (0.25, -0.45), (0.45, -0.15), (0.45, 0), (-0.45, 0), (-0.45, -0.15)], PILLAR_Y - 0.4, PILLAR_Y + 0.4)
+    box(bm, -0.3, 0.3, PILLAR_Y - 0.3, PILLAR_Y + 0.3, -0.55, -0.45)  # a plinth band where it meets the shaft
+    return join([link('opConcrete', bm, m['opConcrete'])], 'OverpassCap')
+
+
+def overpass_rail(m):
+    bm = bmesh.new()
+    box(bm, 0, 2, RAIL_Y - 0.05, RAIL_Y + 0.05, 0.68, 0.76)  # top rail
+    box(bm, 0, 2, RAIL_Y - 0.03, RAIL_Y + 0.03, 0.08, 0.13)  # bottom rail
+    for x in (0.0, 1.0):  # posts
+        box(bm, x + 0.02, x + 0.1, RAIL_Y - 0.05, RAIL_Y + 0.05, 0, 0.72)
+    for i in range(8):  # balusters
+        x = 0.06 + i * 0.25
+        if i % 4:
+            box(bm, x - 0.015, x + 0.015, RAIL_Y - 0.015, RAIL_Y + 0.015, 0.13, 0.68)
+    return join([link('opMetal', bm, m['opMetal'])], 'OverpassRail')
+
+
 def wanted_board(m):
     wood, plank, roof = bmesh.new(), bmesh.new(), bmesh.new()
     for x in (-0.62, 0.62):  # posts, sunk in the sidewalk, up past the panel
@@ -178,10 +215,12 @@ def wanted_board(m):
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     m = {k: material(k, v) for k, v in COLORS.items()}
-    obs = [el_span(m), el_column(m), el_column_cap(m), signal(m), lens(m, 'SignalRed', 'sigRed', 3.33), lens(m, 'SignalGreen', 'sigGreen', 2.87), wanted_board(m)]
+    obs = [el_span(m), el_column(m), el_column_cap(m), signal(m), lens(m, 'SignalRed', 'sigRed', 3.33), lens(m, 'SignalGreen', 'sigGreen', 2.87), wanted_board(m),
+           overpass_pillar(m), overpass_cap(m), overpass_rail(m)]
     # laid out in the file for a look: a span on a column, the signal beside it
     at = {'ElSpan': (0, 0, 4), 'ElColumn': (0.6, 0, 0), 'ElColumnCap': (0.6, 0, 3.9), 'TrafficSignal': (-2, 0, 0),
-          'SignalRed': (-2, 0, 0), 'SignalGreen': (-2, 0, 0), 'WantedBoard': (-4, 0, 0)}
+          'SignalRed': (-2, 0, 0), 'SignalGreen': (-2, 0, 0), 'WantedBoard': (-4, 0, 0),
+          'OverpassPillar': (6, 0, 0), 'OverpassCap': (6, 0, 3), 'OverpassRail': (5, 0, 3.2)}
     obs[1].scale = (1, 1, 3.9)
     for ob in obs:
         ob.location = at[ob.name]

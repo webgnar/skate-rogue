@@ -209,14 +209,34 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
       const deck = slab(w, 0.45, 2.9, lambert(null, 0x6f6a7a), lambert(null, 0x8d889a), sideMat);
       deck.position.set(x, y - 0.225, 0.05);
       kit.add(deck);
+      const built = model('OverpassPillar'); // art/street.py: pillars with flared caps, a railing with balusters
       for (let px = toX(s.x0) + 1; px < toX(s.x1); px += 5) {
+        if (built) {
+          const pillar = model('OverpassPillar')!;
+          pillar.position.x = px;
+          pillar.scale.y = Math.max(0.1, y - 1);
+          const cap = model('OverpassCap')!;
+          cap.position.set(px, y - 0.45, 0);
+          kit.add(pillar, cap);
+          continue;
+        }
         const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.5, y - 0.45, 0.5), concrete);
         pillar.position.set(px, (y - 0.45) / 2, -1.2);
         kit.add(pillar);
       }
-      const railing = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, 0.08), metal);
-      railing.position.set(x, y + 0.7, -1.4);
-      kit.add(railing);
+      if (built) {
+        const n = Math.max(1, Math.round(w / 2));
+        for (let i = 0; i < n; i++) {
+          const rail = model('OverpassRail')!;
+          rail.position.set(toX(s.x0) + (i * w) / n, y, 0);
+          rail.scale.x = w / n / 2;
+          kit.add(rail);
+        }
+      } else {
+        const railing = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, 0.08), metal);
+        railing.position.set(x, y + 0.7, -1.4);
+        kit.add(railing);
+      }
     } else if (s.kind === 'ledge') {
       const row = new Array(Math.round(w)).fill(skin.ledge[1]);
       row[0] = skin.ledge[0];

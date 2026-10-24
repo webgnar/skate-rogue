@@ -481,6 +481,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   gold coin with a rim and a raised $ on both faces (the back one mirrored so it reads right as it spins), and a
   brilliant-cut purple gem, table up. Still one instanced draw each (colours baked into the vertices), 284 and 30
   triangles. The bounty's poster now hangs on a board with two posts, a plank panel, a frame and a little roof.
+- **Pedestrians duck, and the overpass is modelled.** People (not filmers, who keep filming) fold forward with
+  their arms over their heads when you fly in low past them (airborne, 0.8 to 4.5 tiles over the street, within
+  1.8 tiles). The overpass gets concrete pillars with flared caps and a railing with posts and balusters
+  (art/street.py `OverpassPillar`, `OverpassCap`, `OverpassRail`); its deck stays the textured slab.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

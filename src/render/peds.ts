@@ -1,6 +1,6 @@
 // People on the sidewalk (GDD: a living street): they stand about or stroll along the back of the street, and react
 // to the skater coming past. They turn to watch, some hold a phone up and film you, they cheer a landing near them
-// and flinch at a slam. Purely for show: the sim doesn't know they're there.
+// and flinch at a slam, duck when you fly in low over them. Purely for show: the sim doesn't know they're there.
 //
 // Each person is the parts from art/pedestrians.py (peds.glb), recoloured and merged into one skinned mesh on a
 // little skeleton built here (hips, legs, arms, head), so a person costs one draw and one outline.
@@ -52,6 +52,7 @@ interface Person {
   phase: number;
   cheer: number; // seconds left
   flinch: number;
+  duck: number;
   delay: number; // a beat before reacting, so a crowd doesn't move as one
 }
 
@@ -172,6 +173,7 @@ export class PedView {
         phase: rng() * 10,
         cheer: 0,
         flinch: 0,
+        duck: 0,
         delay: rng() * 0.35,
       };
       person.mesh.position.set(x, 0, LANE_Z + (rng() - 0.5) * 0.4);
@@ -204,11 +206,14 @@ export class PedView {
       if (slammed && near) p.flinch = 1.3 + p.delay;
       p.cheer = Math.max(0, p.cheer - dt);
       p.flinch = Math.max(0, p.flinch - dt);
+      //flying in low overhead: duck (a filmer keeps filming)
+      if (sk.mode === 'air' && high > 0.8 && high < 4.5 && Math.abs(dx) < 1.8 && !p.filmer) p.duck = 0.55 + p.delay * 0.5;
+      p.duck = Math.max(0, p.duck - dt);
       const watching = high < 7 && dx > -9 && dx < 5; // you coming up the street, or just gone past
       const [root, hips, legL, legR, armL, armR, head] = p.bones;
       //turn toward the skater (the lane is in front of them, toward the camera)
       const look = Math.max(-1.2, Math.min(1.2, Math.atan2(dx, -LANE_Z)));
-      const strolling = p.walker && !watching && p.cheer === 0 && p.flinch === 0;
+      const strolling = p.walker && !watching && p.cheer === 0 && p.flinch === 0 && p.duck === 0;
       if (strolling) {
         p.x += p.dir * dt * 0.9;
         if (Math.abs(p.x - p.home) > 1.6) p.dir = Math.sign(p.home - p.x);
@@ -247,6 +252,16 @@ export class PedView {
         rz = -0.35;
         hipsX = -0.18;
         face = look * 0.6;
+      }
+      if (p.duck > 0) {
+        //folded forward, arms wrapped over the head
+        lx = rx = -2.75;
+        lz = 0.5;
+        rz = -0.5;
+        hipsX = 0.65;
+        bounce = -0.06;
+        face = 0;
+        headY = 0;
       }
       ease(root as THREE.Bone, 0, face, 0, k);
       ease(hips, hipsX, 0, strolling ? 0 : Math.sin(this.t * 0.9 + p.phase) * 0.03, k);
