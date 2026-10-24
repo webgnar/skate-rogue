@@ -4,7 +4,7 @@ import type { Intersection } from '../traffic/cross';
 import type { BusStop } from '../traffic/street';
 import { CHUNK_W, STREET_ROW, cell, type Layout } from '../gen/layout';
 import type { Road } from '../gen/roads';
-import { TILE } from './constants';
+import { PHYS, TILE } from './constants';
 import type { Material } from './feel';
 
 export type SurfaceKind = 'roof' | 'ledge' | 'rail' | 'stairs' | 'bank' | 'overpass';
@@ -18,6 +18,7 @@ export interface Surface {
   y1?: number;
   row: number;
   material?: Material; // what it grinds like; left out, it goes by kind (see surfaceMaterial)
+  conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
@@ -172,6 +173,8 @@ export interface Level {
   doors: number[]; // parked cars (by index) whose door swings open as you come up
   bounty?: { x: number }; // a wanted poster's bounty (src/run/bounty.ts)
   tutorial?: { x: number; text: string }[]; // the tutorial floor's prompts (src/gen/tutorial.ts)
+  currents?: { x0: number; x1: number; push: number }[]; // Atlantis: the water pushes you in the air (src/gen/twists.ts)
+  ceiling?: { x0: number; x1: number; y: number }[]; // the Art Museum's low ceilings: their undersides
 }
 
 const CAR_W = 2 * TILE;
@@ -260,4 +263,20 @@ export function buildLevel(layout: Layout): Level {
 export function isStreetAt(level: Level, x: number): boolean {
   const c = Math.floor(x / TILE);
   return c >= 0 && c < level.street.length && level.street[c];
+}
+
+// the push of the current at x, if any
+export function currentAt(level: Level, x: number): number {
+  const cs = level.currents;
+  if (!cs) return 0;
+  for (const c of cs) if (x >= c.x0 && x < c.x1) return c.push;
+  return 0;
+}
+
+// the lowest your feet can go up at x under a ceiling (a y), if there is one
+export function ceilingAt(level: Level, x: number): number | undefined {
+  const cs = level.ceiling;
+  if (!cs) return undefined;
+  for (const c of cs) if (x >= c.x0 && x < c.x1) return c.y + PHYS.height;
+  return undefined;
 }

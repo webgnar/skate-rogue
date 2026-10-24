@@ -2,6 +2,7 @@
 // terraces, stair sets, big handrails, drop-offs, rooftop gaps and a few banks, then finishes on a short street
 // stretch built from QFS pieces (canals, curved rails, parked cars, traffic) with the exit gate.
 import { placeProps } from './props';
+import { applyTwist, districtPieces, type Twist } from './twists';
 import { crossPlan } from '../traffic/cross';
 import { doorPlan, stopPlan } from '../traffic/street';
 import { bountyPlan } from '../run/bounty';
@@ -52,6 +53,7 @@ export interface FloorOptions {
   danger?: number; // traffic 1-3
   fork?: Fork; // where the roads at the end lead
   gravity?: number; // the district's (BIOME_GRAVITY): validation skates the floor in it
+  twist?: Twist; // the district's twist (src/gen/twists.ts): validation skates that too
 }
 
 export const PICKUPS = {
@@ -200,7 +202,7 @@ export function buildDescent(seed: number, floor: number, streetY: number, short
 
 // the whole floor: descent, then the street finale (its start piece is the runway where the last roof meets the street)
 export function buildFloor(seed: number, floor: number, library: Piece[] = PIECES, opts: FloorOptions = {}): Level {
-  const finale = buildLevel(makeLayout(seed, floor, library, finaleCount(floor), opts.fork ? [FORK_PIECE] : []));
+  const finale = buildLevel(makeLayout(seed, floor, districtPieces(library, opts.twist), finaleCount(floor), opts.fork ? [FORK_PIECE] : []));
   const d = buildDescent(seed, floor, finale.streetY, opts.short);
   //every floor has a Stoken somewhere: if the sections rolled none, one goes up high over the first stair set
   if (!d.pickups.some((p) => p.kind === 'stoken')) {
@@ -250,6 +252,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     danger: opts.danger ?? 2,
     ...(opts.gravity !== undefined && opts.gravity !== 1 ? { gravity: opts.gravity } : {}),
   };
+  applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);
   level.doors = doorPlan(level, level.layout.seed);

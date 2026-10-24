@@ -370,6 +370,14 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Pause card settings and Quit run.** Sound and music sliders, vibration, effects quality and the three
   accessibility switches all moved from URL flags onto the pause card (the flags still work). Quit run ends the run
   with its summary and keeps its Stoken. The HUD thread can restyle the card to the mockups.
+- **District twists (GDD: Biomes).** Clemente Park: rail pieces twice as often. Greece: curved-rail pieces three
+  times as often (columns as curved rails; collapsing ruins are left for later). Atlantis: currents, 6 to 10 tile
+  stretches that push you forward (60%) or back while you're in the air, never on the ground, so they change your
+  jumps but can't stall you. Art Museum: a low ceiling over the street, a plain ollie above the highest thing you can
+  land on in each piece, so flips get capped; rail pieces twice as often. High-Tech: 60% of flat rails are conveyors,
+  mostly forward (+1.5 px/frame) and some back. The bot validates every floor with its twist; it needs about the
+  same rerolls as before (2 to 2.5 tries against 2.2). The looks (bubbles, a ceiling slab, chevrons) are
+  placeholders for the models and effects threads. Chicago, Space and the Hive have no twist yet.
 
 ## Models thread: animation
 

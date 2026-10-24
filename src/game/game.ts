@@ -13,6 +13,7 @@ import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, writeSave } from '../run/save';
 import { tutorialLevel } from '../gen/tutorial';
+import { DISTRICT_TWIST } from '../gen/twists';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
 import { buzz } from '../ui/settings';
@@ -47,6 +48,7 @@ import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
 import { PedView } from '../render/peds';
 import { CHASER } from '../sim/chaser';
+import { TwistView } from '../render/twist-view';
 import { BountyView } from '../render/bounty-view';
 import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
@@ -175,6 +177,7 @@ export class Game {
   private readonly chaserView = new ChaserView();
   private readonly pedView = new PedView();
   private readonly bountyView = new BountyView();
+  private readonly twistView = new TwistView();
   private floorStoken = 0; // Stoken at the floor's start, for a bounty
   private bountySeen = false;
   private tutorial = false; // on the tutorial floor, before the run's first floor
@@ -235,7 +238,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group);
+    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -251,12 +254,14 @@ export class Game {
   private makeLevel(): Level {
     if (this.tutorial) return tutorialLevel(this.seed);
     if (this.road.kind === 'escape') return validatedEscape(this.seed, this.road.act);
+    //the district's gravity (Atlantis floats) and twist; the floor is validated in both
+    const district = this.biomePinned ? this.biome : actBiome(this.seed, actOf(this.floor));
     return validatedFloor(this.seed, this.floor, {
       fork: rollFork(this.seed, this.floor, this.meta.library.types),
       danger: this.road.danger,
       short: this.road.kind === 'stash',
-      //the district's gravity (Atlantis floats); the floor is validated in it
-      gravity: BIOME_GRAVITY[this.biomePinned ? this.biome : actBiome(this.seed, actOf(this.floor))] ?? 1,
+      gravity: BIOME_GRAVITY[district] ?? 1,
+      twist: DISTRICT_TWIST[district],
     }).level;
   }
 
@@ -311,8 +316,8 @@ export class Game {
   setBiome(id: BiomeId): void {
     this.biomePinned = true;
     this.goBiome(id);
-    //a district with other gravity needs the floor rebuilt (and validated) in it
-    if ((BIOME_GRAVITY[id] ?? 1) !== (this.level.gravity ?? 1) && this.road.kind !== 'escape') {
+    //the floor is rebuilt (and validated) in the district's gravity and twist
+    if (this.road.kind !== 'escape' && !this.tutorial) {
       this.level = this.makeLevel();
       this.startFloor();
     }
@@ -358,6 +363,7 @@ export class Game {
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
     this.bountyView.set(this.level);
+    this.twistView.set(this.level);
     this.floorStoken = this.run.stoken;
     this.bountySeen = false;
     this.lesson = 0;
@@ -782,6 +788,7 @@ export class Game {
     this.chopper.update(this.level, this.sim.chopper, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, this.biome, dt);
+    this.twistView.update(dt);
     if (this.state === 'skate') {
       const street = toY(this.level, this.level.streetY);
       const ch = this.sim.chopper;
