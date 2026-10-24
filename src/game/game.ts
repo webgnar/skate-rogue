@@ -28,7 +28,8 @@ import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
 import { PHYS, TILE } from '../physics/constants';
-import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
+import { SkaterRig } from '../render/skater-rig';
+import { trickName } from '../physics/tricks';
 import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
@@ -611,7 +612,7 @@ export class Game {
     switch (e.type) {
       case 'trick':
         this.view.zoom.trick();
-        this.hud.callout(TRICK_NAMES[TRICKS[e.index % TRICKS.length]] + combo, 'trick');
+        this.hud.callout(trickName(e.name, e.fakie) + combo, 'trick');
         break;
       case 'grind':
         this.particles.grindStart(...this.backTruck(), 1);

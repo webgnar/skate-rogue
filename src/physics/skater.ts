@@ -2,13 +2,14 @@
 // player_grinding_state, player_rail_state) on Lou Gnar's one-button auto-run. Pure: no rendering, no DOM.
 import { NO_MODS, type Mods } from '../boons/mods';
 import { PHYS, TILE } from './constants';
+import { rollTrick, SPIN, type TrickId } from './tricks';
 import { isStreetAt, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
 export type SkaterEvent =
-  | { type: 'ollie' }
-  | { type: 'trick'; index: number }
+  | { type: 'ollie'; spin: 0 | 180 }
+  | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean } // fakie: the stance it was thrown from
   | { type: 'land' }
   | { type: 'grind' }
   | { type: 'rail' }
@@ -51,6 +52,7 @@ export class Skater {
   spare = 0; // banked bonus jump (Spare Change)
   onRailT = 0; // frames on the current rail (Feeble Frenzy)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
+  fakie = false; // riding with the other foot forward, after a 180
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
 
@@ -110,7 +112,7 @@ export class Skater {
     this.coyote = 0;
     this.flipped = false;
     this.holdT = 1;
-    this.events.push({ type: 'ollie' });
+    this.events.push({ type: 'ollie', spin: 0 });
   }
 
   private trick(): void {
@@ -120,7 +122,11 @@ export class Skater {
     this.buffer = 0;
     this.flipped = true;
     if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
-    this.events.push({ type: 'trick', index: this.tricks++ });
+    const name = rollTrick(this.tricks);
+    const spin = SPIN[name];
+    this.events.push({ type: 'trick', index: this.tricks++, name, spin, fakie: this.fakie });
+    //a 180 lands you riding the other way round
+    if (spin === 180) this.fakie = !this.fakie;
   }
 
   private bankSpare(): void {
@@ -410,6 +416,7 @@ export class Skater {
     this.slamT = PHYS.slamFrames;
     this.carry = 0;
     this.hsp = PHYS.baseSpeed * PHYS.slamSpeed;
+    this.fakie = false; // you get back on the way you like
     this.events.push({ type: 'slam' });
   }
 }

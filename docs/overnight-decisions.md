@@ -38,6 +38,12 @@ and listed it here for review. Any of these can be flipped in the morning.
   pieces exist (the flood / chariots / guards, and the drone swarm). **The finale** is two roadblocks with the
   helicopter hunting the whole way.
 
+- **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
+  forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
+  shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin
+  only the board so they don't. Tricks thrown fakie are called "FAKIE KICKFLIP" and score 1.5x; a 180 adds +25.
+  A slam puts you back regular. The stance resets each floor. Trick events now carry `name`, `spin` and `fakie`.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)
