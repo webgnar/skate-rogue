@@ -319,9 +319,13 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] **Each world has its own smashables:** soda cups, pumpkins and hay bales in Clemente; oil jugs, kraters and amphorae in Greece; shells, coral and treasure chests in Atlantis; mugs, porcelain vases and marble busts in the museum; batteries, glowing holo-cubes and server racks in High-Tech City and the Hive; crystals and fuel cells in space. They stand where Chicago's cones, crates and barrels would, and break into their own pieces (pottery chips like stone, crystal like glass). The AI's kiosks, bots and Flock poles stay in every world. Chicago's hydrants, benches and meters only show in Chicago.
 - [ ] *Open question:* the city skyline behind is still Chicago in every biome. Should each world get its own backdrop next (QFS's skies and far layers)?
 
-**The AI helicopter (the PR after #78)**
+**The AI helicopter (the PR after #80)**
 - [ ] On a helicopter escape, the chopper overhead is a proper model: a dark pod with a tinted canopy, a red eye slit across its nose, red stripes, skids, a searchlight under its chin where the spotlight comes from, and a tail with a fin. Its main rotor's four blades turn under a faint blur and the tail rotor spins. It banks the way it flies, as before.
 - [ ] *Open question:* does it read against the night skyline, or should it get lights (a belly strobe) or a lighter hull?
+
+**World landmarks (same PR)**
+- [ ] `?biome=greece`: a white temple front with a blue and red frieze stands behind the wall every few screens. `atlantis`: a broken arch with coral and kelp. `clemente`: a ballpark light tower. `museum`: a giant marble bust on a plinth. `hightech`: a black spire with cyan bands and a pink sign. `space`: a rocket beside a red gantry. `hive`: a black tower with a red eye and amber lights. Chicago has none.
+- [ ] *Open question:* from the street their tops go out of frame (they're best seen from the roofs). Too tall, or right?
 
 ## Performance
 

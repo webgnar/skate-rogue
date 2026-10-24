@@ -1,16 +1,17 @@
-// Models built in Blender (art/*.py, exported to public/models): the cars, the drone, the helicopter and the props. Loaded once at startup; anything that fails to load
-// falls back to the code-built version.
+// Models built in Blender (art/*.py, exported to public/models): the cars, the drone, the helicopter, the props and
+// the other worlds' landmarks. Loaded once at startup; anything that fails to load falls back to the code-built
+// version (or, for a landmark, isn't drawn).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const parts = new Map<string, THREE.Mesh>();
 // materials that glow instead of taking light
-const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo']); // the sheriff gold is reflective livery
+const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber']); // the sheriff gold is reflective livery
 
 export async function loadModels(base: string): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
-    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb'].map(async (file) => {
+    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb'].map(async (file) => {
       try {
         const gltf = await loader.loadAsync(`${base}models/${file}`);
         gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));

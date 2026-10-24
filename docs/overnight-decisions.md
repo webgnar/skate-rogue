@@ -396,6 +396,11 @@ and listed it here for review. Any of these can be flipped in the morning.
   eye slit across the nose, a searchlight under the chin, skids, a tail boom with a fin and the AI's red livery. Its
   rotors are spun slower than a real one's so the blades read instead of strobing, with a faint blur disc over
   them. The code-built chopper stays as the fallback. The spotlight and its behaviour are unchanged.
+- **One big landmark per world, behind the street** (art/landmarks.py): a Greek temple front, Atlantis's sunken arch
+  in coral and kelp, Clemente Park's ballpark light tower, a giant museum bust, High-Tech City's data spire, a rocket
+  on its gantry in space, and the AI's tower with its red eye in the Hive. One stands in for a building every 26 to
+  46 tiles. They are 6 to 10 tiles tall, so from the street their tops rise out of frame; from the roofs you see them
+  whole. Chicago has none: its skyline is the landmark.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

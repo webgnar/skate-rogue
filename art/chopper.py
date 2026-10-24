@@ -25,17 +25,18 @@ HUB = (0.0, 0.0, 0.86)  # main rotor hub
 TAIL_HUB = (-2.82, -0.14, 0.42)  # tail rotor hub, camera side of the fin
 BLADE = 2.35  # main rotor radius
 
+# named apart from the drone's and the cars' colours: the game shares materials by name (src/render/models.ts)
 COLORS = {
-    'shell': 0x1D1F28,
-    'armor': 0x343846,
-    'trim': 0x0E0F14,
-    'glass': 0x22324A,
+    'chShell': 0x1D1F28,
+    'chArmor': 0x343846,
+    'chTrim': 0x0E0F14,
+    'chGlass': 0x22324A,
     'stripe': 0xD9302E,
     'eye': 0xFF2A2A,  # glows
-    'lamp': 0xFFF2C0,  # glows: the searchlight's lens
+    'lamp': 0xFFF2B0,  # glows: the searchlight's lens
     'navRed': 0xFF3030,  # glows
     'navBlue': 0x2F6BFF,  # glows
-    'blade': 0x5A5F6C,
+    'chBlade': 0x5A5F6C,
 }
 
 
@@ -118,12 +119,12 @@ def build():
     cyl(bm, 0.2, 2.0, (-1.75, 0, 0.18), segs=10, r2=0.09, rot=Matrix.Rotation(-math.pi / 2, 3, 'Y'))
     boxv(bm, (0.7, 0.42, 0.24), (-0.05, 0, 0.5), bevel=0.06)  # engine housing on the roof
     cyl(bm, 0.07, 0.3, (0, 0, 0.7), segs=8)  # rotor mast
-    parts.append(link('shell', bm, mats['shell']))
+    parts.append(link('chShell', bm, mats['chShell']))
 
     # the tinted canopy: the front-top of a slightly bigger blob
     bm = bmesh.new()
     blob(bm, (1.07, 0.52, 0.54), (0.02, 0, 0.0), keep=lambda c: c.x > 0.35 and c.z > -0.1)
-    parts.append(link('glass', bm, mats['glass']))
+    parts.append(link('chGlass', bm, mats['chGlass']))
 
     # armour: engine intakes, the stub wings, the fin and stabiliser, the searchlight pod, the hub
     bm = bmesh.new()
@@ -136,7 +137,7 @@ def build():
     cyl(bm, 0.13, 0.22, (0.66, 0, -0.5), segs=12)  # searchlight pod under the chin
     cyl(bm, 0.05, 0.14, (0.66, 0, -0.38), segs=8)
     cyl(bm, 0.12, 0.08, HUB, segs=10)  # main hub
-    parts.append(link('armor', bm, mats['armor']))
+    parts.append(link('chArmor', bm, mats['chArmor']))
 
     # skids on struts
     bm = bmesh.new()
@@ -145,7 +146,7 @@ def build():
         boxv(bm, (0.12, 0.035, 0.035), (0.95, sy * 0.48, -0.74), rot=Matrix.Rotation(-0.5, 3, 'Y'))  # upturned toes
         for sx in (0.42, -0.38):
             boxv(bm, (0.04, 0.04, 0.42), (sx, sy * 0.4, -0.58), rot=Matrix.Rotation(sy * 0.35, 3, 'X'))
-    parts.append(link('trim', bm, mats['trim']))
+    parts.append(link('chTrim', bm, mats['chTrim']))
 
     # the AI's livery: a red stripe down each flank and on the fin
     bm = bmesh.new()
@@ -186,7 +187,7 @@ def build():
         bmesh.ops.translate(bm, verts=vs, vec=((BLADE + 0.1) / 2, 0, -0.02))
         bmesh.ops.rotate(bm, verts=vs, cent=(0, 0, 0), matrix=Matrix.Rotation(i * math.pi / 2, 3, 'Z'))
     cyl(bm, 0.09, 0.08, (0, 0, 0.05), segs=8)
-    rotor = link('ChopperRotor', bm, mats['blade'])
+    rotor = link('ChopperRotor', bm, mats['chBlade'])
     rotor.location = HUB
 
     # the tail rotor: two blades turning about Y, beside the fin
@@ -197,7 +198,7 @@ def build():
         bmesh.ops.translate(bm, verts=vs, vec=(0, 0, 0.16))
         bmesh.ops.rotate(bm, verts=vs, cent=(0, 0, 0), matrix=Matrix.Rotation(a, 3, 'Y'))
     cyl(bm, 0.04, 0.05, (0, 0, 0), segs=8, rot=ALONG_Y)
-    tail = link('ChopperTail', bm, mats['blade'])
+    tail = link('ChopperTail', bm, mats['chBlade'])
     tail.location = TAIL_HUB
 
     for ob in (body, rotor, tail):
