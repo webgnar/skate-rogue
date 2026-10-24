@@ -503,11 +503,12 @@ def build():
 def export():
     os.makedirs(os.path.dirname(GLB), exist_ok=True)
     locs = {}
-    for ob in bpy.data.objects:  # props at the origin; pieces keep their offset in the prop
+    for ob in bpy.data.objects:
         locs[ob.name] = ob.location.copy()
+    for ob in bpy.data.objects:  # props at the origin; pieces keep their offset in the prop
         if '_piece' in ob.name:
             whole = bpy.data.objects[ob.name.split('_piece')[0]]
-            ob.location = ob.location - whole.location - Vector((0, 3, 0))
+            ob.location = locs[ob.name] - locs[whole.name] - Vector((0, 3, 0))
         else:
             ob.location = (0, 0, 0)
     bpy.ops.object.select_all(action='SELECT')

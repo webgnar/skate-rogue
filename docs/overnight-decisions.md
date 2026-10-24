@@ -236,3 +236,7 @@ and listed it here for review. Any of these can be flipped in the morning.
   benches, Chicago blue garbage carts, rows of newspaper boxes, USPS mailboxes, parking meters, street-name sign
   poles and the odd cone. Nothing collides with them; a floor's props merge into one mesh (one draw call). Making
   any of them skateable (benches and hydrants to ollie over) is a gameplay call, left for zack.
+- **The game now plays the Blender actions** from `lou-gnar.glb` in place of the code clips of the same name;
+  crossfades blend bone by bone. To change a move: edit its action in `art/lou-gnar.blend`, then
+  `blender -b art/lou-gnar.blend -P art/lou_gnar.py -- --export-only`. A new move still needs a code clip entry
+  (its timing and looping come from `src/render/poses.ts`).
