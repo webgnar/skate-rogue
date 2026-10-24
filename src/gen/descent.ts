@@ -2,6 +2,7 @@
 // terraces, stair sets, big handrails, drop-offs, rooftop gaps and a few banks, then finishes on a short street
 // stretch built from QFS pieces (canals, curved rails, parked cars, traffic) with the exit gate.
 import { placeProps } from './props';
+import { crossPlan } from '../traffic/cross';
 import { TILE } from '../physics/constants';
 import { buildLevel, CurvedRail, type Level, type Pickup, type Surface } from '../physics/level';
 import type { Fork } from './roads';
@@ -245,6 +246,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     fork,
     danger: opts.danger ?? 2,
   };
+  level.crossings = crossPlan(level, level.layout.seed);
   level.props = placeProps(level);
   return level;
 }

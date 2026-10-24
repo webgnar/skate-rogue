@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { BOON_COLORS } from '../boons/defs';
 import { model } from './models';
 import { buildProps } from './props';
+import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
@@ -98,9 +99,21 @@ export function buildKit(level: Level): THREE.Group {
     wallRows[0].push(CITY.brick[(i * 7) % CITY.brick.length]);
     wallRows[1].push(CITY.brick[(i * 5 + 3) % CITY.brick.length]);
   }
-  const wall = slab(cols - first, 2, 0.5, lambert(tileTexture(wallRows.map((row) => row.slice(first)))), lambert(null, 0x6b5a55), sideMat);
-  wall.position.set(first + (cols - first) / 2, 1, STREET_BACK - 0.25);
-  kit.add(wall);
+  //cross streets cut the wall and the block behind it
+  const gaps = level.crossings.map((i) => toX(i.x + CROSS.w / 2)).map((cx) => [cx - CROSS.street, cx + CROSS.street]);
+  const inGap = (x0: number, x1: number) => gaps.some(([g0, g1]) => x1 > g0 - 0.2 && x0 < g1 + 0.2);
+  let w0 = first;
+  for (const [g0, g1] of [...gaps, [cols, cols]].sort((a, b) => a[0] - b[0])) {
+    const a0 = Math.round(w0);
+    const a1 = Math.min(cols, Math.round(g0));
+    if (a1 > a0) {
+      const wall = slab(a1 - a0, 2, 0.5, lambert(tileTexture(wallRows.map((row) => row.slice(a0, a1)))), lambert(null, 0x6b5a55), sideMat);
+      wall.position.set((a0 + a1) / 2, 1, STREET_BACK - 0.25);
+      kit.add(wall);
+    }
+    w0 = g1;
+  }
+  for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
   const props = buildProps(level); // hydrants, benches, newspaper boxes... along the back of the sidewalk
   if (props) kit.add(props);
 
@@ -108,9 +121,12 @@ export function buildKit(level: Level): THREE.Group {
     const w = 4 + randInt(rng, 5);
     const h = 5 + randInt(rng, 9);
     const t = CITY.facade[randInt(rng, CITY.facade.length)];
-    const b = slab(w, h, 4, facadeMat(w, h, t, 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
-    b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - randInt(rng, 3));
-    kit.add(b);
+    const back = randInt(rng, 3);
+    if (!inGap(bx, bx + w)) {
+      const b = slab(w, h, 4, facadeMat(w, h, t, 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
+      b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - back);
+      kit.add(b);
+    }
     bx += w + randInt(rng, 2);
   }
 
@@ -319,6 +335,41 @@ export function buildKit(level: Level): THREE.Group {
 
 // a building front: facade tiles with QFS's roof-line cap drawn over the top row
 // a building front; userData.facade lets the night pass (night.ts) light its windows
+// a cross street from x0 to x1 (tiles): the side road running off into the city behind, sidewalks along it, the
+// main street's sidewalk cut through with a crosswalk
+function crossStreet(x0: number, x1: number, sideMat: THREE.Material): THREE.Group {
+  const g = new THREE.Group();
+  const w = x1 - x0;
+  const cx = (x0 + x1) / 2;
+  const far = 34; // tiles back, into the fog
+  const road = paintTexture(w, far, (ctx, W, H) => {
+    ctx.fillStyle = '#2a2830';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#d8b84a'; // centre line, along the road
+    for (let py = 0; py < H; py += 24) ctx.fillRect(W / 2 - 1, py, 2, 12);
+  });
+  const side = slab(w, 3, far, lambert(null, 0x2a2830), lambert(road), sideMat);
+  side.position.set(cx, -1.5, STREET_BACK - far / 2);
+  //sidewalks and kerbs down both sides
+  const walk = lambert(null, 0x7d7a86);
+  for (const sx of [x0 - 0.35, x1 + 0.35]) {
+    const kerb = slab(0.7, 0.12, far, walk, walk, sideMat);
+    kerb.position.set(sx, 0.06, STREET_BACK - far / 2);
+    g.add(kerb);
+  }
+  //the main street's sidewalk is road here, with a crosswalk across the mouth of the side street
+  const cut = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.8).rotateX(-Math.PI / 2), lambert(null, 0x2a2830));
+  cut.position.set(cx, 0.004, STREET_BACK + 0.9);
+  const zebra = new THREE.MeshBasicMaterial({ color: 0xd8d8de, transparent: true, opacity: 0.6, depthWrite: false });
+  for (let bx = x0 + 0.25; bx < x1 - 0.1; bx += 0.45) {
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 1.4).rotateX(-Math.PI / 2), zebra);
+    bar.position.set(bx, 0.008, STREET_BACK + 0.9);
+    g.add(bar);
+  }
+  g.add(side, cut);
+  return g;
+}
+
 function facadeMat(w: number, h: number, t: number, color = 0xffffff): THREE.MeshLambertMaterial {
   const m = lambert(tileTexture(facade(w, h, t)), color);
   m.userData.facade = { w, h, t };

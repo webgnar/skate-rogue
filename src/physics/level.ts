@@ -1,5 +1,6 @@
 // A floor as the physics sees it: street columns, one-way surfaces, curved rails and parked cars, in pixels.
 import type { Prop } from '../gen/props';
+import type { Intersection } from '../traffic/cross';
 import { CHUNK_W, STREET_ROW, cell, type Layout } from '../gen/layout';
 import type { Road } from '../gen/roads';
 import { TILE } from './constants';
@@ -155,6 +156,7 @@ export interface Level {
   danger: number; // traffic 1 (light) to 3 (rush hour)
   escape?: EscapeSite; // an escape floor
   props: Prop[]; // street props, scenery and smashables (src/gen/props.ts)
+  crossings: Intersection[]; // cross streets with cross traffic (src/traffic/cross.ts)
 }
 
 const CAR_W = 2 * TILE;
@@ -234,6 +236,7 @@ export function buildLevel(layout: Layout): Level {
     fork: null,
     danger: 2,
     props: [],
+    crossings: [],
   };
 }
 

@@ -21,6 +21,7 @@ const PAINTS: Record<VehicleKind, number[]> = {
   truck: [0xf4f1ea, 0xd9e2ec, 0xffd23f],
 };
 const BACK_LANE_Z = -2.2;
+const CROSS_GONE_Z = 2.7;
 const CRUISER_Z = -1.3; // the lane just behind the skate lane
 
 export class TrafficView {
@@ -146,7 +147,8 @@ export class TrafficView {
     cross.forEach((c, i) => {
       const v = this.crossings[i];
       v.car.position.z = c.z;
-      v.car.visible = c.t >= 0 && c.z < CROSS.endZ;
+      //off the front edge of the street it's out of shot
+      v.car.visible = c.t >= 0 && c.z < CROSS_GONE_Z;
       v.red.visible = c.red;
       v.green.visible = !c.red;
     });
@@ -179,14 +181,8 @@ export class TrafficView {
     green.position.set(0, 2.93, 0.13);
     inkify(post.add(pole, head));
     post.add(red, green);
-    post.position.set(toX(c.box.x0) - 0.6, street, -1.2);
-    //a crosswalk on the street just before it: bars running across the lanes
-    const zebra = new THREE.MeshBasicMaterial({ color: 0xd8d8de, transparent: true, opacity: 0.5, depthWrite: false });
-    for (let k = 0; k < 4; k++) {
-      const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 3.4).rotateX(-Math.PI / 2), zebra);
-      bar.position.set(-1.6 + k * 0.4, 0.015, 1.2);
-      post.add(bar);
-    }
+    //on the near corner of the cross street, at the back of the sidewalk
+    post.position.set(toX(c.box.x0 + CROSS.w / 2) - CROSS.street - 0.45, street, -2.0);
     this.group.add(car, post);
     return { car, post, red, green };
   }

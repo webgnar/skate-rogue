@@ -51,6 +51,16 @@ describe('cross traffic', () => {
     expect(slam).toBe(true);
   });
 
+  it('each intersection is a cross street on the level, kept clear of street props', () => {
+    for (const l of floors(8)) {
+      expect(l.crossings).toEqual(crossPlan(l, l.layout.seed));
+      for (const i of l.crossings) {
+        const mid = i.x + CROSS.w / 2;
+        expect(l.props.some((p) => Math.abs(p.x - mid) < CROSS.street * 32)).toBe(false);
+      }
+    }
+  });
+
   it('the no-boon bot gets through floors with cross traffic', () => {
     for (const l of floors(9)) expect(botRun(l).result).toBe('exit');
   });

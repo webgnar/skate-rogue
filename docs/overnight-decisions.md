@@ -197,6 +197,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   "WRECKING BALL!". A landing from about 4 tiles up breaks everything within 2 tiles, a slam within 1.5, and a
   tailgate bomb clears the street 5 tiles ahead.
 
+- **Cross streets (zack: "cross traffic needs cross streets").** Each intersection is now a real cross street
+  on the level (`level.crossings`): the back wall and the block behind it open up, a side road with a centre
+  line and kerbs runs off into the city, the main sidewalk is cut through with a crosswalk, and the traffic light
+  stands on the near corner. Cross cars start 9 tiles up the side road with their headlights on (about 2 s
+  before they reach your lane, light red the whole time) and drive out of shot past the front of the street.
+  Street props keep out of the junction.
+
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
   shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin
