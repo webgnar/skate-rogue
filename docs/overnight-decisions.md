@@ -50,6 +50,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   to 200 draws. Facades stay separate because each has its own window map. Lou's rig (36 draws with outlines) is
   the next biggest item, and belongs to the models thread.
 
+## Effects thread: fx9 trick effects
+
+- **Sketchy means the trick was caught late**: the board landed within 0.3 s of the flip being thrown. It is visual
+  only, with no score change; gameplay could hook into it later if you want a sketchy penalty.
+- **Trail colours by trick**: kickflip cyan, heelflip magenta, shove-its yellow, 180s white, so tricks read apart.
+- **Two grind spark styles**: hot white for metal rails, orange with concrete chips for ledges and roof edges.
+- **Lamps and headlights come on from golden hour**, not faintly in the afternoon (a fix to fx7).
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor

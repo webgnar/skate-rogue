@@ -17,7 +17,7 @@ import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
 import { Impacts } from '../render/impact';
-import { Particles } from '../render/particles';
+import { Particles, TRICK_TRAIL } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
@@ -97,6 +97,9 @@ const SLAM_EASE = 0.55;
 //speed lines fade in from FLOW_FROM x cruising speed and are full FLOW_RANGE x cruising speed above that.
 //zack: only at real speed. A flat grind (5) stays clear; a steep rail run (up to 9) brings them in.
 const FLOW_FROM = 1.8;
+//flip trails show for this long after a trick; a landing this soon after the trick is sketchy
+const FLIP_TRAIL_SECS = 0.35;
+const SKETCHY_SECS = 0.3;
 const FLOW_RANGE = 0.7;
 const GNAR_TRAIL = 40; // sparkles per second
 const SPARKS_RAIL = 150;
@@ -119,6 +122,7 @@ export class Game {
   private rerolls = 0;
   private readonly pickups = new PickupView();
   private nextRoad: Road = FIRST_ROAD;
+  private flip: { rgb: number[]; left: number; at: number } | null = null; // the last trick thrown this air
   private fallSpeed = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
   private readonly chopper = new ChopperView();
@@ -544,6 +548,11 @@ export class Game {
     const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
     const flow = skating ? Math.min(1, Math.max(0, (speed - PHYS.baseSpeed * FLOW_FROM) / (PHYS.baseSpeed * FLOW_RANGE))) : 0;
     this.clock += dt;
+    if (this.flip && this.flip.left > 0) {
+      this.flip.left -= dt;
+      const p = this.sprite.mesh.position;
+      if (this.skater.mode === 'air') this.particles.flipTrail(p.x, p.y + 0.08, this.flip.rgb, dt);
+    }
     this.speedLines.update(dt, this.view.camera, FX.reduceMotion ? 0 : flow, gnar && !FX.reduceMotion);
     this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
@@ -570,7 +579,8 @@ export class Game {
     const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
     const rate = (sk.mode === 'rail' ? SPARKS_RAIL : SPARKS_LEDGE) * Math.min(2, Math.max(0.4, speed / PHYS.baseSpeed));
     const [x, y] = this.backTruck();
-    this.particles.grind(x, y, 1, rate, dt);
+    //rails are metal; ledges, roof edges and banks are concrete
+    this.particles.grind(x, y, 1, rate, dt, sk.mode === 'rail' ? 'metal' : 'concrete');
   }
 
   // where the back truck meets the rail, from the rig's tilt
@@ -653,6 +663,7 @@ export class Game {
     switch (e.type) {
       case 'trick':
         this.view.zoom.trick();
+        this.flip = { rgb: TRICK_TRAIL[e.name] ?? TRICK_TRAIL.kickflip, left: FLIP_TRAIL_SECS, at: this.clock };
         this.hud.callout(trickName(e.name, e.fakie) + combo, 'trick');
         break;
       case 'grind':
@@ -674,6 +685,16 @@ export class Game {
         //dust on every landing; a big drop also lands with a smaller burst
         this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), Math.min(1.5, Math.max(0.5, this.fallSpeed / BIG_LANDING)));
         if (this.fallSpeed >= BIG_LANDING) this.burst(0.6, 0.12);
+        //a trick landed: clean if the board came round in good time, sketchy if it was caught at the last moment
+        if (this.flip) {
+          const x = toX(this.skater.x);
+          const y = toY(this.level, this.skater.y);
+          if (this.clock - this.flip.at < SKETCHY_SECS) {
+            this.particles.sketchyLanding(x, y, 1);
+            this.view.shake(0.12);
+          } else this.particles.cleanLanding(x, y);
+          this.flip = null;
+        }
         //into a puddle: a crown of water, and a SPLSH! on a big drop
         {
           const x = toX(this.skater.x);
@@ -686,6 +707,7 @@ export class Game {
         }
         break;
       case 'slam':
+        this.flip = null;
         this.slam();
         navigator.vibrate?.(60);
         break;

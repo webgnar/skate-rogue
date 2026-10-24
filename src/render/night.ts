@@ -295,10 +295,12 @@ export class NightCity {
   setNight(amount: number): void {
     this.amount = amount;
     for (const m of this.windowMats) m.emissiveIntensity = amount * NIGHT.windowGlow;
+    //lamps and headlights come on from golden hour, not in the afternoon
+    const beams = THREE.MathUtils.smoothstep(amount, 0.15, 0.6);
     for (const b of BEAMS) {
-      b.uniforms.uAmt.value = amount;
+      b.uniforms.uAmt.value = beams;
       //low tier keeps the pools on the ground and drops the big additive cones
-      b.visible = amount > 0.02 && (FX.tier === 'high' || (b !== lampCone && b !== headCone));
+      b.visible = beams > 0.02 && (FX.tier === 'high' || (b !== lampCone && b !== headCone));
     }
     this.headMat.emissive.setRGB(amount, amount * 0.8, amount * 0.5);
   }
