@@ -71,6 +71,8 @@ export class Skater {
   trickCatch = 0; // frames that flip takes to catch (0: no flip going)
   readonly crumbling = new Map<Surface, number>(); // Greece's ruins: frames until each ledge you've stood on falls
   readonly gone = new Set<Surface>(); // ruins that have fallen
+  rollOn = false; // through the gate you keep skating onto the next floor (src/game/game.ts) instead of stopping
+  exited = false; // through the gate, rolling on
 
   constructor(
     readonly level: Level,
@@ -141,9 +143,58 @@ export class Skater {
     else this.stepMove(input.held);
     if ((this.mode as Mode) !== 'bail') this.feel.step(this.grounded, this.groundPitch(), this.mode === 'rail' ? this.railV : this.hsp);
 
-    if (this.x >= this.level.exitX && (this.mode as Mode) !== 'bail') {
-      this.mode = 'exit';
+    if (this.x >= this.level.exitX && (this.mode as Mode) !== 'bail' && !this.exited) {
+      if (this.rollOn) this.exited = true;
+      else this.mode = 'exit';
       this.events.push({ type: 'exit' });
+    }
+  }
+
+  // the run flows on from the last floor (src/game/game.ts): pick up where `from` left off, moved (dx, dy) px into
+  // this floor's space, at the same speed, in the same air, mid-trick. The floor's own saves (pads, tucks) are new.
+  carryOn(from: Skater, dx: number, dy: number): void {
+    this.x = from.x + dx;
+    this.y = from.y + dy;
+    this.hsp = from.hsp;
+    this.vsp = from.vsp;
+    this.jumps = from.jumps;
+    this.carry = from.carry;
+    this.slamT = from.slamT;
+    this.boost = from.boost;
+    this.buffer = from.buffer;
+    this.coyote = from.coyote;
+    this.tricks = from.tricks;
+    this.floatT = from.floatT;
+    this.flipped = from.flipped;
+    this.holdT = from.holdT;
+    this.spare = from.spare;
+    this.fakie = from.fakie;
+    this.gravFlipT = from.gravFlipT;
+    this.rocket = from.rocket;
+    this.kicked = from.kicked;
+    this.trickT = from.trickT;
+    this.trickCatch = from.trickCatch;
+    Object.assign(this.feel, from.feel);
+    this.rail = null;
+    this.railV = 0;
+    if (from.mode === 'air' || from.mode === 'bail') {
+      this.mode = 'air';
+      this.surface = null;
+      return;
+    }
+    //on the ground: whatever is underfoot here (the next floor's first roof, or its street), else falling
+    const under = this.level.surfaces.find((s) => s.kind !== 'rail' && s.x0 <= this.x && s.x1 >= this.x && Math.abs(surfaceY(s, this.x) - this.y) < 2);
+    if (under) {
+      this.mode = 'roll';
+      this.surface = under;
+      this.y = surfaceY(under, this.x);
+    } else if (isStreetAt(this.level, this.x) && Math.abs(this.y - this.level.streetY) < 2) {
+      this.mode = 'roll';
+      this.surface = null;
+      this.y = this.level.streetY;
+    } else {
+      this.mode = 'air';
+      this.surface = null;
     }
   }
 

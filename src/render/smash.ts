@@ -187,6 +187,15 @@ export class SmashFx {
   clear(): void {
     for (const l of [...this.live]) this.retire(l);
   }
+
+  // the world moved (the next floor took over): move the pieces with it
+  shift(dx: number, dy: number): void {
+    for (const l of this.live) {
+      l.mesh.position.x += dx;
+      l.mesh.position.y += dy;
+      l.floor += dy;
+    }
+  }
 }
 
 // pieces sit round the prop's own middle across the ground: if an export left them offset (where the prop stood in

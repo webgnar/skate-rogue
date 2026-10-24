@@ -17,6 +17,76 @@ import { mergeInk, splitSlabs } from './kit-merge';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
 
+// keep everything: a clipping plane this far out cuts nothing
+const NO_CUT = 1e6;
+// the floor just left stays drawn behind the skater until the camera is this many tiles into the next one
+const BEHIND_TILES = 40;
+
+// the next floor, built ahead of time past the end of this one (src/game/game.ts runs a whole run as one street):
+// its kit is built a step a frame so it never stalls the game, then waits, hidden, until the skater nears the join
+interface Ahead {
+  root: THREE.Group; // at the next floor's origin, in this floor's world
+  level: Level;
+  seed: number;
+  floor: number;
+  kit: THREE.Group | null; // null until its build is done
+  job: Generator<void, THREE.Group> | null;
+  night: NightCity;
+  gates: GateFx;
+  sirens: SirenFx;
+  cut: THREE.Plane[]; // its kit's clipping planes: [start, end]
+  at: THREE.Vector2; // where its origin is, in world units
+}
+
+// a floor's kit is cut at its ends where another floor joins, so their margins (the city past each end) never
+// overlap. Every kit always has both planes, set out of the way when nothing joins, so programs never recompile.
+function cutPlanes(): THREE.Plane[] {
+  return [new THREE.Plane(new THREE.Vector3(1, 0, 0), NO_CUT), new THREE.Plane(new THREE.Vector3(-1, 0, 0), NO_CUT)];
+}
+
+// give a fresh kit its own copies of its materials, clipped by its planes (the outline material is shared by every
+// model: its copy keeps the shared uniforms, so resizes still reach it)
+function clipKit(kit: THREE.Object3D, planes: THREE.Plane[]): void {
+  const copies = new Map<THREE.Material, THREE.Material>();
+  const clip = (m: THREE.Material) => {
+    let c = copies.get(m);
+    if (!c) {
+      c = m.clone();
+      if (m instanceof THREE.ShaderMaterial) (c as THREE.ShaderMaterial).uniforms = m.uniforms;
+      c.clippingPlanes = planes;
+      c.userData.clipCopy = true;
+      copies.set(m, c);
+    }
+    return c;
+  };
+  kit.traverse((o) => {
+    if (o instanceof THREE.Mesh) o.material = Array.isArray(o.material) ? o.material.map(clip) : clip(o.material);
+  });
+}
+
+// free a kit's geometry, materials and their textures
+function disposeKit(kit: THREE.Object3D): void {
+  kit.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    //outlines share their geometry with what they outline (bar the merged one), and the outline material
+    if (o.userData.inkMerged) o.geometry.dispose();
+    else if (!o.userData.ink) o.geometry.dispose();
+    for (const m of [o.material].flat()) {
+      if (o.userData.ink && !m.userData.clipCopy) continue;
+      if (!o.userData.ink) (m as THREE.MeshLambertMaterial).map?.dispose();
+      m.dispose();
+    }
+  });
+}
+
+// run a generator to its end
+function run<T>(job: Generator<void, T>): T {
+  for (;;) {
+    const step = job.next();
+    if (step.done) return step.value;
+  }
+}
+
 export class StreetView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -24,18 +94,22 @@ export class StreetView {
   readonly front = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
+  private cut = cutPlanes(); // the kit's clipping planes: [start, end]
+  private aheads = new Map<string, Ahead>();
+  private behind: { root: THREE.Group; kit: THREE.Group } | null = null;
+  private skyDrop = 0; // world units the backdrop still sits above its place after a floor joined on (eases to 0)
   private biome: BiomeId = 'chicago';
   private sheet: HTMLImageElement | null = null; // the biome's tile sheet (skins.ts)
   private worlds = new Map<BiomeId, HTMLImageElement>(); // every world's sheet, for the one city's quarters
   private base = '';
   private seed = 0;
   private floor = 1;
-  readonly night = new NightCity();
-  readonly gates = new GateFx();
-  readonly sirens = new SirenFx();
+  night = new NightCity(); // these three are the floor being skated's: the next floor's take over at the join
+  gates = new GateFx();
+  sirens = new SirenFx();
   readonly ambience = new Ambience();
   private wet = 0;
-  private backdrop: { mesh: THREE.Mesh; parallax: number }[] = [];
+  private backdrop: { mesh: THREE.Mesh; parallax: number; w: number; y: number; off: number }[] = [];
   private readonly backdropTexs = new Map<string, THREE.Texture>();
   private readonly hemis: THREE.HemisphereLight[] = [];
   private readonly suns: THREE.DirectionalLight[] = [];
@@ -66,6 +140,7 @@ export class StreetView {
     this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.info.autoReset = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.localClippingEnabled = true; // floors' kits are cut where they join (clipKit)
     this.scene.background = new THREE.Color(0x2a1d4a);
     this.scene.fog = new THREE.Fog(0x3a2a5c, 40, 140);
 
@@ -128,7 +203,7 @@ export class StreetView {
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w * repeat, h), skylineMaterial(tex));
       mesh.position.set(0, h / 2 - 10 + l.lift, l.z);
       this.scene.add(mesh);
-      this.backdrop.push({ mesh, parallax: l.parallax });
+      this.backdrop.push({ mesh, parallax: l.parallax, w, y: mesh.position.y, off: 0 });
     }
     if (this.mood) this.setMood(this.mood, this.rain.amount);
   }
@@ -170,44 +245,162 @@ export class StreetView {
     }
     this.rain.amount = rain;
     this.wet = Math.min(1, rain);
-    this.wetKit();
+    for (const kit of this.kits()) this.wetKit(kit);
     this.puddles.setSky(m.skyTop, m.skyBottom, m.neon);
-    this.night.setNight(m.neon);
-    this.sirens.setNight(m.neon);
+    for (const n of [this.night, ...[...this.aheads.values()].map((a) => a.night)]) n.setNight(m.neon);
+    for (const s of [this.sirens, ...[...this.aheads.values()].map((a) => a.sirens)]) s.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
     this.flash = 99;
   }
 
-  // seed and floor place the night city's lamps, cameras and billboards
+  // seed and floor place the night city's lamps, cameras and billboards. A fresh start: the floors ahead and behind
+  // are dropped (the game asks for the next one again)
   setLevel(level: Level, seed = 0, floor = 1): void {
     this.level = level;
     this.seed = seed;
     this.floor = floor;
     if (this.kit) {
       this.scene.remove(this.kit);
-      this.kit.traverse((o) => {
-        //outlines share their geometry and one material with what they outline
-        if (o instanceof THREE.Mesh && o.userData.inkMerged) o.geometry.dispose();
-        else if (o instanceof THREE.Mesh && !o.userData.ink) {
-          o.geometry.dispose();
-          for (const m of [o.material].flat()) {
-            (m as THREE.MeshLambertMaterial).map?.dispose();
-            m.dispose();
-          }
-        }
-      });
+      disposeKit(this.kit);
     }
-    this.kit = buildKit(level, this.biome, this.sheet, this.worlds);
-    const slabs = splitSlabs(this.kit);
-    batchStatic(this.kit);
-    inkify(this.kit, { outline: (m) => !m.userData.noInk && solid(m) });
-    mergeInk(this.kit, slabs);
-    this.kitInk();
-    this.wetKit();
+    this.dropAheads([]);
+    this.dropBehind();
+    this.cut = cutPlanes();
+    this.kit = run(this.kitSteps(level, this.cut));
     this.scene.add(this.kit);
     this.night.build(level, this.kit, seed, floor);
     this.gates.build(this.kit);
     this.sirens.build(this.kit);
+  }
+
+  // a floor's kit, a step at a time: the generator yields between the slow parts
+  private *kitSteps(level: Level, cut: THREE.Plane[]): Generator<void, THREE.Group> {
+    const kit = buildKit(level, this.biome, this.sheet, this.worlds);
+    yield;
+    const slabs = splitSlabs(kit);
+    batchStatic(kit);
+    yield;
+    inkify(kit, { outline: (m) => !m.userData.noInk && solid(m) });
+    yield;
+    mergeInk(kit, slabs);
+    clipKit(kit, cut);
+    this.kitInk(kit);
+    this.wetKit(kit);
+    return kit;
+  }
+
+  // build the next floor past the end of this one, its origin at (x, y) world units: a step a frame (see tick).
+  // Asking again for one already built or building does nothing.
+  buildAhead(key: string, level: Level, seed: number, floor: number, x: number, y: number): void {
+    if (this.aheads.has(key)) return;
+    const root = new THREE.Group();
+    root.position.set(x, y, 0);
+    root.visible = false;
+    const cut = cutPlanes();
+    cut[0].constant = -x; // its kit keeps x >= the join
+    const a: Ahead = { root, level, seed, floor, kit: null, job: null, night: new NightCity(), gates: new GateFx(), sirens: new SirenFx(), cut, at: new THREE.Vector2(x, y) };
+    a.job = this.kitSteps(level, cut);
+    this.aheads.set(key, a);
+    this.scene.add(root);
+  }
+
+  hasAhead(key: string): boolean {
+    return this.aheads.has(key);
+  }
+
+  // drop the floors ahead that aren't in `keep` (the road was decided, or a new run began)
+  dropAheads(keep: string[]): void {
+    for (const [key, a] of this.aheads) {
+      if (keep.includes(key)) continue;
+      this.scene.remove(a.root);
+      if (a.kit) disposeKit(a.kit);
+      this.aheads.delete(key);
+    }
+  }
+
+  // show one floor ahead (the road the skater is on), or none: hidden, its whole outline mesh isn't drawn
+  showAhead(key: string | null): void {
+    let shown = false;
+    for (const [k, a] of this.aheads) {
+      a.root.visible = k === key && a.kit !== null;
+      shown ||= a.root.visible;
+    }
+    //this floor's kit stops where the shown one starts
+    const a = key ? this.aheads.get(key) : undefined;
+    this.cut[1].constant = shown && a ? a.at.x : NO_CUT;
+  }
+
+  // one step of the next floor's build, once a frame
+  tick(): void {
+    for (const a of this.aheads.values()) {
+      if (!a.job) continue;
+      const step = a.job.next();
+      if (step.done) this.finishAhead(a, step.value);
+      return;
+    }
+  }
+
+  private finishAhead(a: Ahead, kit: THREE.Group): void {
+    a.job = null;
+    a.kit = kit;
+    a.root.add(kit, a.night.group, a.gates.group, a.sirens.group);
+    a.night.build(a.level, kit, a.seed, a.floor);
+    a.night.setNight(this.mood?.neon ?? 0);
+    a.sirens.setNight(this.mood?.neon ?? 0);
+    a.gates.build(kit);
+    a.sirens.build(kit);
+    //upload its textures now, not on the frame it first comes into view
+    kit.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      for (const m of [o.material].flat() as THREE.MeshToonMaterial[]) for (const t of [m.map, m.emissiveMap]) if (t) this.renderer.initTexture(t);
+    });
+  }
+
+  // the skater crossed into the floor ahead: it becomes this floor, at the world's origin, and everything moves
+  // back by its origin (the game moves the skater, and the effects, the same way). The floor left stays drawn
+  // behind until it's off screen. Finishes the floor's build first if it isn't done.
+  promote(key: string, level: Level, seed: number, floor: number, x: number, y: number): void {
+    this.buildAhead(key, level, seed, floor, x, y);
+    const a = this.aheads.get(key)!;
+    while (a.job) {
+      const step = a.job.next();
+      if (step.done) this.finishAhead(a, step.value);
+    }
+    this.aheads.delete(key);
+    this.dropAheads([]);
+    this.dropBehind();
+    //this floor goes behind, cut where the next starts
+    if (this.kit) {
+      const root = new THREE.Group();
+      root.position.set(-a.at.x, -a.at.y, 0);
+      root.add(this.kit, this.night.group, this.gates.group, this.sirens.group);
+      this.scene.add(root);
+      this.cut[1].constant = 0;
+      this.behind = { root, kit: this.kit };
+    }
+    //and the next comes to the origin, cut where the last one ended
+    this.scene.remove(a.root);
+    this.scene.add(a.kit!, a.night.group, a.gates.group, a.sirens.group);
+    a.cut[0].constant = 0;
+    this.kit = a.kit;
+    this.cut = a.cut;
+    this.night = a.night;
+    this.gates = a.gates;
+    this.sirens = a.sirens;
+    this.level = level;
+    this.seed = seed;
+    this.floor = floor;
+    //the far cards stay where they were on screen: the skyline drifts back down to its place over a few seconds
+    for (const b of this.backdrop) b.off = THREE.MathUtils.euclideanModulo(b.off + a.at.x * (b.parallax - 1) + b.w / 2, b.w) - b.w / 2;
+    this.skyDrop -= a.at.y;
+  }
+
+  private dropBehind(): void {
+    if (!this.behind) return;
+    this.scene.remove(this.behind.root);
+    disposeKit(this.behind.kit);
+    this.behind = null;
+    this.cut[0].constant = NO_CUT;
   }
 
   // the district's kit (skins.ts): loads its tiles, then rebuilds the floor's kit in them. Chicago if they fail.
@@ -241,7 +434,13 @@ export class StreetView {
     this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0.25);
     this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
     this.punchAmt *= Math.pow(0.91, dt * 60);
-    for (const b of this.backdrop) b.mesh.position.x = this.camX * b.parallax; // far away: barely moves
+    //far away: barely moves. After a floor joins on, the skyline eases back down to where it sits
+    this.skyDrop *= Math.exp(-dt / 5);
+    for (const b of this.backdrop) {
+      b.mesh.position.x = this.camX * b.parallax + b.off;
+      b.mesh.position.y = b.y + this.skyDrop;
+    }
+    if (this.behind && this.camX > BEHIND_TILES) this.dropBehind();
     this.rain.update(dt, this.camera);
     this.ambience.update(dt, this.camera, this.pointScale);
     this.lightning(dt);
@@ -312,14 +511,20 @@ export class StreetView {
 
   setTier(tier: 'high' | 'low'): void {
     FX.tier = tier;
-    this.kitInk();
-    this.night.setNight(this.mood?.neon ?? 0);
+    for (const kit of this.kits()) this.kitInk(kit);
+    for (const n of [this.night, ...[...this.aheads.values()].map((a) => a.night)]) n.setNight(this.mood?.neon ?? 0);
+  }
+
+  // every floor kit there is: this floor's, the one behind, and the ones built ahead
+  private kits(): THREE.Group[] {
+    const out = [this.kit, this.behind?.kit ?? null, ...[...this.aheads.values()].map((a) => a.kit)];
+    return out.filter((k): k is THREE.Group => k !== null);
   }
 
   // rain darkens the street kit, the way wet concrete and brick go darker (facades keep their windows)
-  private wetKit(): void {
+  private wetKit(kit: THREE.Group): void {
     const k = 1 - 0.22 * this.wet;
-    this.kit?.traverse((o) => {
+    kit.traverse((o) => {
       if (!(o instanceof THREE.Mesh) || o.userData.ink) return;
       for (const m of [o.material].flat() as THREE.MeshToonMaterial[]) {
         if (!(m instanceof THREE.MeshToonMaterial) || m.userData.facade) continue;
@@ -330,8 +535,8 @@ export class StreetView {
   }
 
   // the low tier keeps outlines on the skater, cars and pickups but drops them from the street kit
-  private kitInk(): void {
-    this.kit?.traverse((o) => {
+  private kitInk(kit: THREE.Group): void {
+    kit.traverse((o) => {
       if (o.userData.ink) o.visible = FX.tier === 'high';
     });
   }

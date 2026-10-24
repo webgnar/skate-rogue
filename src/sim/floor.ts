@@ -104,8 +104,14 @@ export class FloorSim {
     this.trains = (level.el ?? []).map((s) => new ElTrain(s));
   }
 
+  // through the gate the skater rolls on (the game hands them to the next floor at the end of this one): the sim
+  // keeps stepping in the 'exit' state, and nothing after the gate can end the floor again
+  set rollOn(on: boolean) {
+    this.skater.rollOn = on;
+  }
+
   step(input: StepInput): void {
-    if (this.state !== 'skate') return;
+    if (this.state !== 'skate' && !(this.state === 'exit' && this.skater.rollOn)) return;
     this.traffic.step(this.skater.x);
     for (const t of this.trains) t.step(this.skater.x);
     this.swarm?.step(this.skater);
@@ -135,8 +141,9 @@ export class FloorSim {
     if (this.chopper?.step(this.skater)) this.heat.add(CHOPPER.heatPerSec / 60);
     this.chaser?.step(this.skater, skaterEvents);
     if (this.heat.decoyFired) this.events.push({ type: 'decoy' });
+    if (this.state === 'exit') return;
     if (this.skater.mode === 'bail') this.state = 'bail';
-    else if (this.skater.mode === 'exit') {
+    else if (this.skater.mode === 'exit' || this.skater.exited) {
       this.state = 'exit';
       //on (or above) the overpass at the gate = the high road
       const fork = this.level.fork;
