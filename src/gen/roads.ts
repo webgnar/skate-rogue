@@ -8,7 +8,8 @@ export type Road =
   | { kind: 'cash'; danger: number } // a normal floor with a big cash payout
   | { kind: 'hot'; danger: number } // rush hour, Heat starts at 30; pays a pick of 4 and cash
   | { kind: 'stash'; danger: number } // a short floor ending in a Stoken stash
-  | { kind: 'shop'; boonType: BoonType; danger: number }; // the skate shop (no floor), then a boon street
+  | { kind: 'shop'; boonType: BoonType; danger: number } // the skate shop (no floor), then a boon street
+  | { kind: 'escape'; act: number; danger: number }; // an act's escape set piece (no fork, no road choice)
 
 export interface Fork {
   high: Road;
@@ -77,5 +78,7 @@ export function label(road: Road): string {
       return 'STOKEN STASH';
     case 'shop':
       return 'SKATE SHOP';
+    case 'escape':
+      return road.act >= 5 ? 'THE LAST ROADBLOCK' : 'ROADBLOCK';
   }
 }

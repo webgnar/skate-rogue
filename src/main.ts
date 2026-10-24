@@ -3,6 +3,7 @@ import { BOON_COLORS, boonById, stacksOf, type Boon, type Held } from './boons/d
 import { Game, type Hud, type ShopView } from './game/game';
 import { modDef, type ModId } from './board/mods';
 import { label } from './gen/roads';
+import { actOf } from './gen/escape';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
@@ -73,7 +74,7 @@ function shopHtml(v: ShopView): { slots: string; stock: string; hint: string } {
 }
 
 function makeHud(): Hud {
-  const floorEl = document.getElementById('floor')!;
+  const floorEl = document.getElementById('floortext')!;
   const calloutEl = document.getElementById('callout')!;
   const debugEl = document.getElementById('debug')!;
   const boonsEl = document.getElementById('boons')!;
@@ -95,7 +96,7 @@ function makeHud(): Hud {
   let timer = 0;
   return {
     floor: (n, road) => {
-      floorEl.textContent = `FLOOR ${n}`;
+      floorEl.textContent = road.kind === 'escape' ? `ACT ${road.act} ESCAPE` : `ACT ${actOf(n)} · FLOOR ${n}`;
       roadEl.textContent = label(road);
       roadEl.dataset.kind = road.kind;
     },
@@ -165,8 +166,11 @@ function makeHud(): Hud {
     over: (result) => {
       overEl.hidden = !result;
       if (!result) return;
-      overEl.querySelector('b')!.textContent = result.caught ? 'BUSTED' : 'BAILED';
-      overEl.querySelector('.reached')!.textContent = `You made it to floor ${result.floor}`;
+      overEl.classList.toggle('won', result.won);
+      overEl.querySelector('b')!.textContent = result.won ? 'YOU ESCAPED!' : result.caught ? 'BUSTED' : 'BAILED';
+      overEl.querySelector('.reached')!.textContent = result.won
+        ? `Out of the city in ${result.floor} floors · escape #${result.wins}`
+        : `You made it to act ${result.act}, floor ${result.floor}`;
       overEl.querySelector('.final')!.textContent = `${result.score.toLocaleString()}${result.newBest ? ' · NEW BEST' : ''}`;
       overEl.querySelector('.best')!.textContent = `best ${result.best.toLocaleString()} · ◆ ${result.stoken} Stoken this run (${result.bank} banked)`;
       overEl.querySelector('.held')!.innerHTML = result.boons.length ? result.boons.map(chip).join('') : '<span class="none">no boons</span>';

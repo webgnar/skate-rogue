@@ -5,15 +5,16 @@ const KEY = 'gnar-run-save';
 export interface Save {
   best: number;
   stoken: number;
+  wins: number; // runs that escaped the city
 }
 
 export function loadSave(): Save {
   try {
     const raw = localStorage.getItem(KEY);
     const s = raw ? (JSON.parse(raw) as Partial<Save>) : {};
-    return { best: Number(s.best) || 0, stoken: Number(s.stoken) || 0 };
+    return { best: Number(s.best) || 0, stoken: Number(s.stoken) || 0, wins: Number(s.wins) || 0 };
   } catch {
-    return { best: 0, stoken: 0 };
+    return { best: 0, stoken: 0, wins: 0 };
   }
 }
 
