@@ -17,6 +17,7 @@ Shaders and visual effects for Gnar Run. Each item is an OpenSpec change in `ope
 | fx11-heat-beams | Cruiser searchlight that hunts then locks on, drone scan beam | Built |
 | fx12-ui-juice | Card deal and pick pop, shop stamps, gate portals | Built (fork signs left) |
 | fx13-biome-looks | A colour grade and ambient drift per GDD biome; ?biome= preview | Built (first pass, waits on biome kits) |
+| fx14-smash | Smashable props: pieces, chips, dust, words, kick, by material | Built (waits on sim events and model pieces) |
 
 Budget rules for all of it: one draw call per effect type, no full-screen passes beyond the brief slam lines,
 fake lights (additive meshes) instead of real ones, and nothing that strobes the whole screen.

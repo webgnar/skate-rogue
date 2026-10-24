@@ -27,6 +27,7 @@ import { SpeedLines } from '../render/speed-lines';
 import { FX } from '../render/fx-settings';
 import { HeatCue } from '../render/heat-cue';
 import { BoonFx } from '../render/boon-fx';
+import { SmashFx, type SmashHit } from '../render/smash';
 import { biomeMood, type BiomeId } from '../render/biomes';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
@@ -140,6 +141,10 @@ export class Game {
   private readonly warp = new TimeWarp();
   private readonly speedLines = new SpeedLines();
   private readonly boonFx = new BoonFx(this.particles);
+  readonly smashFx = new SmashFx(this.particles, {
+    word: (x, y, w) => this.words.spawn(x, y, w),
+    shake: (a) => this.view.shake(a),
+  });
   private biome: BiomeId = 'chicago';
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
   private perfT = 0;
@@ -181,6 +186,7 @@ export class Game {
     );
     this.ghostMesh.visible = false;
     this.view.scene.add(this.ghostMesh);
+    this.view.scene.add(this.smashFx.group);
     this.startFloor();
   }
 
@@ -213,6 +219,11 @@ export class Game {
     this.input.clear();
   }
 
+  // a prop breaks (or rings, if it can't): the sim's smash events come through here
+  smash(hit: SmashHit): void {
+    this.smashFx.smash(hit);
+  }
+
   // the district's look (gameplay picks it per act; ?biome= previews one); takes effect now
   setBiome(id: BiomeId): void {
     this.biome = id;
@@ -234,6 +245,7 @@ export class Game {
     this.state = 'skate';
     this.warp.reset();
     this.particles.clear();
+    this.smashFx.clear();
     this.input.clear();
     this.boonFx.setBoons(this.boons);
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
@@ -591,6 +603,7 @@ export class Game {
     this.sparks(dt);
     this.water(dt);
     this.particles.update(dt, this.view.pointScale);
+    this.smashFx.update(dt);
     this.words.update(realDt);
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
     this.flowFx(dt);
