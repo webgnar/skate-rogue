@@ -13,6 +13,7 @@ Shaders and visual effects for Gnar Run. Each item is an OpenSpec change in `ope
 | fx7-night-city | Lit windows, street lamps, headlight telegraphing, neon signs, AI billboards and Flock cameras that track you | Built (signs, brake trails, visor highlight left) |
 | fx8-device-polish | On-iPhone tuning, automatic quality tiers, reduce motion / flashing, perf overlay | Built except the on-device tuning pass |
 | fx9-trick-fx | Flip trails by trick, grind sparks by surface, clean vs sketchy landings | Built |
+| fx10-boon-looks | A look for each of the 12 boons and the board mod effects | Built |
 
 Budget rules for all of it: one draw call per effect type, no full-screen passes beyond the brief slam lines,
 fake lights (additive meshes) instead of real ones, and nothing that strobes the whole screen.

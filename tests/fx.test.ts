@@ -1,3 +1,5 @@
+import { BoonFx } from '../src/render/boon-fx';
+import type { Particles } from '../src/render/particles';
 import { applyParams } from '../src/render/fx-settings';
 import { describe, expect, it } from 'vitest';
 import { TimeWarp } from '../src/game/time-warp';
@@ -139,5 +141,32 @@ describe('effect settings from the URL', () => {
     expect(q('fx=nonsense').quality).toBe('auto');
     expect(q('noflash')).toMatchObject({ reduceMotion: false, reduceFlashing: true });
     expect(q('heatcue').heatCue).toBe(true);
+  });
+});
+
+describe('boon and board mod looks', () => {
+  const calls: string[] = [];
+  const fake = { spray: () => calls.push('spray'), stream: (k: string) => calls.push(k) } as unknown as Particles;
+  const look = { mode: 'air' as const, floatT: 10, holdT: 0, onRailT: 0, carry: 0, hsp: 3 };
+  it('shows only the boons that are held', () => {
+    const fx = new BoonFx(fake);
+    fx.setBoons([{ id: 'bigPop', stacks: 1 }]);
+    calls.length = 0;
+    fx.event({ type: 'ollie', spin: 0 }, 0, 0, 3);
+    fx.update(1 / 60, look, 0, 0);
+    expect(calls).toEqual(['spray']);
+    fx.setBoons([{ id: 'floatyFlip', stacks: 1 }]);
+    calls.length = 0;
+    fx.event({ type: 'ollie', spin: 0 }, 0, 0, 3);
+    fx.update(1 / 60, look, 0, 0);
+    expect(calls).toEqual(['floaty']);
+  });
+  it('every board mod effect except sparks has a look', () => {
+    const fx = new BoonFx(fake);
+    for (const e of ['doublePop', 'speedKick', 'jumpRefill', 'cashBurst', 'slowMo', 'gravFlip', 'shockwave'] as const) {
+      calls.length = 0;
+      fx.mod(e, 0, 0);
+      expect(calls.length, e).toBeGreaterThan(0);
+    }
   });
 });

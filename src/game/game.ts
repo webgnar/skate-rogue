@@ -25,6 +25,7 @@ import { Aura, inkify } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
 import { FX } from '../render/fx-settings';
 import { HeatCue } from '../render/heat-cue';
+import { BoonFx } from '../render/boon-fx';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
@@ -133,6 +134,7 @@ export class Game {
   private readonly words = new SoundWords();
   private readonly warp = new TimeWarp();
   private readonly speedLines = new SpeedLines();
+  private readonly boonFx = new BoonFx(this.particles);
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
   private perfT = 0;
   private perfWorst = 0;
@@ -209,6 +211,7 @@ export class Game {
     this.warp.reset();
     this.particles.clear();
     this.input.clear();
+    this.boonFx.setBoons(this.boons);
     this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0, this.board);
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
@@ -548,6 +551,7 @@ export class Game {
     const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
     const flow = skating ? Math.min(1, Math.max(0, (speed - PHYS.baseSpeed * FLOW_FROM) / (PHYS.baseSpeed * FLOW_RANGE))) : 0;
     this.clock += dt;
+    if (skating) this.boonFx.update(dt, sk, this.sprite.mesh.position.x, this.sprite.mesh.position.y);
     if (this.flip && this.flip.left > 0) {
       this.flip.left -= dt;
       const p = this.sprite.mesh.position;
@@ -615,6 +619,7 @@ export class Game {
   // a board mod fired: the effects the sim can't do itself
   private fire(effect: EffectId, slot: number): void {
     this.hud.fire(slot);
+    this.boonFx.mod(effect, this.sprite.mesh.position.x, this.sprite.mesh.position.y);
     switch (effect) {
       case 'sparks':
         this.run.addStyle(BOARD.sparkStyle);
@@ -656,7 +661,11 @@ export class Game {
   private handle(e: FloorSim['events'][number]): void {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
-    if (e.type !== 'pickup' && e.type !== 'near') this.sprite.onEvent(e);
+    if (e.type !== 'pickup' && e.type !== 'near') {
+      this.sprite.onEvent(e);
+      const p = this.sprite.mesh.position;
+      this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));
+    }
     const wasGnar = this.run.gnar;
     const bank = this.run.onEvent(e, this.skater.hsp);
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';

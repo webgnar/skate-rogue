@@ -58,6 +58,14 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Two grind spark styles**: hot white for metal rails, orange with concrete chips for ledges and roof edges.
 - **Lamps and headlights come on from golden hour**, not faintly in the afternoon (a fix to fx7).
 
+## Effects thread: fx10 boon and board mod looks
+
+- **Boon looks use the card colours** (POP yellow, GRIND orange), so a look says which kind of boon made it. Board
+  mods each get their own colour (cash green, slow-mo pale blue, gravity violet, kick cyan).
+- **Everything is a short particle effect**, with no new meshes, sprites or HUD. The full table is in
+  `openspec/changes/fx10-boon-looks/proposal.md`.
+- **Ghost Rail gets nothing new**, because the ghost rail it draws is already its look.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor
