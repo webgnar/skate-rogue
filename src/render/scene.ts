@@ -7,6 +7,7 @@ import { NightCity } from './night';
 import { FX } from './fx-settings';
 import { batchStatic } from './batch';
 import { GateFx } from './gate-fx';
+import { Ambience } from './biomes';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution } from './toon';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
@@ -21,6 +22,7 @@ export class StreetView {
   private kit: THREE.Group | null = null;
   readonly night = new NightCity();
   readonly gates = new GateFx();
+  readonly ambience = new Ambience();
   private skyline: THREE.Mesh | null = null;
   private readonly hemis: THREE.HemisphereLight[] = [];
   private readonly suns: THREE.DirectionalLight[] = [];
@@ -63,7 +65,7 @@ export class StreetView {
       this.hemis.push(hemi);
       this.suns.push(sun);
     }
-    this.scene.add(this.sky, this.puddles.mesh, this.night.group, this.gates.group);
+    this.scene.add(this.sky, this.puddles.mesh, this.night.group, this.gates.group, this.ambience.points);
     this.front.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
@@ -164,6 +166,7 @@ export class StreetView {
     this.punchAmt *= Math.pow(0.91, dt * 60);
     if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
     this.rain.update(dt, this.camera);
+    this.ambience.update(dt, this.camera, this.pointScale);
     this.lightning(dt);
   }
 

@@ -27,6 +27,7 @@ import { SpeedLines } from '../render/speed-lines';
 import { FX } from '../render/fx-settings';
 import { HeatCue } from '../render/heat-cue';
 import { BoonFx } from '../render/boon-fx';
+import { biomeMood, type BiomeId } from '../render/biomes';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
@@ -139,6 +140,7 @@ export class Game {
   private readonly warp = new TimeWarp();
   private readonly speedLines = new SpeedLines();
   private readonly boonFx = new BoonFx(this.particles);
+  private biome: BiomeId = 'chicago';
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
   private perfT = 0;
   private perfWorst = 0;
@@ -211,6 +213,23 @@ export class Game {
     this.input.clear();
   }
 
+  // the district's look (gameplay picks it per act; ?biome= previews one); takes effect now
+  setBiome(id: BiomeId): void {
+    this.biome = id;
+    this.applyMood();
+  }
+
+  //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level
+  private applyMood(): number {
+    const rain = rainLevel(this.seed, this.floor);
+    const mood = moodAt(clockFor(this.floor));
+    const look = biomeMood(rain > 0 ? rainy(mood) : mood, this.biome);
+    this.view.setMood(look, rain);
+    this.view.ambience.set(this.biome);
+    this.trafficView.beams.setNight(look.neon);
+    return rain;
+  }
+
   private startFloor(): void {
     this.state = 'skate';
     this.warp.reset();
@@ -224,11 +243,7 @@ export class Game {
     this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level, this.seed, this.floor);
-    //the run's clock: afternoon into neon night, rain on some floors
-    const rain = rainLevel(this.seed, this.floor);
-    const mood = moodAt(clockFor(this.floor));
-    this.view.setMood(rain > 0 ? rainy(mood) : mood, rain);
-    this.trafficView.beams.setNight(mood.neon);
+    const rain = this.applyMood();
     this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
     this.view.zoom.reset();
     this.view.follow(this.skater.x, this.skater.y);
