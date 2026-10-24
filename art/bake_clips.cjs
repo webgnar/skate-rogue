@@ -41,6 +41,7 @@ function modeFor(name) {
       const g = window.game;
       g.loop.advance = () => {};
       const s = g.sprite;
+      s.baked.clear(); // pose from the code clips, not the Blender actions baked from them last time
       const round = (m) => m.elements.map((v) => Math.round(v * 1e5) / 1e5);
       const model = s.mesh.children.find((c) => c.getObjectByProperty('isSkinnedMesh', true));
       const skinned = model.getObjectByProperty('isSkinnedMesh', true);

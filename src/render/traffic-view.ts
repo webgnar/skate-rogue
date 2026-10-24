@@ -182,15 +182,23 @@ export class TrafficView {
     car.visible = false;
     //the light: a post just before the crossing, back of the skate lane, red and green lamps facing the camera
     const post = new THREE.Group();
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 6), new THREE.MeshLambertMaterial({ color: 0x2a2a30 }));
-    pole.position.y = 1.5;
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, 0.25), new THREE.MeshLambertMaterial({ color: 0x1a1a1f }));
-    head.position.y = 3.1;
-    const red = new THREE.Mesh(new THREE.CircleGeometry(0.1, 12), new THREE.MeshBasicMaterial({ color: 0xff2a2a }));
-    red.position.set(0, 3.27, 0.13);
-    const green = new THREE.Mesh(new THREE.CircleGeometry(0.1, 12), new THREE.MeshBasicMaterial({ color: 0x3aff7a }));
-    green.position.set(0, 2.93, 0.13);
-    inkify(post.add(pole, head));
+    const signal = model('TrafficSignal'); // art/street.py: hooded three-lamp head, lit lenses over the unlit ones
+    let red: THREE.Mesh, green: THREE.Mesh;
+    if (signal) {
+      red = model('SignalRed')!;
+      green = model('SignalGreen')!;
+      inkify(post.add(signal));
+    } else {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 6), new THREE.MeshLambertMaterial({ color: 0x2a2a30 }));
+      pole.position.y = 1.5;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, 0.25), new THREE.MeshLambertMaterial({ color: 0x1a1a1f }));
+      head.position.y = 3.1;
+      red = new THREE.Mesh(new THREE.CircleGeometry(0.1, 12), new THREE.MeshBasicMaterial({ color: 0xff2a2a }));
+      red.position.set(0, 3.27, 0.13);
+      green = new THREE.Mesh(new THREE.CircleGeometry(0.1, 12), new THREE.MeshBasicMaterial({ color: 0x3aff7a }));
+      green.position.set(0, 2.93, 0.13);
+      inkify(post.add(pole, head));
+    }
     post.add(red, green);
     //on the near corner of the cross street, at the back of the sidewalk
     post.position.set(toX(c.box.x0 + CROSS.w / 2) - CROSS.street - 0.45, street, -2.0);

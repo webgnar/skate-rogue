@@ -402,6 +402,15 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Nobody stands in a cross street, at a bus stop, on a prop, or in front of the fork's doors.
 - [ ] *Open question:* too many or too few people? Should they duck when you fly over?
 
+**Slams and bails (the PR after #89)**
+- [ ] Land a trick badly (or down stairs): the board shoots out ahead, Lou sits down hard with his hands behind him, rocks forward, takes a step and hops back on. It reads as a slip-out, not a faceplant.
+- [ ] Fall off the map (miss a gap): Lou windmills his arms and runs his legs in the air while the board tumbles.
+- [ ] Every other trick still looks the same as before (the clips were re-baked).
+
+**The L and traffic signals as models (same PR)**
+- [ ] Act 2's helicopter escape: the L tracks overhead are dark green riveted girders with rusty X-bracing, ties and rails on top, standing on columns in the back lane. You can still hide under them from the spotlight.
+- [ ] Floor 5 and later, at a cross street: the signal has a hooded three-lamp head; red or green lights up as the cross traffic changes.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
