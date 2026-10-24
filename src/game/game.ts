@@ -95,6 +95,8 @@ type State = 'skate' | 'caught' | 'pick' | 'shop' | 'under' | 'over';
 const CAUGHT_BEAT_MS = 800;
 
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
+const SMASH_CHAIN = 4; // smashes in quick succession for a Wrecking Ball
+const SMASH_CHAIN_SECS = 1.2;
 const BIG_LANDING = 8; // px/frame of fall: a drop of about 4 tiles or more
 //slam: hit-stop, then slow motion easing back to full speed
 const SLAM_FREEZE = 0.09;
@@ -129,6 +131,8 @@ export class Game {
   private rerolls = 0;
   private readonly pickups = new PickupView();
   private nextRoad: Road = FIRST_ROAD;
+  private smashChain = 0;
+  private smashAt = -10;
   private carry = 0; // Heat carried into the next floor
   private swapping = false; // the pick on screen is the underground spot's swap
   private flip: { rgb: number[]; left: number; at: number } | null = null; // the last trick thrown this air
@@ -730,6 +734,24 @@ export class Game {
     }
   }
 
+  // smashed a prop: a little style, maybe loot, and a Wrecking Ball for a quick chain; the break itself is the
+  // effects' (src/render/smash.ts)
+  private smashed(e: Extract<FloorSim['events'][number], { type: 'smash' }>): void {
+    this.run.addStyle(SCORE.smash);
+    this.smashChain = this.clock - this.smashAt < SMASH_CHAIN_SECS ? this.smashChain + 1 : 1;
+    this.smashAt = this.clock;
+    if (this.smashChain === SMASH_CHAIN) this.hud.callout('WRECKING BALL!', 'trick');
+    if (e.loot === 'cash') {
+      this.run.cash += SCORE.smashCash;
+      this.hud.money(this.run.cash, this.run.stoken);
+    } else if (e.loot === 'stoken') {
+      this.run.stoken++;
+      this.hud.money(this.run.cash, this.run.stoken);
+      this.hud.callout('GOLDEN SMASH! STOKEN', 'good');
+    }
+    this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
+  }
+
   // stomped a drone: it's worth a trick's style, and goes down with a crunch
   private droneDown(index: number): void {
     const d = this.sim.swarm!.drones[index];
@@ -751,6 +773,7 @@ export class Game {
   private handle(e: FloorSim['events'][number]): void {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
+    if (e.type === 'smash') return this.smashed(e);
     if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;

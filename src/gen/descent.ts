@@ -1,6 +1,7 @@
 // Downhill floors (GDD: Floor shape). A floor starts high on the rooftops and works down to the street through
 // terraces, stair sets, big handrails, drop-offs, rooftop gaps and a few banks, then finishes on a short street
 // stretch built from QFS pieces (canals, curved rails, parked cars, traffic) with the exit gate.
+import { placeProps } from './props';
 import { TILE } from '../physics/constants';
 import { buildLevel, CurvedRail, type Level, type Pickup, type Surface } from '../physics/level';
 import type { Fork } from './roads';
@@ -224,7 +225,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     fork = { x0, x1: exitX + 4 * TILE, y, ...opts.fork };
     for (let x = x0 + 2 * TILE; x < exitX - TILE; x += 2 * TILE) pickups.push({ kind: 'cash', x, y: y - PICKUPS.ride });
   }
-  return {
+  const level: Level = {
     ...finale,
     width: finale.width + off,
     street: [...new Array<boolean>(cols).fill(false), ...finale.street],
@@ -244,4 +245,6 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     fork,
     danger: opts.danger ?? 2,
   };
+  level.props = placeProps(level);
+  return level;
 }

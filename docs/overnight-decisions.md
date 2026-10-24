@@ -190,6 +190,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   and smashing the AI's signage or Flock cameras cools Heat a little. Split: gameplay places props and emits
   break events, effects makes the breaks, models builds the props.
 
+- **Smashables in the sim.** `level.props` is the one list of street props (scenery at the back of the sidewalk
+  plus smashables in the skate lane: on the street every 4-9 tiles, and 1-3 on longer ledges and roofs). Each
+  smash is worth 25 style; crates, newspaper boxes and trash cans sometimes hide 3 cash; one golden prop a floor
+  holds a Stoken; the AI's kiosks, delivery bots and Flock poles take 3 Heat off. Four smashes inside 1.2 s is a
+  "WRECKING BALL!". A landing from about 4 tiles up breaks everything within 2 tiles, a slam within 1.5, and a
+  tailgate bomb clears the street 5 tiles ahead.
+
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
   shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin
