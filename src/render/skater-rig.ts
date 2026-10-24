@@ -3,6 +3,7 @@
 // IK to the feet, and the feet ride the board, so the deck's pop, flip and spin come from where the feet are.
 // Same interface as the sprite it replaces: play, onEvent, update and a mesh to place.
 import * as THREE from 'three';
+import { toon } from './toon';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
@@ -44,9 +45,9 @@ const DOWN = new THREE.Vector3(0, -1, 0);
 
 export class SkaterRig {
   readonly mesh = new THREE.Group();
-  private readonly mats: THREE.MeshLambertMaterial[] = [];
+  private readonly mats: THREE.MeshToonMaterial[] = [];
   private readonly lambert = (color: number) => {
-    const m = new THREE.MeshLambertMaterial({ color, flatShading: true });
+    const m = toon({ color });
     this.mats.push(m);
     return m;
   };

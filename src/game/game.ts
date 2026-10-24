@@ -18,6 +18,7 @@ import { Particles } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
+import { inkify } from '../render/toon';
 import { FloorSim } from '../sim/floor';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
@@ -105,6 +106,8 @@ export class Game {
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
     this.view.front.add(this.sprite.mesh);
+    //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
+    inkify(this.sprite.mesh, { toon: false });
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group);
