@@ -2,8 +2,7 @@ import './style.css';
 import { BOON_COLORS, boonById, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud } from './game/game';
 import { OneButton } from './game/input';
-import { makeLayout } from './gen/layout';
-import { buildLevel } from './physics/level';
+import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { SkaterSprite } from './render/skater-sprite';
 import { loadCityTiles } from './render/textures';
@@ -89,7 +88,7 @@ async function start() {
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 
   await loadCityTiles(`${base}tex/chicago_tiles.png`);
-  const view = new StreetView(canvas, buildLevel(makeLayout(seed, 1)));
+  const view = new StreetView(canvas, buildFloor(seed, 1));
   await view.loadBackdrop(base);
   const sprite = await SkaterSprite.create(base);
   const input = new OneButton(document.getElementById('app')!);

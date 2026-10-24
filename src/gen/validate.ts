@@ -1,10 +1,11 @@
 // Makes sure every floor can be cleared with no boons: a simple reference bot skates each generated layout, and
 // layouts it can't clear are re-rolled from a sub-seed, then generated one tier lower. Pure and deterministic.
 import { TILE } from '../physics/constants';
-import { buildLevel, isStreetAt, type Level } from '../physics/level';
+import { isStreetAt, type Level } from '../physics/level';
 import { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
-import { makeLayout, maxTier, type Layout } from './layout';
+import { buildFloor } from './descent';
+import { maxTier } from './layout';
 import { PIECES } from './pieces';
 
 const REROLLS = 8;
@@ -49,26 +50,26 @@ export function botRun(level: Level): { result: string; slams: number; maxHeat: 
   return { result: 'timeout', slams, maxHeat };
 }
 
-export function clearable(layout: Layout): boolean {
-  return botRun(buildLevel(layout)).result === 'exit';
+export function clearable(level: Level): boolean {
+  return botRun(level).result === 'exit';
 }
 
 export interface Validated {
-  layout: Layout;
-  tries: number; // layouts generated before one passed
+  level: Level;
+  tries: number; // floors generated before one passed
   tierDrops: number;
 }
 
-export function validatedLayout(seed: number, floor: number): Validated {
+export function validatedFloor(seed: number, floor: number): Validated {
   let tries = 0;
   for (let top = maxTier(floor), drops = 0; top >= 1; top--, drops++) {
     const library = PIECES.filter((p) => p.tier <= top);
     for (let k = 0; k <= REROLLS; k++) {
       tries++;
-      const layout = makeLayout(seed + k * 15485863 + drops * 32452843, floor, library);
-      if (clearable(layout)) return { layout, tries, tierDrops: drops };
+      const level = buildFloor(seed + k * 15485863 + drops * 32452843, floor, library);
+      if (clearable(level)) return { level, tries, tierDrops: drops };
     }
   }
-  //nothing passed (should not happen: tier 1 is designed for walking speed); hand back the original
-  return { layout: makeLayout(seed, floor), tries, tierDrops: -1 };
+  //nothing passed (should not happen); hand back the original
+  return { level: buildFloor(seed, floor), tries, tierDrops: -1 };
 }
