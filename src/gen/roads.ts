@@ -40,7 +40,7 @@ export function floorRoad(road: Road): Road {
 // what the first floor of a run is
 export const FIRST_ROAD: Road = { kind: 'boon', boonType: 'POP', danger: 1 };
 
-const BOON_TYPES: BoonType[] = ['POP', 'GRIND', 'FLOW', 'COOL'];
+const BOON_TYPES: BoonType[] = ['POP', 'GRIND', 'FLOW', 'COOL', 'LUCK', 'STREET'];
 
 function roll(rng: () => number, floor: number, not?: Road): Road {
   for (;;) {

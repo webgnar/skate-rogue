@@ -81,6 +81,7 @@ export function vehicleSize(kind: VehicleKind): [number, number] {
 
 export class Traffic {
   vehicles: Vehicle[] = [];
+  noBrake = false; // Spoofed Plate: robotaxis don't brake for the skater
   readonly cross: CrossCar[]; // cars crossing at intersections
   private next = 0;
   private ids = 0;
@@ -119,7 +120,7 @@ export class Traffic {
     while (this.next < this.plan.length && skaterX >= this.plan[this.next].at) this.spawn(this.plan[this.next++]);
 
     for (const v of this.vehicles) {
-      if (v.speed > 0 && !v.leaving) {
+      if (v.speed > 0 && !v.leaving && !(this.noBrake && v.kind === 'robotaxi')) {
         //brake hard when the skater rolls up behind
         const gap = v.x0 - skaterX;
         const target = gap > 0 && gap < TRAFFIC.brakeRange ? PHYS.baseSpeed * TRAFFIC.brakeSpeed : v.cruise;

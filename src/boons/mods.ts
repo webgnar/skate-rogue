@@ -29,6 +29,17 @@ export interface Mods {
   hopCool: number; // extra Heat off per car hop
   decoy: boolean;
   slowHeat: number; // multiplier on Heat from skating slow
+  // LUCK (pickups and the run read these)
+  magnet: number; // pickup reach multiplier
+  stokenScale: number;
+  extraCards: number;
+  freeReroll: boolean;
+  // STREET
+  roofRider: boolean; // parked roofs are grind ledges
+  slipFrames: number; // frames tucked behind a car for a Slipstream (0 = none)
+  hopScale: number;
+  spoofed: boolean; // robotaxis don't brake
+  nearScale: number; // close-call window and score
 }
 
 export const NO_MODS: Mods = {
@@ -57,6 +68,15 @@ export const NO_MODS: Mods = {
   hopCool: 0,
   decoy: false,
   slowHeat: 1,
+  magnet: 1,
+  stokenScale: 1,
+  extraCards: 0,
+  freeReroll: false,
+  roofRider: false,
+  slipFrames: 0,
+  hopScale: 1,
+  spoofed: false,
+  nearScale: 1,
 };
 
 export function skaterMods(boons: Held[]): Mods {
@@ -87,5 +107,14 @@ export function skaterMods(boons: Held[]): Mods {
     hopCool: 10 * s('sirenSong'),
     decoy: s('decoy') > 0,
     slowHeat: s('ghostMode') > 0 ? 0.5 : 1,
+    magnet: s('stokenMagnet') > 0 ? 3 : 1,
+    stokenScale: s('doubleStoken') > 0 ? 2 : 1,
+    extraCards: s('hustler'),
+    freeReroll: s('luckyReroll') > 0,
+    roofRider: s('roofRider') > 0,
+    slipFrames: [0, 30, 20][s('slipstream')],
+    hopScale: 1 + 0.5 * s('hoodPop'),
+    spoofed: s('spoofedPlate') > 0,
+    nearScale: s('jaywalker') > 0 ? 2 : 1,
   };
 }

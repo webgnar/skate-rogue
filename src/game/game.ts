@@ -269,6 +269,8 @@ export class Game {
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board);
     this.run.scoreScale = mods.scoreScale;
     this.run.slamStoke = mods.slamStoke;
+    this.run.stokenScale = mods.stokenScale;
+    this.run.nearScale = mods.nearScale;
     this.carry = 0;
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
@@ -310,7 +312,7 @@ export class Game {
       this.advance();
       this.hud.callout(`+${pay} CASH`, 'good');
     } else {
-      const pay = ROADS.stashStoken(this.floor);
+      const pay = ROADS.stashStoken(this.floor) * this.run.stokenScale;
       this.run.stoken += pay;
       this.advance();
       this.hud.callout(`+${pay} STOKEN`, 'good');
@@ -321,7 +323,7 @@ export class Game {
   // through an act's escape: pay out, and the last act wins the run; the road picked before it comes next
   private clearAct(now: number, act: number): void {
     const cash = ESCAPE.actCash(act);
-    const stoken = ESCAPE.actStoken(act);
+    const stoken = ESCAPE.actStoken(act) * this.run.stokenScale;
     this.run.cash += cash;
     this.run.stoken += stoken;
     this.run.score += this.run.clearFloor(this.floor) * 2;
@@ -331,16 +333,19 @@ export class Game {
   }
 
   private rerollCost(): number {
+    //Lucky Reroll: the first one on each pick is free
+    if (this.rerolls === 0 && skaterMods(this.boons).freeReroll) return 0;
     return 15 + 10 * this.rerolls;
   }
 
   private showOffer(): void {
     const road = this.road;
     const run = { floor: this.floor, boons: this.boons };
+    const extra = skaterMods(this.boons).extraCards; // Hustler
     this.offer =
       road.kind === 'hot'
-        ? offerBoons(this.seed, run, 4, undefined, this.rerolls)
-        : offerBoons(this.seed, run, 3, road.kind === 'boon' ? road.boonType : undefined, this.rerolls);
+        ? offerBoons(this.seed, run, 4 + extra, undefined, this.rerolls)
+        : offerBoons(this.seed, run, 3 + extra, road.kind === 'boon' ? road.boonType : undefined, this.rerolls);
     const cost = this.rerollCost();
     this.hud.pick(this.offer, {
       title: road.kind === 'hot' ? 'HOT STREET: PICK ANY BOON' : `PICK A ${label(road)}`,
@@ -769,7 +774,7 @@ export class Game {
       this.run.cash += SCORE.smashCash;
       this.hud.money(this.run.cash, this.run.stoken);
     } else if (e.loot === 'stoken') {
-      this.run.stoken++;
+      this.run.stoken += this.run.stokenScale;
       this.hud.money(this.run.cash, this.run.stoken);
       this.hud.callout('GOLDEN SMASH! STOKEN', 'good');
     }
@@ -798,7 +803,7 @@ export class Game {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type === 'smash') return this.smashed(e);
-    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy') {
+    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;
       this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));
@@ -837,6 +842,10 @@ export class Game {
         this.hud.callout('TUCK AND ROLL!', 'good');
         this.view.shake(0.15);
         navigator.vibrate?.(40);
+        break;
+      case 'slip':
+        this.hud.callout('SLIPSTREAM!', 'trick');
+        this.view.zoom.trick();
         break;
       case 'decoy':
         this.hud.callout('DECOY! HEAT 35', 'good');

@@ -20,6 +20,7 @@ export type FloorEvent =
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'decoy' } // the Decoy boon pulled the cruiser back
+  | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' };
 
 // how a prop got smashed (GDD: Smashables), for the effects to tell apart
@@ -43,6 +44,7 @@ const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
   hop: 'onHop',
 };
 
+export const SLIP = { reach: 4 * TILE }; // Slipstream: how close behind a car counts as drafting
 export const NEAR_MISS = 10; // px of air between your wheels and a roof that counts as a close call
 export const PICKUP_RADIUS = 26; // px around the skater's middle
 const BODY = 24; // the skater's middle, above their feet
@@ -59,6 +61,7 @@ export class FloorSim {
   readonly swarm: Swarm | null; // the drone swarm escape
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
+  private slipT = 0; // frames drafting behind a car
   readonly broken: boolean[]; // props smashed
   private fall = 0; // how fast we were falling before this step
   private near = new Map<Car, { gap: number; touched: boolean }>(); // vehicles we're over: the closest pass, and any contact
@@ -79,6 +82,7 @@ export class FloorSim {
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
     this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed), level.crossings);
+    this.traffic.noBrake = mods?.spoofed ?? false;
   }
 
   step(input: StepInput): void {
@@ -98,6 +102,7 @@ export class FloorSim {
     this.runBoard(skaterEvents);
     this.collect();
     this.closeCalls(skaterEvents);
+    this.slipstream();
     this.smash(skaterEvents);
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
@@ -188,11 +193,27 @@ export class FloorSim {
         }
       } else if (n) {
         this.near.delete(c);
-        if (!n.touched && n.gap >= 0 && n.gap < NEAR_MISS) {
+        if (!n.touched && n.gap >= 0 && n.gap < NEAR_MISS * this.skater.mods.nearScale) {
           this.events.push({ type: 'near' });
           this.heat.add(HEAT.nearMiss);
         }
       }
+    }
+  }
+
+  // Slipstream: rolling within a few tiles behind a car going your way builds a draft; held long enough, it
+  // throws you forward with a burst of speed (then ollie it)
+  private slipstream(): void {
+    const sk = this.skater;
+    const need = sk.mods.slipFrames;
+    if (!need) return;
+    const drafting = sk.mode === 'roll' && !sk.surface && this.traffic.inLane.some((v) => v.speed > 0 && v.x0 - sk.x > 0 && v.x0 - sk.x < SLIP.reach);
+    this.slipT = drafting ? this.slipT + 1 : 0;
+    if (this.slipT >= need) {
+      this.slipT = 0;
+      sk.hsp = Math.max(sk.hsp, PHYS.bombSpeed);
+      sk.carry = Math.max(sk.carry, PHYS.bombSpeed);
+      this.events.push({ type: 'slip' });
     }
   }
 
@@ -228,9 +249,10 @@ export class FloorSim {
 
   private collect(): void {
     const sk = this.skater;
-    const r2 = PICKUP_RADIUS * PICKUP_RADIUS;
+    const reach = PICKUP_RADIUS * sk.mods.magnet;
+    const r2 = reach * reach;
     this.level.pickups.forEach((p, i) => {
-      if (this.taken[i] || Math.abs(p.x - sk.x) > PICKUP_RADIUS) return;
+      if (this.taken[i] || Math.abs(p.x - sk.x) > reach) return;
       const dy = p.y - (sk.y - BODY);
       if ((p.x - sk.x) ** 2 + dy * dy > r2) return;
       this.taken[i] = true;

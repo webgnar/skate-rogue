@@ -1,12 +1,14 @@
-// The boon pool: POP and GRIND (the first playable set), then FLOW and COOL. Card fields follow QFS
+// The boon pool: POP and GRIND (the first playable set), then FLOW, COOL, LUCK and STREET. Card fields follow QFS
 // survivor_boons (type label, name, effect line, optional small line, max stacks, when filter).
-export type BoonType = 'POP' | 'GRIND' | 'FLOW' | 'COOL';
+export type BoonType = 'POP' | 'GRIND' | 'FLOW' | 'COOL' | 'LUCK' | 'STREET';
 
 export type BoonId =
   | 'tripleThreat' | 'bigPop' | 'floatyFlip' | 'lateFlip' | 'pressureFlip' | 'spareChange'
   | 'railMagnet' | 'grease' | 'railLaunch' | 'exitWax' | 'feebleFrenzy' | 'ghostRail'
   | 'newWheels' | 'bombHill' | 'butter' | 'kickerBoost' | 'slingshot'
-  | 'lowProfile' | 'bubblePads' | 'tuckAndRoll' | 'slamStoke' | 'sirenSong' | 'decoy' | 'ghostMode';
+  | 'lowProfile' | 'bubblePads' | 'tuckAndRoll' | 'slamStoke' | 'sirenSong' | 'decoy' | 'ghostMode'
+  | 'stokenMagnet' | 'doubleStoken' | 'hustler' | 'luckyReroll'
+  | 'roofRider' | 'slipstream' | 'hoodPop' | 'spoofedPlate' | 'jaywalker';
 
 export interface Held {
   id: BoonId;
@@ -28,7 +30,7 @@ export interface Boon {
   when?: (run: RunView) => boolean;
 }
 
-export const BOON_COLORS: Record<BoonType, string> = { POP: '#ffd23f', GRIND: '#ff8c2b', FLOW: '#3ee0f0', COOL: '#5a8cff' };
+export const BOON_COLORS: Record<BoonType, string> = { POP: '#ffd23f', GRIND: '#ff8c2b', FLOW: '#3ee0f0', COOL: '#5a8cff', LUCK: '#5fe08a', STREET: '#ff4a5a' };
 
 export const BOONS: Boon[] = [
   { id: 'tripleThreat', type: 'POP', name: 'Triple Threat', effect: '+1 jump', max: 1 },
@@ -60,6 +62,18 @@ export const BOONS: Boon[] = [
   { id: 'slamStoke', type: 'COOL', name: 'Slam Stoke', effect: 'Slams fill your stoke instead of draining it', note: 'and keep your combo', max: 1 },
   { id: 'sirenSong', type: 'COOL', name: 'Siren Song', effect: 'Car hops take 10 more Heat off', max: 2 },
   { id: 'decoy', type: 'COOL', name: 'Decoy', effect: 'The first time Heat hits 75 on a floor, it drops to 35', max: 1 },
+  { id: 'stokenMagnet', type: 'LUCK', name: 'Stoken Magnet', effect: 'Pickups fly to you', note: 'from three times as far', max: 1 },
+  { id: 'doubleStoken', type: 'LUCK', name: 'Double Stoken', effect: 'Every Stoken counts twice', max: 1 },
+  { id: 'hustler', type: 'LUCK', name: 'Hustler', effect: '+1 card on every boon pick', max: 1 },
+  { id: 'luckyReroll', type: 'LUCK', name: 'Lucky Reroll', effect: 'Your first reroll on each pick is free', max: 1 },
+  { id: 'roofRider', type: 'STREET', name: 'Roof Rider', effect: 'Parked car and bus roofs grind like ledges', max: 1 },
+  { id: 'slipstream', type: 'STREET', name: 'Slipstream', effect: 'Draft right behind a car to slingshot past it', note: 'half a second; quicker with 2', max: 2 },
+  { id: 'hoodPop', type: 'STREET', name: 'Hood Pop', effect: 'Car hops bounce 50% higher', max: 2 },
+  {
+    id: 'spoofedPlate', type: 'STREET', name: 'Spoofed Plate', effect: "Robotaxis don't brake for you", note: 'easier to hop from behind',
+    max: 1,
+  },
+  { id: 'jaywalker', type: 'STREET', name: 'Jaywalker', effect: 'Close calls count from twice as far', note: 'and score double', max: 1 },
   { id: 'ghostMode', type: 'COOL', name: 'Ghost Mode', effect: 'Half the Heat from skating slow', note: 'the Flock cameras lose you', max: 1 },
 ];
 

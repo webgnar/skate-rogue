@@ -202,7 +202,13 @@ and listed it here for review. Any of these can be flipped in the morning.
     and adds a quarter of the stoke meter (the GDD said +50%, which felt like it rewarded slamming). Siren Song:
     car hops take 10 more Heat off per stack. Decoy: the first time Heat reaches 75 on a floor it drops to 35.
     Ghost Mode: half the Heat from skating slow.
-- LUCK and STREET boons are next.
+- **LUCK and STREET boons (9 more cards; boon streets now come in all six types).** LUCK: Stoken Magnet
+  (pickups reach 3x as far), Double Stoken (every Stoken counts twice, stash and act pay too), Hustler (+1 card on
+  every pick) and one of mine, Lucky Reroll (the first reroll on each pick is free). STREET: Roof Rider (parked car
+  and bus roofs grind like flat bars; moving cars still hop), Slipstream (half a second drafting within 4 tiles
+  behind a car going your way throws you forward at bomb speed; a third of a second with 2), Hood Pop (+50% hop
+  per stack), Spoofed Plate (robotaxis don't brake), Jaywalker (close calls from 20 px and worth double). The
+  GDD's shop-price LUCK idea is left for the shop's next pass.
 
 - **Smashables written into the GDD (zack asked).** New pillar 7, "Smash everything", and a Smashables section:
   props are juice, never hazards (they never slow or slam you); roll through, land on, grind, car-hop, slam or

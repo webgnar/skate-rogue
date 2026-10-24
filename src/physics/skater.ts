@@ -302,7 +302,10 @@ export class Skater {
       }
     }
     for (const car of this.cars()) {
-      if (x + PHYS.width / 2 >= car.x0 && x - PHYS.width / 2 <= car.x1) consider(car.roof, () => this.carHop());
+      if (x + PHYS.width / 2 < car.x0 || x - PHYS.width / 2 > car.x1) continue;
+      //Roof Rider: a parked roof is a ledge to grind
+      const parked = this.mods.roofRider && this.level.cars.includes(car);
+      consider(car.roof, parked ? () => this.touchDown(roofLedge(car)) : () => this.carHop());
     }
     for (const rail of this.level.rails) {
       if (rail === this.railIgnore) continue;
@@ -353,7 +356,7 @@ export class Skater {
 
   private carHop(): void {
     this.kicked = false;
-    this.vsp = PHYS.carHop;
+    this.vsp = PHYS.carHop * this.mods.hopScale;
     this.jumps = this.maxJumps;
     this.flipped = false;
     this.mode = 'air';
@@ -467,3 +470,13 @@ export class Skater {
   }
 }
 
+// Roof Rider: a parked car's roof as a grind (a flat-bar surface), the same object each time
+const ROOFS = new WeakMap<Car, Surface>();
+function roofLedge(car: Car): Surface {
+  let s = ROOFS.get(car);
+  if (!s) {
+    s = { kind: 'rail', x0: car.x0, x1: car.x1, y: car.roof, row: -1 };
+    ROOFS.set(car, s);
+  }
+  return s;
+}
