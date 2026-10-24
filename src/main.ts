@@ -439,6 +439,7 @@ async function start() {
     volumes: () => sound.applyVolumes(),
     tier: (tier) => view.setTier(tier),
     look,
+    pixel: () => view.setPixel(),
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) game.setPaused(true);

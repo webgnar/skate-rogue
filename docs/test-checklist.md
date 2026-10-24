@@ -413,6 +413,11 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 - [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
 
+**Chunky pixel look**
+
+- [ ] Pause and drag PIXELS from SHARP to 4X: the game goes blocky and hard-edged straight away, and the HUD stays
+      sharp. It's remembered after a reload. `?pixel=3` sets it from the URL.
+
 **Speed lines**
 
 - [ ] They only show at high speed and stay subtle (toned down after your note).

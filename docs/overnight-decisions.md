@@ -174,6 +174,11 @@ and listed it here for review. Any of these can be flipped in the morning.
   the exit portal turns the payout's violet with a faint gold rim. It eases over about 0.4 s each way, so Heat
   hovering at 50 fades it rather than flickering it. Before this, the only feedback was the callout after you'd
   already reached the gate.
+- **Chunky pixel look, a live setting (zack's ask).** The pause card has a PIXELS slider from SHARP to 4X. It sets
+  how many screen pixels each rendered pixel covers (CSS px, so it looks the same on any phone) and scales up
+  hard-edged with no blur. It applies immediately and is saved; `?pixel=3` sets it from the URL. Ink lines are
+  kept at least one rendered pixel wide so they don't break up. I capped it at 4X because past that the ink
+  swallows the skater. Default stays SHARP. It also helps frame rate, since fewer pixels get drawn.
 - **Landmarks get no extra night treatment.** I checked all seven at floor 13. They already carry their own glowing
   materials and read fine against the night sky, so I left them alone.
 
