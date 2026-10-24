@@ -18,6 +18,7 @@ export interface Skin {
   decor: { rows: number[][]; chance: number; hang?: boolean }[];
   props: (number | number[])[]; // small things on the sidewalk, as cards: one tile, or a column top first
   sink?: boolean; // the props' bottom tiles have their art at the top: they stand a tile lower
+  landmark?: string; // the world's big 3D landmark (art/landmarks.py), stood behind the wall every few screens
 }
 
 const CITY_TOP = { road: '#2a2830', back: '#7d7a86', seam: '#5d5a66', edge: '#9a97a3', line: '#d8b84a' };
@@ -38,6 +39,7 @@ export const SKINS: Record<BiomeId, Skin> = {
       { rows: [[229, 230, 231, 232]], chance: 0.15 }, // SKATEHIVE
     ],
     props: [220, 221, 222, 223, 75, 185],
+    landmark: 'LightTower',
   },
   greece: {
     sheet: 'greece', ground: { top: [195, 196, 197, 198, 199, 200, 201, 202], left: -1, right: -1, fill: [170] }, pit: { top: 126, fill: 135 },
@@ -49,6 +51,7 @@ export const SKINS: Record<BiomeId, Skin> = {
     ],
     props: [[132, 147], [133, 148], [101, 116, 131, 146]], // red palace pillars
     sink: true,
+    landmark: 'Temple',
   },
   atlantis: {
     sheet: 'atlantis', ground: { top: [81, 82, 83, 84, 85], left: -1, right: -1, fill: [96, 97, 98, 99, 100] }, pit: { top: 336, fill: 337 },
@@ -56,6 +59,7 @@ export const SKINS: Record<BiomeId, Skin> = {
     top: { road: '#2c5a62', back: '#c8b07a', seam: '#a8945e', edge: '#3a7a80', line: null }, side: 0x1a3a48,
     decor: [],
     props: [255, 256, 257, 227, 225, 228, 240, 241, 242, 63, 64, 66, 67, 68], // coral, seaweed, sea grass
+    landmark: 'SunkenArch',
   },
   museum: {
     sheet: 'museum', ground: { top: [63], left: -1, right: -1, fill: [63] }, pit: 'city',
@@ -66,18 +70,21 @@ export const SKINS: Record<BiomeId, Skin> = {
       { rows: [[229, 230, 231, 232], [244, 245, 246, 247], [259, 260, 261, 262], [274, 275, 276, 277]], chance: 0.3, hang: true },
     ],
     props: [188, 308, 309, 323, 324, 326, 327, 328, 329, [411, 426, 441]], // ... and the statue of David
+    landmark: 'GiantBust',
   },
   hightech: {
     sheet: 'hightech', ground: { top: [21], left: -1, right: -1, fill: [20] }, pit: { top: 425, fill: 440 },
     block: { fill: [248] }, ledge: [210, 211, 212],
     top: { road: '#1c2230', back: '#3a4458', seam: '#2c3446', edge: '#5ae0f0', line: '#ff4ad8' }, side: 0x222838,
     decor: [], props: [399, 400, 401, 402],
+    landmark: 'DataSpire',
   },
   space: {
     sheet: 'space', ground: { top: [16], left: -1, right: -1, fill: [16] }, pit: { top: 136, fill: 151 },
     block: { fill: [71, 72] }, ledge: [16, 16, 16],
     top: { road: '#1a1830', back: '#2c2a48', seam: '#22203a', edge: '#6a68a0', line: null }, side: 0x14122a,
     decor: [], props: [5, 6, 7, 8],
+    landmark: 'Rocket',
   },
   // the AI's stronghold: High-Tech City's tiles under the Hive's red-amber grade (biomes.ts)
   hive: {
@@ -85,6 +92,7 @@ export const SKINS: Record<BiomeId, Skin> = {
     block: { fill: [248] }, ledge: [210, 211, 212],
     top: { road: '#20141a', back: '#3a2228', seam: '#2c1a20', edge: '#ff8a3a', line: '#ffd23f' }, side: 0x2a1418,
     decor: [], props: [399, 400, 401, 402],
+    landmark: 'HiveTower',
   },
 };
 

@@ -18,6 +18,7 @@ export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
+const LANDMARK_W = 8; // art/landmarks.py's are up to 7.2 wide
 // buildings, stairs and banks under the descent run from BLOCK_BACK to BLOCK_FRONT: the front face sits well in
 // front of the skater (z = 0.25), so they ride on the roof, not along its front edge
 const BLOCK_BACK = -3.1;
@@ -153,7 +154,20 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
     if (cards) kit.add(cards);
   }
 
+  //the world's landmark stands in for a building every few screens, the first one soon after the start
+  let mark = skin.landmark ? first + 6 + randInt(rng, 8) : Infinity;
   for (let bx = -8; bx < cols + 20; ) {
+    if (bx >= mark) {
+      const lm = model(skin.landmark!);
+      if (lm && !inGap(bx, bx + LANDMARK_W)) {
+        lm.position.set(bx + LANDMARK_W / 2, 0, STREET_BACK - 2.6);
+        lm.userData.keep = true; // several materials, some glowing: not batched
+        kit.add(lm);
+        bx += LANDMARK_W + 1;
+      }
+      mark = bx + 26 + randInt(rng, 20);
+      continue;
+    }
     const w = 4 + randInt(rng, 5);
     const h = 5 + randInt(rng, 9);
     const t = CITY.facade[randInt(rng, CITY.facade.length)];

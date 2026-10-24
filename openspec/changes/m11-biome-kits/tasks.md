@@ -6,5 +6,5 @@
 - [x] 1.4 `StreetView.setBiome` loads the sheet and rebuilds the kit
 - [ ] 1.5 Backdrops per world (QFS skies, far and mid layers) in place of Chicago's skyline
 - [x] 1.6 Smashables per world from Blender (small, medium and large for each), standing in for Chicago's by size
-- [ ] 1.8 Bigger 3D landmarks per world (columns, statues) as scenery
+- [x] 1.8 Bigger 3D landmarks per world (columns, statues) as scenery: art/landmarks.py, one per world, stood in for a building every few screens
 - [ ] 1.7 Gameplay picks the biome per act (gameplay thread)
