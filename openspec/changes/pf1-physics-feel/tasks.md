@@ -15,11 +15,17 @@
 
 ## 3. Ship
 
-- [ ] 3.1 Merge to main and tell zack
+- [x] 3.1 Merge to main and tell zack
 
 ## 4. Round 2
 
 - [x] 4.1 Swept landings (path crossing plus end point) for surfaces, the street and car roofs; rising onto climbing rails; fuzz test
 - [x] 4.2 `Level.gravity` and `BIOME_GRAVITY`; the skater's gravity scales by it
 - [x] 4.3 Worn trucks and wheels rock you more
+
+## 5. Rounds 3 and 4
+
+- [x] 5.1 Car hops, doors, buses and kickers load the knees; a hop mid-flip rocks you
+- [x] 5.2 Collision fuzz in every district's gravity and twist, with moving vehicles
+- [x] 5.3 Ceiling bumps fold the knees
 

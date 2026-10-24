@@ -549,3 +549,13 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Tuning pass on bot stats, no number changed.** Sketchy landings: 14% at normal gravity, 9% in Atlantis, 6% in space.
   Slams from landings: under 1%. The sketchy rate comes from the descents' 5+ tile drops to flat, and it costs little
   (only flow speed, which you rarely have after a drop), so I left `FEEL.huge` at 9.5 for zack to judge in play.
+
+## Physics feel thread, round 4 (district twists)
+
+- **The fall-through test covers every district.** Each seed runs in another district's gravity and twist (Atlantis
+  currents, museum ceilings, High-Tech conveyors, rail-heavy Clemente and Greece). No holes found.
+- **Bumping a museum ceiling folds the knees.** A ducking squat, not a slam. Real skaters would bonk, but a slam from
+  a ceiling you can't see coming in one-button play would feel cheap. The ceiling itself stays the gameplay thread's.
+- **My feel backlog is otherwise done.** What's left needs zack: whether ledges become concrete grinds, a manual
+  mechanic, and the tuning questions in the checklist (sketchy rate, heavy speed loss, handrail ollies).
+

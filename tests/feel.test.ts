@@ -393,3 +393,18 @@ describe('bounces', () => {
     expect(hop(true).rock).toBeGreaterThan(0.1);
   });
 });
+
+describe('low ceilings', () => {
+  it('bumping a ceiling folds the knees', () => {
+    const base = levelOf(FLAT);
+    const sk = new Skater({ ...base, ceiling: [{ x0: 0, x1: 20 * TILE, y: base.streetY - 30 - PHYS.height }] });
+    let squash = 0;
+    //up into it and still in the air, before any landing
+    run(sk, 10, (f) => {
+      squash = Math.max(squash, sk.feel.squash);
+      return { pressed: f === 0, held: true };
+    });
+    expect(sk.mode).toBe('air');
+    expect(squash).toBeGreaterThan(0.2);
+  });
+});
