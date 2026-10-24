@@ -1,6 +1,7 @@
 // Builds a floor's 3D kit from the physics level: street slabs, canals, buildings under rooftops, ledges, rails,
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
+import { model } from './models';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
@@ -259,10 +260,23 @@ function facade(w: number, h: number, t: number): TileCell[][] {
   return grid;
 }
 
-export function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number): THREE.Group {
+// the Blender cars (art/cars.py) are 2.3 long and 1.25 to the roof, for a 2 tile hitbox; others are stretched
+export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser';
+const MODEL_LEN = 2.3;
+const MODEL_ROOF = 1.25;
+
+export function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number, kind: CarModel = 'Sedan'): THREE.Group {
   const car = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;
+  const body3d = model(kind, paint);
+  if (body3d) {
+    body3d.scale.set((w + 0.3) / MODEL_LEN, h / MODEL_ROOF, 1);
+    body3d.position.y = bottom;
+    car.add(body3d);
+    car.position.x = x0 + w / 2;
+    return car;
+  }
   const body = new THREE.MeshLambertMaterial({ color: paint });
   const glass = new THREE.MeshLambertMaterial({ color: 0x1c2333 });
   const lower = new THREE.Mesh(new THREE.BoxGeometry(w + 0.3, h * 0.55, 1.6), body);

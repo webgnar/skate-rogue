@@ -7,6 +7,7 @@ import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { SkaterRig } from './render/skater-rig';
+import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
 
 const base = import.meta.env.BASE_URL;
@@ -179,7 +180,7 @@ async function start() {
   const fixedSeed = Number(params.get('seed')) || 0;
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 
-  await loadCityTiles(`${base}tex/chicago_tiles.png`);
+  await Promise.all([loadCityTiles(`${base}tex/chicago_tiles.png`), loadModels(base)]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await view.loadBackdrop(base);
   const sprite = await SkaterRig.create(base);

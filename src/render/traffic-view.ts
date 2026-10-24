@@ -32,11 +32,13 @@ export class TrafficView {
 
   private makeCruiser(): THREE.Group {
     const h = TRAFFIC.carH / TILE;
-    const car = makeCar(0, TRAFFIC.carW / TILE, 0, h, 0x1c1c24);
-    //white doors and a light bar
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, h * 0.4, 1.62), new THREE.MeshLambertMaterial({ color: 0xf0f0f0 }));
-    door.position.set(0, 0.15 + h * 0.3, 0);
-    car.add(door);
+    const car = makeCar(0, TRAFFIC.carW / TILE, 0, h, 0x1c1c24, 'Cruiser');
+    //white doors (the Blender cruiser has its own) and a light bar
+    if (car.children.length > 1) {
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, h * 0.4, 1.62), new THREE.MeshLambertMaterial({ color: 0xf0f0f0 }));
+      door.position.set(0, 0.15 + h * 0.3, 0);
+      car.add(door);
+    }
     for (const [dx, color] of [[-0.2, 0xff2a2a], [0.2, 0x2a6bff]] as const) {
       const light = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.5), new THREE.MeshBasicMaterial({ color }));
       light.position.set(dx - 0.05, h + 0.2, 0);
@@ -76,7 +78,7 @@ export class TrafficView {
       let mesh = this.meshes.get(v.id);
       if (!mesh) {
         const paints = PAINTS[v.kind];
-        mesh = makeCar(0, toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[v.id % paints.length]);
+        mesh = makeCar(0, toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[v.id % paints.length], v.kind === 'robotaxi' ? 'Robotaxi' : 'Sedan');
         if (v.speed < 0) mesh.rotation.y = Math.PI; // oncoming: headlights toward the skater
         inkify(mesh);
         this.meshes.set(v.id, mesh);
