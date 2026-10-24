@@ -74,9 +74,12 @@ export class StreetView {
     const targetLead = 3 + Math.max(0, hsp) * 0.9;
     this.lead += (targetLead - this.lead) * (snap ? 1 : 0.05);
     const tx = x + this.lead;
-    const ty = Math.max(1.6, y * 0.6 + 1.6);
+    //on the street small hops barely move the camera; up on the roofs it follows the skater's height
+    const ty = y > 4 ? y - 0.5 : Math.max(1.6, y * 0.6 + 1.6);
+    //catch up faster on big drops
+    const k = ty < this.camY - 2 ? 0.2 : 0.08;
     this.camX = snap ? tx : this.camX + (tx - this.camX) * 0.2;
-    this.camY = snap ? ty : this.camY + (ty - this.camY) * 0.08;
+    this.camY = snap ? ty : this.camY + (ty - this.camY) * k;
     //pull back a little at speed
     const dist = 19 + Math.max(0, hsp - 3.5) * 0.8;
     this.camera.position.set(this.camX, this.camY + 4, dist);

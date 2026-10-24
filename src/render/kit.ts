@@ -28,8 +28,16 @@ export function buildKit(level: Level): THREE.Group {
   const cols = level.street.length;
   const sideMat = lambert(null, 0x3a3640);
 
+  //--- the alley far below the descent: you only see it if you fall ---------------------------
+  const first = Math.round(toX(level.finaleX));
+  if (first > 0) {
+    const alley = slab(first, 3, STREET_DEPTH, lambert(null, 0x18121f), lambert(null, 0x221a2c), sideMat);
+    alley.position.set(first / 2, -2.5, STREET_BACK + STREET_DEPTH / 2);
+    kit.add(alley);
+  }
+
   //--- street slabs and canals -------------------------------------------------------------
-  let c = 0;
+  let c = first;
   while (c < cols) {
     const isStreet = level.street[c];
     let end = c;
@@ -80,8 +88,8 @@ export function buildKit(level: Level): THREE.Group {
     wallRows[0].push(CITY.brick[(i * 7) % CITY.brick.length]);
     wallRows[1].push(CITY.brick[(i * 5 + 3) % CITY.brick.length]);
   }
-  const wall = slab(cols, 2, 0.5, lambert(tileTexture(wallRows)), lambert(null, 0x6b5a55), sideMat);
-  wall.position.set(cols / 2, 1, STREET_BACK - 0.25);
+  const wall = slab(cols - first, 2, 0.5, lambert(tileTexture(wallRows.map((row) => row.slice(first)))), lambert(null, 0x6b5a55), sideMat);
+  wall.position.set(first + (cols - first) / 2, 1, STREET_BACK - 0.25);
   kit.add(wall);
 
   for (let bx = -8; bx < cols + 20; ) {
@@ -97,11 +105,22 @@ export function buildKit(level: Level): THREE.Group {
   //--- one-way surfaces: buildings under rooftops, floating ledges, flat rails -------------------
   const metal = new THREE.MeshLambertMaterial({ color: 0xb8bcc8 });
   const postMat = new THREE.MeshLambertMaterial({ color: 0x55596a });
+  const concrete = lambert(null, 0x8c8794);
+  const stepTop = lambert(null, 0xb9b4c2);
+  //rails up on the roofs stand on the roof, not on the street
+  const postH = (px: number, y: number) => (px < level.finaleX ? Math.min(y, 0.75) : y);
   for (const s of level.surfaces) {
     const w = toX(s.x1 - s.x0);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
     if (s.kind === 'roof') {
+      //a roof at street level is just more street (the descent's last run-out)
+      if (y < 0.5) {
+        const pad = slab(w, 3, STREET_DEPTH, lambert(null, 0x3a3640), lambert(null, 0x6d6a76), sideMat);
+        pad.position.set(x, y - 1.5, STREET_BACK + STREET_DEPTH / 2);
+        kit.add(pad);
+        continue;
+      }
       const t = CITY.facade[randInt(rng, CITY.facade.length)];
       const b = slab(w, y, 3, lambert(tileTexture(facade(Math.round(w), Math.ceil(y), t))), lambert(null, 0x6a6478), sideMat);
       b.position.set(x, y / 2, -1.6);
@@ -113,13 +132,36 @@ export function buildKit(level: Level): THREE.Group {
       const l = slab(w, 0.35, 2.2, lambert(tileTexture([row])), lambert(null, 0x8a6a50), sideMat);
       l.position.set(x, y - 0.175, -0.4);
       kit.add(l);
+    } else if (s.kind === 'stairs') {
+      //one block per step, down to the street
+      const steps = Math.round(w);
+      for (let i = 0; i < steps; i++) {
+        const top = toY(level, s.y + ((s.y1! - s.y) * (i + 1)) / steps);
+        const step = slab(1, top + 0.5, 3, concrete, stepTop, sideMat);
+        step.position.set(toX(s.x0) + i + 0.5, (top - 0.5) / 2, -1.6);
+        kit.add(step);
+      }
+    } else if (s.kind === 'bank') {
+      //a concrete wedge
+      const y1 = toY(level, s.y1!);
+      const shape = new THREE.Shape();
+      shape.moveTo(0, -0.5);
+      shape.lineTo(w, -0.5);
+      shape.lineTo(w, y1);
+      shape.lineTo(0, y);
+      shape.closePath();
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3, bevelEnabled: false });
+      const bank = new THREE.Mesh(geo, concrete);
+      bank.position.set(toX(s.x0), 0, -3.1);
+      kit.add(bank);
     } else {
       const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.14), metal);
       bar.position.set(x, y - 0.06, 0);
       kit.add(bar);
       for (let px = toX(s.x0) + 0.3; px < toX(s.x1); px += 2) {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, y, 0.1), postMat);
-        post.position.set(px, y / 2, 0);
+        const h = postH(s.x0, y);
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, h, 0.1), postMat);
+        post.position.set(px, y - h / 2, 0);
         kit.add(post);
       }
     }
@@ -133,8 +175,9 @@ export function buildKit(level: Level): THREE.Group {
     for (const i of [0, Math.floor(pts.length / 2), pts.length - 1]) {
       const p = pts[i];
       if (p.y <= 0.1) continue;
-      const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, p.y, 0.1), postMat);
-      post.position.set(p.x, p.y / 2, 0);
+      const h = postH(rail.x0, p.y);
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, h, 0.1), postMat);
+      post.position.set(p.x, p.y - h / 2, 0);
       kit.add(post);
     }
   }
