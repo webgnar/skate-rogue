@@ -464,6 +464,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   visual (no collision, no score): some stroll, all turn to watch you come past, about a third hold their phone up
   to film, they throw their arms up when you land a big air near them and flinch when you slam. Ducking was left
   out for now. game.ts gets one view and one update call next to the chasers.
+- **Slam reworked to a slip-out, bail windmills.** The old slam pitched Lou forward onto his hands while the board
+  shot ahead, which can't happen together. A slam in the sim is a landing that doesn't stick, so now the board
+  squirts out ahead, Lou sits down hard on his butt (head whipping back, hands behind), rocks forward over his
+  feet, takes a running step and hops back on (still 0.9 s). The bail (falling off the map) windmills both arms and
+  runs the legs while the board tumbles away. Push was checked against the reference (front foot turned about 80°,
+  back foot reaching beside the front truck, sweeping back past the tail) and left as is. Re-baking also fixed
+  art/bake_clips.cjs, which had baked from the Blender actions instead of the code clips (it now clears them
+  first); the re-baked actions match the code clips frame for frame.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

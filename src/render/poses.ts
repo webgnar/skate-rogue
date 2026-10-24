@@ -493,27 +493,31 @@ export const CLIPS: Record<string, Clip> = {
       { t: 1.0, pose: { hipY: 0.92, bend: 0.2, armLRaise: 1.1, armRRaise: 0.95, armLElbow: 0.5, armRElbow: 0.6 } },
     ],
   },
-  // slam: a hard hit. The skater is thrown off: knees buckle, head whips back, arms fling up, the board shoots out
-  // ahead tumbling; they pitch forward onto their hands, bounce, scramble up and hop back on as the board rolls
-  // back under them (about 0.9 s)
+  // slam: a landing that doesn't stick. The board squirts out ahead, the feet slip with it and the skater sits down
+  // hard on their butt, head whipping back, hands behind to break it; then they rock forward over their feet, take
+  // a running step and hop back on as the board rolls back under them (about 0.9 s)
   slam: {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 0.8, bend: 0.3 } },
-      { t: 0.06, pose: { tumble: -0.35, hipY: 0.45, bend: 0.75, nod: -0.5, ...feetUp(0.18, 0.05), footFX: 0.35, footBX: -0.4, armLRaise: 2.7, armRRaise: 2.5, armLElbow: 0.2, armRElbow: 0.3, boardX: 0.6, boardY: 0.28, boardRoll: 1.6, boardYaw: 0.5 } },
-      { t: 0.2, pose: { tumble: -1.25, hipX: 0.35, hipY: 0.42, bend: 0.55, nod: 0.2, ...feetUp(0.3, 0.05), footFX: 0.1, footBX: -0.55, armLRaise: 1.0, armLFwd: 1.4, armRRaise: 1.1, armRFwd: 1.3, armLElbow: 0.1, armRElbow: 0.1, boardX: 1.4, boardY: 0.15, boardRoll: Math.PI, boardYaw: 0.9 } },
-      { t: 0.36, pose: { tumble: -0.85, hipX: 0.3, hipY: 0.52, bend: 0.6, nod: 0.3, ...feetUp(0.12, 0.05), footFX: 0.2, footBX: -0.45, armLRaise: 0.9, armLFwd: 1.2, armRRaise: 1.0, armRFwd: 1.1, armLElbow: 0.3, armRElbow: 0.3, boardX: 1.1, boardY: 0, boardRoll: TAU, boardYaw: 0.4 } },
-      { t: 0.6, pose: { tumble: -0.3, hipX: 0.12, hipY: 0.66, bend: 0.5, nod: 0.3, ...feetUp(0.05), footFX: 0.3, footBX: -0.3, armLRaise: 0.9, armRRaise: 0.8, boardX: 0.3, boardRoll: TAU } },
-      { t: 0.9, pose: { tumble: 0, hipY: 0.84, bend: 0.25, boardRoll: TAU } },
+      // the board squirts out ahead from under the feet; they slip forward with it, hips drop, head whips back
+      { t: 0.08, pose: { tumble: 0.45, hipX: -0.08, hipY: 0.58, bend: 0.1, nod: -0.6, head: 0.2, ...feetUp(0.22, 0.05), footFX: 0.5, footBX: 0.1, armLRaise: 1.9, armLFwd: 0.9, armLElbow: 0.3, armRRaise: 2.2, armRFwd: 0.6, armRElbow: 0.4, boardX: 0.55, boardPivot: TAIL, boardPitch: 0.35, boardY: 0.05 } },
+      // down on the butt, legs out in front, hands back on the ground to break the fall
+      { t: 0.22, pose: { tumble: 0.85, hipX: -0.2, hipY: 0.22, bend: 0.45, nod: -0.2, head: 0.3, ...feetUp(0.06, 0.1), footFX: 0.55, footBX: 0.35, armLRaise: 0.7, armLFwd: -1.1, armLElbow: 0.1, armRRaise: 0.8, armRFwd: -1.2, armRElbow: 0.1, boardX: 1.5, boardYaw: 0.35 } },
+      // the bounce: rocked forward over the feet, hands pushing off the knees
+      { t: 0.42, pose: { tumble: 0.15, hipX: -0.05, hipY: 0.45, bend: 0.85, nod: 0.25, ...feetUp(0.02, 0.06), footFX: 0.22, footBX: -0.18, armLRaise: 0.4, armLFwd: 1.0, armLElbow: 0.9, armRRaise: 0.45, armRFwd: 0.9, armRElbow: 0.9, boardX: 1.2, boardYaw: 0.2 } },
+      // a running step to catch the board up, the back foot swinging onto it
+      { t: 0.65, pose: { hipX: 0.06, hipY: 0.82, bend: 0.4, nod: 0.3, footFOn: 1, footBOn: 0, footBX: -0.35, footBY: 0.28, footBZ: 0.06, armLRaise: 0.9, armRRaise: 0.8, boardX: 0.35 } },
+      { t: 0.9, pose: { tumble: 0, hipY: 0.84, bend: 0.25 } },
     ],
   },
-  // freefall: off the board, flailing (4 x 100 ms)
+  // freefall: off the board and dropping, arms windmilling, legs running in the air, the board tumbling away
   freefall: {
     loop: true,
     keys: [
-      { t: 0, pose: { hipY: 0.9, ...feetUp(0.42, 0.1), footFX: 0.3, footBX: -0.2, boardY: 0.5, boardRoll: 0.4, armLRaise: 2.0, armRRaise: 1.2, armLElbow: 1.1, armRElbow: 0.6 } },
-      { t: 0.2, pose: { hipY: 0.9, ...feetUp(0.3, 0.1), footFX: 0.2, footBX: -0.3, boardY: 0.55, boardRoll: 0.6, armLRaise: 1.2, armRRaise: 2.0, armLElbow: 0.6, armRElbow: 1.1 } },
-      { t: 0.4, pose: { hipY: 0.9, ...feetUp(0.42, 0.1), footFX: 0.3, footBX: -0.2, boardY: 0.5, boardRoll: 0.4, armLRaise: 2.0, armRRaise: 1.2, armLElbow: 1.1, armRElbow: 0.6 } },
+      { t: 0, pose: { hipY: 0.9, nod: -0.3, ...feetUp(0.42, 0.1), footFX: 0.35, footBX: -0.25, footFY: 0.3, boardX: 0.4, boardY: 0.6, boardRoll: 0.5, boardPitch: 0.4, armLRaise: 2.6, armLFwd: 0.6, armLElbow: 0.4, armRRaise: 1.0, armRFwd: -0.6, armRElbow: 0.6 } },
+      { t: 0.15, pose: { hipY: 0.9, nod: -0.2, ...feetUp(0.3, 0.1), footFX: 0.15, footBX: -0.05, footBY: 0.45, boardX: 0.45, boardY: 0.62, boardRoll: 0.9, boardPitch: 0.25, armLRaise: 1.6, armLFwd: 1.4, armLElbow: 0.7, armRRaise: 2.4, armRFwd: -0.1, armRElbow: 0.3 } },
+      { t: 0.3, pose: { hipY: 0.9, nod: -0.3, ...feetUp(0.42, 0.1), footFX: 0.35, footBX: -0.25, footFY: 0.3, boardX: 0.4, boardY: 0.6, boardRoll: 0.5, boardPitch: 0.4, armLRaise: 2.6, armLFwd: 0.6, armLElbow: 0.4, armRRaise: 1.0, armRFwd: -0.6, armRElbow: 0.6 } },
     ],
   },
 };
