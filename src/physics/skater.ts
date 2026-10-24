@@ -50,6 +50,7 @@ export class Skater {
   spare = 0; // banked bonus jump (Spare Change)
   onRailT = 0; // frames on the current rail (Feeble Frenzy)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
+  movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
 
   constructor(
     readonly level: Level,
@@ -204,6 +205,11 @@ export class Skater {
     return PHYS.railMin * this.mods.grindScale;
   }
 
+  // parked cars plus moving traffic
+  private cars(): Car[] {
+    return this.movers.length ? [...this.level.cars, ...this.movers] : this.level.cars;
+  }
+
   // the level's ledges, roofs and rails, plus a live ghost rail
   private surfaces(): Surface[] {
     return this.ghost ? [...this.level.surfaces, this.ghost] : this.level.surfaces;
@@ -238,7 +244,7 @@ export class Skater {
         });
       }
     }
-    for (const car of this.level.cars) {
+    for (const car of this.cars()) {
       if (x + PHYS.width / 2 >= car.x0 && x - PHYS.width / 2 <= car.x1) consider(car.roof, () => this.carHop());
     }
     for (const rail of this.level.rails) {
@@ -346,7 +352,7 @@ export class Skater {
   // car sides and broken glass: a slam, never the end of the run
   private checkHazards(): void {
     const half = PHYS.width / 2;
-    for (const car of this.level.cars) {
+    for (const car of this.cars()) {
       if (this.hitCars.has(car)) continue;
       const overlapX = this.x + half > car.x0 && this.x - half < car.x1;
       const overlapY = this.y > car.roof + 6 && this.y - PHYS.height < car.bottom;
