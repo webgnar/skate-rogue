@@ -275,7 +275,7 @@ vehicles in the skate lane can hit you; the others are there for life and noise,
 | --- | --- | --- |
 | **Robotaxi** (same direction) | The AI's self-driving cars, slower than you. You catch them from behind. They brake hard when you get close | Ollie onto the trunk, ride the roof, hop off the hood |
 | **Oncoming car** | Comes at you in the skate lane; closing speed is very high | Time an ollie over it, or land on the roof for a car-hop |
-| **Cross traffic** | At intersections, cars cut across the skate lane from the back lanes | Read the traffic light and headlights, time the gap or ollie over |
+| **Cross traffic** | At intersections, cars pull out of the cross street and turn onto your road, your way | Read the traffic light and headlights; ollie it, or car-hop its roof as it turns or drives off |
 | **Parked car** | Static. A door can swing open as you pass | A platform; the door is a hazard and a launch |
 | **Bus** | Long and slow, with a stop where it pulls into the lane | A long roof to manual on; the roof edge is a grind |
 | **Box truck** | Dropped tailgate | The tailgate is a kicker (triggers a bomb) |

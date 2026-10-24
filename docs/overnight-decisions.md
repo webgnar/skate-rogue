@@ -250,6 +250,17 @@ and listed it here for review. Any of these can be flipped in the morning.
   1.2 per fast second; fresh gear each run. Shop prices: deck $25, shoes $15, trucks $20, wheels $15. HUD: four
   bars bottom left, green, yellow, red. Callouts at half and at 15. Worn looks are left for the models and effects threads.
 
+- **Cross-street cars turn onto your road (zack asked).** A cross car now pulls out of the side street to the
+  skate lane (2.5 s, light red), swings round over half a second and drives off your way at 0.45x cruising as
+  ordinary traffic, keeping its paint. It doesn't brake for you like a robotaxi. Its roof is a car hop while it
+  pulls out, turns and drives. Choices: always turns your way (not toward you); new cars stop once you're 30
+  tiles past the corner.
+
+- **Platforms toward the camera (zack: "they dont stick out enough").** Floating ledges were 2.2 deep with their
+  front edge only 0.45 in front of Lou; they now reach the same front line as rooftops, stairs and banks (1.25 in
+  front of Lou). Rooftops, stairs, banks, the overpass, street pads and the L-train covers already did. Vehicle
+  roofs (cars, buses, trucks, roadblocks) keep their models' widths.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)
