@@ -416,6 +416,12 @@ and listed it here for review. Any of these can be flipped in the morning.
   stand in the traffic lane. Greece's ruin twist applies to it too.
 - **Leaderboard entries carry the Gnar level.** A Gnar run's entry shows "G3" beside its floor on the same boards,
   rather than getting boards of its own (that would split the few early players across many boards).
+- **Filling stoke can't make a floor impossible (from the playtest bot, PR #106).** The validator skated floors only
+  at cruising speed, but full stoke (the gnar state) skates 20% faster, and 8 validated floors bailed at that speed.
+  Now a floor or escape only passes if the reference bot clears it at both speeds, the gnar run also having slams
+  free of Heat, as in the game. Escapes get 24 rerolls instead of 16, because act 3 passes both ways only about a
+  quarter of the time. After this, `npm run playtest:sim` finds no unclearable floors. I left the Sky Line climbing
+  warning alone: it's a boon working as intended (a ghost rail under your feet), just very high.
 
 ## Models thread: animation
 
