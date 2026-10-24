@@ -13,9 +13,10 @@ import { FX, initFx } from './render/fx-settings';
 import { isBiome } from './render/biomes';
 import { props } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
-import { dailySeed, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
+import { dailySeed, dayKey, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
 import { loadSave } from './run/save';
 import { MetaScreen } from './ui/meta-screen';
+import { BoardPanel } from './ui/board-panel';
 import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
 
@@ -308,7 +309,16 @@ async function start() {
   const input = new OneButton(document.getElementById('app')!);
   const startAt = Math.max(1, Math.floor(Number(params.get('floor')) || 1));
   const library = all ? FULL_LIBRARY : libraryOf(save.unlocked);
-  const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud(), startAt, { loadout: { skater, deck }, library, daily });
+  //the leaderboards: every finished run posts itself (once there's a tag); a daily run also goes on today's board
+  const scores = new BoardPanel(document.getElementById('scores')!, document.querySelector<HTMLElement>('#over [data-scores]')!);
+  const day = daily ? dayKey() : undefined;
+  const hud = makeHud();
+  const showOver = hud.over;
+  hud.over = (result) => {
+    showOver(result);
+    if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}) });
+  };
+  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily });
   //?debug exposes the game for headless checks
   if (params.has('debug')) Object.assign(window, { game, props });
   const biome = params.get('biome');
@@ -343,6 +353,7 @@ async function start() {
     e.preventDefault();
     const t = e.target instanceof Element ? e.target : null;
     if (t?.closest('[data-open-meta]')) metaScreen.open();
+    else if (t?.closest('[data-scores]')) void scores.open();
     else if (t?.closest('[data-daily]')) reloadWith('daily', !daily);
   });
   tapOnly('resume', () => game.setPaused(false));
