@@ -183,8 +183,9 @@ function fromModels(look: ChaserLook): THREE.Group | null {
 export class ChaserView {
   readonly group = new THREE.Group();
   private body: THREE.Group | null = null;
-  private look: ChaserLook | null = null;
-  private x = 0;
+  look: ChaserLook | null = null;
+  x = 0; // where it's drawn, world units (eases after the sim)
+  surging = false; // closing in faster than it settles
   private t = 0;
 
   update(level: Level, chaser: Chaser | null, biome: BiomeId, dt: number): void {
@@ -202,6 +203,7 @@ export class ChaserView {
     this.t += dt;
     //surge after a slam, settle back as you get away
     const target = toX(chaser.x);
+    this.surging = target - this.x > 0.5;
     this.x += (target - this.x) * Math.min(1, dt * (target > this.x ? 6 : 2));
     this.group.position.set(this.x, toY(level, level.streetY), 0.2);
     const run = Math.sin(this.t * 14);

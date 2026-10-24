@@ -229,6 +229,15 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 - [ ] Red and blue pools glow on the street under the parked cruisers, swapping slowly side to side, stronger at
       night. With `?noflash` they hold steady.
 
+**Escape set pieces**
+
+- [ ] Helicopter escape: grit blows out along the street under the chopper, harder when its light is on you. It
+      stops under the L tracks.
+- [ ] Act 3 chase: the wave throws foam and mist, the chariot kicks dust with sparks from its wheel, and the guards
+      kick dust. All of it gets bigger when they surge after you slam.
+- [ ] With `?noflash`, the helicopter's light pool holds steady instead of pulsing.
+- [ ] Reach the gate hot on a wanted-poster floor: a violet-and-gold fountain comes with BOUNTY CLAIMED.
+
 **Weather by district**
 
 - [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
