@@ -592,7 +592,7 @@ the thing it takes the beating from:
 - **The shop** always has a gear row under the mod stock: New Deck $25, New Shoes $15, New Trucks $20, New Wheels
   $15. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
   a new mod, or keep your setup rolling.
-- **HUD:** four small bars above the board strip, bottom left (DECK, SHOES, TRUCKS, WHEELS), green while fresh,
+- **HUD:** four bars in the GEAR WEAR panel, bottom right (DECK, TRUCKS, WHEELS, SHOES), green while fresh,
   yellow once a part starts costing you and red, blinking, from 15. A callout fires when a part wears past half
   ("SHOES WORN") and again near the end ("DECK BUSTED!").
 - **Looks (models and effects threads):** worn parts should show on Lou: a chipped, delaminating deck nose and
@@ -737,8 +737,11 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
 
 ## UI
 
-- **HUD:** kept minimal for immersion. Heat is shown by the world (sirens, light), not a bar; cash and Stoken top right, floor number and biome on the banner, jump pips
-  above the skater (Lou Gnar's jump counter), stoke meter along the bottom.
+- **HUD:** decided Oct 24, 2026 from zack's comic ink mockup (openspec change ui1-hud): the GNAR RUN logo with act
+  and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the
+  Stoke meter into GNAR MODE and the Heat meter (the cruiser, 10 segments, stars at 25/50/75/90) under them; board
+  mods bottom left and gear wear bottom right. The middle of the screen stays clear. Heat keeps its world cues
+  (sirens, light, edge glow) as well as the bar.
 - **Boon pick:** three large cards, tap to pick, long-press to read. Reuse QFS's card layout and deal animation.
 - **Shop:** board slots across the top, mods below, drag to place. Must work with one thumb.
 - **Pause:** resume, settings, run summary (boons, mods), abandon run.

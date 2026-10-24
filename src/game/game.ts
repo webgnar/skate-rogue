@@ -84,7 +84,8 @@ export interface Hud {
   pick(offer: Boon[] | null, info?: PickInfo): void; // null hides the cards
   over(result: RunResult | null): void;
   money(cash: number, stoken: number): void;
-  score(score: number, combo: number, stoke: number, gnar: number): void; // stoke and gnar 0..1
+  score(score: number, combo: number, stoke: number, gnar: number, pending: number): void; // stoke and gnar 0..1; pending: the live combo's points
+  pause(paused: boolean): void; // show or hide the pause card
   heat(value: number): void;
   warn(show: boolean): void; // an oncoming car is on its way
   board(slots: Slots): void;
@@ -129,6 +130,7 @@ export class Game {
   private floor = 1;
   private boons: Held[] = [];
   private state: State = 'skate';
+  paused = false; // frozen by the pause button, Esc / P, or the page going hidden
   private menuAt = 0;
   private offer: Boon[] = [];
   private last = performance.now();
@@ -559,11 +561,25 @@ export class Game {
     if (this.state === 'pick' && performance.now() - this.menuAt >= MENU_LOCK_MS) this.pickBoon(i);
   }
 
+  // pause only while skating; the menus are already a pause
+  setPaused(on: boolean): void {
+    if (on && this.state !== 'skate') return;
+    if (on === this.paused) return;
+    this.paused = on;
+    this.input.clear();
+    this.hud.pause(on);
+  }
+
   frame(now: number): void {
     //never negative: a frame's timestamp can come from before the game was made, and a negative step would
     //poison the time warp (and through it the camera and the physics clock) with NaN
     const realDt = Math.max(0, Math.min(0.1, (now - this.last) / 1000));
     this.last = now;
+    //paused: the street holds its last frame and presses are dropped
+    if (this.paused) {
+      this.input.clear();
+      return;
+    }
     //game time: frozen on a slam's hit-stop, then slow motion
     const dt = realDt * this.warp.scale;
     this.warp.update(realDt);
@@ -662,7 +678,7 @@ export class Game {
     this.words.update(realDt);
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
     this.flowFx(dt);
-    this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs);
+    this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs, this.run.comboPoints * this.run.combo);
     this.hud.gear(this.sim.gear);
     this.view.zoom.update(dt, this.skater.mode);
     this.view.follow(x, y, dt);

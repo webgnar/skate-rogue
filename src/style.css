@@ -27,15 +27,6 @@ html, body {
 #game { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 #hud { position: absolute; inset: 0; pointer-events: none; }
 #hud > * { position: absolute; text-shadow: 2px 2px 0 var(--shadow); }
-#floor {
-  top: max(12px, env(safe-area-inset-top));
-  left: max(16px, env(safe-area-inset-left));
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 20px;
-  letter-spacing: 2px;
-}
 #callout {
   top: 22%;
   left: 0;
@@ -67,54 +58,6 @@ html, body {
 }
 #debug { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 16px); }
 #seed { bottom: max(12px, env(safe-area-inset-bottom)); }
-#road {
-  font-size: 12px;
-  letter-spacing: 1.5px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(18, 12, 30, 0.6);
-  text-shadow: none;
-}
-#road:empty { display: none; }
-#road[data-kind='cash'] { color: #5fe08a; }
-#road[data-kind='hot'] { color: #ff4a3a; }
-#road[data-kind='stash'] { color: #b98cff; }
-#road[data-kind='boon'] { color: var(--trick); }
-#road[data-kind='shop'] { color: #4ad8ff; }
-#road[data-kind='escape'] { color: #ff4a3a; }
-#money {
-  top: max(12px, env(safe-area-inset-top));
-  right: max(16px, env(safe-area-inset-right));
-  display: flex;
-  gap: 14px;
-  font-size: 20px;
-  letter-spacing: 1px;
-}
-#cash { color: #7df0a0; }
-#stoken { color: #c9a8ff; }
-#scorebox {
-  top: max(12px, env(safe-area-inset-top));
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 22px;
-  letter-spacing: 1px;
-}
-#combo { margin-left: 8px; color: var(--trick); }
-#stoke {
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 22px);
-  left: 50%;
-  width: min(260px, 40vw);
-  height: 8px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: rgba(18, 12, 30, 0.6);
-  border: 1.5px solid rgba(255, 247, 232, 0.6);
-  overflow: hidden;
-}
-#stoke i { display: block; height: 100%; width: 0; background: var(--trick); transition: width 0.2s; }
-#stoke.gnar { border-color: var(--good); box-shadow: 0 0 12px var(--good); }
-#stoke.gnar i { background: var(--good); transition: none; }
 #rotate {
   display: none;
   top: 48px;
@@ -304,29 +247,6 @@ html, body {
 
 /* board strip (bottom left) and the skate shop */
 :root { --trigger: #c08cff; --effect: #4ad8ff; }
-#board {
-  bottom: max(12px, env(safe-area-inset-bottom));
-  left: max(16px, env(safe-area-inset-left));
-  display: flex;
-  gap: 4px;
-}
-#board:empty { display: none; }
-#board .slot {
-  min-width: 44px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 9px;
-  letter-spacing: 0.5px;
-  text-align: center;
-  text-shadow: none;
-  background: rgba(18, 12, 30, 0.7);
-  border: 1.5px solid rgba(255, 247, 232, 0.25);
-}
-#board .slot.trigger { border-color: var(--trigger); color: var(--trigger); }
-#board .slot.effect { border-color: var(--effect); color: var(--effect); }
-#board .slot.fire { animation: fire 0.45s ease-out; }
-@keyframes fire { from { background: #fff7e8; color: #1a1028; transform: scale(1.25); } }
-
 #shop {
   position: absolute;
   inset: 0;
@@ -443,24 +363,9 @@ html, body {
 .card.cursed { border-style: dashed; background: linear-gradient(180deg, #2e1a48, #241838); }
 .card:nth-child(4) { animation-delay: 0.21s; }
 
-/* gear wear (GDD: Gear and wear): a bar per part above the board strip, and the shop's gear row */
+/* gear wear (GDD: Gear and wear): the shop's gear row; the HUD's bars are in the HUD section below */
 :root { --fresh: #7df0a0; --worn: #ffd23f; --busted: #ff4a5a; }
-#gear {
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 30px);
-  left: max(16px, env(safe-area-inset-left));
-  display: flex;
-  gap: 6px;
-}
-#gear .part {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 8px;
-  letter-spacing: 0.8px;
-  text-shadow: none;
-  opacity: 0.85;
-}
-#gear i, #shop .cond i {
+#shop .cond i {
   display: block;
   width: 40px;
   height: 4px;
@@ -470,8 +375,6 @@ html, body {
 .fresh { --tone: var(--fresh); }
 .worn { --tone: var(--worn); }
 .busted { --tone: var(--busted); }
-#gear .part.worn { color: var(--worn); }
-#gear .part.busted { color: var(--busted); animation: blink 0.8s steps(2) infinite; }
 #shop .gearshop { display: flex; gap: clamp(6px, 1.5vw, 12px); width: 100%; max-width: 760px; justify-content: center; flex-wrap: wrap; }
 #shop .gearbuy {
   flex: 1 1 0;
@@ -490,3 +393,286 @@ html, body {
 #shop .gearbuy .cond { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--tone); }
 #shop .gearbuy .text { font: 11px/1.2 system-ui, sans-serif; opacity: 0.75; text-shadow: none; }
 #shop .gearbuy .price { color: #7df0a0; }
+
+/* ---- the in-run HUD (openspec/changes/ui1-hud): zack's comic ink mockup ----
+   Sizes are in --u, which follows the screen's height (landscape phones are short). Panels are skewed, inked in
+   black with a neon edge and a halftone. Nothing here animates per frame except the warnings. */
+#hud {
+  --u: clamp(7px, min(2.5vh, 1.35vw), 13px);
+  --t: max(6px, env(safe-area-inset-top));
+  --r: max(10px, env(safe-area-inset-right));
+  --b: max(6px, env(safe-area-inset-bottom));
+  --l: max(10px, env(safe-area-inset-left));
+  --pink: #ff2fb4;
+  --cyan: #3ff0ff;
+  --yellow: #ffe23a;
+  --hud-bg: #160b26;
+  font-family: 'Bangers', 'Arial Black', Impact, sans-serif;
+  letter-spacing: 0.06em;
+}
+#hud > * { text-shadow: none; }
+.panel {
+  position: relative;
+  background:
+    radial-gradient(circle, rgba(255, 47, 180, 0.22) 1px, transparent 1.4px) 0 0 / 5px 5px,
+    linear-gradient(180deg, #24123c, var(--hud-bg));
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px var(--edge, var(--pink)), 3px 4px 0 2px #000;
+  transform: skewX(-10deg);
+}
+.ink {
+  color: var(--yellow);
+  -webkit-text-stroke: 1.5px #000;
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 #000;
+}
+#top {
+  top: var(--t);
+  left: var(--l);
+  right: var(--r);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: calc(var(--u) * 1.4);
+  row-gap: calc(var(--u) * 0.9);
+  align-items: start;
+}
+#logo { grid-row: 1 / 3; display: flex; flex-direction: column; align-items: flex-start; }
+#logo .mark {
+  font-size: calc(var(--u) * 3.6);
+  line-height: 0.9;
+  transform: skewX(-8deg) rotate(-3deg);
+  -webkit-text-stroke: 2px #000;
+  paint-order: stroke fill;
+  text-shadow: 3px 3px 0 #000;
+}
+#logo .gnar { color: var(--yellow); }
+#logo .run { color: var(--pink); margin-left: 0.15em; }
+#logo .sub {
+  display: flex;
+  gap: calc(var(--u) * 0.6);
+  align-items: center;
+  margin-top: calc(var(--u) * 0.3);
+  font-size: calc(var(--u) * 1.35);
+  color: #fff;
+  -webkit-text-stroke: 1px #000;
+  paint-order: stroke fill;
+  text-shadow: 1px 2px 0 #000;
+}
+#floortext { background: #000; padding: 0.1em 0.5em; transform: skewX(-10deg); }
+#road {
+  font-size: calc(var(--u) * 1.1);
+  padding: 0.1em 0.5em;
+  background: #000;
+  transform: skewX(-10deg);
+  color: var(--yellow);
+}
+#road:empty { display: none; }
+#road[data-kind='cash'] { color: #5fe08a; }
+#road[data-kind='hot'], #road[data-kind='escape'] { color: #ff4a3a; }
+#road[data-kind='stash'] { color: #d58cff; }
+#road[data-kind='shop'] { color: var(--cyan); }
+
+#center { display: flex; justify-content: center; gap: calc(var(--u) * 1.2); align-items: flex-start; min-width: 0; }
+#scorebox {
+  --edge: var(--cyan);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--u) * 0.2) calc(var(--u) * 1.4) calc(var(--u) * 0.3);
+  min-width: calc(var(--u) * 11);
+}
+#scorebox small { font-size: calc(var(--u) * 1.05); color: #fff; line-height: 1; }
+#score { font-size: calc(var(--u) * 2.6); line-height: 1; color: var(--yellow); -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; font-variant-numeric: tabular-nums; }
+#combobox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--u) * 0.2) calc(var(--u) * 1.2) calc(var(--u) * 0.3);
+  transition: opacity 0.15s, transform 0.15s;
+}
+#combobox[data-live='0'] { opacity: 0; transform: skewX(-10deg) scale(0.85); }
+#combobox .c { font-size: calc(var(--u) * 2.2); line-height: 1; color: var(--pink); -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+#combo { font-style: normal; color: var(--yellow); font-size: 1.15em; }
+#pending { font-size: calc(var(--u) * 1.4); color: #fff; line-height: 1.1; }
+
+#right { display: flex; gap: calc(var(--u) * 1); align-items: flex-start; }
+#money {
+  --edge: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.2);
+  padding: calc(var(--u) * 0.45) calc(var(--u) * 1.2);
+  font-size: calc(var(--u) * 2);
+  line-height: 1;
+}
+#money > span { display: flex; align-items: center; gap: calc(var(--u) * 0.4); }
+#money svg { height: 1em; width: auto; }
+#cash { color: #4dff8a; }
+#stoken { color: #fff; }
+#pausebtn {
+  all: unset;
+  box-sizing: border-box;
+  pointer-events: auto;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  width: calc(var(--u) * 4.2);
+  height: calc(var(--u) * 3.6);
+  min-width: 40px;
+  min-height: 36px;
+  background: linear-gradient(180deg, #24123c, var(--hud-bg));
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px var(--pink), 3px 4px 0 2px #000;
+  transform: skewX(-10deg);
+}
+#pausebtn svg { height: 55%; }
+#pausebtn:active { transform: skewX(-10deg) translateY(2px); box-shadow: 0 0 0 2px var(--pink), 1px 2px 0 2px #000; }
+
+#meters { grid-column: 2 / 4; display: flex; justify-content: space-between; gap: calc(var(--u) * 1.2); min-width: 0; padding-right: calc(var(--u) * 0.6); }
+#stoke, #heat {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.25) calc(var(--u) * 0.8);
+  background: rgba(10, 4, 20, 0.72);
+  border: 2px solid #000;
+  transform: skewX(-10deg);
+}
+#hud .tag {
+  font-size: calc(var(--u) * 1.8);
+  line-height: 1;
+  color: var(--yellow);
+  -webkit-text-stroke: 1.2px #000;
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 #000;
+  transform: rotate(-4deg);
+}
+#heat .tag { color: #ff3a5a; }
+.meter { display: flex; gap: 2px; padding: 2px; background: #000; }
+.meter b { display: block; width: calc(var(--u) * 1.15); height: calc(var(--u) * 1.2); background: #3a3046; }
+.meter b.on { background: var(--c); }
+#stoke .badge {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.3);
+  font-size: calc(var(--u) * 1.05);
+  line-height: 0.95;
+  color: #8a7a9a;
+  opacity: 0.85;
+}
+#stoke .badge svg { height: calc(var(--u) * 2.4); filter: grayscale(1) brightness(0.6); }
+#stoke[data-gnar='1'] { border-color: var(--yellow); box-shadow: 0 0 calc(var(--u) * 1.2) var(--pink); }
+#stoke[data-gnar='1'] .badge { color: var(--yellow); opacity: 1; }
+#stoke[data-gnar='1'] .badge svg { filter: none; animation: gnarbob 0.5s ease-in-out infinite alternate; }
+@keyframes gnarbob { to { transform: scale(1.15) rotate(6deg); } }
+.cruiser svg { height: calc(var(--u) * 2); display: block; }
+.cruiser .l1, .cruiser .l2 { opacity: 0.35; }
+#heat[data-hot='1'] .cruiser .l1 { opacity: 1; animation: siren 0.5s steps(2) infinite; }
+#heat[data-hot='1'] .cruiser .l2 { opacity: 1; animation: siren 0.5s steps(2) infinite reverse; }
+@keyframes siren { 50% { opacity: 0.2; } }
+#stars { display: flex; gap: 1px; font-size: calc(var(--u) * 1.6); line-height: 1; color: #3a3046; -webkit-text-stroke: 1px #000; font-family: system-ui, sans-serif; }
+#heat[data-stars='1'] #stars i:nth-child(-n + 1),
+#heat[data-stars='2'] #stars i:nth-child(-n + 2),
+#heat[data-stars='3'] #stars i:nth-child(-n + 3),
+#heat[data-stars='4'] #stars i:nth-child(-n + 4) { color: #ff2a3a; }
+
+/* bottom corners: board mods and gear wear */
+#board, #gear { bottom: var(--b); display: flex; flex-direction: column; gap: calc(var(--u) * 0.2); }
+#board { left: var(--l); align-items: flex-start; }
+#gear { right: var(--r); align-items: flex-end; }
+#board .tag, #gear .tag { font-size: calc(var(--u) * 1.5); margin-left: calc(var(--u) * 0.6); }
+#slots, #gearbars {
+  display: flex;
+  gap: calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 0.4);
+  background: rgba(10, 4, 20, 0.72);
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px var(--pink), 3px 4px 0 2px #000;
+  transform: skewX(-10deg);
+}
+#slots .slot {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: calc(var(--u) * 4.6);
+  height: calc(var(--u) * 3.6);
+  font-size: calc(var(--u) * 1.05);
+  line-height: 1;
+  text-align: center;
+  background: #1d1030;
+  border: 2px solid var(--k, #4a3d5a);
+  color: var(--k, #fff);
+}
+#slots .slot small { font-size: 0.75em; opacity: 0.7; color: #fff; }
+#slots .slot.empty { border-style: dashed; background: transparent; }
+#slots .slot.trigger { --k: var(--trigger); }
+#slots .slot.effect { --k: var(--effect); }
+#slots .slot.fire { animation: fire 0.45s ease-out; }
+@keyframes fire { from { background: #fff7e8; color: #1a1028; transform: scale(1.2); } }
+#gearbars .part {
+  --wear: #4dff8a;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: calc(var(--u) * 0.3);
+  align-items: center;
+  padding: calc(var(--u) * 0.25) calc(var(--u) * 0.4);
+  background: #1d1030;
+  border: 2px solid #4a3d5a;
+}
+#gearbars .icon { grid-row: 1 / 3; }
+#gearbars .icon svg { height: calc(var(--u) * 2.4); display: block; }
+#gearbars .name { font-size: calc(var(--u) * 1.05); color: #fff; line-height: 1.1; }
+#gearbars .meter b { width: calc(var(--u) * 0.9); height: calc(var(--u) * 0.9); }
+#gearbars .part[data-wear='worn'] { --wear: #ffe23a; }
+#gearbars .part[data-wear='busted'] { --wear: #ff3048; border-color: #ff3048; animation: blink 0.6s steps(2) infinite; }
+#app.calm #gearbars .part[data-wear='busted'], #app.noflash #gearbars .part[data-wear='busted'] { animation: none; }
+
+/* everything else that sits on the HUD */
+#boons { top: calc(var(--t) + var(--u) * 7.2); left: var(--l); right: auto; max-width: 26vw; }
+#hint { bottom: calc(var(--b) + var(--u) * 7.6); font-size: calc(var(--u) * 1.25); font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; text-shadow: 2px 2px 0 var(--shadow); }
+/* the perf line only with ?debug; the seed is on the pause card */
+#debug { display: none; top: calc(var(--t) + var(--u) * 9); right: auto; left: 50%; bottom: auto; transform: translateX(-50%); white-space: nowrap; }
+#app.debug #debug { display: block; }
+#seed { display: none; }
+#paused .seed { font: 12px ui-monospace, monospace; opacity: 0.6; }
+#callout { font-family: 'Bangers', 'Arial Black', sans-serif; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; letter-spacing: 0.06em; }
+#app.calm #combobox { transition: none; }
+
+/* the pause card */
+#paused {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(18, 12, 30, 0.78);
+  font-family: 'Bangers', 'Arial Black', sans-serif;
+  letter-spacing: 0.06em;
+  animation: fade 0.15s ease-out;
+}
+#paused .title { font-size: clamp(36px, 10vh, 64px); color: var(--trick); -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; transform: skewX(-8deg); }
+#paused .held { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 560px; padding: 0 16px; }
+#paused .none { opacity: 0.6; font-family: system-ui, sans-serif; }
+#resume {
+  all: unset;
+  cursor: pointer;
+  padding: 10px 26px;
+  font-size: 24px;
+  color: #1a1028;
+  background: var(--trick);
+  border: 3px solid #000;
+  box-shadow: 0 0 0 3px #ff2fb4, 4px 5px 0 3px #000;
+  transform: skewX(-10deg);
+}
+#app.calm #paused, #app.calm #stoke .badge svg { animation: none; }
+/* narrow landscape phones (iPhone SE): slimmer meters so Heat's stars fit */
+@media (max-width: 720px) {
+  #hud .meter b { width: calc(var(--u) * 0.8); }
+  #stoke .tag, #heat .tag { font-size: calc(var(--u) * 1.5); }
+  #stars { font-size: calc(var(--u) * 1.3); }
+}
