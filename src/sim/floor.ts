@@ -12,6 +12,7 @@ import { PROP_SIZE } from '../gen/props';
 import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
+import { ElTrain } from '../traffic/el';
 import { crossed, freshGear, GEAR, GEAR_PARTS, gearScale, type Gear, type GearPart } from '../run/gear';
 
 export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
@@ -64,6 +65,7 @@ export class FloorSim {
   readonly chopper: Chopper | null; // the helicopter escape's spotlight
   readonly swarm: Swarm | null; // the drone swarm escape
   readonly chaser: Chaser | null; // act 3's chaser
+  readonly trains: ElTrain[]; // the L's trains, one line per stretch of track
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
   private later: { effect: EffectId; slot: number; t: number }[] = []; // board effects waiting to fire
@@ -99,17 +101,22 @@ export class FloorSim {
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
     this.traffic = new Traffic(level, level.tutorial ? [] : spawnPlan(level, level.layout.seed), level.crossings, level.busStops ?? [], level.doors ?? []);
     this.traffic.noBrake = mods?.spoofed ?? false;
+    this.trains = (level.el ?? []).map((s) => new ElTrain(s));
   }
 
   step(input: StepInput): void {
     if (this.state !== 'skate') return;
     this.traffic.step(this.skater.x);
+    for (const t of this.trains) t.step(this.skater.x);
     this.swarm?.step(this.skater);
     this.fall = this.skater.mode === 'air' ? this.skater.vsp : 0;
     const crossing = this.traffic.crossing;
     const doors = this.traffic.doorBoxes;
+    const trains = this.trains.length ? this.trains.flatMap((t) => t.inLane) : [];
     this.skater.movers =
-      this.swarm || crossing.length || doors.length ? [...this.traffic.inLane, ...crossing, ...doors, ...(this.swarm?.boxes ?? [])] : this.traffic.inLane;
+      this.swarm || crossing.length || doors.length || trains.length
+        ? [...this.traffic.inLane, ...crossing, ...doors, ...trains, ...(this.swarm?.boxes ?? [])]
+        : this.traffic.inLane;
     this.skater.step(input);
     const skaterEvents = this.skater.events.slice();
     this.skater.events.length = 0;

@@ -14,6 +14,7 @@ import { CHUNK_W, makeLayout } from './layout';
 import { clearable } from './validate';
 import { droneSpots } from '../sim/drones';
 import { placeProps } from './props';
+import { EL } from '../traffic/el';
 import { makeRng, randInt } from './rng';
 
 export const ACTS = 5;
@@ -112,6 +113,8 @@ export function buildEscape(seed: number, act: number): Level {
     for (let c = chopperFrom + 14 * TILE; c < level.exitX - 10 * TILE; c += (e0 + randInt(rng, e1 - e0 + 1)) * TILE) {
       covers.push({ x0: c, x1: c + (l0 + randInt(rng, l1 - l0 + 1)) * TILE, y: level.streetY - L_TRACKS.height });
     }
+    //their running rails grind (src/traffic/el.ts): a bus roof and an ollie gets you up
+    for (const c of covers) level.surfaces.push({ kind: 'rail', x0: c.x0, x1: c.x1, y: c.y - EL.head * TILE, row: -1, el: true });
   }
   //the swarm: waves of drones over the flat street before the gate
   if (swarm) {

@@ -12,6 +12,8 @@ import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
+import { buildForeground, buildHill } from './hillside';
+import { buildElTrack, elCuts } from './el-view';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
@@ -57,7 +59,10 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
 
   //--- the alley far below the descent: you only see it if you fall ---------------------------
   const first = Math.round(toX(level.finaleX));
-  if (first > 0) {
+  //act 1's hillside and the near side of the street (hillside.ts)
+  if (level.hills) buildHill(level, kit);
+  if (city) buildForeground(level, kit);
+  if (first > 0 && !level.hills) {
     const alley = slab(first, 3, STREET_DEPTH, lambert(null, 0x18121f), lambert(null, 0x221a2c), sideMat);
     alley.position.set(first / 2, -2.5, STREET_BACK + STREET_DEPTH / 2);
     kit.add(alley);
@@ -134,9 +139,11 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
   }
   //cross streets cut the wall and the block behind it
   const gaps = level.crossings.map((i) => toX(i.x + CROSS.w / 2)).map((cx) => [cx - CROSS.street, cx + CROSS.street]);
-  const inGap = (x0: number, x1: number) => gaps.some(([g0, g1]) => x1 > g0 - 0.2 && x0 < g1 + 0.2);
+  //and so do the L's bends (el-view.ts)
+  const cuts = [...gaps, ...elCuts(level)];
+  const inGap = (x0: number, x1: number) => cuts.some(([g0, g1]) => x1 > g0 - 0.2 && x0 < g1 + 0.2);
   let w0 = first;
-  for (const [g0, g1] of [...gaps, [cols, cols]].sort((a, b) => a[0] - b[0])) {
+  for (const [g0, g1] of [...cuts, [cols, cols]].sort((a, b) => a[0] - b[0])) {
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
     if (a1 > a0) {
@@ -156,7 +163,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
 
   //the world's landmark stands in for a building every few screens, the first one soon after the start
   let mark = skin.landmark ? first + 6 + randInt(rng, 8) : Infinity;
-  for (let bx = -8; bx < cols + 20; ) {
+  for (let bx = level.hills ? first - 2 : -8; bx < cols + 20; ) {
     if (bx >= mark) {
       const lm = model(skin.landmark!);
       if (lm && !inGap(bx, bx + LANDMARK_W)) {
@@ -191,6 +198,10 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
     const w = toX(s.x1 - s.x0);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
+    //the L's running rails are part of its track
+    if (s.el) continue;
+    //the hill draws its own ground
+    if (level.hills && s.x0 < level.finaleX && !s.side && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
     if (s.kind === 'roof') {
       //a roof at street level is just more street (the descent's last run-out)
       if (y < 0.5) {
@@ -319,6 +330,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
       kit.add(shard);
     }
   }
+
+  //--- the L over Chicago's street, round its bends into the city (el-view.ts) -----------------
+  buildElTrack(level, kit);
 
   //--- the L: elevated train tracks over the street on a helicopter escape (you hide under them) ------
   if (level.escape?.covers.length && model('ElSpan')) {

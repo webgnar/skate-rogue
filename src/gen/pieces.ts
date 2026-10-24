@@ -370,6 +370,14 @@ export const FORK_PIECE: Piece = {
   ],
 };
 
+// plain street after the start on a Chicago floor: the L runs over it (src/traffic/el.ts)
+export const EL_PIECE: Piece = {
+  name: 'el', tier: 0, rows: [
+    '................', '................', '................', '................', '................',
+    '................', '................', '................', '................', '################',
+  ],
+};
+
 export const EXIT_PIECE: Piece = {
   name: 'exit', tier: 0, rows: [
     '................', '................', '................', '................', '................',
