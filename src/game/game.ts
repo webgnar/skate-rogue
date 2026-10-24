@@ -39,6 +39,8 @@ import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
 import { DroneView } from '../render/drone-view';
+import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
+import { CHASER } from '../sim/chaser';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig } from '../render/skater-rig';
 import { trickName } from '../physics/tricks';
@@ -160,6 +162,7 @@ export class Game {
   private readonly impacts: Impacts;
   private readonly chopper = new ChopperView();
   private readonly droneView = new DroneView();
+  private readonly chaserView = new ChaserView();
   private spotState = 'hunt';
   private readonly particles = new Particles();
   private readonly focus = new FocusLines();
@@ -214,7 +217,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group);
+    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -337,7 +340,9 @@ export class Game {
     this.hud.gear(this.gear);
     this.hud.money(this.run.cash, this.run.stoken);
     if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
-    if (this.road.kind === 'escape') this.hud.callout(`ESCAPE: ${label(this.road)}`, 'bad');
+    if (this.road.kind === 'escape') {
+      this.hud.callout(this.sim.chaser ? CHASER_CALLS[chaserLook(this.biome)].start : `ESCAPE: ${label(this.road)}`, 'bad');
+    }
   }
 
   // the floor's gate: pay floor clear, then this floor's reward; the road taken is the next floor
@@ -667,7 +672,7 @@ export class Game {
     } else if (this.state === 'skate' && this.sim.state === 'caught') {
       this.state = 'caught';
       this.menuAt = now;
-      this.hud.callout('BUSTED!', 'bad');
+      this.hud.callout(this.sim.chaser?.caught ? CHASER_CALLS[chaserLook(this.biome)].caught : 'BUSTED!', 'bad');
       navigator.vibrate?.(200);
     }
 
@@ -683,7 +688,8 @@ export class Game {
     this.view.gates.setRoad(this.sim.roadAhead);
     this.hud.warn(
       this.state === 'skate' &&
-        this.sim.traffic.inLane.some((v) => v.speed < 0 && v.x0 - this.skater.x > 17 * TILE),
+        (this.sim.traffic.inLane.some((v) => v.speed < 0 && v.x0 - this.skater.x > 17 * TILE) ||
+          (this.sim.chaser !== null && this.sim.chaser.gap < CHASER.warnAt)),
     );
 
     const ghost = this.skater.ghost;
@@ -709,6 +715,7 @@ export class Game {
     this.impacts.update(dt);
     this.chopper.update(this.level, this.sim.chopper, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
+    this.chaserView.update(this.level, this.sim.chaser, this.biome, dt);
     const spot = this.sim.chopper?.state ?? 'hunt';
     if (spot !== this.spotState && this.state === 'skate') {
       if (spot === 'lock') this.hud.callout('SPOTTED!', 'bad');

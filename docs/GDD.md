@@ -187,8 +187,9 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
 
 Built Oct 24, 2026 (first version): acts of 3 floors with an escape after each act's third floor (before the road
 picked at its fork), the Roadblock set piece (car, bus, a line of cruisers, bus; car-hop the roofs), and act 5's
-double roadblock wins the run. Each act now has its own district look (act 3 picks Greece, Atlantis or the museum by seed); acts 2
-and 3 still use the roadblock until their own set pieces exist. See docs/overnight-decisions.md.
+double roadblock wins the run. Each act now has its own district look (act 3 picks Greece, Atlantis or the museum by seed). Act 3's
+escape is a chase (built Oct 24, 2026, src/sim/chaser.ts): the district's chaser (wave, chariot or guards) closes in
+on every slam, and three close together catch you. See docs/overnight-decisions.md.
 
 ### 3. Risk and reward inside a floor
 

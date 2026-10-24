@@ -28,7 +28,8 @@ Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 - [ ] **Boon streets only lead to types you've unlocked:** a new phone sees POP and GRIND signs only; with `?unlockall` you see all six (POP, GRIND, FLOW, COOL, LUCK, STREET).
 - [ ] **Each act is its own district:** act 1 Chicago, act 2 Clemente Park, act 3 Greece, Atlantis or the museum (it changes run to run), act 4 High-Tech City, act 5 the Hive. The look switches when an act's first floor starts. Quickest check: `?floor=4`, then `?floor=7`, `?floor=10`, `?floor=13`. A `?biome=` in the link pins one look for the whole run. In Atlantis gravity is 0.8: you float higher and longer on every floor of that act (the floors are built and checked in it). `?biome=atlantis` shows it from floor 1.
 - [ ] **Fork signs light up** for the road you're on as you reach the overpass.
-- [ ] **Escapes:** the act 1 to 3 escapes, and act 4's drone swarm (stomp the drones to car-hop).
+- [ ] **Escapes:** act 1's roadblock, act 2's helicopter, and act 4's drone swarm (stomp the drones to car-hop).
+- [ ] **Act 3's chase (after floor 9; quickest is `?floor=9`, clear it and take a road):** the district's chaser comes in a few tiles behind you: a tidal wave in Atlantis, a gold chariot in Greece, three guards with a torch in the museum. The callout names it ("THE WAVE IS COMING!"). Each slam lets it surge closer, and the "!" warning shows when it's close. Clean skating slowly opens the gap. Three slams close together and it catches you ("WIPED OUT!", "TRAMPLED!", "COLLARED!"). *Tuning:* too forgiving or too harsh? *Looks:* these are placeholder shapes until the models thread builds real ones.
 
 ## Unlocks between runs (meta progression)
 
