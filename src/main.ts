@@ -100,13 +100,13 @@ function shopHtml(v: ShopView): { slots: string; stock: string; hint: string } {
       const on = picked && 'stock' in picked && picked.stock === i ? 'picked' : '';
       const poor = shop.cash < m.price ? 'poor' : '';
       return `<button class="mod ${m.kind} ${on} ${poor}" data-stock="${i}">
-        <span class="kind">${m.kind === 'trigger' ? 'TRIGGER' : 'EFFECT'}</span>
+        <span class="kind">${m.kind === 'trigger' ? 'TRIGGER' : m.kind === 'modifier' ? 'MODIFIER' : 'EFFECT'}</span>
         <b>${esc(m.name)}</b><span class="text">${esc(m.text)}</span><span class="price">$${m.price}</span>
       </button>`;
     })
     .join('');
   const hint = !picked
-    ? 'Tap a mod, then a slot to put it in · tap two slots to swap · triggers fire the effects to their right'
+    ? 'Tap a mod, then a slot to put it in · tap two slots to swap · triggers fire the effects to their right · a modifier changes the next effect'
     : 'stock' in picked
       ? `Tap a slot for ${modDef(shop.stock[picked.stock]!).name}`
       : 'Tap another slot to swap';
@@ -308,6 +308,9 @@ async function start() {
   const sprite = await SkaterRig.create(base, skater);
   const input = new OneButton(document.getElementById('app')!);
   const startAt = Math.max(1, Math.floor(Number(params.get('floor')) || 1));
+  //a new phone starts on the tutorial floor (?tutorial shows it again; a test URL skips it)
+  const testing = ['floor', 'seed', 'biome', 'daily'].some((k) => params.has(k));
+  const tutorial = params.has('tutorial') || (!save.tutorialDone && save.best === 0 && !testing);
   const library = all ? FULL_LIBRARY : libraryOf(save.unlocked);
   //the leaderboards: every finished run posts itself (once there's a tag); a daily run also goes on today's board
   const scores = new BoardPanel(document.getElementById('scores')!, document.querySelector<HTMLElement>('#over [data-scores]')!);
@@ -318,7 +321,7 @@ async function start() {
     showOver(result);
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}) });
   };
-  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily });
+  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial });
   //?debug exposes the game for headless checks
   if (params.has('debug')) Object.assign(window, { game, props });
   const biome = params.get('biome');

@@ -1,12 +1,14 @@
 // Board mods (GDD: Board build, the light launch version). A board has slots; a slot holds a trigger or an effect.
 // When a trigger's event happens it fires the effects to its right, left to right, until the next trigger.
+// A modifier changes the next effect after it (GDD: ×2, Delay, Only On Combo, Chance); modifiers stack.
 export type TriggerId = 'onOllie' | 'onLand' | 'onGrind' | 'onGrindEnd' | 'onTrick' | 'onHop';
 export type EffectId = 'sparks' | 'doublePop' | 'speedKick' | 'jumpRefill' | 'cashBurst' | 'slowMo' | 'gravFlip' | 'shockwave';
-export type ModId = TriggerId | EffectId;
+export type ModifierId = 'twice' | 'delay' | 'comboOnly' | 'coinFlip';
+export type ModId = TriggerId | EffectId | ModifierId;
 
 export interface ModDef {
   id: ModId;
-  kind: 'trigger' | 'effect';
+  kind: 'trigger' | 'effect' | 'modifier';
   name: string;
   short: string; // fits a HUD slot
   text: string;
@@ -28,6 +30,10 @@ export const MOD_DEFS: ModDef[] = [
   { id: 'slowMo', kind: 'effect', name: 'Slow-mo', short: 'SLOW-MO', text: 'Half speed for 0.5 s', price: 30 },
   { id: 'gravFlip', kind: 'effect', name: 'Gravity Flip', short: 'GRAV FLIP', text: 'Gravity pulls up for 0.3 s (in the air)', price: 40 },
   { id: 'shockwave', kind: 'effect', name: 'Shockwave', short: 'SHOCK', text: 'Cars near you pull out of the skate lane', price: 45 },
+  { id: 'twice', kind: 'modifier', name: 'Times Two', short: '×2', text: 'The next effect fires twice', price: 45 },
+  { id: 'delay', kind: 'modifier', name: 'Delay', short: 'DELAY', text: 'The next effect fires 0.5 s later', price: 15 },
+  { id: 'comboOnly', kind: 'modifier', name: 'Combo Only', short: 'COMBO 5+', text: 'The next effect fires only in a 5+ combo, and twice', price: 30 },
+  { id: 'coinFlip', kind: 'modifier', name: 'Coin Flip', short: '50/50', text: 'The next effect: half the time nothing, half the time three times', price: 25 },
 ];
 
 export const BOARD = {
@@ -46,6 +52,8 @@ export const BOARD = {
   slowMoScale: 0.5,
   gravFlipFrames: 18,
   shockwaveTiles: 12,
+  delayFrames: 30,
+  comboOnly: 5,
 };
 
 export function modDef(id: ModId): ModDef {
@@ -58,15 +66,41 @@ export function newBoard(slots: number = BOARD.startSlots): Slots {
   return Array.from({ length: slots }, () => null);
 }
 
-// the effects a trigger fires, with their slots: every copy of the trigger fires its own run of effects
-export function fires(slots: Slots, trigger: TriggerId): { slot: number; effect: EffectId }[] {
-  const out: { slot: number; effect: EffectId }[] = [];
+export interface Firing {
+  slot: number;
+  effect: EffectId;
+  times: number; // ×2 doubles it; a won coin flip triples it
+  delay: number; // frames
+  comboOnly: boolean; // only in a combo of BOARD.comboOnly or more
+  coinFlip: boolean; // a 50/50: nothing, or three times
+}
+
+// the effects a trigger fires, with their slots: every copy of the trigger fires its own run of effects, and the
+// modifiers before an effect (since the last effect or trigger) shape it
+export function fires(slots: Slots, trigger: TriggerId): Firing[] {
+  const out: Firing[] = [];
   let live = false;
+  let pending: ModifierId[] = [];
   slots.forEach((id, slot) => {
     if (!id) return;
     const def = modDef(id);
-    if (def.kind === 'trigger') live = id === trigger;
-    else if (live) out.push({ slot, effect: id as EffectId });
+    if (def.kind === 'trigger') {
+      live = id === trigger;
+      pending = [];
+    } else if (def.kind === 'modifier') {
+      if (live) pending.push(id as ModifierId);
+    } else if (live) {
+      const n = (m: ModifierId) => pending.filter((p) => p === m).length;
+      out.push({
+        slot,
+        effect: id as EffectId,
+        times: 2 ** n('twice') * (n('comboOnly') ? 2 : 1),
+        delay: n('delay') * BOARD.delayFrames,
+        comboOnly: n('comboOnly') > 0,
+        coinFlip: n('coinFlip') > 0,
+      });
+      pending = [];
+    }
   });
   return out;
 }

@@ -12,6 +12,7 @@ import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } 
 import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, writeSave } from '../run/save';
+import { tutorialLevel } from '../gen/tutorial';
 import { cashScale, dayKey, DECK_SLOTS, FULL_LIBRARY, firstPick, STOCK, withLoadout, type Library, type Loadout } from '../run/meta';
 import { PickupView } from '../render/pickups';
 
@@ -79,6 +80,7 @@ export interface RunMeta {
   loadout: Loadout;
   library: Library;
   daily: boolean;
+  tutorial?: boolean; // start on the tutorial floor (a new phone, or ?tutorial)
 }
 
 export type ShopPick = { stock: number } | { slot: number } | null;
@@ -169,6 +171,8 @@ export class Game {
   private readonly bountyView = new BountyView();
   private floorStoken = 0; // Stoken at the floor's start, for a bounty
   private bountySeen = false;
+  private tutorial = false; // on the tutorial floor, before the run's first floor
+  private lesson = 0; // the next tutorial prompt
   private spotState = 'hunt';
   private readonly particles = new Particles();
   private readonly focus = new FocusLines();
@@ -212,6 +216,7 @@ export class Game {
     private readonly meta: RunMeta = { loadout: STOCK, library: FULL_LIBRARY, daily: false },
   ) {
     this.floor = startAt;
+    this.tutorial = meta.tutorial ?? false;
     this.road = this.firstRoad();
     this.board = newBoard(DECK_SLOTS[meta.loadout.deck]);
     this.level = this.makeLevel();
@@ -238,6 +243,7 @@ export class Game {
   }
 
   private makeLevel(): Level {
+    if (this.tutorial) return tutorialLevel(this.seed);
     if (this.road.kind === 'escape') return validatedEscape(this.seed, this.road.act);
     return validatedFloor(this.seed, this.floor, {
       fork: rollFork(this.seed, this.floor, this.meta.library.types),
@@ -261,6 +267,20 @@ export class Game {
     this.level = this.makeLevel();
     this.hud.over(null);
     this.startFloor();
+  }
+
+  // through the tutorial's gate: remember it, then the run proper starts on its first floor (no score carried)
+  private endTutorial(): void {
+    this.tutorial = false;
+    writeSave({ ...loadSave(), tutorialDone: true });
+    this.run = new RunScore();
+    this.gear = freshGear();
+    this.carry = 0;
+    this.floor = this.startAt;
+    this.road = this.firstRoad();
+    this.level = this.makeLevel();
+    this.startFloor();
+    this.hud.callout("YOU'RE READY. LET'S GO!", 'good');
   }
 
   // the first floor is a boon street of your skater's type (GDD: Meta progression)
@@ -333,6 +353,7 @@ export class Game {
     this.bountyView.set(this.level);
     this.floorStoken = this.run.stoken;
     this.bountySeen = false;
+    this.lesson = 0;
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level, this.seed, this.floor);
     const rain = this.applyMood();
@@ -359,6 +380,7 @@ export class Game {
   private finishFloor(now: number): void {
     this.carry = carriedHeat(this.sim.heat.value);
     this.gear = { ...this.sim.gear };
+    if (this.tutorial) return this.endTutorial();
     if (this.road.kind === 'escape') return this.clearAct(now, this.road.act);
     const pts = this.run.clearFloor(this.floor);
     //a wanted poster's bounty: the floor's Stoken again, for reaching the gate hot
@@ -676,6 +698,7 @@ export class Game {
         //the gnar state: faster cruising, slams cost no Heat
         this.skater.boost = this.run.gnar ? SCORE.gnarBoost : 1;
         this.sim.heat.slamFree = this.run.gnar;
+        this.sim.combo = this.run.combo;
         this.sim.step(this.input.sample());
         this.run.step(this.skater.mode);
         for (const e of this.sim.events) this.handle(e);
@@ -742,6 +765,11 @@ export class Game {
     if (this.level.bounty && !this.bountySeen && this.state === 'skate' && this.skater.x >= this.level.bounty.x - 4 * TILE) {
       this.bountySeen = true;
       this.hud.callout(`WANTED: HEAT ${BOUNTY.heat}+ AT THE GATE PAYS 2× ◆`, 'trick');
+    }
+    const lesson = this.level.tutorial?.[this.lesson];
+    if (lesson && this.state === 'skate' && this.skater.x >= lesson.x) {
+      this.lesson++;
+      this.hud.callout(lesson.text, 'trick');
     }
     const spot = this.sim.chopper?.state ?? 'hunt';
     if (spot !== this.spotState && this.state === 'skate') {

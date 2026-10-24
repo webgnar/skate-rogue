@@ -14,19 +14,53 @@ describe('board mods', () => {
   it('has 6 triggers and 8 effects, starting with 3 empty slots', () => {
     expect(MOD_DEFS.filter((m) => m.kind === 'trigger')).toHaveLength(6);
     expect(MOD_DEFS.filter((m) => m.kind === 'effect')).toHaveLength(8);
+    expect(MOD_DEFS.filter((m) => m.kind === 'modifier')).toHaveLength(4);
     expect(newBoard()).toEqual([null, null, null]);
   });
 
   it('a trigger fires the effects to its right, in order, until the next trigger', () => {
     const b: Slots = ['onGrindEnd', 'speedKick', 'cashBurst', 'onLand', 'sparks'];
+    const plain = { times: 1, delay: 0, comboOnly: false, coinFlip: false };
     expect(fires(b, 'onGrindEnd')).toEqual([
-      { slot: 1, effect: 'speedKick' },
-      { slot: 2, effect: 'cashBurst' },
+      { slot: 1, effect: 'speedKick', ...plain },
+      { slot: 2, effect: 'cashBurst', ...plain },
     ]);
-    expect(fires(b, 'onLand')).toEqual([{ slot: 4, effect: 'sparks' }]);
+    expect(fires(b, 'onLand')).toEqual([{ slot: 4, effect: 'sparks', ...plain }]);
     expect(fires(b, 'onTrick')).toEqual([]);
     //effects with no trigger before them never fire
-    expect(fires(['cashBurst', 'onOllie', null, 'sparks'], 'onOllie')).toEqual([{ slot: 3, effect: 'sparks' }]);
+    expect(fires(['cashBurst', 'onOllie', null, 'sparks'], 'onOllie')).toEqual([{ slot: 3, effect: 'sparks', ...plain }]);
+  });
+
+  it('a modifier shapes the next effect only, and they stack', () => {
+    const f = fires(['onLand', 'twice', 'twice', 'cashBurst', 'sparks', 'delay', 'comboOnly', 'speedKick'], 'onLand');
+    expect(f.map((x) => [x.effect, x.times, x.delay, x.comboOnly])).toEqual([
+      ['cashBurst', 4, 0, false],
+      ['sparks', 1, 0, false],
+      ['speedKick', 2, BOARD.delayFrames, true],
+    ]);
+    //a modifier before the trigger, or under another trigger, does nothing here
+    expect(fires(['twice', 'onLand', 'sparks'], 'onLand')[0].times).toBe(1);
+    expect(fires(['onOllie', 'twice', 'onLand', 'sparks'], 'onLand')[0].times).toBe(1);
+  });
+
+  it('in the sim: ×2 pays twice, Delay waits half a second, Combo Only needs a combo', () => {
+    const run = (board: Slots, combo = 0) => {
+      const sim = new FloorSim(buildFloor(5, 1), undefined, 0, board);
+      sim.combo = combo;
+      const at: number[] = [];
+      for (let f = 0; f < 90; f++) {
+        sim.step({ pressed: f === 2, held: f >= 2 && f < 6 });
+        for (const e of sim.events) if (e.type === 'mod') at.push(f);
+      }
+      return at;
+    };
+    const once = run(['onOllie', 'cashBurst']);
+    expect(once).toHaveLength(1);
+    expect(run(['onOllie', 'twice', 'cashBurst'])).toEqual([once[0], once[0]]);
+    expect(run(['onOllie', 'delay', 'cashBurst'])).toEqual([once[0] + BOARD.delayFrames]);
+    expect(run(['onOllie', 'comboOnly', 'cashBurst'])).toEqual([]);
+    expect(run(['onOllie', 'comboOnly', 'cashBurst'], 5)).toHaveLength(2);
+    expect([0, 3]).toContain(run(['onOllie', 'coinFlip', 'cashBurst']).length);
   });
 
   it('On Ollie + Speed Kick: the pop comes with +2 speed, carried like rail speed', () => {

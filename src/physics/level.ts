@@ -171,6 +171,7 @@ export interface Level {
   busStops: BusStop[]; // where a bus pulls in (src/traffic/street.ts)
   doors: number[]; // parked cars (by index) whose door swings open as you come up
   bounty?: { x: number }; // a wanted poster's bounty (src/run/bounty.ts)
+  tutorial?: { x: number; text: string }[]; // the tutorial floor's prompts (src/gen/tutorial.ts)
 }
 
 const CAR_W = 2 * TILE;

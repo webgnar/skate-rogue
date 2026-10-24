@@ -166,7 +166,7 @@ export class HudView {
     this.slotsEl.innerHTML = slots.map((id: ModId | null) => {
       if (!id) return '<span class="slot empty"></span>';
       const m = modDef(id);
-      return `<span class="slot ${m.kind}"><small>${m.kind === 'trigger' ? 'ON' : 'DO'}</small>${esc(m.short)}</span>`;
+      return `<span class="slot ${m.kind}"><small>${m.kind === 'trigger' ? 'ON' : m.kind === 'modifier' ? 'MOD' : 'DO'}</small>${esc(m.short)}</span>`;
     }).join('');
   }
 

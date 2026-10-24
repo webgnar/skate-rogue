@@ -246,7 +246,7 @@ html, body {
 @keyframes blink { 50% { opacity: 0.2; } }
 
 /* board strip (bottom left) and the skate shop */
-:root { --trigger: #c08cff; --effect: #4ad8ff; }
+:root { --trigger: #c08cff; --effect: #4ad8ff; --modifier: #ffd84a; }
 #shop {
   position: absolute;
   inset: 0;
@@ -284,6 +284,7 @@ html, body {
 }
 #shop .slot.trigger { border: 2.5px solid var(--trigger); color: var(--trigger); }
 #shop .slot.effect { border: 2.5px solid var(--effect); color: var(--effect); }
+#shop .slot.modifier { border: 2.5px solid var(--modifier); color: var(--modifier); }
 #shop .slot.target { box-shadow: 0 0 0 2px #fff7e8; animation: blink 0.8s steps(2) infinite; }
 #shop .slot.picked { background: #fff7e8; color: #1a1028; }
 #shop .slot.add { border: 2.5px dashed #7df0a0; color: #7df0a0; }
@@ -325,6 +326,7 @@ html, body {
 #shop.opening .mod:nth-child(4) { animation-delay: 0.15s; }
 #shop .mod.trigger { --c: var(--trigger); }
 #shop .mod.effect { --c: var(--effect); }
+#shop .mod.modifier { --c: var(--modifier); }
 #shop .mod.picked { background: #3a2a5c; transform: translateY(-4px); box-shadow: 0 9px 0 var(--shadow), 0 0 0 2px #fff7e8; }
 #shop .mod.poor { opacity: 0.45; }
 #shop .mod.sold { display: flex; align-items: center; justify-content: center; opacity: 0.35; border-style: dashed; box-shadow: none; }
@@ -609,6 +611,7 @@ html, body {
 #slots .slot.empty { border-style: dashed; background: transparent; }
 #slots .slot.trigger { --k: var(--trigger); }
 #slots .slot.effect { --k: var(--effect); }
+#slots .slot.modifier { --k: var(--modifier); }
 #slots .slot.fire { animation: fire 0.45s ease-out; }
 @keyframes fire { from { background: #fff7e8; color: #1a1028; transform: scale(1.2); } }
 #gearbars .part {

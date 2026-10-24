@@ -569,6 +569,11 @@ This is the deepest system and the riskiest one for scope. Decided Oct 23, 2026:
 (3 slots, about 6 triggers and 8 effects, no modifiers), built after boons are fun (see Milestones). Modifiers,
 extra slots and a bigger mod pool come in updates.
 
+Built Oct 24, 2026 (overnight): the four modifiers, sold in the shop. A modifier changes the next effect after it
+in the slots; several stack (Times Two then Coin Flip is 0 or 6). Times Two fires it twice, Delay fires it 0.5 s
+later, Combo Only (COMBO 5+) fires it only in a combo of 5 or more and then twice, and Coin Flip (50/50) fires it
+not at all or three times. A trigger with nothing after it still does nothing.
+
 Built Oct 24, 2026 (light version): 3 slots (up to 5 at $60 each), 6 triggers and the 8 effects above. A trigger
 fires the effects to its right until the next trigger; an effect with no trigger to its left does nothing. The shop
 stocks 4 mods (at least one trigger and one effect) for $15 to $45, a slot and a restock ($10, then +5). Tap a mod
@@ -807,6 +812,11 @@ src/
 | M4 | Meta | Stoken, unlock tree, decks, saves |
 | M5 | Board build | Skate Shop, 3-slot boards, first triggers and effects |
 | M6 | Polish | Duo boons, curses, daily seed, PWA, tutorial floor, audio |
+
+Tutorial floor, built Oct 24, 2026 (overnight): the first floor on a new phone, before the run's floor 1. A short,
+quiet street of fixed pieces, each with a prompt as you reach it: tap to ollie, ollie onto the kiosks, hold for a
+higher ollie over a canal, tap again in the air to flip, land on a rail to grind, hop onto parked cars, then the
+gate. No traffic and no Heat. Through the gate, the run starts fresh on floor 1. `?tutorial` shows it again.
 
 The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays live in excaliburSkate until M2 is better than it.
 

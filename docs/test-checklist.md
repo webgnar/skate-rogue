@@ -17,6 +17,7 @@ owns it will pick it up.
 | `?biome=greece` | Previews a district's look: `chicago`, `clemente`, `greece`, `atlantis`, `museum`, `hightech`, `space`, `hive` |
 | `?calm` | Reduce motion and flashing (no shake, no flashes) |
 | `?fx=low` | The low tier for older phones |
+| `?tutorial` | Starts on the tutorial floor again (a brand new phone gets it automatically) |
 | `?debug` | Shows fps, draws and speed; exposes `window.game` |
 
 Flags combine, for example `?seed=77&floor=5&skater=roxy`.
@@ -143,11 +144,21 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 - [ ] Lou leans forward a touch when speeding up (rail exits, tailgate bombs) and back when slowing.
 - [ ] Nothing jitters at 120 Hz: try it on a fast phone screen if you have one.
 
+## Tutorial floor
+
+- [ ] **A new phone starts on it:** clear site data (or use a private window) and open the game with no URL flags. You start on a short, quiet street instead of floor 1. Any test flag (`?floor`, `?seed`, `?biome`, `?daily`) skips it.
+- [ ] **One prompt per move, as you reach it:** TAP TO OLLIE, OLLIE UP ONTO THE KIOSKS, HOLD THE TAP TO OLLIE HIGHER (a canal), TAP AGAIN IN THE AIR TO FLIP, LAND ON THE RAIL TO GRIND, HOP UP ONTO THE CARS, SKATE THROUGH THE GATE!. Do they come early enough to act on?
+- [ ] **Quiet:** no traffic, no bus stops or car doors, and the Heat bar never moves.
+- [ ] **Through the gate:** "YOU'RE READY. LET'S GO!" and the real run starts on floor 1 with score 0. Reload: it doesn't come back (`?tutorial` brings it back).
+- [ ] *Feel:* is it too long, too short, or missing a move you'd want taught (fakie, a car hop for Heat)?
+
 ## Gear and the shop
 
 - [ ] **Gear wear:** four bars on the HUD (bottom right) for the deck, shoes, trucks and wheels. The deck wears from ollies, the shoes from flip tricks, the trucks from grinding and the wheels from going fast. A part turns yellow below 50 and red and blinking at 15, with a callout at each.
 - [ ] **Worn gear costs you:** below half, a worn deck pops lower, worn shoes flip lower, worn trucks grind slower and worn wheels cruise slower. The most it costs is at 0.
 - [ ] **The shop sells new parts:** a gear row under the mod stock (deck $25, shoes $15, trucks $20, wheels $15). *Tuning:* does gear wear too fast or too slow? About 3 to 5 floors to half is the aim.
+- [ ] **Modifiers in the shop:** gold-edged mods marked MOD: Times Two (×2, $45), Delay ($15), Combo Only (COMBO 5+, $30) and Coin Flip (50/50, $25). Each changes the next effect after it in the slots. Try `[On Ollie] [Times Two] [Speed Kick]`: two kicks per ollie. `[On Land] [Delay] [Double Pop]`: the pop comes half a second after you land.
+- [ ] **Combo Only and Coin Flip:** `[On Trick] [Combo Only] [Cash Burst]` pays nothing until your combo hits 5, then double. `[On Grind Start] [Coin Flip] [Spark Trail]` sometimes gives nothing, sometimes a big trail. *Tuning:* are the prices right?
 - [ ] **Worn looks on Lou:** a chipped deck nose, a scuffed shoe and then a hole, rusty trucks, coned wheels.
 
 ## Smashables

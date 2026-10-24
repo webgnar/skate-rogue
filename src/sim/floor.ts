@@ -9,6 +9,7 @@ import { Chaser } from './chaser';
 import { Swarm } from './drones';
 import type { Car, Level, PickupKind } from '../physics/level';
 import { PROP_SIZE } from '../gen/props';
+import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
 import { crossed, freshGear, GEAR, GEAR_PARTS, gearScale, type Gear, type GearPart } from '../run/gear';
@@ -65,6 +66,9 @@ export class FloorSim {
   readonly chaser: Chaser | null; // act 3's chaser
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
+  private later: { effect: EffectId; slot: number; t: number }[] = []; // board effects waiting to fire
+  combo = 0; // the run's live combo count, set by the game each step (Combo Only reads it)
+  private readonly flip: () => number; // the board's coin flips, from the floor seed
   private slipT = 0; // frames drafting behind a car
   readonly broken: boolean[]; // props smashed
   private fall = 0; // how fast we were falling before this step
@@ -79,10 +83,13 @@ export class FloorSim {
     gear: Gear = freshGear(),
   ) {
     this.skater = new Skater(level, mods);
+    this.flip = makeRng(level.layout.seed * 7 + 99);
     this.gear = { ...gear };
     this.skater.gear = gearScale(this.gear);
     this.heat.value = startHeat;
     if (mods) this.heat.mods = { rise: mods.heatRise, hopCool: mods.hopCool, decoy: mods.decoy, slow: mods.slowHeat, airCool: mods.airCool };
+    //the tutorial teaches the moves first: nothing makes Heat rise
+    if (level.tutorial) this.heat.mods = { ...this.heat.mods, rise: 0 };
     this.taken = level.pickups.map(() => false);
     this.broken = level.props.map(() => false);
     const esc = level.escape;
@@ -90,7 +97,7 @@ export class FloorSim {
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
     this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
-    this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed), level.crossings, level.busStops ?? [], level.doors ?? []);
+    this.traffic = new Traffic(level, level.tutorial ? [] : spawnPlan(level, level.layout.seed), level.crossings, level.busStops ?? [], level.doors ?? []);
     this.traffic.noBrake = mods?.spoofed ?? false;
   }
 
@@ -156,9 +163,17 @@ export class FloorSim {
     this.wasGrinding = grinding;
     for (const t of triggers) {
       for (const f of fires(this.board, t)) {
-        this.apply(f.effect);
-        this.events.push({ type: 'mod', effect: f.effect, slot: f.slot });
+        if (f.comboOnly && this.combo < BOARD.comboOnly) continue;
+        const times = f.coinFlip ? (this.flip() < 0.5 ? 0 : 3 * f.times) : f.times;
+        for (let k = 0; k < times; k++) this.later.push({ effect: f.effect, slot: f.slot, t: f.delay });
       }
+    }
+    //effects whose time has come (a Delay holds them back), firing in order
+    const now = this.later.filter((l) => l.t <= 0);
+    this.later = this.later.filter((l) => l.t > 0).map((l) => ({ ...l, t: l.t - 1 }));
+    for (const l of now) {
+      this.apply(l.effect);
+      this.events.push({ type: 'mod', effect: l.effect, slot: l.slot });
     }
   }
 
