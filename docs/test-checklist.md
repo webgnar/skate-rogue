@@ -22,6 +22,10 @@ owns it will pick it up.
 | `?debug` | Shows fps, draws and speed; exposes `window.game` |
 | `?editor` | The animation editor: keyframe Lou's clips (see docs/animation-editor.md). `?editor&clip=kickflip` opens a clip |
 | `?drafts` | Plays the editor's unsaved clips from this browser |
+| `?bot` | The playtest bot skates for you (`?bot=mash` presses at random, `&turbo=3` runs it 3x faster). See docs/playtest-bot.md |
+| `?escape=2` | Starts on act 2's escape |
+| `?boons=bigPop,bigPop,grease` | Starts holding those boons (repeat one for stacks) |
+| `?danger=3` | The first floor's traffic: 1 light to 3 rush hour |
 
 Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 
