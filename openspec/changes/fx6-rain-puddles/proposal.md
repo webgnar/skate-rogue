@@ -1,4 +1,4 @@
-# Proposal (planned, not built)
+# Proposal (built: see tasks for what is deferred)
 
 ## Why
 

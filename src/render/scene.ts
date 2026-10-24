@@ -5,7 +5,8 @@ import { LouZoom, viewHeight } from './camera';
 import { buildKit, toX, toY } from './kit';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution } from './toon';
-import { Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
+import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
+import { Puddles } from './puddles';
 
 export class StreetView {
   readonly renderer: THREE.WebGLRenderer;
@@ -19,6 +20,9 @@ export class StreetView {
   private readonly suns: THREE.DirectionalLight[] = [];
   private readonly sky = skyMesh();
   readonly rain = new Rain();
+  readonly puddles = new Puddles();
+  private lightningIn = 0; // seconds to the next lightning glow in a downpour
+  private flash = 0; // seconds into the current glow
   private mood: Mood | null = null;
   readonly zoom = new LouZoom();
   private camX = 0;
@@ -52,7 +56,7 @@ export class StreetView {
       this.hemis.push(hemi);
       this.suns.push(sun);
     }
-    this.scene.add(this.sky);
+    this.scene.add(this.sky, this.puddles.mesh);
     this.front.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
@@ -76,7 +80,7 @@ export class StreetView {
   }
 
   // light, fog, sky and skyline for a time of day and weather
-  setMood(m: Mood, raining = false): void {
+  setMood(m: Mood, rain = 0): void {
     this.mood = m;
     for (const h of this.hemis) {
       h.color.setHex(m.hemiSky);
@@ -101,7 +105,10 @@ export class StreetView {
       u.uTint.value.setHex(m.skyline);
       u.uNeon.value = m.neon;
     }
-    this.rain.on = raining;
+    this.rain.amount = rain;
+    this.puddles.setSky(m.skyTop, m.skyBottom, m.neon);
+    this.lightningIn = 6 + Math.random() * 6;
+    this.flash = 99;
   }
 
   setLevel(level: Level): void {
@@ -143,6 +150,24 @@ export class StreetView {
     this.punchAmt *= Math.pow(0.91, dt * 60);
     if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
     this.rain.update(dt, this.camera);
+    this.lightning(dt);
+  }
+
+  // a downpour now and then lights the sky: one soft glow that rises fast and fades over a second, never a strobe
+  private lightning(dt: number): void {
+    const sky = (this.sky.material as THREE.ShaderMaterial).uniforms;
+    if (this.rain.amount < RAIN.downpour) {
+      sky.uFlash.value = 0;
+      return;
+    }
+    this.lightningIn -= dt;
+    if (this.lightningIn <= 0) {
+      this.lightningIn = 9 + Math.random() * 8;
+      this.flash = 0;
+    }
+    this.flash += dt;
+    const f = this.flash;
+    sky.uFlash.value = f < 0.12 ? f / 0.12 : Math.max(0, 1 - (f - 0.12) / 1.1);
   }
 
   shake(amount: number): void {

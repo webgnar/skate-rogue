@@ -48,6 +48,11 @@ const DUST = [
   [0.66, 0.62, 0.6],
   [0.86, 0.82, 0.76],
 ];
+const WATER = [
+  [0.85, 0.92, 1],
+  [0.7, 0.82, 0.98],
+  [0.95, 0.97, 1],
+];
 const DEBRIS = [
   [0.55, 0.53, 0.56],
   [0.38, 0.36, 0.4],
@@ -71,6 +76,7 @@ export class Particles {
   private readonly mat: THREE.ShaderMaterial;
   private sparkDebt = 0;
   private trailDebt = 0;
+  private splashDebt = 0;
 
   constructor() {
     const geo = new THREE.BufferGeometry();
@@ -148,6 +154,37 @@ export class Particles {
   grindStart(x: number, y: number, dir: number): void {
     this.sparkDebt += 14;
     this.grind(x, y, dir, 0, 0);
+  }
+
+  // spray off the wheels while rolling through water: blue-white drops thrown back and up, more with speed
+  wade(x: number, y: number, speed: number, dt: number): void {
+    this.splashDebt += (40 + 30 * speed) * dt;
+    const p = this.pool;
+    while (this.splashDebt >= 1) {
+      this.splashDebt--;
+      const back = Math.random() < 0.5;
+      const i = this.spawn(x + (back ? -0.32 : 0.32) + rand(-0.05, 0.05), y + 0.03, rand(-0.2, 0.5), rand(0.25, 0.5), pick(WATER), rand(0.07, 0.12), 0.03, 0.9, 0.4, false);
+      p.vx[i] = rand(-0.4, 0.6) - speed * rand(0.15, 0.35);
+      p.vy[i] = rand(1, 2.6) * (0.6 + 0.2 * speed);
+      p.vz[i] = rand(-0.8, 1.2);
+      p.grav[i] = 14;
+      p.floor[i] = y;
+    }
+  }
+
+  // landing in a puddle: a crown of drops all round
+  splash(x: number, y: number, size = 1): void {
+    const p = this.pool;
+    const n = Math.round(14 + 14 * size);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const i = this.spawn(x + Math.cos(a) * 0.2, y + 0.03, Math.sin(a) * 0.2 + 0.2, rand(0.4, 0.7), pick(WATER), rand(0.08, 0.14), 0.03, 0.95, 0.5, false);
+      p.vx[i] = Math.cos(a) * rand(1, 2.5) * size;
+      p.vy[i] = rand(2.5, 4.5) * size;
+      p.vz[i] = Math.sin(a) * rand(0.8, 2) * size;
+      p.grav[i] = 15;
+      p.floor[i] = y;
+    }
   }
 
   // a dust puff where the board touches down; size 1 for a normal landing
