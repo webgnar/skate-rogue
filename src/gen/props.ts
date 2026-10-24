@@ -6,6 +6,7 @@
 import { TILE } from '../physics/constants';
 import { isStreetAt, type Level } from '../physics/level';
 import { makeRng, type Rng } from './rng';
+import { CROSS } from '../traffic/cross';
 
 export interface Prop {
   name: string; // the Blender part in props.glb (art/props.py)
@@ -76,6 +77,8 @@ export function placeProps(level: Level): Prop[] {
   const clear = (x0: number, x1: number) => {
     for (let x = x0; x <= x1; x += TILE / 2) if (!isStreetAt(level, x)) return false;
     if (level.cars.some((c) => c.x1 > x0 - TILE && c.x0 < x1 + TILE)) return false;
+    //not in a cross street
+    if (level.crossings.some((i) => i.x + CROSS.w / 2 + CROSS.street * TILE > x0 && i.x + CROSS.w / 2 - CROSS.street * TILE < x1)) return false;
     return !level.glass.some((g) => g.x1 > x0 && g.x0 < x1);
   };
   const add = (name: string, x: number, y: number, z: number, breaks: boolean) => {

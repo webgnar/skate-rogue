@@ -749,7 +749,7 @@ export class Game {
       this.hud.money(this.run.cash, this.run.stoken);
       this.hud.callout('GOLDEN SMASH! STOKEN', 'good');
     }
-    this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
+    this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), z: this.level.props[e.index]?.z, how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
   }
 
   // stomped a drone: it's worth a trick's style, and goes down with a crunch

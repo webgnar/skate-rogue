@@ -13,12 +13,13 @@ export const CROSS = {
   w: 1.6 * TILE, // the car seen nose-on: its width along the street
   h: 40,
   laneZ: 0.9, // tiles either side of the skate lane's middle that count as in the lane
-  startZ: -5, // tiles: the back lanes it comes from
+  startZ: -9, // tiles: up the cross street it comes from
   endZ: 4, // and the front lane it goes to
   speedZ: 0.06, // tiles per frame across
-  period: 200, // frames between cars once it starts cycling: 150 across, then a gap on green
+  period: 260, // frames between cars once it starts cycling: 217 across, then a gap on green
   clear: 4 * TILE, // open street needed either side
   every: 40 * TILE, // at most one intersection per this much street
+  street: 1.6, // tiles: half the cross street's width, either side of the car's middle
 };
 
 // frames from pulling off to reaching the skate lane
