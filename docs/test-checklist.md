@@ -272,6 +272,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] **Grinds:** 50-50, 5-0, crooked, smith, feeble, boardslide. *Check:* on a smith the nose dips down toward the camera, and on a feeble it dips away.
 - [ ] **Manuals** (when the gameplay thread wires them): the nose or tail stays down and the other truck is up.
 - [ ] **Visor glint:** a white streak across Lou's visor, faint by day and tinted at night.
+- [ ] **Idle under menus:** while a boon pick, the shop or the underground spot is up, Lou stands on the board breathing and looking up and down the street (from his idle sprite), instead of pushing in place.
+- [ ] **BUSTED:** when the cruiser catches you, Lou puts his hands up with his head down until the summary.
 
 **Slopes (zack's IK legs, PR #62)**
 - [ ] **Roll up and down a bank:** only the board tilts. The knees bend to soak it up and the torso stays upright over the board.

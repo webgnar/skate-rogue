@@ -170,6 +170,28 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.98, pose: { yaw: 1.0, head: 0.2, lean: 0.12, hipY: 0.88, footFTurn: 1.4, footFX: 0.2, footBOn: 0, footBX: -0.05, footBY: 0.24, footBZ: 0.12 } },
     ],
   },
+  // standing on the board while a menu is up (the shop, a pick): Lou Gnar's idle, 4 frames x 100 ms, slowed to a
+  // breath: stood up taller, arms loose, looking up and down the street
+  idle: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { hipY: 0.87, bend: 0.06, armLRaise: 0.25, armRRaise: 0.3, armLElbow: 0.35, armRElbow: 0.5 } },
+      { t: 0.6, pose: { hipY: 0.86, bend: 0.08, head: 0.8, nod: 0.05, armLRaise: 0.28, armRRaise: 0.32, armLElbow: 0.4, armRElbow: 0.55 } },
+      { t: 1.2, pose: { hipY: 0.87, bend: 0.06, head: 0.5, armLRaise: 0.25, armRRaise: 0.3, armLElbow: 0.35, armRElbow: 0.5 } },
+      { t: 1.8, pose: { hipY: 0.86, bend: 0.08, head: 0.15, nod: 0.15, armLRaise: 0.28, armRRaise: 0.32, armLElbow: 0.4, armRElbow: 0.55 } },
+      { t: 2.4, pose: { hipY: 0.87, bend: 0.06, armLRaise: 0.25, armRRaise: 0.3, armLElbow: 0.35, armRElbow: 0.5 } },
+    ],
+  },
+  // BUSTED: the cruiser cuts in and Lou puts his hands up, head down, still stood on the board
+  busted: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { hipY: 0.84, bend: 0.1, nod: 0.2 } },
+      { t: 0.25, pose: { hipY: 0.88, bend: -0.04, nod: 0.35, head: 0.6, armLRaise: 2.5, armRRaise: 2.5, armLFwd: 0.35, armRFwd: 0.35, armLElbow: 1.0, armRElbow: 1.0 } },
+      { t: 1.0, pose: { hipY: 0.87, bend: -0.02, nod: 0.4, head: 0.55, armLRaise: 2.45, armRRaise: 2.55, armLFwd: 0.3, armRFwd: 0.35, armLElbow: 1.05, armRElbow: 0.95 } },
+      { t: 1.75, pose: { hipY: 0.88, bend: -0.04, nod: 0.35, head: 0.6, armLRaise: 2.5, armRRaise: 2.5, armLFwd: 0.35, armRFwd: 0.35, armLElbow: 1.0, armRElbow: 1.0 } },
+    ],
+  },
   // rolling fast: no pushing, a relaxed stance over the bolts
   ride: {
     loop: true,
