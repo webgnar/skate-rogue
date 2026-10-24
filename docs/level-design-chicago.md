@@ -8,9 +8,27 @@ A run is now all one district (PR #112), so this covers all 15 Chicago floors pl
 
 ## Floor shape
 
-Each floor is still a downhill descent into a street finale, but in Chicago the descent is a hillside you skate
-down rather than floating rooftops (`src/gen/hills.ts`, used when `FloorOptions.hills` is set, which
-`src/run/floor-level.ts` does for the Chicago district).
+A floor is a hillside you skate down rather than floating rooftops (`src/gen/hills.ts`, used when
+`FloorOptions.hills` is set, which `src/run/floor-level.ts` does for every floor). zack, 2026-10-24: the floors were
+too short and all felt like "descent to flat", so a floor is now two or three stretches of hill with a flat street
+chase between each:
+
+**hill → street chase → cable car up → hill → (street chase → cable car up → hill) → street finale**
+
+- **Street chase** (the recipe's `chase` beat): `HILLS.chasePieces` street pieces (2 on floors 1–3, 3 on 4–7, 4 from
+  8 on) with the full street: traffic, cross streets, parked cars, canals, the cruiser on your tail.
+- **Cable car**: at the end of a chase the street runs into the foot of the next hill, and a San Francisco cable car
+  waits in its slot. Roll onto the slot (`Surface.tow`) and the cable takes you up at 2.2 times cruising speed,
+  whatever the slope. The car runs just ahead of you in the next lane (`src/render/cable-view.ts`). It climbs
+  `HILLS.climbTop` tiles (11 on floor 1, up to 22) at a grade of 0.45, with a stepped sidewalk beside it. A crest at
+  the top lets you set up, then the next stretch of hill goes down to the next street.
+- **Power lines to grind** (zack: "the player should be able to grind these at times"): about 45% of the plain blocks
+  of hill 10 tiles or longer get a power line strung low over the lane from pole to pole. It hangs 2 tiles over the
+  road at the poles and sags 0.45 tiles between them, with coins along it. Ollie and flip up to grind it, or ride
+  under it.
+- In the code, each later stretch is a run of `HILL_PIECE`s (no street) followed by a `RUNWAY_PIECE` in the
+  street layout (`makeLayout`'s `breaks`), with the hill built over it by `buildClimb`. `Level.hillSpans` lists every
+  stretch, and `inHill()` tells the street systems (traffic, twists, the L, the kit) where the hill is.
 
 | Beat | What it is | How you skate it |
 | --- | --- | --- |
@@ -27,16 +45,16 @@ crests are roofs and gaps are gaps, so the validator, the playtest bot and every
 
 ## Progression
 
-Each floor is a phrase with a shape: it opens on a block to bomb, builds, peaks on its biggest stairway (always the
-last beat, always with a handrail), and runs out down a last short block and 10 flat tiles into the street, so the
+Each stretch of hill is a phrase with a shape: it opens on a block to bomb, builds, peaks on its biggest stairway
+(always the last beat, always with a handrail), and runs out down a last short block and 10 flat tiles into the street, so the
 hill's speed is spent before the traffic. The height is planned up front: the last stairway gets its set, and the
 beats before it share the rest by weight, so no beat is left with nothing to drop.
 
 | Act | Floors | Signature |
 | --- | --- | --- |
-| 1 | 1–3 | Learn the hill: a block, a small stairway, a rail down a block, a drop. Floor 2 adds the crest jump and the kicker; floor 3 is the act's big one |
-| 2 | 4–6 | Rails: handrails down most blocks |
-| 3 | 7–9 | The steps: stairways back to back, landing to landing |
+| 1 | 1–3 | Learn the hill: a block, a small stairway, a rail down a block, a drop. Floor 2 adds the crest jump and the kicker; floor 3 is the act's big one. Two stretches of hill |
+| 2 | 4–6 | Rails: handrails down most blocks. Floor 6 has three stretches |
+| 3 | 7–9 | The steps: stairways back to back, landing to landing. Three stretches from here |
 | 4 | 10–12 | Bombing: crest jumps and kickers into them, the steepest blocks |
 | 5 | 13–15 | Everything, the longest floors |
 
@@ -52,11 +70,13 @@ What grows with depth:
 | Crest jump (tiles) | 2–3 | 3–4 | 3–4 | 3–4 |
 | Stairway before the last | 5–7 | 9–11 | 10–14 | 10–14 |
 | Last stairway, at most | 8 | 15 | 16 | 16 |
-| Floor length (tiles, average) | 190 | 275 | 320 | 325 |
+| Floor length (tiles) | 350 | 450 | 730 | 760 |
+| Floor time for the reference bot (s) | 33 | 46 | 76 | 77 |
 
-All 15 floors pass the validator at cruising speed and in the gnar state; about as often first time as the
-rooftop descents did (1.0 tries a floor on floor 1, up to about 3 on floor 12), and a floor takes 20–30 ms to
-generate and validate.
+All 15 floors pass the validator at cruising speed and in the gnar state, usually in 1–3 tries; floor 13 can take
+more. A floor takes 150–750 ms to generate and validate in Node, because the bot skates floors twice as long.
+Gear wear was halved to keep about 4 floors to half-worn gear. The balance test's Heat bound went from 60 to 80,
+because with two or three street chases a floor, slams get more chances to bunch up.
 
 ## The look (`src/render/hillside.ts`)
 

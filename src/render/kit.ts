@@ -6,7 +6,7 @@ import { model } from './models';
 import { buildProps } from './props';
 import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
-import type { Level } from '../physics/level';
+import { inHill, type Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
 import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
@@ -124,8 +124,8 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       const mesh = slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
       mesh.position.set(x, -1.5, STREET_BACK + STREET_DEPTH / 2);
       kit.add(mesh);
-    } else {
-      //canal: water a bit below the street, QFS's clean water tiles
+    } else if (!inHill(level, (c + n / 2) * TILE)) {
+      //canal: water a bit below the street, QFS's clean water tiles (a stretch of hill draws its own ground)
       const pit = skin.pit === 'city' ? { top: CITY.waterTop, fill: CITY.water } : skin.pit;
       const front = [new Array(n).fill(pit.top), new Array(n).fill(pit.fill), new Array(n).fill(pit.fill)];
       const tex = tileTexture(front, skin.pit === 'city' ? cityTiles() : undefined);
@@ -146,7 +146,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //cross streets cut the wall and the block behind it
   const gaps = level.crossings.map((i) => toX(i.x + CROSS.w / 2)).map((cx) => [cx - CROSS.street, cx + CROSS.street]);
   //and so do the L's bends (el-view.ts)
-  const cuts = [...gaps, ...elCuts(level)];
+  //and the later stretches of hill between the street chases, which draw their own (hillside.ts)
+  const hillCuts = (level.hillSpans ?? []).slice(1).map(([a, b]) => [toX(a), toX(b)]);
+  const cuts = [...gaps, ...elCuts(level), ...hillCuts];
   const inGap = (x0: number, x1: number) => cuts.some(([g0, g1]) => x1 > g0 - 0.2 && x0 < g1 + 0.2);
   let w0 = first;
   for (const [g0, g1] of [...cuts, [cols, cols]].sort((a, b) => a[0] - b[0])) {
@@ -208,7 +210,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   const concrete = lambert(null, 0x8c8794);
   const stepTop = lambert(null, 0xb9b4c2);
   //rails up on the roofs stand on the roof, not on the street
-  const postH = (px: number, y: number) => (px < level.finaleX ? Math.min(y, 0.75) : y);
+  const postH = (px: number, y: number) => (inHill(level, px) ? Math.min(y, 0.75) : y);
   for (const s of level.surfaces) {
     const w = toX(s.x1 - s.x0);
     const x = toX(s.x0) + w / 2;
@@ -216,7 +218,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     //the L's running rails are part of its track
     if (s.el) continue;
     //the hill draws its own ground
-    if (level.hills && s.x0 < level.finaleX && !s.side && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
+    if (level.hills && inHill(level, s.x0) && !s.side && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
     if (s.kind === 'roof') {
       //a roof at street level is just more street (the descent's last run-out)
       if (y < 0.5) {
@@ -311,6 +313,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
 
   //--- curved rails ---------------------------------------------------------------------------
   for (const rail of level.rails) {
+    if (rail.wire) continue; // a power line: the hillside draws it with its poles
     const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
     const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.07, 6), metal);
     kit.add(tube);

@@ -12,9 +12,11 @@
 // a floor costs four draws plus its share of the kit's one merged outline.
 import * as THREE from 'three';
 import { TILE } from '../physics/constants';
-import type { Level, Surface } from '../physics/level';
+import { inHill, type Level, type Surface } from '../physics/level';
 import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
+
+const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
 
 export const HILLSIDE = {
   bottom: -18, // how far down the ground and the houses' foundations go
@@ -482,14 +484,15 @@ const tx = (px: number) => px / TILE;
 function descentGround(level: Level): Ground[] {
   const h = (py: number) => (level.streetY - py) / TILE;
   return level.surfaces
-    .filter((s) => s.x0 < level.finaleX && !s.side && (s.kind === 'roof' || s.kind === 'bank' || s.kind === 'stairs'))
+    .filter((s) => inHill(level, s.x0) && !s.side && (s.kind === 'roof' || s.kind === 'bank' || s.kind === 'stairs'))
     .map((s) => ({ x0: tx(s.x0), x1: tx(s.x1), t0: h(s.y), t1: h(s.y1 ?? s.y), kind: s.kind }))
     .sort((a, b) => a.x0 - b.x0);
 }
 
 // the lane's height at x (tiles): the descent's ground, a gap takes the lower edge, the street is 0
-export function laneHeight(ground: Ground[], finale: number, x: number): number {
-  if (x >= finale) return 0;
+// (`hill`: whether x is on a stretch of hill rather than the street)
+export function laneHeight(ground: Ground[], hill: (x: number) => boolean, x: number): number {
+  if (!hill(x)) return 0;
   let below = -Infinity;
   let after = Infinity;
   for (const g of ground) {
@@ -502,16 +505,16 @@ export function laneHeight(ground: Ground[], finale: number, x: number): number 
 }
 
 // the lowest the lane gets over [x0, x1]
-function lowest(ground: Ground[], finale: number, x0: number, x1: number): number {
-  return span(ground, finale, x0, x1)[0];
+function lowest(ground: Ground[], hill: (x: number) => boolean, x0: number, x1: number): number {
+  return span(ground, hill, x0, x1)[0];
 }
 
 // the lowest and highest the lane gets over [x0, x1]
-function span(ground: Ground[], finale: number, x0: number, x1: number): [number, number] {
+function span(ground: Ground[], hill: (x: number) => boolean, x0: number, x1: number): [number, number] {
   let lo = Infinity;
   let hi = -Infinity;
   for (let x = x0; x <= x1 + 1e-6; x += 0.5) {
-    const h = laneHeight(ground, finale, x);
+    const h = laneHeight(ground, hill, x);
     lo = Math.min(lo, h);
     hi = Math.max(hi, h);
   }
@@ -520,18 +523,18 @@ function span(ground: Ground[], finale: number, x0: number, x1: number): [number
 
 // where a house in front tops out: under the lane, but partway up a slope rather than at its foot, so the rooftops
 // step down the hill with it (the camera's line to the lane clears a little rise there)
-function frontRoof(ground: Ground[], finale: number, x0: number, x1: number): number {
-  const [lo, hi] = span(ground, finale, x0, x1);
+function frontRoof(ground: Ground[], hill: (x: number) => boolean, x0: number, x1: number): number {
+  const [lo, hi] = span(ground, hill, x0, x1);
   return lo + Math.min(0.6, 0.5 * (hi - lo));
 }
 
-// gaps in the descent's ground (tiles): crest jumps over a cross street
+// gaps in the descent's ground (tiles): crest jumps over a cross street (not the street chases between stretches)
 function gaps(ground: Ground[]): [number, number, number][] {
   const out: [number, number, number][] = [];
   for (let i = 1; i < ground.length; i++) {
     const a = ground[i - 1];
     const b = ground[i];
-    if (b.x0 - a.x1 > 0.5) out.push([a.x1, b.x0, Math.min(a.t1, b.t0)]);
+    if (b.x0 - a.x1 > 0.5 && b.x0 - a.x1 < 8) out.push([a.x1, b.x0, Math.min(a.t1, b.t0)]);
   }
   return out;
 }
@@ -706,12 +709,20 @@ function houseRow(m: Mesher, rng: () => number, x0: number, x1: number, z0: numb
 
 // ------------------------------------------------------------------------------------------------ the hill
 
+// whether x (tiles) is on a stretch of hill
+const onHill = (level: Level) => (x: number) => inHill(level, x * TILE);
+
+// each stretch of hill, tiles: the opening descent (from off the left of the screen) and the later ones
+function hillStretches(level: Level): [number, number][] {
+  return [[-8, tx(level.finaleX)], ...(level.hillSpans ?? []).slice(1).map(([a, b]): [number, number] => [tx(a), tx(b)])];
+}
+
 // the descent as solid hill: road, sidewalks and stairways on ground that goes all the way down, row houses behind,
 // cross streets back into the city at the crests and under the crest jumps, power lines and trees along the back
 export function buildHill(level: Level, group: THREE.Group): void {
   const m = new Mesher();
   const ground = descentGround(level);
-  const finale = tx(level.finaleX);
+  const hill = onHill(level);
   const B = HILLSIDE.bottom;
   const [rz0, rz1] = HILLSIDE.road;
   const back = HILLSIDE.backWalk;
@@ -760,6 +771,35 @@ export function buildHill(level: Level, group: THREE.Group): void {
     for (const [a, b] of [[x0 - 0.7, x0], [x1, x1 + 0.7]]) m.box(a, b, B, t + c, t + c, HILLSIDE.crossFar, back, { top: ['walk', UV.top(1, 1)] });
     for (const lx of [x0 - 0.75, x0 - 0.05, x1 + 0.05, x1 + 0.75]) m.quad('house', [lx - 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz0], [lx - 0.06, t + 0.01, rz0], paint);
   }
+  //the cable car's slot up each climb, between its two running rails (cable-view.ts runs the car on it)
+  const steel = rectUv(SWATCH.grey);
+  const slot = rectUv(SWATCH.dark);
+  for (const s of level.surfaces) {
+    if (!s.tow) continue;
+    const [x0, x1] = [tx(s.x0), tx(s.x1)];
+    const [t0, t1] = [(level.streetY - s.y) / TILE + 0.012, (level.streetY - (s.y1 ?? s.y)) / TILE + 0.012];
+    for (const [z, w, uv] of [[CABLE_Z - 0.55, 0.07, steel], [CABLE_Z, 0.05, slot], [CABLE_Z + 0.55, 0.07, steel]] as const) {
+      m.quad('house', [x0, t0, z + w], [x1, t1, z + w], [x1, t1, z - w], [x0, t0, z - w], uv);
+    }
+  }
+  //power lines strung low over the lane to grind (hills.ts): a heavier wire from a pole's long arm at each end
+  const wood = rectUv(SWATCH.pole);
+  const lineZ = 0.25;
+  for (const r of level.rails) {
+    if (!r.wire) continue;
+    const pts = r.xs.map((x, i): V3 => [tx(x), (level.streetY - r.ys[i]) / TILE, lineZ]);
+    const hw = 0.06;
+    for (let i = 1; i < pts.length; i++) {
+      const [a, b] = [pts[i - 1], pts[i]];
+      m.quad('wire', [a[0], a[1] - hw, lineZ + 0.02], [b[0], b[1] - hw, lineZ + 0.02], [b[0], b[1] + hw, lineZ + 0.02], [a[0], a[1] + hw, lineZ + 0.02], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    }
+    for (const p of [pts[0], pts[pts.length - 1]]) {
+      const foot = laneHeight(ground, hill, p[0]) + c;
+      const pz = HILLSIDE.road[0] + 0.15;
+      oct(m, p[0], pz, 0.1, foot, p[1] + 0.7, wood, 0.08);
+      m.box(p[0] - 0.06, p[0] + 0.06, p[1] + 0.02, p[1] + 0.14, p[1] + 0.14, pz - 0.2, lineZ + 0.2, { top: ['house', wood], front: ['house', wood], left: ['house', wood], right: ['house', wood] });
+    }
+  }
   //under each crest jump, the cross street it clears, running from the city behind to the camera
   const holes = gaps(ground);
   for (const [x0, x1, t] of holes) {
@@ -769,18 +809,26 @@ export function buildHill(level: Level, group: THREE.Group): void {
   const cut = (xa: number, xb: number) => [...crossings, ...holes].some(([a, b]) => xb > a - 0.1 && xa < b + 0.1);
   //row houses stepping down the hill behind the back sidewalk, and a row further up it
   const rng = makeRng(level.layout.seed * 53 + level.layout.floor * 7);
-  const end = finale + 1;
-  const lane = (x: number) => laneHeight(ground, finale, x);
+  const lane = (x: number) => laneHeight(ground, hill, x);
+  //each stretch of hill, tiles: the opening descent from off the left of the screen
+  const stretches = hillStretches(level);
   const [bz0, bz1] = HILLSIDE.backRow;
-  houseRow(m, rng, -8, end, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, finale, a, b) - 0.5, cut, { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
   const [uz1, uz0, up] = HILLSIDE.upRow;
-  houseRow(m, rng, -8, end, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
-  //cypresses between the rows, standing over the back row's roofs now and then
-  for (let x = -4 + rng() * 10; x < finale - 2; x += 14 + rng() * 16) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
+  for (const [s0, s1] of stretches) {
+    houseRow(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, cut, { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
+    houseRow(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
+    //cypresses between the rows, standing over the back row's roofs now and then
+    for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
+  }
   //power poles along the back sidewalk with their wires sagging between them (photo 3), street trees between poles
   const P = HILLSIDE.pole;
   const poles: [number, number][] = [];
-  for (let x = ground.length ? ground[0].x0 + 2 : 0; x < finale - 2; x += P.every[0] + rng() * (P.every[1] - P.every[0])) {
+  const along = stretches.flatMap(([s0, s1]) => {
+    const xs: number[] = [];
+    for (let x = Math.max(s0, ground.length ? ground[0].x0 : 0) + 2; x < s1 - 2; x += P.every[0] + rng() * (P.every[1] - P.every[0])) xs.push(x);
+    return xs;
+  });
+  for (const x of along) {
     if (holes.some(([a, b]) => x > a - 0.5 && x < b + 0.5)) continue;
     const top = lane(x) + c + P.height;
     poles.push([x, top]);
@@ -802,9 +850,11 @@ export function buildHill(level: Level, group: THREE.Group): void {
       m.quad('wire', [p0[0], p0[1] - hw, p0[2]], [p1[0], p1[1] - hw, p1[2]], [p1[0], p1[1] + hw, p1[2]], [p0[0], p0[1] + hw, p0[2]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     }
   };
+  const sameStretch = (xa: number, xb: number) => stretches.some(([s0, s1]) => xa >= s0 && xb <= s1);
   for (let i = 1; i < poles.length; i++) {
     const [xa, ta] = poles[i - 1];
     const [xb, tb] = poles[i];
+    if (!sameStretch(xa, xb)) continue;
     for (const dz of [-0.55, 0, 0.55]) sag([xa, ta - 0.32, P.z + dz], [xb, tb - 0.32, P.z + dz], 0.35 + Math.abs(dz) * 0.3);
     for (const dz of [-0.35, 0.35]) sag([xa, ta - 1.04, P.z + dz], [xb, tb - 1.04, P.z + dz], 0.55);
   }
@@ -812,7 +862,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
     const [xa] = poles[i - 1];
     const [xb] = poles[i];
     const x = (xa + xb) / 2 + (rng() - 0.5) * 2;
-    if (xb - xa > 7 && rng() < 0.55 && !cut(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
+    if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
   }
   m.build(group);
 }
@@ -871,7 +921,8 @@ export function buildForeground(level: Level, group: THREE.Group): void {
   }
   //two rows of houses below the lane, each roofline stepping down with the lowest lane over it
   const rng = makeRng(level.layout.seed * 67 + level.layout.floor * 13);
-  const low = (a: number, b: number) => frontRoof(ground, finale, a, b);
+  const hill = onHill(level);
+  const low = (a: number, b: number) => frontRoof(ground, hill, a, b);
   const [az0, az1, adrop] = HILLSIDE.rowA;
   const [bz0, bz1, bdrop] = HILLSIDE.rowB;
   const storeys = 3 * HILLSIDE.storey;

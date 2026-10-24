@@ -23,8 +23,10 @@ export function maxTier(floor: number): number {
   return Math.min(3, 1 + Math.floor((floor - 1) / 2));
 }
 
-// `tail` pieces go just before the exit (the fork's runway), `head` ones just after the start (Chicago's L block)
-export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES, count = floorLength(floor), tail: Piece[] = [], head: Piece[] = []): Layout {
+// `tail` pieces go just before the exit (the fork's runway), `head` ones just after the start (Chicago's L block).
+// `breaks` go in among the picked pieces: [after this many picked pieces, these pieces] (a hill floor's later
+// stretches of hill between its street chases)
+export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES, count = floorLength(floor), tail: Piece[] = [], head: Piece[] = [], breaks: [number, Piece[]][] = []): Layout {
   const rng = makeRng(seed + floor * 7919);
   const top = maxTier(floor);
   //pieces of the newest tier come up three times as often, so the floor feels harder
@@ -38,6 +40,7 @@ export function makeLayout(seed: number, floor: number, library: Piece[] = PIECE
   const pieces: Piece[] = [START_PIECE, ...head];
   let last: Piece | undefined;
   for (let n = 0; n < count; n++) {
+    for (const [at, ps] of breaks) if (at === n) pieces.push(...ps);
     let pick = pool[randInt(rng, pool.length)];
     //no piece twice in a row
     for (let tries = 0; pick === last && tries < 10; tries++) pick = pool[randInt(rng, pool.length)];

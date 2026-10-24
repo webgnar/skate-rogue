@@ -208,6 +208,19 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
       along the back sidewalk, with trees between the poles, cypresses behind and shrubs by the doors. Steep blocks
       have stepped sidewalks, and crests have crosswalk lines.
 
+## Longer floors: hill, street chase, cable car, hill (docs/level-design-chicago.md)
+
+- [ ] Every floor has at least two stretches of hill, and floors 6 and up have three. Each stretch ends on a
+      stairway and runs out into a street chase with traffic. At the end of the chase a cable car waits at the
+      foot of the next hill.
+- [ ] Roll onto the cable car's slot: it tows you up fast, running just ahead of you, and stops at the top. You
+      can jump off and land back on the slot to keep climbing.
+- [ ] No parked car, L or traffic appears right at the foot of a stretch of hill, where you come down fast.
+- [ ] **Power lines:** some blocks have a power line strung low over the lane between two poles. Ollie and flip
+      up to grind it (coins run along it), or ride under it.
+- [ ] *Feel:* a floor now takes about 35–80 s. Is that too long, or is the street chase too long or short?
+- [ ] *Phone:* the first floor still starts quickly (each floor is generated and validated at its start).
+
 ## One city: every world's art (docs/level-design-chicago.md)
 
 - [ ] Along the street, past the L, the city passes through quarters: a park, an old town, the waterfront, a

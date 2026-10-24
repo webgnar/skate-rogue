@@ -280,7 +280,10 @@ export class Skater {
     if (this.mode === 'roll') {
       //a slope: gravity along it adds flow speed downhill and takes it away uphill (base speed holds)
       const m = this.surface ? surfaceSlope(this.surface) : 0;
-      if (m !== 0) {
+      const tow = this.surface?.tow ?? 0;
+      //a cable car climb: the cable takes you up at its own speed, the slope doesn't slow you
+      if (tow > 0) this.carry = Math.max(this.carry, tow);
+      else if (m !== 0) {
         const pull = this.grav * FEEL.slopeGrav * (m / Math.hypot(1, m));
         this.carry = pull > 0 ? Math.max(this.carry, this.hsp) + pull : Math.max(0, this.carry + pull);
       }

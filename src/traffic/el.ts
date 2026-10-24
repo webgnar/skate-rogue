@@ -7,7 +7,7 @@
 // get there, and sometimes it's gone. You see it coming round the bend before it reaches the lane. Pure.
 import { makeRng } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, type Car, type Level } from '../physics/level';
+import { inHill, isStreetAt, type Car, type Level } from '../physics/level';
 
 export const EL = {
   under: 2.6, // tiles: the structure's underside over the street (a bus fits under; a car roof plus an ollie reaches)
@@ -27,6 +27,7 @@ export const EL = {
   first: 12, // tiles into the street the first stretch starts (over EL_PIECE, the block after the start piece)
   from: 1, // floors with the L
   second: 4, // a second stretch from this floor
+  offHill: 14, // tiles of street between the foot of a stretch of hill and a stretch's parked car
 };
 
 export interface ElStretch {
@@ -121,7 +122,9 @@ export function elPlan(level: Level, seed: number): ElStretch[] {
     const carX = x - TILE - EL.access;
     const parked = level.cars.find((c) => !c.model && c.x0 <= x && c.x1 >= x - TILE);
     const room = street(carX - TILE, x) && !level.cars.some((c) => c.x1 > carX - TILE && c.x0 < x + TILE);
-    if (x + len < end && !tall(x - 2 * TILE, x + len + 2 * TILE) && (parked || room)) {
+    //never right at the foot of a stretch of hill: you come off it too fast to ollie a parked car
+    const offHill = !inHill(level, carX - EL.offHill * TILE);
+    if (x + len < end && offHill && !tall(x - 2 * TILE, x + len + 2 * TILE) && (parked || room)) {
       if (!parked) level.cars.push({ x0: carX, x1: carX + EL.access, roof: level.streetY - 40, bottom: level.streetY });
       place(x, len);
       x += len + (24 + Math.floor(rng() * 20)) * TILE;

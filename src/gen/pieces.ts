@@ -378,6 +378,22 @@ export const EL_PIECE: Piece = {
   ],
 };
 
+// a hill floor's later stretch of hill (src/gen/hills.ts): no street, the hill's own ground over it
+export const HILL_PIECE: Piece = {
+  name: 'hill', tier: 0, rows: [
+    '................', '................', '................', '................', '................',
+    '................', '................', '................', '................', '................',
+  ],
+};
+
+// plain street where a stretch of hill comes down into the next street chase
+export const RUNWAY_PIECE: Piece = {
+  name: 'runway', tier: 0, rows: [
+    '................', '................', '................', '................', '................',
+    '................', '................', '................', '................', '################',
+  ],
+};
+
 export const EXIT_PIECE: Piece = {
   name: 'exit', tier: 0, rows: [
     '................', '................', '................', '................', '................',

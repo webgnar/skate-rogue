@@ -3,7 +3,7 @@
 // before canals, parked cars and glass, so they never sit where the street can't hold them.
 import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, type Car, type Level } from '../physics/level';
+import { inHill, isStreetAt, type Car, type Level } from '../physics/level';
 import { CROSS, CrossCar, type Intersection } from './cross';
 import { CarDoor, STOP, type BusStop } from './street';
 
@@ -49,6 +49,7 @@ export const TRAFFIC = {
   aheadOncoming: 30 * TILE,
   laneFrames: 20, // frames to pull out of the lane
   clearance: 2 * TILE, // pull out this far before a canal or a parked car
+  offHill: 14 * TILE, // no vehicle appears this close after the foot of a stretch of hill
 };
 
 // floor 1-2 robotaxis only, oncoming from floor 3; density grows to 1 vehicle per 1.5 pieces by floor 8
@@ -116,6 +117,8 @@ export class Traffic {
     //a truck needs street for its tailgate behind it too
     const back = s.kind === 'truck' ? TRAFFIC.tailgate : 0;
     if (x0 + w > this.level.exitX || this.blockedAt(x0 - TILE - back, x0 + w + TILE)) return;
+    //nor just off the foot of a stretch of hill, where you come down too fast to deal with it
+    if (inHill(this.level, x0 - TRAFFIC.offHill)) return;
     const bottom = this.level.streetY;
     this.vehicles.push({
       id: this.ids++, kind: s.kind, speed: s.speed, cruise: s.speed, lane: 0, leaving: false,
@@ -155,7 +158,8 @@ export class Traffic {
       if (v.leaving) v.lane = Math.min(1, v.lane + 1 / TRAFFIC.laneFrames);
     }
     //drop vehicles far behind the skater or gone from the lane long ago
-    this.vehicles = this.vehicles.filter((v) => v.x1 > skaterX - 40 * TILE && v.x0 < skaterX + 60 * TILE);
+    //and gone round the corner where the street runs into a hill
+    this.vehicles = this.vehicles.filter((v) => v.x1 > skaterX - 40 * TILE && v.x0 < skaterX + 60 * TILE && !(v.lane >= 1 && inHill(this.level, v.x0) && inHill(this.level, v.x1)));
   }
 
   // a cross street's car has turned onto the road: from here it's traffic, driving your way

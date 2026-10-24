@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildFloor, type FloorOptions } from '../src/gen/descent';
-import { floorRecipe, hillDials, recipe, RECIPES } from '../src/gen/hills';
+import { floorRecipe, hillDials, recipe, RECIPES, stretches } from '../src/gen/hills';
 import { SAVED_EDITS, useLevelEdits, type LevelEdits } from '../src/gen/level-edits';
 import { PIECES } from '../src/gen/pieces';
 import { validatedFloor } from '../src/gen/validate';
@@ -46,7 +46,9 @@ describe('level edits', () => {
   it('changes the street piece count', () => {
     useLevelEdits({ floors: { '2': { street: 5 } } });
     const L = buildFloor(2026, 2, PIECES, opts);
-    expect(L.layout.pieces.filter((p) => p.tier > 0).length).toBe(5);
+    //the finale's street; each street chase between stretches of hill brings its own pieces on top
+    const chases = (stretches(2026, 2).length - 1) * hillDials(2).chasePieces;
+    expect(L.layout.pieces.filter((p) => p.tier > 0).length).toBe(5 + chases);
   });
 
   it('reads dials over the code', () => {

@@ -19,7 +19,7 @@ function floorRuns(floor: number): BotRun[] {
 }
 
 describe('balance (bot runs)', () => {
-  it('floors: cleared, 15 to 35 seconds, about 4 floors to half-worn gear, Heat in hand', () => {
+  it('floors: cleared, 30 to 90 seconds, about 4 floors to half-worn gear, Heat in hand', () => {
     const checks: { sec: number; worn: number; heat: number }[] = [];
     const rows: string[] = ['floor   sec  coins  stoken  slams  maxHeat  wornest'];
     for (let floor = 1; floor <= 15; floor++) {
@@ -31,10 +31,12 @@ describe('balance (bot runs)', () => {
     }
     if (process.env.BALANCE) process.stderr.write(rows.join('\n') + '\n');
     for (const row of checks) {
-      expect(row.sec).toBeGreaterThan(15);
-      expect(row.sec).toBeLessThan(35);
+      //two or three stretches of hill with street chases between (2026-10-24: zack wanted longer floors)
+      expect(row.sec).toBeGreaterThan(30);
+      expect(row.sec).toBeLessThan(90);
       expect(row.worn).toBeLessThan(18); // the worst part: half-worn takes about 3 floors or more
-      expect(row.heat).toBeLessThan(60);
+      //(two or three street chases a floor give slams more chances to bunch up: 60 before the longer floors)
+      expect(row.heat).toBeLessThan(80);
     }
   }, 120000);
 
