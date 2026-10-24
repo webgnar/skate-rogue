@@ -26,7 +26,7 @@ Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 - [ ] **Underground spot** (a green road sign from floor 3, about 1 fork in 7). Taking it shows three choices: Lay low (the next floor starts at 0 Heat), Swap a boon, Remove a curse. *Check:* the swap only offers boons other than the one you dropped.
 - [ ] **Heat carries between floors at half.** Leave a floor with high Heat and the next one starts warmer (see it on the Heat bar).
 - [ ] **Boon streets only lead to types you've unlocked:** a new phone sees POP and GRIND signs only; with `?unlockall` you see all six (POP, GRIND, FLOW, COOL, LUCK, STREET).
-- [ ] **Each act is its own district:** act 1 Chicago, act 2 Clemente Park, act 3 Greece, Atlantis or the museum (it changes run to run), act 4 High-Tech City, act 5 the Hive. The look switches when an act's first floor starts. Quickest check: `?floor=4`, then `?floor=7`, `?floor=10`, `?floor=13`. A `?biome=` in the link pins one look for the whole run.
+- [ ] **Each act is its own district:** act 1 Chicago, act 2 Clemente Park, act 3 Greece, Atlantis or the museum (it changes run to run), act 4 High-Tech City, act 5 the Hive. The look switches when an act's first floor starts. Quickest check: `?floor=4`, then `?floor=7`, `?floor=10`, `?floor=13`. A `?biome=` in the link pins one look for the whole run. In Atlantis gravity is 0.8: you float higher and longer on every floor of that act (the floors are built and checked in it). `?biome=atlantis` shows it from floor 1.
 - [ ] **Fork signs light up** for the road you're on as you reach the overpass.
 - [ ] **Escapes:** the act 1 to 3 escapes, and act 4's drone swarm (stomp the drones to car-hop).
 
@@ -59,6 +59,8 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 - [ ] **Cross cars turn onto your road:** the car comes nose-first down the side street, swings round over about half a second, then drives your way slower than you. *Check:* you can car-hop it while it pulls out, while it turns and after it drives off. *Tuning:* should some turn toward you instead?
 - [ ] **Buses and box trucks (floor 4+):** you can ride a bus roof. A box truck's dropped tailgate is a kicker that throws you up with a burst of speed.
 - [ ] **Close calls:** clearing a roof by a few pixels calls "CLOSE CALL" and cools Heat a little.
+- [ ] **Bus stops (floor 4+, most floors have one; try `?floor=7`):** a blue stop sign and a bench at the back of the sidewalk. As you come up, a bus in the back lane blinks amber and pulls into your lane at the stop, about 8 tiles ahead of you. It sits about 5 seconds, then drives off your way. Its roof is too high for a plain ollie: ollie and flip up the back, hop on from a car, or wait behind it. *Check:* you always see it pulling in before you need to jump. *Tuning:* too much warning, or too little?
+- [ ] **Car doors (floor 2+, about half the parked cars):** come within about 9 tiles and a door swings open at the back of the car. Rolling into it slams you; landing on its top edge pops you up like a car hop. *Check:* the door is easy to see as it opens. *Open question:* the door sticks out behind the car, not toward you, so it reads side-on; does it look like a car door to you?
 
 ## Tricks
 

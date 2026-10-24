@@ -5,6 +5,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
 import { CROSS, CrossCar, type Intersection } from './cross';
+import { CarDoor, STOP, type BusStop } from './street';
 
 // robotaxis, buses and box trucks drive your way (slower than you); oncoming cars come at you; a 'car' turned
 // onto your road from a cross street, a human driver who doesn't brake for you
@@ -18,6 +19,7 @@ export interface Vehicle extends Car {
   lane: number; // 0 = the skate lane, 1 = pulled out to the back lane (no contact)
   leaving: boolean;
   look?: number; // which paint, for a car that came from a cross street (it keeps its colour)
+  stop?: { x: number; t: number }; // a bus pulling in at a bus stop: where its back stops, frames since it started
 }
 
 export interface Spawn {
@@ -85,6 +87,8 @@ export class Traffic {
   vehicles: Vehicle[] = [];
   noBrake = false; // Spoofed Plate: robotaxis don't brake for the skater
   readonly cross: CrossCar[]; // cars crossing at intersections
+  readonly doors: CarDoor[]; // parked cars' doors
+  private nextStop = 0;
   private next = 0;
   private ids = 0;
 
@@ -92,8 +96,11 @@ export class Traffic {
     private readonly level: Level,
     private readonly plan: Spawn[],
     intersections: Intersection[] = [],
+    private readonly stops: BusStop[] = [],
+    doors: number[] = [],
   ) {
     this.cross = intersections.map((i) => new CrossCar(i, level.streetY));
+    this.doors = doors.map((i) => new CarDoor(level.cars[i]));
   }
 
   private blockedAt(x0: number, x1: number): boolean {
@@ -123,8 +130,14 @@ export class Traffic {
       if (c.turned) this.turnIn(c, i);
     }
     while (this.next < this.plan.length && skaterX >= this.plan[this.next].at) this.spawn(this.plan[this.next++]);
+    while (this.nextStop < this.stops.length && skaterX >= this.stops[this.nextStop].trigger) this.pullIn(this.stops[this.nextStop++]);
+    for (const d of this.doors) d.step(skaterX);
 
     for (const v of this.vehicles) {
+      if (v.stop) {
+        this.atStop(v, v.stop);
+        continue;
+      }
       if (v.kind === 'car') v.speed += (v.cruise - v.speed) * 0.04; // pulling away from the corner
       else if (v.speed > 0 && !v.leaving && !(this.noBrake && v.kind === 'robotaxi')) {
         //brake hard when the skater rolls up behind
@@ -137,7 +150,7 @@ export class Traffic {
       //pull out of the lane before anything the street can't carry
       if (!v.leaving) {
         const ahead = v.speed >= 0 ? [v.x1, v.x1 + TRAFFIC.clearance] : [v.x0 - TRAFFIC.clearance, v.x0];
-        if (this.blockedAt(ahead[0], ahead[1])) v.leaving = true;
+        if (this.blockedAt(ahead[0], ahead[1]) || this.busAt(v, ahead[0], ahead[1])) v.leaving = true;
       }
       if (v.leaving) v.lane = Math.min(1, v.lane + 1 / TRAFFIC.laneFrames);
     }
@@ -154,9 +167,52 @@ export class Traffic {
     });
   }
 
-  // vehicles the skater can touch
+  // a bus at its stop, in the way of another vehicle
+  private busAt(v: Vehicle, x0: number, x1: number): boolean {
+    return this.vehicles.some((b) => b !== v && b.stop && b.lane < 0.5 && b.x1 > x0 && b.x0 < x1);
+  }
+
+  // a bus comes up the back lane to its stop
+  private pullIn(s: BusStop): void {
+    const bottom = this.level.streetY;
+    const x0 = s.x - STOP.pullFrom;
+    this.vehicles.push({
+      id: this.ids++, kind: 'bus', speed: 0, cruise: PHYS.baseSpeed * TRAFFIC.busSpeed, lane: 1, leaving: false,
+      x0, x1: x0 + TRAFFIC.busW, bottom, roof: bottom - TRAFFIC.busH, stop: { x: s.x, t: 0 },
+    });
+  }
+
+  // pulling in (easing into the skate lane and to a stop), then the dwell, then it's traffic again
+  private atStop(v: Vehicle, stop: { x: number; t: number }): void {
+    stop.t++;
+    const k = Math.min(1, stop.t / STOP.pullFrames);
+    const ease = 1 - (1 - k) * (1 - k);
+    const x0 = stop.x - STOP.pullFrom * (1 - ease);
+    v.speed = x0 - v.x0;
+    v.x0 = x0;
+    v.x1 = x0 + TRAFFIC.busW;
+    v.lane = 1 - ease;
+    if (stop.t >= STOP.pullFrames + STOP.dwell) {
+      //pulling away: it eases up to its cruise like any bus
+      v.stop = undefined;
+      v.lane = 0;
+      v.speed = v.cruise * 0.1;
+    }
+  }
+
+  // signalling: a bus on its way into a stop, for the view's blinker
+  get signalling(): Vehicle[] {
+    return this.vehicles.filter((v) => v.stop && v.stop.t < STOP.pullFrames + STOP.dwell);
+  }
+
+  // vehicles the skater can touch: not pulled out, and not still out in the back lane
   get inLane(): Vehicle[] {
-    return this.vehicles.filter((v) => !v.leaving);
+    return this.vehicles.filter((v) => !v.leaving && v.lane < 0.5);
+  }
+
+  // open car doors, as boxes to hit or land on
+  get doorBoxes(): Car[] {
+    return this.doors.filter((d) => d.solid).map((d) => d.box);
   }
 
   // cross traffic in the skate lane right now

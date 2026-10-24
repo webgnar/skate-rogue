@@ -317,6 +317,18 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Each act gets its own district.** Act 1 Chicago, act 2 Clemente Park (Los Angeles has no kit), act 3 Greece,
   Atlantis or the museum by the run's seed, act 4 High-Tech City, act 5 the Hive. Space is unused for now.
 
+- **Bus stops and car doors (GDD: Traffic, tiles `B` and `E`).** From floor 4 most floors get one bus stop on
+  open street (a blue sign and a bench). When you're 18 tiles away, a bus blinks in the back lane and pulls into
+  your lane at the stop over 1.5 seconds, sits 5 seconds, then drives off your way. Other traffic pulls out around
+  it. From floor 2, half the plain parked cars have a door that swings open when you're 9 tiles away. It's a low
+  panel (30 px; a car roof is 40) standing out behind the car: roll into it and you slam, land on its edge and it
+  pops you like a car hop. In side view a door can only matter if it sticks out along the street, so it's drawn
+  flung open behind the car rather than toward the camera. Roadblock cars never open.
+
+- **District gravity.** A floor's gravity follows its act's district (Atlantis 0.8, from the physics thread's
+  BIOME_GRAVITY). Floors are generated and bot-checked in it, and they validated first try at 0.8 and 0.6 in a
+  20-floor sample. Escape set pieces stay at normal gravity for now.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

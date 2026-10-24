@@ -3,6 +3,7 @@
 // stretch built from QFS pieces (canals, curved rails, parked cars, traffic) with the exit gate.
 import { placeProps } from './props';
 import { crossPlan } from '../traffic/cross';
+import { doorPlan, stopPlan } from '../traffic/street';
 import { TILE } from '../physics/constants';
 import { buildLevel, CurvedRail, type Level, type Pickup, type Surface } from '../physics/level';
 import type { Fork } from './roads';
@@ -49,6 +50,7 @@ export interface FloorOptions {
   short?: boolean; // a stash floor: fewer sections
   danger?: number; // traffic 1-3
   fork?: Fork; // where the roads at the end lead
+  gravity?: number; // the district's (BIOME_GRAVITY): validation skates the floor in it
 }
 
 export const PICKUPS = {
@@ -245,8 +247,11 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     pickups,
     fork,
     danger: opts.danger ?? 2,
+    ...(opts.gravity !== undefined && opts.gravity !== 1 ? { gravity: opts.gravity } : {}),
   };
   level.crossings = crossPlan(level, level.layout.seed);
+  level.busStops = stopPlan(level, level.layout.seed);
+  level.doors = doorPlan(level, level.layout.seed);
   level.props = placeProps(level);
   return level;
 }
