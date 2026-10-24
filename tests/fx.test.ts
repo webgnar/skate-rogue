@@ -73,3 +73,26 @@ describe('particle pool', () => {
     expect(pool.px[i]).toBeGreaterThan(0);
   });
 });
+
+import { MOODS, clockFor, moodAt, rainsOn } from '../src/render/atmosphere';
+
+describe('time of day', () => {
+  it('runs from afternoon on floor 1 to night by act 5, and stays night in Endless', () => {
+    expect(clockFor(1)).toBe(0);
+    expect(moodAt(clockFor(1)).skyTop).toBe(MOODS.afternoon.skyTop);
+    expect(moodAt(clockFor(13)).skyTop).toBe(MOODS.night.skyTop);
+    expect(moodAt(clockFor(40)).stars).toBe(1);
+    // gets steadily darker
+    const sun = [1, 4, 7, 10, 13].map((f) => moodAt(clockFor(f)).hemi);
+    for (let i = 1; i < sun.length; i++) expect(sun[i]).toBeLessThanOrEqual(sun[i - 1]);
+  });
+
+  it('rains on some floors, never the first, the same for a seed', () => {
+    const floors = Array.from({ length: 200 }, (_, i) => rainsOn(1234, i + 1));
+    expect(floors[0]).toBe(false);
+    const share = floors.filter(Boolean).length / floors.length;
+    expect(share).toBeGreaterThan(0.12);
+    expect(share).toBeLessThan(0.4);
+    expect(rainsOn(1234, 7)).toBe(rainsOn(1234, 7));
+  });
+});

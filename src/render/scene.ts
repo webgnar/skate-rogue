@@ -5,6 +5,7 @@ import { LouZoom, viewHeight } from './camera';
 import { buildKit, toX, toY } from './kit';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution } from './toon';
+import { Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 
 export class StreetView {
   readonly renderer: THREE.WebGLRenderer;
@@ -14,6 +15,11 @@ export class StreetView {
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
   private skyline: THREE.Mesh | null = null;
+  private readonly hemis: THREE.HemisphereLight[] = [];
+  private readonly suns: THREE.DirectionalLight[] = [];
+  private readonly sky = skyMesh();
+  readonly rain = new Rain();
+  private mood: Mood | null = null;
   readonly zoom = new LouZoom();
   private camX = 0;
   private camY = 2;
@@ -37,29 +43,65 @@ export class StreetView {
     this.scene.background = new THREE.Color(0x2a1d4a);
     this.scene.fog = new THREE.Fog(0x3a2a5c, 40, 140);
 
-    //toon shading bands the sun; the sky light fills the shadow side flat
-    this.scene.add(new THREE.HemisphereLight(0xffe8f0, 0x403050, 1.1));
-    const sun = new THREE.DirectionalLight(0xfff0e0, 2.1);
-    sun.position.set(-6, 12, 10);
-    this.scene.add(sun);
-    this.front.add(new THREE.HemisphereLight(0xffe8f0, 0x403050, 1.1), sun.clone());
+    //toon shading bands the sun; the sky light fills the shadow side flat. Colours come from the mood (atmosphere.ts)
+    for (const pass of [this.scene, this.front]) {
+      const hemi = new THREE.HemisphereLight(0xffe8f0, 0x403050, 1.1);
+      const sun = new THREE.DirectionalLight(0xfff0e0, 2.1);
+      sun.position.set(-6, 12, 10);
+      pass.add(hemi, sun);
+      this.hemis.push(hemi);
+      this.suns.push(sun);
+    }
+    this.scene.add(this.sky);
+    this.front.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
 
   async loadBackdrop(base: string): Promise<void> {
     //QFS's Chicago sky behind everything, and its pink skyline as a far card
-    const sky = pixelTexture(await loadImage(`${base}tex/chicago_sky.png`));
-    this.scene.background = sky;
+    //the sky is a gradient drawn per mood (QFS's Chicago sky is a plain blue gradient, the afternoon mood)
+    this.scene.background = null;
     const skylineTex = pixelTexture(await loadImage(`${base}tex/chicago_skyline.png`));
     skylineTex.wrapS = THREE.RepeatWrapping;
     skylineTex.repeat.set(8, 1);
+    skylineTex.updateMatrix();
     const w = 726 / 6;
     this.skyline = new THREE.Mesh(
       new THREE.PlaneGeometry(w * 8, 400 / 6),
-      new THREE.MeshBasicMaterial({ map: skylineTex, transparent: true, alphaTest: 0.3, fog: false }),
+      skylineMaterial(skylineTex),
     );
     this.skyline.position.set(0, 400 / 12 - 10, -70);
     this.scene.add(this.skyline);
+    if (this.mood) this.setMood(this.mood);
+  }
+
+  // light, fog, sky and skyline for a time of day and weather
+  setMood(m: Mood, raining = false): void {
+    this.mood = m;
+    for (const h of this.hemis) {
+      h.color.setHex(m.hemiSky);
+      h.groundColor.setHex(m.hemiGround);
+      h.intensity = m.hemi;
+    }
+    for (const s of this.suns) {
+      s.color.setHex(m.sun);
+      s.intensity = m.sunI;
+      s.position.set(...m.sunDir);
+    }
+    const fog = this.scene.fog as THREE.Fog;
+    fog.color.setHex(m.fog);
+    fog.near = m.fogNear;
+    fog.far = m.fogFar;
+    const sky = (this.sky.material as THREE.ShaderMaterial).uniforms;
+    sky.uTop.value.setHex(m.skyTop);
+    sky.uBottom.value.setHex(m.skyBottom);
+    sky.uStars.value = m.stars;
+    if (this.skyline) {
+      const u = (this.skyline.material as THREE.ShaderMaterial).uniforms;
+      u.uTint.value.setHex(m.skyline);
+      u.uNeon.value = m.neon;
+    }
+    this.rain.on = raining;
   }
 
   setLevel(level: Level): void {
@@ -100,6 +142,7 @@ export class StreetView {
     this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
     this.punchAmt *= Math.pow(0.91, dt * 60);
     if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
+    this.rain.update(dt, this.camera);
   }
 
   shake(amount: number): void {
