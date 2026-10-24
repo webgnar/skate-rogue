@@ -5,13 +5,14 @@ import { carriedHeat, cursesHeld, dropBoon, startHeat, type UnderView } from '..
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
-import { ACTS, actOf, endsAct, ESCAPE, validatedEscape } from '../gen/escape';
+import { ACTS, actBiome, actOf, endsAct, ESCAPE, validatedEscape } from '../gen/escape';
 import { FIRST_ROAD, floorRoad, label, rollFork, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, writeSave } from '../run/save';
+import { cashScale, dayKey, DECK_SLOTS, FULL_LIBRARY, firstPick, STOCK, withLoadout, type Library, type Loadout } from '../run/meta';
 import { PickupView } from '../render/pickups';
 
 import type { Level } from '../physics/level';
@@ -65,6 +66,14 @@ export interface RunResult {
   newBest: boolean;
   stoken: number; // earned this run
   bank: number; // Stoken kept across runs
+  daily: { best: number; newBest: boolean } | null; // on a daily run
+}
+
+// what the meta tree sets for a run: the skater and deck, the boon library, and whether it's the daily run
+export interface RunMeta {
+  loadout: Loadout;
+  library: Library;
+  daily: boolean;
 }
 
 export type ShopPick = { stock: number } | { slot: number } | null;
@@ -165,6 +174,7 @@ export class Game {
     hide: (index) => hideProp(index),
   });
   private biome: BiomeId = 'chicago';
+  private biomePinned = false;
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
   private perfT = 0;
   private perfWorst = 0;
@@ -189,8 +199,11 @@ export class Game {
     private readonly input: OneButton,
     private readonly hud: Hud,
     private readonly startAt = 1, // ?floor=: the first floor of every run, for testing
+    private readonly meta: RunMeta = { loadout: STOCK, library: FULL_LIBRARY, daily: false },
   ) {
     this.floor = startAt;
+    this.road = this.firstRoad();
+    this.board = newBoard(DECK_SLOTS[meta.loadout.deck]);
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
     this.view.front.add(this.sprite.mesh);
@@ -217,7 +230,7 @@ export class Game {
   private makeLevel(): Level {
     if (this.road.kind === 'escape') return validatedEscape(this.seed, this.road.act);
     return validatedFloor(this.seed, this.floor, {
-      fork: rollFork(this.seed, this.floor),
+      fork: rollFork(this.seed, this.floor, this.meta.library.types),
       danger: this.road.danger,
       short: this.road.kind === 'stash',
     }).level;
@@ -227,15 +240,20 @@ export class Game {
     if (!this.fixedSeed) this.seed = Math.floor(Math.random() * 1e6);
     this.floor = this.startAt;
     this.boons = [];
-    this.board = newBoard();
+    this.board = newBoard(DECK_SLOTS[this.meta.loadout.deck]);
     this.gear = freshGear();
     this.shopVisits = 0;
     this.run = new RunScore();
     this.carry = 0;
-    this.road = FIRST_ROAD;
+    this.road = this.firstRoad();
     this.level = this.makeLevel();
     this.hud.over(null);
     this.startFloor();
+  }
+
+  // the first floor is a boon street of your skater's type (GDD: Meta progression)
+  private firstRoad(): Road {
+    return { ...FIRST_ROAD, boonType: firstPick(this.meta.loadout, this.meta.library) } as Road;
   }
 
   private openMenu(state: State, now: number): void {
@@ -249,8 +267,13 @@ export class Game {
     this.smashFx.smash(hit);
   }
 
-  // the district's look (gameplay picks it per act; ?biome= previews one); takes effect now
+  // the district's look: ?biome= pins one for a preview, otherwise each act picks its own (actBiome)
   setBiome(id: BiomeId): void {
+    this.biomePinned = true;
+    this.goBiome(id);
+  }
+
+  private goBiome(id: BiomeId): void {
     this.biome = id;
     this.applyMood();
     void this.view.setBiome(id); // its kit, once the tiles are in
@@ -276,7 +299,11 @@ export class Game {
     this.input.clear();
     this.boonFx.setBoons(this.boons);
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
-    const mods = skaterMods(this.boons);
+    const act = this.road.kind === 'escape' ? this.road.act : actOf(this.floor);
+    const district = actBiome(this.seed, act);
+    if (!this.biomePinned && district !== this.biome) this.goBiome(district);
+    const mods = withLoadout(skaterMods(this.boons), this.meta.loadout);
+    this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
     this.run.scoreScale = mods.scoreScale;
     this.run.slamStoke = mods.slamStoke;
@@ -315,13 +342,12 @@ export class Game {
     this.nextRoad = fork ? (this.sim.road === 'high' ? fork.high : fork.low) : FIRST_ROAD;
     const road = this.road;
     if (road.kind === 'boon' || road.kind === 'hot') {
-      if (road.kind === 'hot') this.run.cash += ROADS.hotCash(this.floor);
+      if (road.kind === 'hot') this.run.addCash(ROADS.hotCash(this.floor));
       this.rerolls = 0;
       this.showOffer();
       this.openMenu('pick', now);
     } else if (road.kind === 'cash') {
-      const pay = ROADS.cashPayout(this.floor);
-      this.run.cash += pay;
+      const pay = this.run.addCash(ROADS.cashPayout(this.floor));
       this.advance();
       this.hud.callout(`+${pay} CASH`, 'good');
     } else {
@@ -335,9 +361,8 @@ export class Game {
 
   // through an act's escape: pay out, and the last act wins the run; the road picked before it comes next
   private clearAct(now: number, act: number): void {
-    const cash = ESCAPE.actCash(act);
+    const cash = this.run.addCash(ESCAPE.actCash(act));
     const stoken = ESCAPE.actStoken(act) * this.run.stokenScale;
-    this.run.cash += cash;
     this.run.stoken += stoken;
     this.run.score += this.run.clearFloor(this.floor) * 2;
     if (act >= ACTS) return this.endRun(now, false, true);
@@ -353,7 +378,7 @@ export class Game {
 
   private showOffer(): void {
     const road = this.road;
-    const run = { floor: this.floor, boons: this.boons };
+    const run = { floor: this.floor, boons: this.boons, library: this.meta.library };
     const extra = skaterMods(this.boons).extraCards; // Hustler
     this.offer =
       road.kind === 'hot'
@@ -500,7 +525,7 @@ export class Game {
       this.hud.under(null);
       this.nextRoad = floorRoad(this.nextRoad);
       //never the one you just dropped
-      const offer = offerBoons(this.seed, { floor: this.floor, boons: this.boons }, 4, undefined, 1000 + this.floor);
+      const offer = offerBoons(this.seed, { floor: this.floor, boons: this.boons, library: this.meta.library }, 4, undefined, 1000 + this.floor);
       this.offer = offer.filter((b) => b.id !== dropped).slice(0, 3);
       this.swapping = true;
       this.hud.pick(this.offer, { title: 'SWAP: PICK ANY BOON', rerollCost: -1, canReroll: false });
@@ -539,7 +564,16 @@ export class Game {
     this.openMenu('over', now);
     const save = loadSave();
     const newBest = this.run.score > save.best;
-    const next = { best: Math.max(save.best, this.run.score), stoken: save.stoken + this.run.stoken, wins: save.wins + (won ? 1 : 0) };
+    const today = dayKey();
+    const dailyBest = save.daily.day === today ? save.daily.best : 0;
+    const daily = this.meta.daily ? { best: Math.max(dailyBest, this.run.score), newBest: this.run.score > dailyBest } : null;
+    const next = {
+      ...save,
+      best: Math.max(save.best, this.run.score),
+      stoken: save.stoken + this.run.stoken,
+      wins: save.wins + (won ? 1 : 0),
+      daily: daily ? { day: today, best: daily.best } : save.daily,
+    };
     writeSave(next);
     this.hud.over({
       floor: this.floor,
@@ -553,6 +587,7 @@ export class Game {
       newBest,
       stoken: this.run.stoken,
       bank: next.stoken,
+      daily,
     });
   }
 
@@ -795,7 +830,7 @@ export class Game {
         this.particles.grindStart(...this.backTruck(), 1);
         break;
       case 'cashBurst':
-        this.run.cash += BOARD.cashBurst;
+        this.run.addCash(BOARD.cashBurst);
         this.hud.money(this.run.cash, this.run.stoken);
         break;
       case 'slowMo':
@@ -816,7 +851,7 @@ export class Game {
     this.smashAt = this.clock;
     if (this.smashChain === SMASH_CHAIN) this.hud.callout('WRECKING BALL!', 'trick');
     if (e.loot === 'cash') {
-      this.run.cash += SCORE.smashCash;
+      this.run.addCash(SCORE.smashCash);
       this.hud.money(this.run.cash, this.run.stoken);
     } else if (e.loot === 'stoken') {
       this.run.stoken += this.run.stokenScale;

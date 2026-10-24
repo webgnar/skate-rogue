@@ -80,7 +80,7 @@ export class FloorSim {
     this.gear = { ...gear };
     this.skater.gear = gearScale(this.gear);
     this.heat.value = startHeat;
-    if (mods) this.heat.mods = { rise: mods.heatRise, hopCool: mods.hopCool, decoy: mods.decoy, slow: mods.slowHeat };
+    if (mods) this.heat.mods = { rise: mods.heatRise, hopCool: mods.hopCool, decoy: mods.decoy, slow: mods.slowHeat, airCool: mods.airCool };
     this.taken = level.pickups.map(() => false);
     this.broken = level.props.map(() => false);
     const esc = level.escape;
@@ -269,7 +269,7 @@ export class FloorSim {
     for (const part of GEAR_PARTS) {
       if (!use[part]) continue;
       const before = this.gear[part];
-      this.gear[part] = Math.max(0, before - use[part]);
+      this.gear[part] = Math.max(0, before - use[part] * sk.mods.wearScale);
       const line = crossed(before, this.gear[part]);
       if (line) this.events.push({ type: 'wear', part, level: line });
       changed = true;

@@ -187,8 +187,8 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
 
 Built Oct 24, 2026 (first version): acts of 3 floors with an escape after each act's third floor (before the road
 picked at its fork), the Roadblock set piece (car, bus, a line of cruisers, bus; car-hop the roofs), and act 5's
-double roadblock wins the run. All acts are still Chicago; acts 2-4 use the roadblock until their own set pieces
-and biomes exist. See docs/overnight-decisions.md.
+double roadblock wins the run. Each act now has its own district look (act 3 picks Greece, Atlantis or the museum by seed); acts 2
+and 3 still use the roadblock until their own set pieces exist. See docs/overnight-decisions.md.
 
 ### 3. Risk and reward inside a floor
 
@@ -625,6 +625,13 @@ the thing it takes the beating from:
 | Keanu | Heat cools 15% faster while you're airborne | COOL |
 | Roxy | Car-hops bounce 20% higher | STREET |
 | Goldie | +25% cash from every source | LUCK |
+
+Built Oct 24, 2026 (first version, src/run/meta.ts): an UNLOCKS screen off the run-over screen. Skaters cost 30
+to 60 Stoken with the passives above. Decks: Popsicle (stock, 3 slots), Cruiser (+10% speed, ollies 5% lower,
+25), Bombhill (+15% speed, gear wears 30% faster, 35), Slab (4 slots, ollies 8% lower, 45). Boon library: POP and
+GRIND to start; FLOW, COOL, STREET and LUCK packs (15 to 25) add their boons and their road signs; Curses (35) and
+Duos (40). Spots: the daily run (20; one seed per UTC day, its own best). Biome starts and gnar mode are still to
+come. See docs/overnight-decisions.md.
 
 Small permanent stat buffs are kept rare and capped (for example Heat starts 10% lower, a free reroll per run), so
 skill and builds stay the point, not grinding the tree. Unlocking is mostly *more variety*, not *more power*.

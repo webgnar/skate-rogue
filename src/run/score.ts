@@ -61,6 +61,17 @@ export class RunScore {
   slamStoke = false; // Slam Stoke: a slam keeps the combo and adds stoke
   stokenScale = 1; // Double Stoken
   nearScale = 1; // Jaywalker: close calls score double
+  cashScale = 1; // Goldie: more cash from every source
+  private cashPart = 0; // the share of a dollar Goldie's cut has banked so far
+
+  // cash from any source, scaled; returns the whole dollars it added
+  addCash(n: number): number {
+    const v = n * this.cashScale + this.cashPart;
+    const whole = Math.floor(v + 1e-9);
+    this.cashPart = v - whole;
+    this.cash += whole;
+    return whole;
+  }
 
   get gnar(): boolean {
     return this.gnarT > 0;
@@ -114,7 +125,7 @@ export class RunScore {
         if (!this.gnar) this.stoke = Math.max(0, this.stoke - SCORE.slamStoke);
         break;
       case 'pickup':
-        if (e.kind === 'cash') this.cash += SCORE.cashCoin;
+        if (e.kind === 'cash') this.addCash(SCORE.cashCoin);
         else {
           this.stoken += this.stokenScale;
           this.score += SCORE.stoken;
@@ -145,10 +156,9 @@ export class RunScore {
     if (this.combo === 0) return null;
     const mult = Math.min(SCORE.speedMultMax, Math.max(1, hsp / PHYS.baseSpeed));
     const points = Math.round(this.comboPoints * this.combo * mult * this.scoreScale * (how === 'sketchy' ? SCORE.sketchy : 1));
-    const cash = Math.max(0, this.combo - SCORE.cashOutFrom + 1) * SCORE.cashOutPer;
+    const cash = this.addCash(Math.max(0, this.combo - SCORE.cashOutFrom + 1) * SCORE.cashOutPer);
     const count = this.combo;
     this.score += points;
-    this.cash += cash;
     this.combo = 0;
     this.comboPoints = 0;
     this.idle = 0;

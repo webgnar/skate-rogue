@@ -11,7 +11,9 @@ owns it will pick it up.
 | --- | --- |
 | `?seed=1234` | The same run every time: the same floors, forks, traffic and offers. Good for re-checking one spot |
 | `?floor=6` | Starts the run on that floor, with no boons. Floor 4 brings buses and trucks, 5 cross streets, 6 curses |
-| `?skater=webster` | Plays as Webster, Keanu, Roxy or Goldie instead of Lou |
+| `?skater=webster` | Plays as Webster, Keanu, Roxy or Goldie instead of Lou, without unlocking them (the look only: the passive comes from the unlocks screen) |
+| `?unlockall` | Opens every unlock for this visit without spending Stoken: all boon types, curses, duos, skaters, decks and the daily run |
+| `?daily` | Today's daily run (needs the Daily run unlock, or `?unlockall`) |
 | `?biome=greece` | Previews a district's look: `chicago`, `clemente`, `greece`, `atlantis`, `museum`, `hightech`, `space`, `hive` |
 | `?calm` | Reduce motion and flashing (no shake, no flashes) |
 | `?fx=low` | The low tier for older phones |
@@ -23,9 +25,24 @@ Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 
 - [ ] **Underground spot** (a green road sign from floor 3, about 1 fork in 7). Taking it shows three choices: Lay low (the next floor starts at 0 Heat), Swap a boon, Remove a curse. *Check:* the swap only offers boons other than the one you dropped.
 - [ ] **Heat carries between floors at half.** Leave a floor with high Heat and the next one starts warmer (see it on the Heat bar).
-- [ ] **Boon streets come in all six types:** POP, GRIND, FLOW, COOL, LUCK and STREET signs at the forks.
+- [ ] **Boon streets only lead to types you've unlocked:** a new phone sees POP and GRIND signs only; with `?unlockall` you see all six (POP, GRIND, FLOW, COOL, LUCK, STREET).
+- [ ] **Each act is its own district:** act 1 Chicago, act 2 Clemente Park, act 3 Greece, Atlantis or the museum (it changes run to run), act 4 High-Tech City, act 5 the Hive. The look switches when an act's first floor starts. Quickest check: `?floor=4`, then `?floor=7`, `?floor=10`, `?floor=13`. A `?biome=` in the link pins one look for the whole run.
 - [ ] **Fork signs light up** for the road you're on as you reach the overpass.
 - [ ] **Escapes:** the act 1 to 3 escapes, and act 4's drone swarm (stomp the drones to car-hop).
+
+## Unlocks between runs (meta progression)
+
+Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS** button.
+
+- [ ] UNLOCKS opens a screen with four columns: Skaters, Decks, Boon library, Spots. Your bank shows at the top. Tapping it never starts a run behind it.
+- [ ] Tapping a locked item you can afford buys it (the bank drops, the tag turns to RIDE or OWNED). One you can't afford is greyed out and says how much more you need.
+- [ ] Tapping an owned skater or deck makes it RIDING. BACK reloads the game with your new setup.
+- [ ] **Skaters:** Webster (grinds 15% faster, first pick GRIND), Roxy (car-hops 20% higher, first pick STREET), Keanu (Heat cools 15% faster in the air, first pick COOL), Goldie (+25% cash from everything, first pick LUCK). The first floor's sign shows that type, as long as its pack is unlocked; otherwise POP.
+- [ ] **Decks:** Cruiser (+10% speed, ollies 5% lower), Bombhill (+15% speed, gear wears 30% faster), Slab (4 board slots from the start, ollies 8% lower). Feel the difference in a run.
+- [ ] **Boon library:** a new phone only gets POP and GRIND boons (12 cards). Each pack adds its type to the cards and the road signs. Curses and Duos are their own unlocks.
+- [ ] **Daily run:** once unlocked, the run-over screen shows DAILY RUN. It reloads into today's seed (the seed line says "daily"), the run-over screen shows today's daily best, and NORMAL RUN goes back.
+- [ ] *Tuning:* prices run from 15 to 60 Stoken (465 for everything). Does a good run earn enough that the first unlock comes after 2 or 3 runs?
+- [ ] Your old best score and banked Stoken carry over from before this update.
 
 ## Boons
 
@@ -250,7 +267,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] `?biome=clemente`, `greece`, `atlantis`, `museum`, `hightech`, `space` (and `hive`): the street front, the back wall, the buildings under the roofs and the ledges all use that QFS world's tiles. Look for Clemente's trees and signs, Greece's temples, arches and red pillars, the museum's paintings and statue of David, and Atlantis's coral. Chicago looks exactly as before.
 - [ ] *Open question:* the city skyline behind is still Chicago in every biome. Should each world get its own backdrop next (QFS's skies and far layers)?
 
-## Performance## Performance
+## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
       should show roughly 45 to 80 draws. Note the fps and the floor if it stutters.

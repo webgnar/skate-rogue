@@ -54,8 +54,8 @@ export function modDef(id: ModId): ModDef {
 
 export type Slots = (ModId | null)[];
 
-export function newBoard(): Slots {
-  return Array.from({ length: BOARD.startSlots }, () => null);
+export function newBoard(slots: number = BOARD.startSlots): Slots {
+  return Array.from({ length: slots }, () => null);
 }
 
 // the effects a trigger fires, with their slots: every copy of the trigger fires its own run of effects

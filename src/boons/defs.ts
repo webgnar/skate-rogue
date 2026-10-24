@@ -20,6 +20,7 @@ export interface Held {
 export interface RunView {
   floor: number;
   boons: Held[];
+  library?: { types: BoonType[]; curses: boolean; duos: boolean }; // what the meta tree has unlocked; all when left out
 }
 
 export interface Boon {
