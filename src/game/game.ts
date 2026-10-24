@@ -14,7 +14,7 @@ import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear'
 import { loadSave, writeSave } from '../run/save';
 import { PickupView } from '../render/pickups';
 
-import { surfaceSlope, type Level } from '../physics/level';
+import type { Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
@@ -653,13 +653,8 @@ export class Game {
     this.sprite.mesh.position.x = toX(x);
     this.sprite.mesh.position.y = toY(this.level, y);
     const sk = this.skater;
-    const angle =
-      sk.mode === 'rail'
-        ? Math.atan2(-sk.vsp, sk.hsp)
-        : sk.mode === 'roll' && sk.surface?.kind === 'bank'
-          ? Math.atan(-surfaceSlope(sk.surface))
-          : 0;
-    this.sprite.update(dt * 1000, this.skater, angle);
+    //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
+    this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
     this.impacts.update(dt);
     this.chopper.update(this.level, this.sim.chopper, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);

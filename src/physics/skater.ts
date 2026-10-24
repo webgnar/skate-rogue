@@ -3,15 +3,16 @@
 import { NO_MODS, type Mods } from '../boons/mods';
 import { NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
-import { rollTrick, SPIN, type TrickId } from './tricks';
-import { isStreetAt, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { Feel, FEEL, MATERIALS, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
+import { rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
+import { isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
 export type SkaterEvent =
-  | { type: 'ollie'; spin: 0 | 180 }
+  | { type: 'ollie'; spin: 0 | 180; lip?: boolean } // lip: popped right at the edge of the ground (or just off it)
   | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean } // fakie: the stance it was thrown from
-  | { type: 'land' }
+  | { type: 'land'; impact?: number; quality?: LandQuality } // impact: px/frame into the surface, along its normal
   | { type: 'grind' }
   | { type: 'rail' }
   | { type: 'hop' }
@@ -64,6 +65,9 @@ export class Skater {
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
+  readonly feel = new Feel(); // the body and board response (src/physics/feel.ts)
+  trickT = 0; // frames since the last flip trick
+  trickCatch = 0; // frames that flip takes to catch (0: no flip going)
 
   constructor(
     readonly level: Level,
@@ -106,6 +110,7 @@ export class Skater {
 
     if (this.mode === 'rail') this.stepRail();
     else this.stepMove(input.held);
+    if ((this.mode as Mode) !== 'bail') this.feel.step(this.grounded, this.groundPitch(), this.mode === 'rail' ? this.railV : this.hsp);
 
     if (this.x >= this.level.exitX && (this.mode as Mode) !== 'bail') {
       this.mode = 'exit';
@@ -116,9 +121,12 @@ export class Skater {
   private ollie(): void {
     //Rail Launch: grind speed adds to the pop
     const grindSpeed = this.mode === 'grind' ? Math.abs(this.hsp) : this.mode === 'rail' ? this.railV : 0;
+    //the pop adds to the way the ground was already carrying you: up off a bank, down off a handrail
+    const carried = this.groundVsp();
+    const lip = this.coyote > 0 || (this.mode === 'roll' && this.nearEdge());
     this.leaveGround();
     this.jumps = Math.max(0, this.jumps - 1);
-    this.vsp = PHYS.ollie * this.mods.ollieScale * this.gear.ollie - grindSpeed * this.mods.railLaunch;
+    this.vsp = PHYS.ollie * this.mods.ollieScale * this.gear.ollie - grindSpeed * this.mods.railLaunch + carried;
     //Rocket Grind: off a fast grind you go straight up, and the pop is the rail's, so letting go doesn't cut it
     if (this.mods.rocketGrind && grindSpeed >= PHYS.grindSpeed) {
       this.vsp *= PHYS.rocketPop;
@@ -129,7 +137,62 @@ export class Skater {
     this.coyote = 0;
     this.flipped = false;
     this.holdT = 1;
-    this.events.push({ type: 'ollie', spin: 0 });
+    this.events.push({ type: 'ollie', spin: 0, lip });
+  }
+
+  // vertical speed the ground gives you: rolling a slope, or riding a rail
+  private groundVsp(): number {
+    if (this.mode === 'rail' && this.rail) return this.railV * this.rail.at(this.railD).ty;
+    if (this.mode === 'roll' && this.surface) return surfaceSlope(this.surface) * this.hsp;
+    return 0;
+  }
+
+  // the ground ends within a lip's reach ahead, and the next ground (if any) is lower
+  private nearEdge(): boolean {
+    const ahead = this.x + FEEL.lipPx;
+    if (this.supportAt(ahead) !== null) return false;
+    return true;
+  }
+
+  // the height of the ground under x that the wheels would be on, near our height (null: nothing there)
+  private supportAt(x: number): number | null {
+    const s = this.surface;
+    if (s && x >= s.x0 && x <= s.x1) return surfaceY(s, x);
+    if (this.mode === 'grind') return null;
+    for (const o of this.level.surfaces) {
+      if (o === s || o.kind === 'rail' || x < o.x0 || x > o.x1) continue;
+      const y = surfaceY(o, x);
+      if (Math.abs(y - this.y) <= 8) return y;
+    }
+    if (isStreetAt(this.level, x) && Math.abs(this.level.streetY - this.y) <= 8) return this.level.streetY;
+    return null;
+  }
+
+  // the board's angle on the ground, from where its two trucks touch (null in the air): it tips over a bank's lip
+  // and stays level with a truck hanging over an edge, as a real board does
+  private groundPitch(): number | null {
+    if (this.mode === 'rail' && this.rail) {
+      const t = this.rail.at(this.railD);
+      return Math.atan2(-t.ty, t.tx);
+    }
+    if (this.mode === 'grind') return 0;
+    if (this.mode !== 'roll') return null;
+    const half = FEEL.wheelbase / 2;
+    const back = this.supportAt(this.x - half);
+    const front = this.supportAt(this.x + half);
+    if (back === null && front === null) return 0;
+    return Math.atan2((back ?? front!) - (front ?? back!), FEEL.wheelbase);
+  }
+
+  // how much of the flip in the air has been caught (1: none going, or caught)
+  get caught(): number {
+    return this.trickCatch > 0 ? Math.min(1, this.trickT / this.trickCatch) : 1;
+  }
+
+  // what's under the trucks while grinding
+  get material(): Material {
+    if (this.mode === 'rail' && this.rail) return this.rail.material;
+    return this.surface ? surfaceMaterial(this.surface) : 'concrete';
   }
 
   private trick(): void {
@@ -142,6 +205,8 @@ export class Skater {
     if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
     const name = rollTrick(this.tricks);
     const spin = SPIN[name];
+    this.trickT = 0;
+    this.trickCatch = Math.round(TRICK_CATCH[name] * 60);
     this.events.push({ type: 'trick', index: this.tricks++, name, spin, fakie: this.fakie });
     //a 180 lands you riding the other way round
     if (spin === 180) this.fakie = !this.fakie;
@@ -184,6 +249,12 @@ export class Skater {
   private stepMove(held: boolean): void {
     //horizontal speed
     if (this.mode === 'roll') {
+      //a slope: gravity along it adds flow speed downhill and takes it away uphill (base speed holds)
+      const m = this.surface ? surfaceSlope(this.surface) : 0;
+      if (m !== 0) {
+        const pull = PHYS.grav * FEEL.slopeGrav * (m / Math.hypot(1, m));
+        this.carry = pull > 0 ? Math.max(this.carry, this.hsp) + pull : Math.max(0, this.carry + pull);
+      }
       const excess = Math.max(0, this.carry - PHYS.baseSpeed);
       const bleed = Math.max(PHYS.carryBleedMin, excess * PHYS.carryDecay) * this.mods.carryBleedScale;
       this.carry = Math.max(0, this.carry - bleed);
@@ -192,8 +263,10 @@ export class Skater {
     } else if (this.mode === 'grind') {
       this.onRailT++;
       const frenzy = this.mods.feebleFrenzy ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
-      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * this.gear.grind * frenzy, this.carry);
-      this.hsp = Math.max(PHYS.grindMin, this.hsp < target ? Math.min(target, this.hsp + PHYS.grindAccel) : this.hsp);
+      const mat = MATERIALS[this.material];
+      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * this.gear.grind * mat.grindScale * frenzy, this.carry);
+      const accel = PHYS.grindAccel * mat.grindAccel;
+      this.hsp = Math.max(PHYS.grindMin, this.hsp < target ? Math.min(target, this.hsp + accel) : this.hsp);
     }
 
     //vertical speed
@@ -213,6 +286,7 @@ export class Skater {
       const cut = !(this.flipped && this.mods.lateFlip) && this.gravFlipT === 0 && !this.kicked;
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
+      if (this.trickCatch > 0) this.trickT++;
     } else {
       this.vsp = 0;
     }
@@ -347,6 +421,11 @@ export class Skater {
   }
 
   private touchDown(s: Surface | null): void {
+    const m = s ? surfaceSlope(s) : 0;
+    const impact = normalImpact(this.hsp, this.vsp, m);
+    const caught = this.caught;
+    const vsp = this.vsp;
+    this.trickCatch = 0;
     this.surface = s;
     this.vsp = 0;
     this.jumps = this.maxJumps;
@@ -359,6 +438,7 @@ export class Skater {
       const enter = this.mods.grindInstant ? PHYS.grindSpeed * this.mods.grindScale : PHYS.grindMin;
       this.hsp = Math.max(this.hsp, enter);
       this.bankSpare();
+      this.feel.railEntry(impact, surfaceMaterial(s));
       this.events.push({ type: 'grind' });
     } else {
       this.spare = 0;
@@ -367,9 +447,22 @@ export class Skater {
       const wobbly = this.mods.wobbles && Math.abs(this.hsp) > PHYS.baseSpeed * this.mods.speedScale * PHYS.wobbleOver;
       //Butter: the air speed rolls on (it bleeds off like rail speed)
       if (this.mods.butter) this.carry = Math.max(this.carry, Math.abs(this.hsp));
-      this.events.push({ type: 'land' });
-      //landing on the steps
-      if (s?.kind === 'stairs' || wobbly) this.slam();
+      //on a slope you keep the speed along it: a bank that falls away turns the drop into speed
+      //(cruising speed still holds: an uphill bank only eats flow speed)
+      if (m !== 0) {
+        const along = alongSlope(this.hsp, vsp, m);
+        if (along > this.hsp) this.carry = Math.max(this.carry, along);
+        else if (!this.mods.butter) this.carry = Math.min(this.carry, Math.max(0, along));
+        this.hsp = Math.max(along, Math.min(this.hsp, this.baseSpeed()));
+      }
+      //landing on the steps, or before the board's back under your feet
+      const quality = s?.kind === 'stairs' || wobbly ? 'slam' : landQuality(impact, caught, m > 0);
+      //a hard landing to flat costs flow speed (never base speed); Butter soaks it up, not a sketchy one
+      if (quality === 'heavy' && m === 0 && !this.mods.butter) this.carry *= Math.max(0, 1 - FEEL.heavyScrub * (impact - FEEL.heavy));
+      if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
+      this.feel.land(impact, quality);
+      this.events.push({ type: 'land', impact, quality });
+      if (quality === 'slam') this.slam();
     }
   }
 
@@ -389,6 +482,8 @@ export class Skater {
     this.railD = d;
     //speed along the rail: our velocity projected on its direction, always rolling forward
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.hsp * t.tx + this.vsp * t.ty));
+    this.feel.railEntry(Math.abs(this.vsp * t.tx - this.hsp * t.ty), rail.material);
+    this.trickCatch = 0;
     this.mode = 'rail';
     this.onRailT = 0;
     this.flipped = false;
@@ -404,6 +499,8 @@ export class Skater {
     const t = rail.at(this.railD);
     //gravity pulls along the rail: downhill (ty > 0 in y-down) speeds you up (QFS player_rail_state)
     this.railV += PHYS.grav * t.ty * PHYS.railGravMult;
+    //and friction under the trucks, from how hard the rail pushes back (the cos of its angle)
+    this.railV -= PHYS.grav * MATERIALS[rail.material].mu * t.tx;
     //Feeble Frenzy: a little more speed every 30 frames on the same rail
     if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0) this.railV *= 1 + PHYS.frenzyStep;
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.railV));

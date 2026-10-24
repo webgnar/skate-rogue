@@ -4,6 +4,7 @@ import type { Intersection } from '../traffic/cross';
 import { CHUNK_W, STREET_ROW, cell, type Layout } from '../gen/layout';
 import type { Road } from '../gen/roads';
 import { TILE } from './constants';
+import type { Material } from './feel';
 
 export type SurfaceKind = 'roof' | 'ledge' | 'rail' | 'stairs' | 'bank' | 'overpass';
 
@@ -15,6 +16,12 @@ export interface Surface {
   y: number;
   y1?: number;
   row: number;
+  material?: Material; // what it grinds like; left out, it goes by kind (see surfaceMaterial)
+}
+
+// bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
+export function surfaceMaterial(s: Surface): Material {
+  return s.material ?? (s.kind === 'rail' ? 'metal' : 'concrete');
 }
 
 export function surfaceY(s: Surface, x: number): number {
@@ -47,6 +54,7 @@ export class CurvedRail {
   readonly ys: number[] = [];
   readonly ds: number[] = [];
   readonly length: number;
+  material: Material = 'metal'; // handrails and curved rails are steel
 
   constructor(
     readonly x0: number,
