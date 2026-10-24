@@ -267,3 +267,7 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Goldie rides a board.** She skates quads in QFS, but every Gnar Run move is a board trick, so a roller-skate
   Goldie would need her own trick set. She wears purple high-tops with orange soles, her skates' colours. If you
   want her on quads, that's a separate move list to design.
+- **Slopes tilt the board, not the skater.** zack asked for IK legs that soak up slopes with the torso centred. On
+  the skinned model the ground angle now tilts only the board; the feet stay on it, the legs re-aim by two-bone IK
+  and the hips sink a little, over any clip. The physics feel thread's `feel` values (squash, lean, wobble) feed the
+  same hook, and its `feel.pitch` becomes the board angle.
