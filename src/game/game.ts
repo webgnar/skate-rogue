@@ -1153,7 +1153,7 @@ export class Game {
         break;
       case 'rail':
         this.particles.grindStart(...this.backTruck(), 1);
-        this.hud.callout('BOARDSLIDE' + combo, 'trick');
+        this.hud.callout(this.sprite.grindName + combo, 'trick');
         break;
       case 'hop':
         this.hud.callout('CAR HOP!' + combo, 'good');

@@ -474,6 +474,12 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Parked cars, cruisers and buses show their windows, lights and trim (a cruiser is black and white with a light bar, not a flat black blob; a bus is red with windows).
 - [ ] The roadblock at the end of act 1 shows proper cruisers and buses.
 
+**Grinds by obstacle, FS boardslide, knees toward the camera**
+- [ ] On rails and handrails, grinds take turns: BS boardslide, 50-50, FS boardslide, 5-0, smith, crooked, feeble. The callout names each one.
+- [ ] On a parked car's roof, Lou never boardslides; he does the other grinds.
+- [ ] FS boardslide: board across the rail, Lou's back facing the way he slides, looking back over his shoulder.
+- [ ] Knees always bend toward the camera when Lou lands, squashes or rides a slope; never backward or sideways.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

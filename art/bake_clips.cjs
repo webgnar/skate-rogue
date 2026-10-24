@@ -29,7 +29,7 @@ function deckTop() {
 
 // the sim mode each clip is shown in, so the rig doesn't switch away from it
 function modeFor(name) {
-  if (/^(grind\d|crooked|smith|feeble|fiveO)$/.test(name)) return 'grind';
+  if (/^(grind\d|crooked|smith|feeble|fiveO|fsBoardslide)$/.test(name)) return 'grind';
   if (/^(push|ride|land|slam|manual|noseManual)$/.test(name)) return 'roll';
   return 'air';
 }
