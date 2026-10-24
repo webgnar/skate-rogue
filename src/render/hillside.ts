@@ -1,4 +1,4 @@
-// Act 1's San Francisco hillside and the foreground in front of the lane (docs/level-design-act1.md).
+// Chicago's San Francisco hillside and the foreground in front of the lane (docs/level-design-chicago.md).
 //
 // The hill (a level with `hills`): every piece of the descent is solid ground. Blocks of street fall away with their
 // sidewalks following the slope, public stairways cut down between them, retaining walls drop to the next street,

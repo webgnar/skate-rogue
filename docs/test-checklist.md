@@ -182,6 +182,28 @@ Each act's district now changes the street, not just the look. Quickest check: `
 - [ ] **High-Tech City (act 4):** some flat rails have glowing chevrons. Cyan ones speed your grind up, orange ones slow it down.
 - [ ] *Feel:* are currents strong enough to notice but never unfair? Does the museum ceiling feel like a twist or just a limit?
 
+## Chicago hills, foreground and the L (docs/level-design-chicago.md)
+
+Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `floor=14` to see each act's signature.
+
+- [ ] **Hills:** the descent is a San Francisco hillside, not floating rooftops: steep blocks of street with
+      sidewalks following the slope, flat intersections at the crests with a cross street running back, public
+      stairways, retaining-wall drops, and painted row houses stepping down the hill behind.
+- [ ] **Bombing a hill** builds speed; the last block runs out onto 10 flat tiles before the street.
+- [ ] **Each floor peaks on its last stairway** (always with a handrail), and floor 1's stairways always have one.
+- [ ] **Acts feel different:** act 2 (floors 4-6) has handrails down most blocks, act 3 (7-9) stairways back to back,
+      act 4 (10-12) crest jumps and kickers, act 5 (13-15) everything.
+- [ ] **Foreground:** the bottom of the screen is always the near sidewalk, a low wall and rooftops stepping down
+      toward you, never sky, on the hill, the street and the escapes. Nothing in front ever hides the lane.
+- [ ] **The L:** about 12 tiles into every street, elevated track over the lane. Ollie onto the parked car just
+      before it, keep holding through the hop, flip at the top, and you land grinding the rails.
+- [ ] **L trains:** two-car trains come round the bend from behind the buildings, run along the stretch your way,
+      and bend off at the far end, then another comes about 12 s later. Catch one and hop its roof, or slam into
+      its back. A bus fits under the track.
+- [ ] *Feel:* is the hill too fast, or not fast enough? Are the crest jumps readable at speed? Too much grey from
+      the near sidewalk and rooftops at street level?
+- [ ] *Phone:* frame rate on the older iPhone on a hill floor with the L in view.
+
 ## One district per run
 
 - [ ] A whole run stays in one district: floors 1 to 15, the escapes and the finale all keep the same look, gravity

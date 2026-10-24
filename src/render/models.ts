@@ -15,7 +15,7 @@ export function missingModels(): { files: string[]; parts: string[] } {
 
 const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb'];
 // materials that glow instead of taking light
-const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen']); // the sheriff gold is reflective livery
+const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen', 'elCarSign', 'elCarLamp']); // the sheriff gold is reflective livery
 
 export async function loadModels(base: string): Promise<void> {
   const loader = new GLTFLoader();
@@ -69,6 +69,11 @@ function merge(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
 }
 
 const shared = new Map<string, THREE.Material>();
+
+// whether a model is in the loaded files (asking doesn't count it as missing)
+export function hasModel(name: string): boolean {
+  return parts.has(name);
+}
 
 // a copy of a model with the game's materials: Lambert (inkify turns it toon), glowing lamps, and `paint` recoloured
 export function model(name: string, paint?: number): THREE.Mesh | null {

@@ -24,6 +24,7 @@ import type { Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
+import { ElView } from '../render/el-view';
 import { Impacts } from '../render/impact';
 import { Particles, TRICK_TRAIL } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
@@ -179,6 +180,7 @@ export class Game {
   private level: Level;
   private sim: FloorSim;
   private trafficView = new TrafficView();
+  private elView = new ElView(); // the L's trains
   private prev = { x: 0, y: 0 };
   private loop = new FixedStep();
   private floor = 1;
@@ -285,7 +287,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
+    this.view.scene.add(this.trafficView.group, this.elView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -468,6 +470,7 @@ export class Game {
     this.run.nearScale = mods.nearScale;
     this.carry = 0;
     this.trafficView.clear();
+    this.elView.clear();
     this.pickups.setLevel(this.level);
     this.bountyView.set(this.level);
     this.twistView.set(this.level);
@@ -877,6 +880,7 @@ export class Game {
 
     //traffic, the cruiser and the warnings
     this.trafficView.sync(this.level, this.sim.traffic.vehicles);
+    this.elView.sync(this.level, this.sim.trains);
     this.trafficView.syncCross(this.level, this.sim.traffic.cross);
     this.trafficView.syncStreet(this.level, this.sim.traffic);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;

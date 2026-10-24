@@ -23,8 +23,8 @@ export function maxTier(floor: number): number {
   return Math.min(3, 1 + Math.floor((floor - 1) / 2));
 }
 
-// `tail` pieces go just before the exit (the fork's runway)
-export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES, count = floorLength(floor), tail: Piece[] = []): Layout {
+// `tail` pieces go just before the exit (the fork's runway), `head` ones just after the start (Chicago's L block)
+export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES, count = floorLength(floor), tail: Piece[] = [], head: Piece[] = []): Layout {
   const rng = makeRng(seed + floor * 7919);
   const top = maxTier(floor);
   //pieces of the newest tier come up three times as often, so the floor feels harder
@@ -35,7 +35,7 @@ export function makeLayout(seed: number, floor: number, library: Piece[] = PIECE
     for (let i = 0; i < weight; i++) pool.push(p);
   }
 
-  const pieces: Piece[] = [START_PIECE];
+  const pieces: Piece[] = [START_PIECE, ...head];
   let last: Piece | undefined;
   for (let n = 0; n < count; n++) {
     let pick = pool[randInt(rng, pool.length)];

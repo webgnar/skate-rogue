@@ -11,9 +11,10 @@ import { TILE } from '../physics/constants';
 import { buildLevel, CurvedRail, type Level, type Pickup, type Surface } from '../physics/level';
 import type { Fork } from './roads';
 import { makeLayout } from './layout';
-import { FORK_PIECE, PIECES, type Piece } from './pieces';
+import { EL_PIECE, FORK_PIECE, PIECES, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
 import { buildHills } from './hills';
+import { elPlan } from '../traffic/el';
 
 export const DESCENT = {
   stepRise: 16, // px per step
@@ -205,7 +206,8 @@ export function buildDescent(seed: number, floor: number, streetY: number, short
 
 // the whole floor: descent, then the street finale (its start piece is the runway where the last roof meets the street)
 export function buildFloor(seed: number, floor: number, library: Piece[] = PIECES, opts: FloorOptions = {}): Level {
-  const finale = buildLevel(makeLayout(seed, floor, districtPieces(library, opts.twist), finaleCount(floor), opts.fork ? [FORK_PIECE] : []));
+  //Chicago's street opens with a block of plain street for the L over it
+  const finale = buildLevel(makeLayout(seed, floor, districtPieces(library, opts.twist), finaleCount(floor), opts.fork ? [FORK_PIECE] : [], opts.hills ? [EL_PIECE] : []));
   const d = opts.hills ? buildHills(seed, floor, finale.streetY, opts.short) : buildDescent(seed, floor, finale.streetY, opts.short);
   //every floor has a Stoken somewhere: if the sections rolled none, one goes up high over the first stair set
   if (!d.pickups.some((p) => p.kind === 'stoken')) {
@@ -256,6 +258,8 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     ...(opts.hills ? { hills: true } : {}),
     ...(opts.gravity !== undefined && opts.gravity !== 1 ? { gravity: opts.gravity } : {}),
   };
+  //Chicago's L over the street, before the side line so the side line stays clear of it
+  if (opts.hills) level.el = elPlan(level, level.layout.seed);
   addSideLine(level, level.layout.seed);
   applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
