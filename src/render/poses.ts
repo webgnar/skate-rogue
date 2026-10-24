@@ -24,6 +24,7 @@ export interface Pose {
   lean: number; // torso tilt in the screen plane (+ leans toward +x)
   bend: number; // torso pitch toward the camera (crouching over the toes)
   head: number; // head turn toward +x
+  nod: number; // head pitch, + looks down
   armLRaise: number; // lead (left, +x) arm: 0 hanging, 1.57 straight out sideways
   armLFwd: number; // swing toward the camera
   armLElbow: number;
@@ -56,6 +57,7 @@ export const BASE: Pose = {
   lean: 0.04,
   bend: 0.12,
   head: 0.5,
+  nod: 0.1,
   armLRaise: 0.45,
   armLFwd: 0.15,
   armLElbow: 0.45,
@@ -105,6 +107,23 @@ const pop: Key = {
 // both feet off, knees up, for flips and shove-its
 const G50: Key = { boardY: -0.07 }; // hangers on the rail: the wheels hang just below its top
 const BOARDSLIDE: Key = { yaw: 1.2, head: 0.2, boardYaw: Math.PI / 2, boardY: -(BOARD.deckTop - 0.03) };
+// side = -1 flicks off the heel side (kickflip), +1 kicks out the toe side (heelflip)
+const flick = (side: 1 | -1): Key => ({
+  hipY: 1.05, boardY: 0.3, bend: 0.3,
+  footFOn: 0, footFX: 0.52, footFY: 0.5, footFZ: 0.14 * side,
+  footBOn: 0, footBX: -0.38, footBY: 0.58,
+});
+const split = (side: 1 | -1): Key => ({
+  hipY: 1.1, boardY: 0.2, lean: -0.08, bend: 0.38, nod: 0.6, head: 0.3,
+  footFOn: 0, footFX: 0.78, footFY: 0.6, footFZ: 0.12 * side, footFTurn: 0.5,
+  footBOn: 0, footBX: -0.42, footBY: 0.72, footBZ: 0.05,
+  armRRaise: 2.7, armRFwd: -0.2, armRElbow: 0.3, armLRaise: 0.55, armLFwd: 0.65, armLElbow: 0.15,
+});
+// legs close over the board; the back foot lands on it first, the front foot still coming down
+const catchBack: Key = {
+  hipY: 1.02, boardY: 0.28, bend: 0.3, nod: 0.45, footBOn: 1, footBX: -0.3,
+  footFOn: 0, footFX: 0.32, footFY: 0.52, armRRaise: 1.8, armLRaise: 0.9, armLFwd: 0.3,
+};
 const feetUp = (y: number, z = 0): Key => ({ footFOn: 0, footBOn: 0, footFY: y, footBY: y, footFZ: z, footBZ: z });
 
 export const CLIPS: Record<string, Clip> = {
@@ -144,27 +163,35 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.76, pose: { hipY: 0.92, boardY: 0.06 } },
     ],
   },
-  // kickflip: front foot slides up and flicks off the heel-side corner of the nose (out and back), the board rolls
-  // a full turn toe-edge up while the feet stay clear, back foot catches first, then the front
+  // Kickflip, keyed from photos of tweaked kickflips (zack, 2026-10-24). The front foot slides up and flicks off the
+  // heel-side corner of the nose; the board rolls toe edge up (heel edge down) while the body keeps rising away
+  // from it. At the height of the flip the legs split wide over the board: front leg kicked out past the nose and
+  // nearly straight, back knee pulled up with the foot hovering over the tail, the board turning in the gap below
+  // the feet. The back arm is flung up overhead, the front arm reaches down toward the front foot, the torso leans
+  // back a little and the head looks down at the board. Then the legs close, the back foot catches first, the
+  // front foot stomps it level.
   kickflip: {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 1.0, boardY: 0.3, footFX: 0.34, footBX: TAIL_FOOT, bend: 0.25, armLRaise: 1.2, armRRaise: 1.0 } },
-      { t: 0.06, pose: { hipY: 1.02, boardY: 0.32, footFOn: 0, footFX: 0.55, footFY: 0.62, footFZ: -0.18, footBOn: 0, footBX: -0.3, footBY: 0.66, armLRaise: 1.4 } },
-      { t: 0.28, pose: { hipY: 1.04, boardY: 0.3, boardRoll: -TAU, ...feetUp(0.66), footFX: 0.3, footBX: -0.3, armLRaise: 1.3 } },
-      { t: 0.33, pose: { hipY: 1.02, boardY: 0.3, boardRoll: -TAU, footBOn: 1, footFOn: 0, footFY: 0.6, footFX: 0.28 } },
-      { t: 0.42, pose: { hipY: 0.98, boardY: 0.26, boardRoll: -TAU, footFX: 0.28, footBX: -0.28 } },
+      { t: 0.05, pose: { ...flick(-1), boardRoll: -0.7, armRRaise: 1.9, armRElbow: 0.4, armLRaise: 0.9, armLFwd: 0.4, nod: 0.4 } },
+      { t: 0.15, pose: { ...split(-1), boardRoll: -Math.PI * 1.15 } },
+      { t: 0.25, pose: { ...split(-1), hipY: 1.08, boardY: 0.22, footFX: 0.72, footBY: 0.68, boardRoll: -Math.PI * 1.75 } },
+      { t: 0.32, pose: { ...catchBack, boardRoll: -TAU } },
+      { t: 0.42, pose: { hipY: 0.98, boardY: 0.26, boardRoll: -TAU, footFX: 0.28, footBX: -0.28, nod: 0.3, armLRaise: 1.0, armRRaise: 1.3 } },
     ],
   },
-  // heelflip: front heel kicks off the toe-side edge (out toward the camera); the board rolls the other way
+  // heelflip: the front heel kicks off the toe-side edge, out toward the camera, and the board rolls the other way
+  // (toe edge down). Same lift and split as the kickflip with the front leg kicked out toward the toe side.
   heelflip: {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 1.0, boardY: 0.3, footFX: 0.3, footBX: TAIL_FOOT, bend: 0.2, armLRaise: 1.1, armRRaise: 1.2 } },
-      { t: 0.07, pose: { hipY: 1.02, boardY: 0.32, footFOn: 0, footFX: 0.5, footFY: 0.6, footFZ: 0.2, footFTurn: 0.4, footBOn: 0, footBX: -0.3, footBY: 0.66 } },
-      { t: 0.3, pose: { hipY: 1.04, boardY: 0.3, boardRoll: TAU, ...feetUp(0.66), footFX: 0.3, footBX: -0.3 } },
-      { t: 0.35, pose: { hipY: 1.02, boardY: 0.3, boardRoll: TAU, footBOn: 1, footFOn: 0, footFY: 0.6, footFX: 0.28 } },
-      { t: 0.42, pose: { hipY: 0.98, boardY: 0.26, boardRoll: TAU, footFX: 0.28, footBX: -0.28 } },
+      { t: 0.06, pose: { ...flick(1), footFTurn: 0.5, boardRoll: 0.7, armRRaise: 1.9, armRElbow: 0.4, armLRaise: 0.9, armLFwd: 0.4, nod: 0.4 } },
+      { t: 0.16, pose: { ...split(1), footFTurn: 0.6, boardRoll: Math.PI * 1.15 } },
+      { t: 0.26, pose: { ...split(1), footFTurn: 0.6, hipY: 1.08, boardY: 0.22, footFX: 0.7, footBY: 0.68, boardRoll: Math.PI * 1.75 } },
+      { t: 0.33, pose: { ...catchBack, boardRoll: TAU } },
+      { t: 0.42, pose: { hipY: 0.98, boardY: 0.26, boardRoll: TAU, footFX: 0.28, footBX: -0.28, nod: 0.3, armLRaise: 1.0, armRRaise: 1.3 } },
     ],
   },
   // backside pop shove-it: back foot scoops the tail behind (toward the heels) and the board spins flat 180 under
