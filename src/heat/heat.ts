@@ -9,6 +9,7 @@ export const HEAT = {
   trick: -3,
   grindPerSec: -4,
   carHop: -8,
+  nearMiss: -5,
   cleanPerSec: -6,
   cleanAfter: 180, // frames without a slam before clean skating counts
   max: 100,

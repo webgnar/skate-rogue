@@ -89,6 +89,17 @@ and listed it here for review. Any of these can be flipped in the morning.
   flip, or hop onto it off the drone before). The first two waves are always a single then a pair, to teach it.
   The act 3 escape stays the roadblock until the act 3 biomes exist.
 
+- **Buses and box trucks in traffic (from floor 4).** 30% of the vehicles going your way are big: a CTA bus
+  (6 tiles, 72 px roof: ollie and flip up the back, or hop on off a car; slow, 0.3x cruising) or a box truck
+  (4 tiles, 64 px box) with its tailgate down. Roll up the tailgate and it's a kicker: a bigger pop than an ollie
+  (about 87 px of air, no jump cut since the ramp did the popping) and a **bomb**, my light version of the GDD's
+  bomb: a burst to 6.5 px/frame that bleeds off like rail speed. "TAILGATE BOMB!", +150 style. Hitting the side
+  of either is a slam as usual. The truck is code-built for now; the models thread can swap in a Blender one.
+- **Close calls.** Clear a vehicle (parked, roadblock or moving, including an oncoming car passing under you)
+  with your wheels within 10 px of its roof the whole way over, without touching it: "CLOSE CALL!", +200 into the
+  combo, -5 Heat (the GDD's number), and a short slow-mo beat. Landing on the roof is a car hop instead.
+- **Not yet:** cross traffic at intersections, parked car doors, and the bus stop pulling into the lane are next.
+
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
   shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin

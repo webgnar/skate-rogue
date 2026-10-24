@@ -31,6 +31,7 @@ export interface Car {
   roof: number; // y of the roof
   bottom: number;
   model?: 'cruiser' | 'bus'; // parked roadblock vehicles; plain parked cars leave it out
+  kicker?: number; // a box truck's dropped tailgate: this far behind x0 it launches you (px)
 }
 
 export interface Glass {

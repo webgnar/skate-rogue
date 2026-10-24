@@ -3,10 +3,10 @@
 import type { Mods } from '../boons/mods';
 import { BOARD, fires, type EffectId, type Slots, type TriggerId } from '../board/mods';
 import { PHYS, TILE } from '../physics/constants';
-import { Heat } from '../heat/heat';
+import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
 import { Swarm } from './drones';
-import type { Level, PickupKind } from '../physics/level';
+import type { Car, Level, PickupKind } from '../physics/level';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
 
@@ -16,7 +16,8 @@ export type FloorEvent =
   | SkaterEvent
   | { type: 'pickup'; kind: PickupKind; index: number }
   | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
-  | { type: 'drone'; index: number }; // stomped a drone out of the sky
+  | { type: 'drone'; index: number } // stomped a drone out of the sky
+  | { type: 'near' }; // a close call: cleared a vehicle by a few px without touching it
 
 // which board trigger a skater event is
 const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
@@ -28,6 +29,7 @@ const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
   hop: 'onHop',
 };
 
+export const NEAR_MISS = 10; // px of air between your wheels and a roof that counts as a close call
 export const PICKUP_RADIUS = 26; // px around the skater's middle
 const BODY = 24; // the skater's middle, above their feet
 
@@ -43,6 +45,7 @@ export class FloorSim {
   readonly swarm: Swarm | null; // the drone swarm escape
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
+  private near = new Map<Car, { gap: number; touched: boolean }>(); // vehicles we're over: the closest pass, and any contact
 
   constructor(
     readonly level: Level,
@@ -74,6 +77,7 @@ export class FloorSim {
     }
     this.runBoard(skaterEvents);
     this.collect();
+    this.closeCalls(skaterEvents);
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
     if (this.chopper?.step(this.skater)) this.heat.value = Math.min(100, this.heat.value + CHOPPER.heatPerSec / 60);
@@ -134,6 +138,32 @@ export class FloorSim {
           if (Math.abs((v.x0 + v.x1) / 2 - sk.x) < BOARD.shockwaveTiles * TILE) v.leaving = true;
         }
         break;
+    }
+  }
+
+  // close calls: over a vehicle (or it under you) the whole way in the air, the wheels within a few px of its roof
+  private closeCalls(events: readonly SkaterEvent[]): void {
+    const sk = this.skater;
+    const half = PHYS.width / 2;
+    const contact = sk.mode !== 'air' || events.some((e) => e.type === 'hop' || e.type === 'slam' || e.type === 'kicker');
+    const cars = sk.movers.length ? [...this.level.cars, ...sk.movers] : this.level.cars;
+    for (const c of cars) {
+      const over = sk.x + half > c.x0 && sk.x - half < c.x1;
+      const n = this.near.get(c);
+      if (over) {
+        const touched = contact || sk.hitCars.has(c);
+        if (!n) this.near.set(c, { gap: c.roof - sk.y, touched });
+        else {
+          n.gap = Math.min(n.gap, c.roof - sk.y);
+          n.touched ||= touched;
+        }
+      } else if (n) {
+        this.near.delete(c);
+        if (!n.touched && n.gap >= 0 && n.gap < NEAR_MISS) {
+          this.events.push({ type: 'near' });
+          this.heat.value = Math.max(0, this.heat.value + HEAT.nearMiss);
+        }
+      }
     }
   }
 

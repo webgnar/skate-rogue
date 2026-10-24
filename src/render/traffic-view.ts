@@ -2,15 +2,20 @@
 import * as THREE from 'three';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
-import type { Vehicle } from '../traffic/traffic';
+import type { Vehicle, VehicleKind } from '../traffic/traffic';
 import { TRAFFIC } from '../traffic/traffic';
-import { makeCar, toX, toY } from './kit';
+import { makeBus, makeCar, makeTruck, toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 import { headlights } from './night';
 import { HeatLights } from './heat-light';
 
-const PAINTS = { robotaxi: [0xf2f2f6, 0xd8dce6], oncoming: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a] };
+const PAINTS: Record<VehicleKind, number[]> = {
+  robotaxi: [0xf2f2f6, 0xd8dce6],
+  oncoming: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a],
+  bus: [0xeeeef2],
+  truck: [0xf4f1ea, 0xd9e2ec, 0xffd23f],
+};
 const BACK_LANE_Z = -2.2;
 const CRUISER_Z = -1.3; // the lane just behind the skate lane
 
@@ -98,7 +103,11 @@ export class TrafficView {
       let mesh = this.meshes.get(v.id);
       if (!mesh) {
         const paints = PAINTS[v.kind];
-        mesh = makeCar(0, toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[v.id % paints.length], v.kind === 'robotaxi' ? 'Robotaxi' : 'Sedan');
+        const [w, b, r, paint] = [toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[v.id % paints.length]];
+        mesh =
+          v.kind === 'bus' ? makeBus(0, w, b, r)
+          : v.kind === 'truck' ? makeTruck(0, w, b, r, paint, (v.kicker ?? 0) / TILE)
+          : makeCar(0, w, b, r, paint, v.kind === 'robotaxi' ? 'Robotaxi' : 'Sedan');
         if (v.speed < 0) mesh.rotation.y = Math.PI; // oncoming: headlights toward the skater
         inkify(mesh);
         const beams = headlights(toX(v.x1 - v.x0));
