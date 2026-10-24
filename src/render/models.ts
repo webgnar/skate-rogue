@@ -1,24 +1,31 @@
-// Models built in Blender (art/*.py, exported to public/models). Loaded once at startup; anything that fails to load
+// Models built in Blender (art/*.py, exported to public/models): the cars and the drone. Loaded once at startup; anything that fails to load
 // falls back to the code-built version.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const parts = new Map<string, THREE.Mesh>();
 // materials that glow instead of taking light
-const LIT = new Set(['lamp', 'tail', 'accent', 'badge']); // the sheriff gold is reflective livery
+const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue']); // the sheriff gold is reflective livery
 
 export async function loadModels(base: string): Promise<void> {
-  try {
-    const gltf = await new GLTFLoader().loadAsync(`${base}models/cars.glb`);
-    gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));
-  } catch (err) {
-    console.warn('cars.glb failed to load, using the built-in cars', err);
-  }
+  const loader = new GLTFLoader();
+  await Promise.all(
+    ['cars.glb', 'drone.glb'].map(async (file) => {
+      try {
+        const gltf = await loader.loadAsync(`${base}models/${file}`);
+        gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));
+      } catch (err) {
+        console.warn(`${file} failed to load, using the built-in version`, err);
+      }
+    }),
+  );
 }
 
 // glTF splits a multi-material object into a group of meshes: make it one mesh with a material group per primitive
 function asMesh(o: THREE.Object3D): THREE.Mesh {
   if ((o as THREE.Mesh).isMesh) return o as THREE.Mesh;
+  const mesh = new THREE.Mesh();
+  mesh.position.copy(o.position); // where the part sits in its model (the drone's rotors)
   const geos: THREE.BufferGeometry[] = [];
   const mats: THREE.Material[] = [];
   o.children.forEach((c) => {
@@ -27,7 +34,9 @@ function asMesh(o: THREE.Object3D): THREE.Mesh {
     geos.push(m.geometry);
     mats.push(m.material as THREE.Material);
   });
-  return new THREE.Mesh(merge(geos), mats);
+  mesh.geometry = merge(geos);
+  mesh.material = mats;
+  return mesh;
 }
 
 function merge(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
@@ -67,5 +76,7 @@ export function model(name: string, paint?: number): THREE.Mesh | null {
     }
     return mat;
   });
-  return new THREE.Mesh(src.geometry, mats.length === 1 ? mats[0] : mats);
+  const mesh = new THREE.Mesh(src.geometry, mats.length === 1 ? mats[0] : mats);
+  mesh.position.copy(src.position);
+  return mesh;
 }
