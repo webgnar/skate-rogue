@@ -6,6 +6,7 @@ import type { Vehicle } from '../traffic/traffic';
 import { TRAFFIC } from '../traffic/traffic';
 import { makeCar, toX, toY } from './kit';
 import { inkify } from './toon';
+import { HeatLights } from './heat-light';
 
 const PAINTS = { robotaxi: [0xf2f2f6, 0xd8dce6], oncoming: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a] };
 const BACK_LANE_Z = -2.2;
@@ -19,11 +20,13 @@ export class TrafficView {
   private drone: THREE.Group;
   private cruiserGap = 10; // tiles behind the skater
   private t = 0;
+  readonly heatLights = new HeatLights();
+  private readonly bar = new THREE.Vector3();
 
   constructor() {
     this.cruiser = this.makeCruiser();
     this.drone = this.makeDrone();
-    this.group.add(this.cruiser, this.drone);
+    this.group.add(this.cruiser, this.drone, this.heatLights.group);
     inkify(this.group);
   }
 
@@ -102,6 +105,9 @@ export class TrafficView {
     const flash = Math.floor(this.t / 160) % 2 === 0;
     this.lights[0].visible = flash;
     this.lights[1].visible = !flash;
+    //the light bar lights the street
+    this.lights[0].getWorldPosition(this.bar);
+    this.heatLights.update(this.bar, this.cruiser.visible, flash, heat, caught, dtMs / 1000);
 
     //a drone drops in front at 75
     this.drone.visible = heat >= 75 || caught;
