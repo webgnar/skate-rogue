@@ -5,13 +5,13 @@ import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
 
-import type { Level } from '../physics/level';
+import { surfaceSlope, type Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
 import { FloorSim } from '../sim/floor';
 import { TILE } from '../physics/constants';
-import { SkaterSprite, TRICKS, TRICK_NAMES } from '../render/skater-sprite';
+import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
 import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
@@ -52,13 +52,13 @@ export class Game {
     private seed: number,
     private readonly fixedSeed: boolean,
     private readonly view: StreetView,
-    private readonly sprite: SkaterSprite,
+    private readonly sprite: SkaterRig,
     private readonly input: OneButton,
     private readonly hud: Hud,
   ) {
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
-    this.view.scene.add(this.sprite.mesh);
+    this.view.front.add(this.sprite.mesh);
     this.view.scene.add(this.trafficView.group);
     this.ghostMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.12, 0.14),
@@ -184,7 +184,13 @@ export class Game {
     const y = this.prev.y + (this.skater.y - this.prev.y) * a;
     this.sprite.mesh.position.x = toX(x);
     this.sprite.mesh.position.y = toY(this.level, y);
-    const angle = this.skater.mode === 'rail' ? Math.atan2(-this.skater.vsp, this.skater.hsp) : 0;
+    const sk = this.skater;
+    const angle =
+      sk.mode === 'rail'
+        ? Math.atan2(-sk.vsp, sk.hsp)
+        : sk.mode === 'roll' && sk.surface?.kind === 'bank'
+          ? Math.atan(-surfaceSlope(sk.surface))
+          : 0;
     this.sprite.update(dt * 1000, this.skater, angle);
     this.view.follow(x, y, this.skater.hsp);
     this.view.adapt(dt * 1000);
