@@ -7,3 +7,7 @@
   Tahoe-style sheriff SUV at its own size (black, gold swoosh and star, grille guard, spotlight, light bar on its roof)
 - [x] 1.5 Enforcer drone (`art/drone.py`, `public/models/drone.glb`): armoured quad, ducted rotors that spin in game,
   a camera gimbal with a red eye looking back at the skater, red and blue nav lights, a slight bank and bob
+
+## 3. Big vehicles
+
+- [x] 3.1 CTA bus (`Bus`) and box truck (`BoxTruck`) in art/cars.py, swapped into makeBus and makeTruck

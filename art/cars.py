@@ -73,7 +73,16 @@ COLORS = {
     'accent': 0x3FE0F0,
     'badge': 0xD9A92E,  # sheriff gold
     'darkrim': 0x2A2C33,
+    'busWhite': 0xEEEEF2,
+    'ctaBlue': 0x1F5FBF,
+    'ctaRed': 0xC8312B,
+    'sign': 0xFFB020,  # destination sign, glows
+    'frame': 0xB8BCC4,  # truck box rails and corner posts
+    'inside': 0x15151C,
 }
+# a CTA bus and a box truck, at their hitbox sizes (src/traffic/traffic.ts): the roofs are exactly at the hitbox roof
+BUS = {'len': 6.0, 'wide': 1.9, 'roof': 2.25, 'wheel_r': 0.32, 'axles': (1.7, -1.3), 'clear': 0.25}
+TRUCK = {'len': 4.0, 'wide': 1.9, 'roof': 2.0, 'floor': 0.45, 'cab': 1.1, 'wheel_r': 0.3, 'axles': (1.45, -1.25)}
 
 
 def hex_rgba(h):
@@ -258,10 +267,201 @@ def car(name, mats, kind):
     return ob
 
 
+def join(parts, name):
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in parts:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    ob = parts[0]
+    ob.name = ob.data.name = name
+    for p in ob.data.polygons:
+        p.use_smooth = False
+    return ob
+
+
+def arches(r, axles, clear):
+    """Points along a body's bottom edge, back to front, with an arch over each wheel."""
+    pts = []
+    arch = r + 0.07
+    for cx in sorted(axles):
+        pts.append((cx - arch, clear))
+        for i in range(9):
+            a = math.pi - i / 8 * math.pi
+            pts.append((cx + arch * math.cos(a), r + 0.02 + arch * math.sin(a)))
+        pts.append((cx + arch, clear))
+    return pts
+
+
+def wheels(bm_tire, bm_rim, r, axles, W, dual=()):
+    for x in axles:
+        for y in (-1, 1):
+            cyl(bm_tire, r, 0.26 if x in dual else 0.22, (x, y * (W / 2 - 0.13), r), segs=16)
+            cyl(bm_rim, r * 0.6, 0.02, (x, y * (W / 2 - 0.01), r), segs=12)
+            cyl(bm_rim, r * 0.18, 0.06, (x, y * (W / 2 + 0.01), r), segs=8)  # hub
+
+
+def bus(mats):
+    """CTA-style city bus: white, a black window band with the doors cut through it, blue and red stripes,
+    the amber destination sign, and the bike rack folded up on the front."""
+    L, W, H, r, clear = BUS['len'], BUS['wide'], BUS['roof'], BUS['wheel_r'], BUS['clear']
+    fx, bx = L / 2, -L / 2
+    fdoor, rdoor = (2.15, 2.8), (-0.35, 0.3)
+    parts = []
+    bm = bmesh.new()
+    outline = [(bx + 0.05, clear), (bx, clear + 0.08), (bx, H - 0.1), (bx + 0.08, H), (fx - 0.12, H), (fx - 0.02, H - 0.12),
+               (fx, H - 0.35), (fx, clear + 0.1), (fx - 0.05, clear)]
+    prism(bm, outline + list(reversed(arches(r, BUS['axles'], clear))), -W / 2, W / 2)
+    for y in (-1, 1):  # mirrors out front on arms
+        box(bm, fx - 0.05, fx + 0.2, y * (W / 2 - 0.05), y * (W / 2 + 0.02), H - 0.42, H - 0.38)
+        box(bm, fx + 0.14, fx + 0.22, y * (W / 2 + 0.02), y * (W / 2 + 0.1), H - 0.75, H - 0.38)
+    parts.append(link('busbody', bm, mats['busWhite']))
+
+    bm = bmesh.new()  # window band down both sides and the big windscreen, just proud of the body
+    for y in (-1, 1):
+        yy = y * (W / 2 + 0.006)
+        box(bm, bx + 0.25, fx - 0.25, y * (W / 2 - 0.01), yy, 1.15, H - 0.3)
+    box(bm, fx - 0.01, fx + 0.006, -W / 2 + 0.12, W / 2 - 0.12, 0.95, H - 0.45)
+    box(bm, bx - 0.006, bx + 0.01, -W / 2 + 0.25, W / 2 - 0.25, 1.55, H - 0.4)  # small back window
+    for door in (fdoor, rdoor):  # doors on the curb side (the camera's side): glass top to bottom, split down the middle
+        box(bm, door[0], door[1], -W / 2 - 0.008, -W / 2 + 0.01, clear + 0.12, H - 0.3)
+    parts.append(link('busglass', bm, mats['glass']))
+
+    bm = bmesh.new()  # pillars between the side windows, door frames, bumpers, rear grille, bike rack
+    xs = [x / 100 for x in range(int((bx + 0.95) * 100), int((fx - 0.4) * 100), 85)]
+    for y in (-1, 1):
+        for x in xs:
+            if not any(d[0] - 0.05 < x < d[1] + 0.05 for d in (fdoor, rdoor)) or y > 0:
+                box(bm, x - 0.035, x + 0.035, y * (W / 2 + 0.005), y * (W / 2 + 0.012), 1.15, H - 0.3)
+    for door in (fdoor, rdoor):
+        mid = (door[0] + door[1]) / 2
+        for x0, x1 in ((door[0] - 0.03, door[0] + 0.02), (door[1] - 0.02, door[1] + 0.03), (mid - 0.02, mid + 0.02)):
+            box(bm, x0, x1, -W / 2 - 0.016, -W / 2, clear + 0.12, H - 0.3)
+        box(bm, door[0] - 0.03, door[1] + 0.03, -W / 2 - 0.016, -W / 2, H - 0.32, H - 0.28)
+    box(bm, fx - 0.03, fx + 0.07, -W / 2 + 0.03, W / 2 - 0.03, clear + 0.02, clear + 0.28)
+    box(bm, bx - 0.07, bx + 0.03, -W / 2 + 0.03, W / 2 - 0.03, clear + 0.02, clear + 0.28)
+    for z in (0.7, 0.82, 0.94, 1.06):  # engine louvres on the back
+        box(bm, bx - 0.012, bx, -0.6, 0.6, z, z + 0.05)
+    # bike rack folded up against the front: a frame of tubes
+    for y in (-0.55, 0.55):
+        box(bm, fx + 0.07, fx + 0.11, y - 0.025, y + 0.025, clear + 0.25, 1.0)
+    for z in (clear + 0.3, 0.95):
+        box(bm, fx + 0.07, fx + 0.11, -0.6, 0.6, z - 0.02, z + 0.02)
+    box(bm, fx, fx + 0.09, -0.06, 0.06, clear + 0.22, clear + 0.32)
+    parts.append(link('bustrim', bm, mats['trim']))
+
+    bm = bmesh.new()  # the livery: a blue band and a thin red line under the windows, broken by the doors
+    for y in (-1, 1):
+        yy0, yy1 = y * (W / 2), y * (W / 2 + 0.008)
+        cuts = [bx + 0.05] + ([c for d in (rdoor, fdoor) for c in d] if y < 0 else []) + [fx - 0.05]
+        for x0, x1 in zip(cuts[::2], cuts[1::2]):
+            box(bm, x0, x1, yy0, yy1, 0.8, 1.0)
+    box(bm, fx, fx + 0.008, -W / 2 + 0.05, W / 2 - 0.05, 0.8, 0.9)
+    parts.append(link('ctaBlue', bm, mats['ctaBlue']))
+    bm = bmesh.new()
+    for y in (-1, 1):
+        yy0, yy1 = y * (W / 2), y * (W / 2 + 0.009)
+        cuts = [bx + 0.05] + ([c for d in (rdoor, fdoor) for c in d] if y < 0 else []) + [fx - 0.05]
+        for x0, x1 in zip(cuts[::2], cuts[1::2]):
+            box(bm, x0, x1, yy0, yy1, 1.03, 1.09)
+    parts.append(link('ctaRed', bm, mats['ctaRed']))
+
+    bm = bmesh.new()  # destination signs: over the windscreen and over the front door
+    box(bm, fx - 0.005, fx + 0.012, -W / 2 + 0.2, W / 2 - 0.2, H - 0.36, H - 0.14)
+    box(bm, fdoor[0] - 0.45, fdoor[0] - 0.05, -W / 2 - 0.012, -W / 2 + 0.01, H - 0.27, H - 0.12)
+    parts.append(link('sign', bm, mats['sign']))
+    bm = bmesh.new()
+    for y in (-1, 1):
+        box(bm, fx, fx + 0.02, y * (W / 2 - 0.32), y * (W / 2 - 0.08), clear + 0.35, clear + 0.5)
+    parts.append(link('lamp', bm, mats['lamp']))
+    bm = bmesh.new()
+    for y in (-1, 1):
+        box(bm, bx - 0.02, bx, y * (W / 2 - 0.25), y * (W / 2 - 0.08), clear + 0.4, clear + 0.9)
+    parts.append(link('tail', bm, mats['tail']))
+
+    tire, rim = bmesh.new(), bmesh.new()
+    wheels(tire, rim, r, BUS['axles'], W, dual=(BUS['axles'][1],))
+    parts.append(link('tire', tire, mats['tire']))
+    parts.append(link('rim', rim, mats['rim']))
+    return join(parts, 'Bus')
+
+
+def box_truck(mats):
+    """Box truck with the roll-up door open at the back: the cab at the front (+X), the box behind it on the
+    chassis. The tailgate ramp behind it is built by the game (its length comes from the level)."""
+    L, W, H, r, floor, cabL = TRUCK['len'], TRUCK['wide'], TRUCK['roof'], TRUCK['wheel_r'], TRUCK['floor'], TRUCK['cab']
+    fx, bx = L / 2, -L / 2
+    boxF = fx - cabL - 0.05
+    parts = []
+    bm = bmesh.new()  # the box (paint): a shell open at the back
+    box(bm, bx, boxF, -W / 2, W / 2, floor, H)
+    # cab: short hood, upright windscreen, a fairing on the roof up toward the box
+    cab = [(boxF + 0.05, 0.42), (fx - 0.05, 0.42), (fx, 0.55), (fx, 0.95), (fx - 0.2, 1.05), (fx - 0.42, 1.08),
+           (fx - 0.62, 1.72), (boxF + 0.08, 1.76)]
+    prism(bm, cab, -W / 2 + 0.05, W / 2 - 0.05)
+    fairing = [(boxF + 0.05, 1.76), (fx - 0.62, 1.72), (boxF + 0.25, 1.95), (boxF + 0.05, 1.95)]
+    prism(bm, fairing, -W / 2 + 0.15, W / 2 - 0.15)
+    parts.append(link('truckpaint', bm, mats['paint']))
+
+    bm = bmesh.new()  # the open back: dark inside, set into the box
+    box(bm, bx - 0.005, bx + 0.02, -W / 2 + 0.07, W / 2 - 0.07, floor + 0.05, H - 0.12)
+    parts.append(link('inside', bm, mats['inside']))
+
+    bm = bmesh.new()  # aluminium rails top and bottom, corner posts, the rolled-up door's drum, rear frame
+    for y in (-1, 1):
+        yy0, yy1 = y * (W / 2 - 0.01), y * (W / 2 + 0.012)
+        box(bm, bx - 0.01, boxF + 0.01, yy0, yy1, H - 0.07, H)
+        box(bm, bx - 0.01, boxF + 0.01, yy0, yy1, floor, floor + 0.08)
+        for x in (bx + 0.03, boxF - 0.03):
+            box(bm, x - 0.035, x + 0.035, yy0, yy1, floor, H)
+        for x in [bx + 0.03 + i * (boxF - bx - 0.06) / 4 for i in (1, 2, 3)]:  # side posts
+            box(bm, x - 0.015, x + 0.015, y * (W / 2), y * (W / 2 + 0.008), floor + 0.08, H - 0.07)
+    box(bm, bx - 0.025, bx + 0.02, -W / 2, W / 2, H - 0.14, H)  # header with the door rolled up in it
+    for y in (-1, 1):
+        box(bm, bx - 0.025, bx + 0.02, y * (W / 2 - 0.08), y * W / 2, floor, H)
+    parts.append(link('frame', bm, mats['frame']))
+
+    bm = bmesh.new()  # chassis rails, fuel tank, underride bar, steps, bumper, grille, mirror
+    box(bm, bx + 0.2, fx - 0.1, -0.45, 0.45, 0.3, floor)
+    box(bm, -0.1, 0.5, -W / 2 + 0.12, -W / 2 + 0.4, 0.22, 0.48)  # fuel tank
+    box(bm, bx + 0.05, bx + 0.12, -W / 2 + 0.1, W / 2 - 0.1, 0.25, 0.33)
+    for y in (-1, 1):
+        box(bm, bx + 0.08, bx + 0.12, y * 0.7, y * 0.75, 0.3, floor)
+        box(bm, boxF + 0.12, boxF + 0.4, y * (W / 2 - 0.08), y * (W / 2 + 0.02), 0.32, 0.37)  # cab step
+        box(bm, fx - 0.55, fx - 0.5, y * (W / 2 - 0.05), y * (W / 2 + 0.12), 1.2, 1.24)  # mirror arm
+        box(bm, fx - 0.58, fx - 0.5, y * (W / 2 + 0.1), y * (W / 2 + 0.16), 1.05, 1.4)  # mirror
+    box(bm, fx - 0.02, fx + 0.08, -W / 2 + 0.05, W / 2 - 0.05, 0.4, 0.6)
+    box(bm, fx - 0.01, fx + 0.015, -0.55, 0.55, 0.65, 0.92)
+    parts.append(link('trucktrim', bm, mats['trim']))
+
+    bm = bmesh.new()  # windscreen and side windows
+    box(bm, fx - 0.6, fx - 0.42, -W / 2 + 0.12, W / 2 - 0.12, 1.12, 1.68)
+    bmesh.ops.rotate(bm, verts=bm.verts[:], cent=(fx - 0.52, 0, 1.4), matrix=Matrix.Rotation(-0.29, 3, 'Y'))
+    for y in (-1, 1):
+        prism(bm, [(boxF + 0.3, 1.12), (fx - 0.5, 1.12), (fx - 0.66, 1.66), (boxF + 0.3, 1.68)],
+              y * (W / 2 - 0.06), y * (W / 2 - 0.045))
+    parts.append(link('truckglass', bm, mats['glass']))
+    bm = bmesh.new()
+    for y in (-1, 1):
+        box(bm, fx, fx + 0.02, y * (W / 2 - 0.35), y * (W / 2 - 0.1), 0.68, 0.84)
+        box(bm, fx - 0.4, fx - 0.3, y * (W / 2 - 0.12), y * (W / 2 - 0.02), 1.76, 1.8)  # marker lights over the cab
+    parts.append(link('lamp', bm, mats['lamp']))
+    bm = bmesh.new()
+    for y in (-1, 1):
+        box(bm, bx - 0.02, bx, y * (W / 2 - 0.08), y * (W / 2 - 0.02), floor + 0.1, floor + 0.35)
+    parts.append(link('tail', bm, mats['tail']))
+    tire, rim = bmesh.new(), bmesh.new()
+    wheels(tire, rim, r, TRUCK['axles'], W, dual=(TRUCK['axles'][1],))
+    parts.append(link('tire', tire, mats['tire']))
+    parts.append(link('rim', rim, mats['rim']))
+    return join(parts, 'BoxTruck')
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     mats = {k: material(k, v) for k, v in COLORS.items()}
-    cars = [car('Sedan', mats, 'sedan'), car('Robotaxi', mats, 'robotaxi'), car('Cruiser', mats, 'cruiser')]
+    cars = [car('Sedan', mats, 'sedan'), car('Robotaxi', mats, 'robotaxi'), car('Cruiser', mats, 'cruiser'),
+            bus(mats), box_truck(mats)]
     for i, ob in enumerate(cars):  # side by side in the file; the game reads each from its origin
         ob.location.y = i * 2.5
     return cars
