@@ -10,6 +10,7 @@ import { buildLevel, type Car, type EscapeKind, type Level } from '../physics/le
 import { EXIT_PIECE, PIECES, START_PIECE, type Piece } from './pieces';
 import { CHUNK_W, makeLayout } from './layout';
 import { clearable } from './validate';
+import { makeRng, randInt } from './rng';
 
 export const ACTS = 5;
 export const FLOORS_PER_ACT = 3;
@@ -33,11 +34,19 @@ export function endsAct(floor: number): boolean {
   return floor % FLOORS_PER_ACT === 0;
 }
 
+// acts 3 and 4 get their own set pieces with their biomes; until then they repeat 1 and 2
 export function escapeKind(act: number): EscapeKind {
-  return act >= ACTS ? 'finale' : 'roadblock';
+  if (act >= ACTS) return 'finale';
+  return act % 2 === 0 ? 'chopper' : 'roadblock';
 }
 
-export const ESCAPE_NAMES: Record<EscapeKind, string> = { roadblock: 'ROADBLOCK', finale: 'THE LAST ROADBLOCK' };
+export const ESCAPE_NAMES: Record<EscapeKind, string> = { roadblock: 'ROADBLOCK', chopper: 'HELICOPTER', finale: 'THE LAST ROADBLOCK' };
+
+export const L_TRACKS = {
+  height: 3.5 * TILE, // underside above the street: clear of an ollie and a flip, so you can't hit it
+  every: [16, 24], // tiles between the starts of two stretches
+  length: [5, 8],
+};
 
 // one plain street piece, for the set piece to stand on
 const FLAT: Piece = { ...EXIT_PIECE, name: 'flat' };
@@ -65,9 +74,10 @@ export function buildEscape(seed: number, act: number): Level {
   const kind = escapeKind(act);
   const floor = act * FLOORS_PER_ACT;
   //the street run: library pieces at this act's depth, then flat street for the set piece and the gate
-  const run = makeLayout(seed * 3 + act * 92821, floor, PIECES, ESCAPE.streetPieces);
-  const blocks = kind === 'finale' ? 2 : 1;
-  const flats = blocks * 3;
+  const chopper = kind !== 'roadblock';
+  const run = makeLayout(seed * 3 + act * 92821, floor, PIECES, ESCAPE.streetPieces + (chopper ? 3 : 0));
+  const blocks = kind === 'finale' ? 2 : kind === 'roadblock' ? 1 : 0;
+  const flats = Math.max(1, blocks * 3);
   const pieces = [START_PIECE, ...run.pieces.slice(1, -1), ...new Array<Piece>(flats).fill(FLAT), EXIT_PIECE];
   const grid = run.grid.map((_, r) =>
     pieces.map((p) => (r === 0 ? '.'.repeat(CHUNK_W) : p.rows[Math.min(r - 1, 9)])).join(''),
@@ -76,7 +86,23 @@ export function buildEscape(seed: number, act: number): Level {
   const x0 = (pieces.length - 1 - flats) * CHUNK_W * TILE + 4 * TILE;
   let x = x0;
   for (let b = 0; b < blocks; b++) x = roadblock(level.cars, level.streetY, x, 3 + act) + 10 * TILE;
-  return { ...level, danger: 3, escape: { kind, act, x0, x1: x - 10 * TILE } };
+  //the helicopter hunts from the end of the start piece; L tracks overhead every so often to hide under
+  const covers: { x0: number; x1: number; y: number }[] = [];
+  let chopperFrom: number | undefined;
+  if (chopper) {
+    chopperFrom = CHUNK_W * TILE;
+    const rng = makeRng(seed * 5 + act * 6007);
+    const [e0, e1] = L_TRACKS.every;
+    const [l0, l1] = L_TRACKS.length;
+    for (let c = chopperFrom + 14 * TILE; c < level.exitX - 10 * TILE; c += (e0 + randInt(rng, e1 - e0 + 1)) * TILE) {
+      covers.push({ x0: c, x1: c + (l0 + randInt(rng, l1 - l0 + 1)) * TILE, y: level.streetY - L_TRACKS.height });
+    }
+  }
+  return {
+    ...level,
+    danger: 3,
+    escape: { kind, act, x0: blocks ? x0 : chopperFrom!, x1: blocks ? x - 10 * TILE : level.exitX, chopperFrom, covers },
+  };
 }
 
 // an escape the no-boon reference bot gets through: re-rolled street runs until one passes

@@ -226,6 +226,57 @@ export function buildKit(level: Level): THREE.Group {
     }
   }
 
+  //--- the L: elevated train tracks over the street on a helicopter escape (you hide under them) ------
+  if (level.escape?.covers.length) {
+    const steel = new THREE.MeshLambertMaterial({ color: 0x2f3a33 });
+    const rust = new THREE.MeshLambertMaterial({ color: 0x5a3a2a });
+    const tie = new THREE.MeshLambertMaterial({ color: 0x3a2a20 });
+    for (const c of level.escape.covers) {
+      const x0 = toX(c.x0);
+      const x1 = toX(c.x1);
+      const y = toY(level, c.y);
+      const w = x1 - x0;
+      //deck and the two deep side girders
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(w, 0.25, 3.2), steel);
+      deck.position.set(x0 + w / 2, y + 0.125, 0.2);
+      kit.add(deck);
+      for (const z of [-1.35, 1.75]) {
+        const girder = new THREE.Mesh(new THREE.BoxGeometry(w, 0.7, 0.12), steel);
+        girder.position.set(x0 + w / 2, y + 0.3, z);
+        kit.add(girder);
+        //lattice: X braces along the girder face
+        for (let x = x0 + 0.5; x < x1 - 0.4; x += 1) {
+          for (const r of [0.6, -0.6]) {
+            const brace = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.06, 0.04), rust);
+            brace.position.set(x, y + 0.3, z + (z > 0 ? 0.08 : -0.08));
+            brace.rotation.z = r;
+            kit.add(brace);
+          }
+        }
+      }
+      //ties and running rails on top
+      for (let x = x0 + 0.2; x < x1; x += 0.5) {
+        const t = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 2.2), tie);
+        t.position.set(x, y + 0.3, 0.2);
+        kit.add(t);
+      }
+      for (const z of [-0.3, 0.7]) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, 0.08), rust);
+        rail.position.set(x0 + w / 2, y + 0.38, z);
+        kit.add(rail);
+      }
+      //columns down to the street, in the back lane so they never touch the skate lane
+      for (let x = x0 + 0.6; x < x1; x += 3) {
+        const col = new THREE.Mesh(new THREE.BoxGeometry(0.35, y, 0.35), steel);
+        col.position.set(x, y / 2, -2.4);
+        kit.add(col);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 1.1), steel);
+        arm.position.set(x, y - 0.1, -1.9);
+        kit.add(arm);
+      }
+    }
+  }
+
   //--- exit: a glowing gate -------------------------------------------------------------------
   const gate = new THREE.Mesh(
     new THREE.TorusGeometry(1.6, 0.12, 8, 32, Math.PI),

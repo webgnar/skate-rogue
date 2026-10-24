@@ -29,9 +29,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   so hitting two or three ends the run. Acts 2-4 also use the roadblock until their own set pieces exist.
 - **Finale (act 5).** Two roadblocks back to back; its gate wins the run: `YOU ESCAPED!`, wins counted on the phone.
 - **Act clear pays** $30 + 15 x act, 3 x act Stoken and 3x the floor-clear score.
-- **Helicopter (act 2), from the card I sent:** going with my recommendation, "outrun it, hide under the L": the
-  spotlight chases you a little slower than cruising speed, rail speed and kicks pull away, slams let it catch
-  up, and the L-train tracks overhead block the light. Will switch if zack picks another option.
+- **Helicopter (act 2), from the card I sent:** going with my recommendation, "outrun it, hide under the L".
+  Built: the light hunts from behind at 1.4x cruising speed, then locks on and follows at up to 1.04x. Rail speed
+  and Speed Kicks pull out of it, and a slam lets it sit on you. Being lit adds 14 Heat a second. L-train tracks
+  overhead (3.5 tiles up, 5-8 tiles long, every 16-24 tiles) block it: duck under one and it loses you,
+  overshoots and turns back. "SPOTTED!" / "LOST 'EM" callouts. The street run is 8 pieces with no roadblock.
+- **Acts 3 and 4** reuse the roadblock and the helicopter (3 = roadblock, 4 = helicopter) until their biome set
+  pieces exist (the flood / chariots / guards, and the drone swarm). **The finale** is two roadblocks with the
+  helicopter hunting the whole way.
 
 ## Models thread: animation
 
