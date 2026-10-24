@@ -5,6 +5,7 @@ import { BoonFx } from '../src/render/boon-fx';
 import { EscapeFx } from '../src/render/escape-fx';
 import { SirenFx, SIREN } from '../src/render/siren-fx';
 import { PhoneFx, PHONE, flashAt } from '../src/render/phone-fx';
+import { GateFx, GATE_FX } from '../src/render/gate-fx';
 import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
 import { landDust, landKick } from '../src/render/land-fx';
@@ -461,6 +462,38 @@ describe('filmers\' phones', () => {
     fx.setNight(1);
     fx.update([]);
     expect(mat.uniforms.uAmt.value).toBeGreaterThan(day * 2);
+  });
+});
+
+describe('bounty gate', () => {
+  const kit = () => {
+    const k = new THREE.Group();
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.2), new THREE.MeshBasicMaterial({ color: 0x40ffd0 }));
+    arch.userData.gate = true;
+    k.add(arch);
+    return k;
+  };
+  it('turns the portal over smoothly once the bounty is claimable, and back when Heat drops', () => {
+    const fx = new GateFx();
+    fx.build(kit());
+    const mat = (fx.group.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
+    fx.update(0.1, 0);
+    expect(mat.uniforms.uBounty.value).toBe(0);
+    fx.setBounty(true);
+    fx.update(0.1, 0);
+    expect(mat.uniforms.uBounty.value).toBeCloseTo(0.1 * GATE_FX.bountyEase);
+    for (let i = 0; i < 20; i++) fx.update(0.1, 0);
+    expect(mat.uniforms.uBounty.value).toBe(1);
+    fx.setBounty(false);
+    fx.update(0.1, 0);
+    expect(mat.uniforms.uBounty.value).toBeLessThan(1);
+  });
+  it('starts each floor unclaimed', () => {
+    const fx = new GateFx();
+    fx.setBounty(true);
+    for (let i = 0; i < 20; i++) fx.update(0.1, 0);
+    fx.build(kit());
+    expect(fx.bounty).toBe(0);
   });
 });
 

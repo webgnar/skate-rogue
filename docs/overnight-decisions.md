@@ -170,6 +170,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   that fades in about a sixth of a second. It's a spot the size of a person's head, never the screen, and
   reduce-flashing turns it off. Two instanced draws for everyone. I touched peds.ts only to report where the phones
   are and when they snap.
+- **The gate shows when a bounty will pay (gate-fx.ts).** On a wanted-poster floor, once Heat is at the bounty's 50,
+  the exit portal turns the payout's violet with a faint gold rim. It eases over about 0.4 s each way, so Heat
+  hovering at 50 fades it rather than flickering it. Before this, the only feedback was the callout after you'd
+  already reached the gate.
 - **Landmarks get no extra night treatment.** I checked all seven at floor 13. They already carry their own glowing
   materials and read fine against the night sky, so I left them alone.
 

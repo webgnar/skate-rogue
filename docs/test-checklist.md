@@ -285,6 +285,8 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
       kick dust. All of it gets bigger when they surge after you slam.
 - [ ] With `?noflash`, the helicopter's light pool holds steady instead of pulsing.
 - [ ] Reach the gate hot on a wanted-poster floor: a violet-and-gold fountain comes with BOUNTY CLAIMED.
+- [ ] On a wanted-poster floor, push Heat to 50 or more: the exit portal turns violet with a gold rim. Let Heat
+      drop below 50 and it fades back to its normal colour.
 
 **People on the street** (`?floor=12`)
 

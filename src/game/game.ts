@@ -767,6 +767,7 @@ export class Game {
     this.heatCue.update(heat, dt);
     this.view.night.update(dt, this.skater.x / TILE, heat);
     this.view.gates.setRoad(this.sim.roadAhead);
+    this.view.gates.setBounty(!!this.level.bounty && this.sim.heat.value >= BOUNTY.heat);
     this.hud.warn(
       this.state === 'skate' &&
         (this.sim.traffic.inLane.some((v) => v.speed < 0 && v.x0 - this.skater.x > 17 * TILE) ||
