@@ -13,6 +13,7 @@ import { EXIT_PIECE, PIECES, START_PIECE, type Piece } from './pieces';
 import { CHUNK_W, makeLayout } from './layout';
 import { clearable } from './validate';
 import { droneSpots } from '../sim/drones';
+import { placeProps } from './props';
 import { makeRng, randInt } from './rng';
 
 export const ACTS = 5;
@@ -113,13 +114,18 @@ export function buildEscape(seed: number, act: number): Level {
   if (swarm) {
     const rng = makeRng(seed * 7 + act * 4093);
     const drones = droneSpots(x0, level.exitX - 4 * TILE, rng);
-    return { ...level, danger: 3, escape: { kind, act, x0, x1: level.exitX, covers, drones } };
+    return withProps({ ...level, danger: 3, escape: { kind, act, x0, x1: level.exitX, covers, drones } });
   }
-  return {
+  return withProps({
     ...level,
     danger: 3,
     escape: { kind, act, x0: blocks ? x0 : chopperFrom!, x1: blocks ? x - 10 * TILE : level.exitX, chopperFrom, covers },
-  };
+  });
+}
+
+function withProps(level: Level): Level {
+  level.props = placeProps(level);
+  return level;
 }
 
 // an escape the no-boon reference bot gets through: re-rolled street runs until one passes

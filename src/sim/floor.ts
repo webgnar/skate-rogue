@@ -7,6 +7,7 @@ import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
 import { Swarm } from './drones';
 import type { Car, Level, PickupKind } from '../physics/level';
+import { PROP_SIZE } from '../gen/props';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
 import { crossPlan } from '../traffic/cross';
@@ -19,7 +20,19 @@ export type FloorEvent =
   | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
-  | { type: 'decoy' }; // the Decoy boon pulled the cruiser back
+  | { type: 'decoy' } // the Decoy boon pulled the cruiser back
+  | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' };
+
+// how a prop got smashed (GDD: Smashables), for the effects to tell apart
+export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb';
+
+export const SMASH = {
+  bigLanding: 8, // px/frame of fall: a landing this hard breaks everything near you
+  landReach: 2 * TILE,
+  bombReach: 5 * TILE, // a kicker's bomb blows props away this far ahead
+  slamReach: 1.5 * TILE,
+  aiCool: 3, // Heat off for smashing the AI's stuff
+};
 
 // which board trigger a skater event is
 const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
@@ -47,6 +60,8 @@ export class FloorSim {
   readonly swarm: Swarm | null; // the drone swarm escape
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
+  readonly broken: boolean[]; // props smashed
+  private fall = 0; // how fast we were falling before this step
   private near = new Map<Car, { gap: number; touched: boolean }>(); // vehicles we're over: the closest pass, and any contact
 
   constructor(
@@ -59,6 +74,7 @@ export class FloorSim {
     this.heat.value = startHeat;
     if (mods) this.heat.mods = { rise: mods.heatRise, hopCool: mods.hopCool, decoy: mods.decoy, slow: mods.slowHeat };
     this.taken = level.pickups.map(() => false);
+    this.broken = level.props.map(() => false);
     const esc = level.escape;
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
@@ -70,6 +86,7 @@ export class FloorSim {
     if (this.state !== 'skate') return;
     this.traffic.step(this.skater.x);
     this.swarm?.step(this.skater);
+    this.fall = this.skater.mode === 'air' ? this.skater.vsp : 0;
     const crossing = this.traffic.crossing;
     this.skater.movers = this.swarm || crossing.length ? [...this.traffic.inLane, ...crossing, ...(this.swarm?.boxes ?? [])] : this.traffic.inLane;
     this.skater.step(input);
@@ -82,6 +99,7 @@ export class FloorSim {
     this.runBoard(skaterEvents);
     this.collect();
     this.closeCalls(skaterEvents);
+    this.smash(skaterEvents);
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
     if (this.chopper?.step(this.skater)) this.heat.add(CHOPPER.heatPerSec / 60);
@@ -177,6 +195,36 @@ export class FloorSim {
         }
       }
     }
+  }
+
+  // smashables: skate through them, land hard near them, grind them off a ledge, slam into them, bomb past them
+  private smash(events: readonly SkaterEvent[]): void {
+    const props = this.level.props;
+    if (!props.length) return;
+    const sk = this.skater;
+    const has = (t: SkaterEvent['type']) => events.some((e) => e.type === t);
+    const slam = has('slam');
+    const land = has('land');
+    const bombing = sk.carry >= PHYS.bombSpeed - 0.5;
+    const how: SmashHow = slam ? 'slam' : sk.mode === 'grind' || sk.mode === 'rail' ? 'grind' : has('hop') ? 'hop' : land ? 'land' : bombing ? 'bomb' : 'roll';
+    const half = PHYS.width / 2;
+    props.forEach((p, i) => {
+      if (!p.breaks || this.broken[i]) return;
+      const size = PROP_SIZE[p.name] ?? { w: 8, h: 16 };
+      const dx = p.x - sk.x;
+      //on the same ground (within a step) and side by side
+      const level = Math.abs(sk.y - p.y) < 10;
+      let by: SmashHow | null = null;
+      const touching = Math.abs(dx) < size.w + half && sk.y > p.y - size.h && sk.y - PHYS.height < p.y;
+      if (touching) by = how;
+      else if (land && this.fall >= SMASH.bigLanding && level && Math.abs(dx) < SMASH.landReach) by = 'land';
+      else if (slam && level && Math.abs(dx) < SMASH.slamReach) by = 'slam';
+      else if (has('kicker') && dx > 0 && dx < SMASH.bombReach && Math.abs(p.y - this.level.streetY) < 2) by = 'bomb';
+      if (!by) return;
+      this.broken[i] = true;
+      this.events.push({ type: 'smash', index: i, prop: p.name, x: p.x, y: p.y, how: by, ...(p.loot ? { loot: p.loot } : {}) });
+      if (p.ai) this.heat.add(-SMASH.aiCool);
+    });
   }
 
   private collect(): void {

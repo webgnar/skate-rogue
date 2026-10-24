@@ -20,6 +20,8 @@ export const SCORE = {
   kicker: 150, // off a box truck's tailgate
   nearMiss: 200, // a close call: over a vehicle with a few px to spare, or one passing right under you
   drone: 250, // stomping a drone out of the sky, on top of the hop
+  smash: 25, // a prop smashed: a little style, never worth more than skating well
+  smashCash: 3, // a prop hiding coins
   stoken: 100,
   cashCoin: 1,
   floorClear: 250,
