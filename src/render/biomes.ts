@@ -81,6 +81,42 @@ export const BIOMES: Record<BiomeId, BiomeLook> = {
   },
 };
 
+// the far backdrop behind each district: QFS's own per-world layers (survivor_skins), as cards far behind the
+// street that drift slowly with the camera. Tinted by the mood like Chicago's skyline; strong reds and blues keep
+// their colour at night. Greece has only its sky.
+export interface BackdropLayer {
+  file: string; // in public/tex
+  px: [number, number]; // image size
+  scale: number; // world units per pixel
+  z: number;
+  lift: number; // world units its bottom sits above Chicago's skyline's
+  parallax: number; // share of the camera's movement it follows (1: fixed to the camera)
+}
+
+const CHICAGO_SKYLINE: BackdropLayer = { file: 'chicago_skyline.png', px: [726, 400], scale: 1 / 6, z: -70, lift: 0, parallax: 0.85 };
+
+export const BACKDROPS: Record<BiomeId, BackdropLayer[]> = {
+  chicago: [CHICAGO_SKYLINE],
+  clemente: [{ file: 'bkgd_clemente.png', px: [900, 158], scale: 1 / 6, z: -60, lift: 0, parallax: 0.8 }],
+  greece: [],
+  atlantis: [
+    { file: 'bkgd_atlantis_dragon.png', px: [1400, 382], scale: 1 / 8, z: -75, lift: 12, parallax: 0.9 },
+    { file: 'bkgd_atlantis_wave.png', px: [96, 64], scale: 1 / 3, z: -62, lift: 0, parallax: 0.8 },
+  ],
+  museum: [
+    { file: 'bkgd_museum_city.png', px: [700, 260], scale: 1 / 5, z: -72, lift: 0, parallax: 0.88 },
+    { file: 'bkgd_museum_sculptures.png', px: [1100, 400], scale: 1 / 7, z: -60, lift: 0, parallax: 0.8 },
+  ],
+  hightech: [{ file: 'bkgd_hightech.png', px: [726, 400], scale: 1 / 6, z: -70, lift: 0, parallax: 0.85 }],
+  space: [
+    { file: 'bkgd_space_stars.png', px: [726, 400], scale: 1 / 6, z: -78, lift: 0, parallax: 0.95 },
+    { file: 'bkgd_space_planets.png', px: [300, 26], scale: 1 / 2, z: -74, lift: 28, parallax: 0.92 },
+  ],
+  hive: [CHICAGO_SKYLINE],
+};
+
+export const BACKDROP_SPAN = (726 / 6) * 8; // world units each card covers, as Chicago's always has
+
 export function isBiome(id: string | null): id is BiomeId {
   return id !== null && id in BIOMES;
 }

@@ -7,7 +7,7 @@ import { NightCity } from './night';
 import { FX } from './fx-settings';
 import { batchStatic } from './batch';
 import { GateFx } from './gate-fx';
-import { Ambience, type BiomeId } from './biomes';
+import { Ambience, BACKDROP_SPAN, BACKDROPS, type BiomeId } from './biomes';
 import { loadSheet } from './skins';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution, solid } from './toon';
@@ -31,7 +31,8 @@ export class StreetView {
   readonly gates = new GateFx();
   readonly ambience = new Ambience();
   private wet = 0;
-  private skyline: THREE.Mesh | null = null;
+  private backdrop: { mesh: THREE.Mesh; parallax: number }[] = [];
+  private readonly backdropTexs = new Map<string, THREE.Texture>();
   private readonly hemis: THREE.HemisphereLight[] = [];
   private readonly suns: THREE.DirectionalLight[] = [];
   private readonly sky = skyMesh();
@@ -80,21 +81,56 @@ export class StreetView {
 
   async loadBackdrop(base: string): Promise<void> {
     this.base = base;
-    //QFS's Chicago sky behind everything, and its pink skyline as a far card
-    //the sky is a gradient drawn per mood (QFS's Chicago sky is a plain blue gradient, the afternoon mood)
+    //the sky is a gradient drawn per mood (QFS's Chicago sky is a plain blue gradient, the afternoon mood);
+    //behind the street, the district's far cards (Chicago's pink skyline)
     this.scene.background = null;
-    const skylineTex = pixelTexture(await loadImage(`${base}tex/chicago_skyline.png`));
-    skylineTex.wrapS = THREE.RepeatWrapping;
-    skylineTex.repeat.set(8, 1);
-    skylineTex.updateMatrix();
-    const w = 726 / 6;
-    this.skyline = new THREE.Mesh(
-      new THREE.PlaneGeometry(w * 8, 400 / 6),
-      skylineMaterial(skylineTex),
+    await this.buildBackdrop(this.biome);
+  }
+
+  // the district's far cards (biomes.ts BACKDROPS); a layer that fails to load is left out
+  private async buildBackdrop(id: BiomeId): Promise<void> {
+    const layers = await Promise.all(
+      BACKDROPS[id].map(async (l) => {
+        try {
+          return { l, tex: await this.backdropTex(l.file) };
+        } catch (err) {
+          console.warn(`backdrop ${l.file} failed to load`, err);
+          return null;
+        }
+      }),
     );
-    this.skyline.position.set(0, 400 / 12 - 10, -70);
-    this.scene.add(this.skyline);
-    if (this.mood) this.setMood(this.mood);
+    for (const b of this.backdrop) {
+      this.scene.remove(b.mesh);
+      b.mesh.geometry.dispose();
+      (b.mesh.material as THREE.Material).dispose();
+    }
+    this.backdrop = [];
+    for (const one of layers) {
+      if (!one) continue;
+      const { l } = one;
+      const w = l.px[0] * l.scale;
+      const h = l.px[1] * l.scale;
+      const repeat = Math.max(1, Math.round(BACKDROP_SPAN / w));
+      const tex = one.tex.clone();
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.repeat.set(repeat, 1);
+      tex.needsUpdate = true;
+      tex.updateMatrix();
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w * repeat, h), skylineMaterial(tex));
+      mesh.position.set(0, h / 2 - 10 + l.lift, l.z);
+      this.scene.add(mesh);
+      this.backdrop.push({ mesh, parallax: l.parallax });
+    }
+    if (this.mood) this.setMood(this.mood, this.rain.amount);
+  }
+
+  private async backdropTex(file: string): Promise<THREE.Texture> {
+    let t = this.backdropTexs.get(file);
+    if (!t) {
+      t = pixelTexture(await loadImage(`${this.base}tex/${file}`));
+      this.backdropTexs.set(file, t);
+    }
+    return t;
   }
 
   // light, fog, sky and skyline for a time of day and weather
@@ -118,8 +154,8 @@ export class StreetView {
     sky.uTop.value.setHex(m.skyTop);
     sky.uBottom.value.setHex(m.skyBottom);
     sky.uStars.value = m.stars;
-    if (this.skyline) {
-      const u = (this.skyline.material as THREE.ShaderMaterial).uniforms;
+    for (const b of this.backdrop) {
+      const u = (b.mesh.material as THREE.ShaderMaterial).uniforms;
       u.uTint.value.setHex(m.skyline);
       u.uNeon.value = m.neon;
     }
@@ -171,6 +207,7 @@ export class StreetView {
     });
     this.biome = sheet ? id : 'chicago';
     this.sheet = sheet;
+    await this.buildBackdrop(id);
     if (this.kit) this.setLevel(this.level, this.seed, this.floor);
   }
 
@@ -192,7 +229,7 @@ export class StreetView {
     this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0.25);
     this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
     this.punchAmt *= Math.pow(0.91, dt * 60);
-    if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
+    for (const b of this.backdrop) b.mesh.position.x = this.camX * b.parallax; // far away: barely moves
     this.rain.update(dt, this.camera);
     this.ambience.update(dt, this.camera, this.pointScale);
     this.lightning(dt);

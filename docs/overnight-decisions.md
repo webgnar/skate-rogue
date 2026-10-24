@@ -130,6 +130,18 @@ and listed it here for review. Any of these can be flipped in the morning.
   up) bursts and kicks the camera from 0.06, growing to a 0.2 cap, which stays well under a slam's kick. A sketchy
   landing without a flip still gets the lopsided scuff. Grind sparks now follow what you grind (skater.material)
   instead of rail versus ledge mode.
+- **Per-district backdrops (src/render/biomes.ts BACKDROPS).** These are QFS's own world layers, used as far cards
+  behind the street:
+  - Clemente: its park wall and trees.
+  - Atlantis: the wave band, with the blue dragon behind it.
+  - Museum: the night-city photo, with the Chicago sculptures in front.
+  - High-Tech: the green sculpture skyline.
+  - Space: stars and a planet.
+  - Chicago and the Hive keep the pink skyline. Greece has only its sky, as in QFS.
+
+  Each card drifts at its own parallax and takes the mood tint, so red and blue neon stays lit at night. Images are
+  cropped and padded from the QFS sprites into public/tex/bkgd_*.png. The models thread did the per-biome kits
+  (#71), and I took the backdrops.
 
 ## Effects thread: fx6 leftovers
 
