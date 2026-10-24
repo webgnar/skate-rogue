@@ -15,6 +15,10 @@
 #   OverpassPillar  a concrete pillar 1 tall (stretched to the deck), origin at its foot, behind the lane
 #   OverpassCap     the flared head under the deck, origin at the pillar's top
 #   OverpassRail    2 tiles of railing along the back of the deck, origin at the deck top
+#   ElCar         an L car (CTA 5000-series style) 4 long, x 0..4 running +x, origin at the bottom of its wheels on
+#                 the running rail heads, centred between the rails (game z 0.2): stainless body, a blue and red
+#                 stripe, the dark window band, two door pairs a side, low roof gear, a plain end at each end
+#   ElCarFront    the same car with the cab at its +x end: windshield, destination sign, headlights
 #   WantedBoard   the bounty's notice board: two posts, a framed plank panel and a little roof, origin on the ground;
 #                 the game pins its poster (a canvas texture) over the panel, 1.2 x 1.6 centred 1.95 up
 import math
@@ -53,6 +57,14 @@ COLORS = {
     'boardWood': 0x6A4428,
     'boardPlank': 0x7E5634,
     'boardRoof': 0x3A2A1E,
+    'elCarSteel': 0xB4BAC2,
+    'elCarDoor': 0x9EA4AC,
+    'elCarGlass': 0x1C2228,
+    'elCarBlue': 0x2A4FB0,
+    'elCarRed': 0xC8282E,
+    'elCarUnder': 0x30333A,
+    'elCarSign': 0xFFB030,
+    'elCarLamp': 0xFFF4D0,
     'sigRed': 0xFF2A2A,  # glow
     'sigGreen': 0x3AFF7A,  # glow
 }
@@ -212,15 +224,73 @@ def wanted_board(m):
                  link('boardRoof', roof, m['boardRoof'])], 'WantedBoard')
 
 
+CAR_L, CAR_H = 4.0, 1.7
+CAR_Y = (-1.15, 0.75)  # 1.9 wide about Blender y -0.2 (game z 0.2), between the running rails
+
+
+def el_car(m, cab=False):
+    """An L car on the running rails: bogies and wheels under a stainless body. Its faces are the camera side
+    (Blender -y) and the back; both get the stripe, windows and doors. cab: the +x end is the driver's end."""
+    y0, y1 = CAR_Y
+    mid = (y0 + y1) / 2
+    steel, door, glass, blue, red, under = (bmesh.new() for _ in range(6))
+    # running gear: two bogies, each two axles over the rails (Blender y 0.3 and -0.7)
+    for bx in (0.75, 3.25):
+        box(under, bx - 0.42, bx + 0.42, -0.85, 0.45, 0.1, 0.3)
+        for ax in (bx - 0.25, bx + 0.25):
+            cyl(under, 0.14, 1.2, (ax, -0.2, 0.14), segs=8)
+    box(under, 0.1, 3.9, y0 + 0.1, y1 - 0.1, 0.3, 0.44)  # underframe, set in from the sides
+    box(steel, 0.02, 3.98, y0, y1, 0.44, 1.58)  # the body
+    box(steel, 0.08, 3.92, y0 + 0.1, y1 - 0.1, 1.58, 1.64)  # the roof, a little narrower
+    box(under, 1.3, 2.7, mid - 0.5, mid + 0.5, 1.64, 1.7)  # roof gear (air conditioning), kept low
+    for fy, out in ((y0, -1), (y1, 1)):
+        face = (fy, fy + out * 0.015) if out > 0 else (fy + out * 0.015, fy)
+        proud = (fy, fy + out * 0.025) if out > 0 else (fy + out * 0.025, fy)
+        prouder = (fy, fy + out * 0.035) if out > 0 else (fy + out * 0.035, fy)  # over the door leaves
+        box(blue, 0.02, 3.98, *face, 0.74, 0.8)  # the stripe under the windows
+        box(red, 0.02, 3.98, *face, 0.68, 0.74)
+        box(glass, 0.15, 3.85, *face, 0.95, 1.35)  # the window band
+        for x in (0.15, 0.95, 1.55, 2.45, 3.05, 3.85):  # pillars between the windows
+            box(steel, x - 0.05, x + 0.05, *proud, 0.93, 1.37)
+        for dx in (1.0, 2.5):  # door pairs: steel leaves with tall windows, a dark seam down the middle
+            box(door, dx, dx + 0.5, *proud, 0.46, 1.48)
+            for lx in (dx + 0.06, dx + 0.29):
+                box(glass, lx, lx + 0.15, *prouder, 0.98, 1.36)
+            box(glass, dx + 0.245, dx + 0.255, *prouder, 0.46, 1.48)
+    parts = []
+    lamps = sign = None
+    for ex, out in ((0.02, -1), (3.98, 1)):
+        face = (ex, ex + out * 0.015) if out > 0 else (ex + out * 0.015, ex)
+        if cab and out > 0:  # the driver's end: a wide windshield, the destination sign over it, headlights
+            box(glass, *face, y0 + 0.15, y1 - 0.15, 0.98, 1.4)
+            sign, lamps = bmesh.new(), bmesh.new()
+            box(sign, *face, mid - 0.45, mid + 0.45, 1.43, 1.55)
+            for ly in (y0 + 0.25, y1 - 0.25):
+                box(lamps, *face, ly - 0.08, ly + 0.08, 0.55, 0.65)
+            box(red, *face, y0, y1, 0.68, 0.74)
+            box(blue, *face, y0, y1, 0.74, 0.8)
+        else:  # a plain end: the door through to the next car, a window each side of it
+            box(glass, *face, mid - 0.22, mid + 0.22, 0.5, 1.45)
+            for wy in (y0 + 0.3, y1 - 0.3):
+                box(glass, *face, wy - 0.18, wy + 0.18, 0.98, 1.35)
+    parts += [link('elCarSteel', steel, m['elCarSteel']), link('elCarDoor', door, m['elCarDoor']),
+              link('elCarGlass', glass, m['elCarGlass']), link('elCarBlue', blue, m['elCarBlue']),
+              link('elCarRed', red, m['elCarRed']), link('elCarUnder', under, m['elCarUnder'])]
+    if sign:
+        parts += [link('elCarSign', sign, m['elCarSign']), link('elCarLamp', lamps, m['elCarLamp'])]
+    return join(parts, 'ElCarFront' if cab else 'ElCar')
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     m = {k: material(k, v) for k, v in COLORS.items()}
     obs = [el_span(m), el_column(m), el_column_cap(m), signal(m), lens(m, 'SignalRed', 'sigRed', 3.33), lens(m, 'SignalGreen', 'sigGreen', 2.87), wanted_board(m),
-           overpass_pillar(m), overpass_cap(m), overpass_rail(m)]
+           overpass_pillar(m), overpass_cap(m), overpass_rail(m), el_car(m), el_car(m, cab=True)]
     # laid out in the file for a look: a span on a column, the signal beside it
     at = {'ElSpan': (0, 0, 4), 'ElColumn': (0.6, 0, 0), 'ElColumnCap': (0.6, 0, 3.9), 'TrafficSignal': (-2, 0, 0),
           'SignalRed': (-2, 0, 0), 'SignalGreen': (-2, 0, 0), 'WantedBoard': (-4, 0, 0),
-          'OverpassPillar': (6, 0, 0), 'OverpassCap': (6, 0, 3), 'OverpassRail': (5, 0, 3.2)}
+          'OverpassPillar': (6, 0, 0), 'OverpassCap': (6, 0, 3), 'OverpassRail': (5, 0, 3.2),
+          'ElCar': (-4, 0, 4.44), 'ElCarFront': (0, 0, 4.44)}
     obs[1].scale = (1, 1, 3.9)
     for ob in obs:
         ob.location = at[ob.name]
