@@ -136,7 +136,8 @@ export class Game {
     this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level);
-    this.view.follow(this.skater.x, this.skater.y, this.skater.hsp, true);
+    this.view.zoom.reset();
+    this.view.follow(this.skater.x, this.skater.y);
     this.sprite.play('push');
     this.hud.floor(this.floor, this.road);
     this.hud.boons(this.boons);
@@ -315,7 +316,8 @@ export class Game {
     this.impacts.update(dt);
     this.pickups.update(dt);
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs);
-    this.view.follow(x, y, this.skater.hsp);
+    this.view.zoom.update(dt, this.skater.mode);
+    this.view.follow(x, y, dt);
     this.view.adapt(dt * 1000);
     this.view.render();
     this.hud.debug(`${Math.round(1 / Math.max(dt, 1e-3))} fps · ${this.skater.hsp.toFixed(1)} px/f · res ${this.view.resolution.toFixed(2)}`);
@@ -333,6 +335,7 @@ export class Game {
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
     switch (e.type) {
       case 'trick':
+        this.view.zoom.trick();
         this.hud.callout(TRICK_NAMES[TRICKS[e.index % TRICKS.length]] + combo, 'trick');
         break;
       case 'grind':
