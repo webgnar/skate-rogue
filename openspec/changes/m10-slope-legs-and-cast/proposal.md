@@ -21,3 +21,11 @@ deck shop also unlocks the QFS skaters (Webster, Keanu, Roxy, Goldie), who had n
 - `src/render/skater-rig.ts` (absorb, aim, setInRig; `SkaterRig.create(base, skater)`), `src/main.ts`
 - `art/skaters.py`, `public/models/{webster,keanu,roxy,goldie}.glb`
 - The built-in fallback skater (no GLB) still tilts as a whole.
+
+## Later: hair and shirt physics
+
+zack (Oct 24, 2026): hair and t-shirt physics come to the player later. The rig is ready for it: the hair (Webster,
+Roxy and Goldie's manes, Keanu's hood) is its own mesh part skinned rigidly to `Head`, so a chain of hair bones
+under `Head` can take it over without touching the body, and the clips only key the 20 body bones and `Board`, so
+new secondary bones need no re-bake. Shirts would get a few bones under `Spine1` (hem, sleeves) driven by a spring
+step in the rig after `absorb()`, using the sim's speed and the physics feel values.

@@ -9,3 +9,4 @@
 - [x] 2.1 Webster, Keanu, Roxy, Goldie on Lou's rig, playing his clips
 - [x] 2.2 `?skater=` picks one
 - [ ] 2.3 Deck shop unlock (gameplay thread) passes the chosen skater to `SkaterRig.create`
+- [ ] 3.1 Hair and shirt physics (later): spring bones under Head and Spine1, stepped after absorb()
