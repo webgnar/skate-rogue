@@ -96,3 +96,32 @@ describe('time of day', () => {
     expect(rainsOn(1234, 7)).toBe(rainsOn(1234, 7));
   });
 });
+
+import { puddleGrowth, puddleSpots, PUDDLE } from '../src/render/puddles';
+import { rainLevel, RAIN } from '../src/render/atmosphere';
+import { buildFloor } from '../src/gen/descent';
+
+describe('puddles', () => {
+  const level = buildFloor(5, 6);
+  const spots = puddleSpots(level, 5, 6);
+
+  it('lands on flat ground, clear of cars and glass, the same for a seed', () => {
+    expect(spots.length).toBeGreaterThan(3);
+    for (const p of spots) {
+      for (const c of level.cars) expect(p.x + p.w <= c.x0 / 32 - 1 || p.x - p.w >= c.x1 / 32 + 1).toBe(true);
+    }
+    expect(puddleSpots(level, 5, 6)).toEqual(spots);
+  });
+
+  it('forms over the first ~20 s of the floor', () => {
+    expect(spots.every((p) => puddleGrowth(p, 0) === 0)).toBe(true);
+    expect(spots.every((p) => puddleGrowth(p, PUDDLE.lastStart + PUDDLE.grow) === 1)).toBe(true);
+  });
+
+  it('rolls drizzle, rain or downpour only on rainy floors', () => {
+    const levels = new Set<number>();
+    for (let f = 1; f < 300; f++) levels.add(rainLevel(77, f));
+    expect([...levels].sort()).toEqual([0, RAIN.drizzle, RAIN.rain, RAIN.downpour].sort());
+    expect(rainLevel(77, 1)).toBe(0);
+  });
+});

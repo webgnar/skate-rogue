@@ -45,6 +45,8 @@ export class HeatLights {
   private readonly frontWash: THREE.HemisphereLight;
   private readonly flares: [THREE.Sprite, THREE.Sprite];
   private readonly mix = new THREE.Color();
+  // the bar's light for reflections in puddles
+  readonly glow = { pos: new THREE.Vector3(), color: new THREE.Color(), k: 0 };
   private t = 0;
 
   constructor() {
@@ -76,6 +78,9 @@ export class HeatLights {
       p.color.copy(color);
       p.intensity = HEAT_LIGHT.point * k;
     }
+    this.glow.pos.copy(bar);
+    this.glow.color.copy(color);
+    this.glow.k = 1.4 * k;
     for (const w of [this.wash, this.frontWash]) {
       w.color.copy(color);
       w.intensity = HEAT_LIGHT.wash * k;

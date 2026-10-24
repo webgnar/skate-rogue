@@ -9,7 +9,7 @@ Shaders and visual effects for Gnar Run. Each item is an OpenSpec change in `ope
 | fx3-speed-gnar | Speed lines; gnar glow, sparkle trail, GNAR! word (no freeze, thin glow: #21) | Live (#13, #21) |
 | fx4-heat-light | Cruiser light on the street and skater, smooth red-blue sweep, no strobe | Live (#17) |
 | fx5-time-weather | Clock through the run (afternoon to neon night), rain per floor | Live (#19) |
-| fx6-rain-puddles | Puddles that form in the rain, neon reflections, ripples, splashes, wet surfaces, rain intensity | Next |
+| fx6-rain-puddles | Puddles that form in the rain, neon reflections, ripples, splashes, wet surfaces, rain intensity | Live (wet look deferred) |
 | fx7-night-city | Lit windows, street lamps, headlight telegraphing, neon signs, AI billboards and Flock cameras that track you | Planned |
 | fx8-device-polish | On-iPhone tuning, automatic quality tiers, reduce motion / flashing, perf overlay | Planned |
 

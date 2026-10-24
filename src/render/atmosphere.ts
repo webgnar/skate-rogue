@@ -83,6 +83,16 @@ export function rainsOn(seed: number, floor: number): boolean {
   return h - Math.floor(h) < 0.25;
 }
 
+export const RAIN = { drizzle: 0.5, rain: 1, downpour: 1.6 };
+
+// how hard it rains on a floor: 0 (dry), drizzle, rain or downpour
+export function rainLevel(seed: number, floor: number): number {
+  if (!rainsOn(seed, floor)) return 0;
+  const h = Math.sin(seed * 39.3468 + floor * 11.135) * 24634.6345;
+  const f = h - Math.floor(h);
+  return f < 0.3 ? RAIN.drizzle : f < 0.75 ? RAIN.rain : RAIN.downpour;
+}
+
 // rain turns the mood grey, wet and close
 export function rainy(m: Mood): Mood {
   const grey = 0x5a6274;
@@ -112,6 +122,7 @@ const skyFragment = /* glsl */ `
   uniform vec3 uTop;
   uniform vec3 uBottom;
   uniform float uStars;
+  uniform float uFlash; // lightning glow, 0..1
   uniform vec2 uRes;
   varying vec2 vUv;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -121,6 +132,7 @@ const skyFragment = /* glsl */ `
     vec2 cell = floor(gl_FragCoord.xy / 4.0);
     float s = step(0.996, hash(cell)) * uStars * smoothstep(0.35, 0.8, vUv.y);
     col = mix(col, vec3(1.0, 0.95, 0.85), s);
+    col = mix(col, vec3(0.85, 0.88, 1.0), uFlash * (0.4 + 0.5 * vUv.y));
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>
   }
@@ -167,7 +179,7 @@ export function skyMesh(): THREE.Mesh {
     new THREE.ShaderMaterial({
       vertexShader: skyVertex,
       fragmentShader: skyFragment,
-      uniforms: { uTop: { value: new THREE.Color() }, uBottom: { value: new THREE.Color() }, uStars: { value: 0 }, uRes: { value: new THREE.Vector2() } },
+      uniforms: { uTop: { value: new THREE.Color() }, uBottom: { value: new THREE.Color() }, uStars: { value: 0 }, uFlash: { value: 0 }, uRes: { value: new THREE.Vector2() } },
       depthWrite: false,
     }),
   );
@@ -183,7 +195,7 @@ export class Rain {
   readonly mesh: THREE.Mesh;
   private readonly pos: THREE.BufferAttribute;
   private readonly drops: { x: number; y: number; z: number; v: number }[] = [];
-  on = false;
+  amount = 0; // 0 dry, 0.5 drizzle, 1 rain, 1.6 downpour
 
   constructor() {
     const geo = new THREE.BufferGeometry();
@@ -202,14 +214,17 @@ export class Rain {
   }
 
   update(dt: number, camera: THREE.PerspectiveCamera): void {
-    this.mesh.visible = this.on;
-    if (!this.on) return;
+    this.mesh.visible = this.amount > 0;
+    if (!this.mesh.visible) return;
+    //drizzle draws fewer streaks, a downpour all of them
+    const n = Math.round(RAIN_N * Math.min(1, this.amount / RAIN.downpour));
+    this.mesh.geometry.setDrawRange(0, n * 6);
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     const cam = camera.position;
-    for (let i = 0; i < RAIN_N; i++) {
+    for (let i = 0; i < n; i++) {
       const d = this.drops[i];
       //fall in screen fractions per second, wrapping round the view, drifting left as if the skater rides into it
-      d.y -= 1.6 * d.v * dt;
+      d.y -= (1.2 + 0.4 * this.amount) * d.v * dt;
       d.x -= 0.35 * d.v * dt;
       if (d.y < 0) d.y += 1;
       if (d.x < 0) d.x += 1;

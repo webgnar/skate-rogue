@@ -22,7 +22,8 @@ import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
 import { Aura, inkify } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
-import { clockFor, moodAt, rainsOn, rainy } from '../render/atmosphere';
+import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
+import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
@@ -118,6 +119,7 @@ export class Game {
   private readonly aura: Aura;
   private gnarGlow = 0; // 0..1, eases with the gnar state
   private clock = 0;
+  private readonly puddleRes = new THREE.Vector2();
   private ghostMesh: THREE.Mesh;
   private board: Slots = newBoard();
   private shop: ShopState | null = null;
@@ -191,9 +193,10 @@ export class Game {
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level);
     //the run's clock: afternoon into neon night, rain on some floors
-    const raining = rainsOn(this.seed, this.floor);
+    const rain = rainLevel(this.seed, this.floor);
     const mood = moodAt(clockFor(this.floor));
-    this.view.setMood(raining ? rainy(mood) : mood, raining);
+    this.view.setMood(rain > 0 ? rainy(mood) : mood, rain);
+    this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
     this.view.zoom.reset();
     this.view.follow(this.skater.x, this.skater.y);
     this.sprite.play('push');
@@ -455,6 +458,7 @@ export class Game {
     this.impacts.update(dt);
     this.pickups.update(dt);
     this.sparks(dt);
+    this.water(dt);
     this.particles.update(dt, this.view.pointScale);
     this.words.update(realDt);
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
@@ -482,6 +486,16 @@ export class Game {
       const p = this.sprite.mesh.position;
       this.particles.trail(p.x - 0.2, p.y + 0.9, GNAR_TRAIL, dt, this.clock);
     }
+  }
+
+  // rolling through puddles: spray off the wheels and a wake in the reflection
+  private water(dt: number): void {
+    const sk = this.skater;
+    const p = this.sprite.mesh.position;
+    const wading = this.state === 'skate' && sk.mode === 'roll' && this.view.puddles.at(p.x, p.y) !== null;
+    if (wading) this.particles.wade(p.x, p.y, Math.abs(sk.hsp) / PHYS.baseSpeed, dt);
+    const glow = this.trafficView.heatLights.glow;
+    this.view.puddles.update(dt, this.view.renderer.getDrawingBufferSize(this.puddleRes), glow.k > 0 ? [glow] : [], p, wading);
   }
 
   // sparks off the back truck while grinding: a rail throws more than a ledge, and more the faster you go
@@ -578,6 +592,16 @@ export class Game {
         //dust on every landing; a big drop also lands with a smaller burst
         this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), Math.min(1.5, Math.max(0.5, this.fallSpeed / BIG_LANDING)));
         if (this.fallSpeed >= BIG_LANDING) this.burst(0.6, 0.12);
+        //into a puddle: a crown of water, and a SPLSH! on a big drop
+        {
+          const x = toX(this.skater.x);
+          const y = toY(this.level, this.skater.y);
+          if (this.view.puddles.at(x, y)) {
+            const big = this.fallSpeed >= BIG_LANDING;
+            this.particles.splash(x, y, big ? 1.5 : 0.8);
+            if (big) this.words.spawn(x, y, 'SPLSH!');
+          }
+        }
         break;
       case 'slam':
         this.slam();
