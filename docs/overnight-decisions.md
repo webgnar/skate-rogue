@@ -236,6 +236,20 @@ and listed it here for review. Any of these can be flipped in the morning.
   only the board so they don't. Tricks thrown fakie are called "FAKIE KICKFLIP" and score 1.5x; a 180 adds +25.
   A slam puts you back regular. The stance resets each floor. Trick events now carry `name`, `spin` and `fakie`.
 
+- **Curses and duos.** The GDD's three curses (Moon Shoes, Wanted, Speed Wobbles) and three duos (Rocket Grind,
+  Sky Line, Perpetual Motion) are in. Curses: from floor 6, one offer in three replaces its last card with one;
+  dashed purple card. Duos: once you hold both halves, half of all offers add it as an extra pink card. Choices I
+  made: Speed Wobbles slams landings above 1.3x cruising (so kicker bombs and fast rail exits slam, plain ollies
+  don't); Rocket Grind needs full grind speed and pops 1.5x; Sky Line's rail is 7 tiles long, 6 px under your feet.
+  The underground spot's "Remove a curse" lifts the curse off entirely.
+
+- **Gear and wear (zack asked).** Deck from ollies, shoes from flip tricks, trucks from grinding, wheels from
+  going fast (above 1.25x cruising). Open choices, all mine: condition 100 to 0; no cost until half worn, then a
+  straight line to −30% ollie / −30% flip pop / −30% grind speed / −20% cruising speed at 0; **nothing ever breaks
+  outright** (a run never ends because of gear); wear per use 1.2 per ollie, 1.6 per flip, 1.2 per grind second,
+  1.2 per fast second; fresh gear each run. Shop prices: deck $25, shoes $15, trucks $20, wheels $15. HUD: four
+  bars bottom left, green, yellow, red. Callouts at half and at 15. Worn looks are left for the models and effects threads.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

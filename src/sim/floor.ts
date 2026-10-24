@@ -10,6 +10,7 @@ import type { Car, Level, PickupKind } from '../physics/level';
 import { PROP_SIZE } from '../gen/props';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
+import { crossed, freshGear, GEAR, GEAR_PARTS, gearScale, type Gear, type GearPart } from '../run/gear';
 
 export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
 
@@ -21,6 +22,7 @@ export type FloorEvent =
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'decoy' } // the Decoy boon pulled the cruiser back
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
+  | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
   | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' };
 
 // how a prop got smashed (GDD: Smashables), for the effects to tell apart
@@ -64,6 +66,7 @@ export class FloorSim {
   private slipT = 0; // frames drafting behind a car
   readonly broken: boolean[]; // props smashed
   private fall = 0; // how fast we were falling before this step
+  readonly gear: Gear; // worn down as you skate; the run takes it to the next floor
   private near = new Map<Car, { gap: number; touched: boolean }>(); // vehicles we're over: the closest pass, and any contact
 
   constructor(
@@ -71,8 +74,11 @@ export class FloorSim {
     mods?: Mods,
     startHeat = 0,
     readonly board: Slots = [],
+    gear: Gear = freshGear(),
   ) {
     this.skater = new Skater(level, mods);
+    this.gear = { ...gear };
+    this.skater.gear = gearScale(this.gear);
     this.heat.value = startHeat;
     if (mods) this.heat.mods = { rise: mods.heatRise, hopCool: mods.hopCool, decoy: mods.decoy, slow: mods.slowHeat };
     this.taken = level.pickups.map(() => false);
@@ -104,6 +110,7 @@ export class FloorSim {
     this.closeCalls(skaterEvents);
     this.slipstream();
     this.smash(skaterEvents);
+    this.wear(skaterEvents);
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
     if (this.chopper?.step(this.skater)) this.heat.add(CHOPPER.heatPerSec / 60);
@@ -245,6 +252,29 @@ export class FloorSim {
       this.events.push({ type: 'smash', index: i, prop: p.name, x: p.x, y: p.y, how: by, ...(p.loot ? { loot: p.loot } : {}) });
       if (p.ai) this.heat.add(-SMASH.aiCool);
     });
+  }
+
+  // gear wear: the deck from ollies, the shoes from flip tricks, the trucks from grinding, the wheels from speed
+  private wear(events: readonly SkaterEvent[]): void {
+    const sk = this.skater;
+    const use: Gear = { deck: 0, shoes: 0, trucks: 0, wheels: 0 };
+    for (const e of events) {
+      if (e.type === 'ollie') use.deck += GEAR.ollie;
+      else if (e.type === 'trick') use.shoes += GEAR.flip;
+    }
+    if (isGrind(sk.mode)) use.trucks += GEAR.grindSec / 60;
+    const speed = Math.abs(sk.mode === 'rail' ? sk.railV : sk.hsp);
+    if (speed > PHYS.baseSpeed * sk.mods.speedScale * GEAR.fastOver) use.wheels += GEAR.fastSec / 60;
+    let changed = false;
+    for (const part of GEAR_PARTS) {
+      if (!use[part]) continue;
+      const before = this.gear[part];
+      this.gear[part] = Math.max(0, before - use[part]);
+      const line = crossed(before, this.gear[part]);
+      if (line) this.events.push({ type: 'wear', part, level: line });
+      changed = true;
+    }
+    if (changed) sk.gear = gearScale(this.gear);
   }
 
   private collect(): void {

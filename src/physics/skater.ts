@@ -1,6 +1,7 @@
 // The skater controller: Quest For Stoken's movement rules (calc_movement, jumped, check_grind,
 // player_grinding_state, player_rail_state) on Lou Gnar's one-button auto-run. Pure: no rendering, no DOM.
 import { NO_MODS, type Mods } from '../boons/mods';
+import { NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
 import { rollTrick, SPIN, type TrickId } from './tricks';
 import { isStreetAt, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
@@ -61,6 +62,7 @@ export class Skater {
   tucks = 0; // Tuck and Roll saves left this floor
   rocket = false; // Rocket Grind: jumps come back at the top of this launch
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
+  gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
 
   constructor(
@@ -116,7 +118,7 @@ export class Skater {
     const grindSpeed = this.mode === 'grind' ? Math.abs(this.hsp) : this.mode === 'rail' ? this.railV : 0;
     this.leaveGround();
     this.jumps = Math.max(0, this.jumps - 1);
-    this.vsp = PHYS.ollie * this.mods.ollieScale - grindSpeed * this.mods.railLaunch;
+    this.vsp = PHYS.ollie * this.mods.ollieScale * this.gear.ollie - grindSpeed * this.mods.railLaunch;
     //Rocket Grind: off a fast grind you go straight up, and the pop is the rail's, so letting go doesn't cut it
     if (this.mods.rocketGrind && grindSpeed >= PHYS.grindSpeed) {
       this.vsp *= PHYS.rocketPop;
@@ -134,7 +136,7 @@ export class Skater {
     this.kicked = false;
     if (this.jumps > 0) this.jumps--;
     else this.spare -= 1;
-    this.vsp = PHYS.trick;
+    this.vsp = PHYS.trick * this.gear.trick;
     this.buffer = 0;
     this.flipped = true;
     if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
@@ -176,7 +178,7 @@ export class Skater {
   private baseSpeed(): number {
     //after a slam you're back to full speed over slamFrames
     const k = this.slamT > 0 ? 1 - (1 - PHYS.slamSpeed) * (this.slamT / PHYS.slamFrames) : 1;
-    return PHYS.baseSpeed * k * this.boost * this.mods.speedScale;
+    return PHYS.baseSpeed * k * this.boost * this.mods.speedScale * this.gear.speed;
   }
 
   private stepMove(held: boolean): void {
@@ -190,7 +192,7 @@ export class Skater {
     } else if (this.mode === 'grind') {
       this.onRailT++;
       const frenzy = this.mods.feebleFrenzy ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
-      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * frenzy, this.carry);
+      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * this.gear.grind * frenzy, this.carry);
       this.hsp = Math.max(PHYS.grindMin, this.hsp < target ? Math.min(target, this.hsp + PHYS.grindAccel) : this.hsp);
     }
 
@@ -253,7 +255,7 @@ export class Skater {
   }
 
   private railMin(): number {
-    return PHYS.railMin * this.mods.grindScale;
+    return PHYS.railMin * this.mods.grindScale * this.gear.grind;
   }
 
   // parked cars plus moving traffic

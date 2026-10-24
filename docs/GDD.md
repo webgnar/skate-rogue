@@ -539,6 +539,11 @@ From floor 6, one card in three may be a **cursed** boon: a strong effect with a
 Examples: *Moon Shoes* (+60% ollie height, −30% grind speed), *Wanted* (2× Stoken, Heat rises twice as fast),
 *Speed Wobbles* (+40% speed, landings above flow speed cause a slam).
 
+Built Oct 24, 2026: the three curses and three duos above. From floor 6, one offer in three swaps its last card
+for a curse (dashed purple border, labelled CURSED). A duo shows up half the time as an extra, pink card once you
+hold both its halves. Speed Wobbles slams any landing faster than 1.3x your cruising speed. Rocket Grind needs a
+grind at full grind speed (5 px/frame) and pops 1.5x. The underground spot's "Remove a curse" lifts one whole.
+
 ## Board build (the Noita part)
 
 Noita's wands take spells in slots that fire in order and modify each other. Our board does the same with
@@ -564,6 +569,37 @@ fires the effects to its right until the next trigger; an effect with no trigger
 stocks 4 mods (at least one trigger and one effect) for $15 to $45, a slot and a restock ($10, then +5). Tap a mod
 then a slot to buy it there; tap two slots to swap them for free. The board shows as a strip of slots bottom left,
 and a slot flashes when it fires. No Heat cool-down or boon reroll in the shop yet.
+
+## Gear and wear
+
+zack, Oct 24, 2026: your gear wears out with use and has to be replaced at the shop. Four parts, each worn by
+the thing it takes the beating from:
+
+| Part | Worn by | When it's worn |
+| --- | --- | --- |
+| **Deck** | Ollies (every pop, off the street, a ledge or a rail) | Ollies pop lower, down to −30% at 0 |
+| **Shoes** | Flip tricks (the flick scuffs the grip side) | Flip tricks in the air pop lower, down to −30% |
+| **Trucks** | Grinding (every second on a rail, ledge or roof edge) | Grinds settle slower, down to −30% |
+| **Wheels** | Going fast (every second above 1.25× cruising speed: rail exits, bombs, kickers) | Cruising speed drops, down to −20% |
+
+- **Condition** runs from 100 (fresh) to 0. A part costs you nothing until it's half worn; below 50 the cost grows
+  in a straight line to the most it can be at 0. Nothing ever breaks outright or ends a run: busted gear makes the
+  street harder, so it's a pressure, never a wall.
+- **How fast:** tuned so a part you lean on lasts about 3 to 5 floors before it's half worn. The reference bot
+  (which skates as little as it can) wears the deck and shoes about 7 to 16 a floor; a stylish player wears them
+  about twice that. Your build decides what wears: a grind build eats trucks, a flip build eats shoes.
+- **The run keeps it:** wear carries from floor to floor and resets with a new run. Fresh gear every run.
+- **The shop** always has a gear row under the mod stock: New Deck $25, New Shoes $15, New Trucks $20, New Wheels
+  $15. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
+  a new mod, or keep your setup rolling.
+- **HUD:** four small bars above the board strip, bottom left (DECK, SHOES, TRUCKS, WHEELS), green while fresh,
+  yellow once a part starts costing you and red, blinking, from 15. A callout fires when a part wears past half
+  ("SHOES WORN") and again near the end ("DECK BUSTED!").
+- **Looks (models and effects threads):** worn parts should show on Lou: a chipped, delaminating deck nose and
+  tail, scuffed shoes with a hole in the ollie spot, rusted, ground-down truck hangers, and coned, flat-spotted
+  wheels. A part going past a line could pop a small puff of splinters, a shoe scuff or rubber crumbs.
+- **Later:** decks from the meta tree can wear slower (a "pro deck" stat), and boons can play with wear (a curse
+  that wears gear twice as fast for a big effect, or a LUCK boon that repairs a part on each floor clear).
 
 ## Meta progression
 

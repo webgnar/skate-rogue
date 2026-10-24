@@ -2,6 +2,7 @@ import './style.css';
 import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
+import { GEAR, GEAR_PARTS, wornness, type Gear } from './run/gear';
 import { modDef, type ModId } from './board/mods';
 import { label } from './gen/roads';
 import { actOf } from './gen/escape';
@@ -108,6 +109,27 @@ function shopHtml(v: ShopView): { slots: string; stock: string; hint: string } {
   return { slots, stock, hint };
 }
 
+// the gear strip and the shop's gear row: a bar per part, green to red as it wears
+function gearTone(c: number): string {
+  return c <= GEAR.busted ? 'busted' : wornness(c) > 0 ? 'worn' : 'fresh';
+}
+
+function gearStrip(g: Gear): string {
+  return GEAR_PARTS.map((p) => `<span class="part ${gearTone(g[p])}" title="${GEAR.names[p]}: worn by ${GEAR.wornBy[p]}">
+    ${GEAR.names[p].toUpperCase()}<i style="--c:${Math.round(g[p])}%"></i></span>`).join('');
+}
+
+function gearShop(g: Gear, cash: number): string {
+  return GEAR_PARTS.map((p) => {
+    const c = Math.round(g[p]);
+    const off = c >= 100 || cash < GEAR.price[p];
+    return `<button class="gearbuy ${gearTone(c)}" data-gear="${p}" ${off ? 'disabled' : ''}>
+      <b>NEW ${GEAR.names[p].toUpperCase()}</b><span class="cond"><i style="--c:${c}%"></i>${c}%</span>
+      <span class="text">worn by ${GEAR.wornBy[p]}</span><span class="price">${c >= 100 ? 'FRESH' : `$${GEAR.price[p]}`}</span>
+    </button>`;
+  }).join('');
+}
+
 function makeHud(): Hud {
   const floorEl = document.getElementById('floortext')!;
   const calloutEl = document.getElementById('callout')!;
@@ -127,6 +149,8 @@ function makeHud(): Hud {
   const boardEl = document.getElementById('board')!;
   const shopEl = document.getElementById('shop')!;
   const underEl = document.getElementById('under')!;
+  const gearEl = document.getElementById('gear')!;
+  let gearKey = '';
   let level = 0;
   let held: Held[] = [];
   let timer = 0;
@@ -217,11 +241,19 @@ function makeHud(): Hud {
       }
       shopCash = v.shop.cash;
       shopEl.querySelector('.stock')!.innerHTML = h.stock;
+      shopEl.querySelector('.gearshop')!.innerHTML = gearShop(v.gear, v.shop.cash);
       shopEl.querySelector('.hint')!.textContent = h.hint;
       shopEl.querySelector('.cash')!.textContent = `$${v.shop.cash}`;
       const re = shopEl.querySelector<HTMLButtonElement>('.restock')!;
       re.textContent = `RESTOCK $${v.restockPrice}`;
       re.disabled = v.shop.cash < v.restockPrice;
+    },
+    gear: (g) => {
+      //redrawn only when a part's whole percent changes
+      const key = GEAR_PARTS.map((p) => Math.round(g[p])).join();
+      if (key === gearKey) return;
+      gearKey = key;
+      gearEl.innerHTML = gearStrip(g);
     },
     boons: (h) => {
       held = h;
