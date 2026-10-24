@@ -408,6 +408,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   first win opens level 1, and winning at a level opens the next. You pick it with a GNAR button on the run summary
   (it reloads into the new level). Daily runs never use it. Leaderboard entries don't record the level yet, so a
   Gnar run's bigger score goes on the same board.
+- **Side lines (GDD: Risk and reward inside a floor).** From floor 2, about two floors in three get one: a chain
+  of four floating ledges at 2, 2.5, 3 and 3 tiles over the street, 3 to 4 tiles long with 2 to 3 tile gaps,
+  coins along it and a Stoken at the top. The first ledge needs an ollie and a flip, so it's a choice you have to
+  make, and the rest are plain ollies. It sits where nothing taller than a parked car is underneath and stays clear
+  of the fork. I went with a roof chain rather than the GDD's "long rail over traffic", because a rail's posts would
+  stand in the traffic lane. Greece's ruin twist applies to it too.
+- **Leaderboard entries carry the Gnar level.** A Gnar run's entry shows "G3" beside its floor on the same boards,
+  rather than getting boards of its own (that would split the few early players across many boards).
 
 ## Models thread: animation
 

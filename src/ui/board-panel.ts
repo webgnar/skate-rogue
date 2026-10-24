@@ -80,7 +80,7 @@ export class BoardPanel {
   }
 
   private row(r: Row, tag: string | undefined): string {
-    return `<li class="${r.tag === tag ? 'me' : ''}"><b>${r.rank}</b><span class="tag">${r.tag}</span><span class="fl">F${r.floor}</span><span class="sc">${r.score.toLocaleString()}</span></li>`;
+    return `<li class="${r.tag === tag ? 'me' : ''}"><b>${r.rank}</b><span class="tag">${r.tag}</span><span class="fl">F${r.floor}${r.gnar ? ` · G${r.gnar}` : ''}</span><span class="sc">${r.score.toLocaleString()}</span></li>`;
   }
 
   private async saveTag(): Promise<void> {

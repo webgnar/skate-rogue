@@ -2,6 +2,7 @@
 // terraces, stair sets, big handrails, drop-offs, rooftop gaps and a few banks, then finishes on a short street
 // stretch built from QFS pieces (canals, curved rails, parked cars, traffic) with the exit gate.
 import { placeProps } from './props';
+import { addSideLine } from './sidelines';
 import { applyTwist, districtPieces, type Twist } from './twists';
 import { crossPlan } from '../traffic/cross';
 import { doorPlan, stopPlan } from '../traffic/street';
@@ -252,6 +253,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     danger: opts.danger ?? 2,
     ...(opts.gravity !== undefined && opts.gravity !== 1 ? { gravity: opts.gravity } : {}),
   };
+  addSideLine(level, level.layout.seed);
   applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);

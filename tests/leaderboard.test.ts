@@ -51,6 +51,8 @@ describe('leaderboards', () => {
     expect(validEntry({ tag: 'ZACK', score: 1200, floor: 4 }, today)).toEqual({ tag: 'ZACK', score: 1200, floor: 4 });
     expect(validEntry({ tag: 'ZACK', score: 1.5, floor: 4 }, today)).toBeNull();
     expect(validEntry({ tag: 'ZACK', score: 10, floor: 99 }, today)).toBeNull();
+    expect(validEntry({ tag: 'ZACK', score: 10, floor: 2, gnar: 3 }, today)?.gnar).toBe(3);
+    expect(validEntry({ tag: 'ZACK', score: 10, floor: 2, gnar: 9 }, today)).toBeNull();
     expect(validEntry({ tag: 'ZACK', score: 10, floor: 2, day: dayBefore(today) }, today)?.day).toBe('2026-10-24');
     expect(validEntry({ tag: 'ZACK', score: 10, floor: 2, day: '2026-10-01' }, today)).toBeNull();
   });

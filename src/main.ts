@@ -331,7 +331,7 @@ async function start() {
   const showOver = hud.over;
   hud.over = (result) => {
     showOver(result);
-    if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}) });
+    if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar });
   //?debug exposes the game for headless checks

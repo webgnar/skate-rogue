@@ -7,6 +7,7 @@ export interface Entry {
   score: number;
   floor: number;
   day?: string; // a daily run's UTC date, YYYY-MM-DD
+  gnar?: number; // the run's Gnar level (src/run/gnar.ts), left out for a normal run
 }
 
 export interface Row {
@@ -14,6 +15,7 @@ export interface Row {
   tag: string;
   score: number;
   floor: number;
+  gnar?: number;
 }
 
 export const BOARD = {
@@ -22,6 +24,7 @@ export const BOARD = {
   maxScore: 50_000_000,
   maxFloor: 15, // 5 acts of 3
   dailyDays: 3, // a daily board expires after this many days
+  maxGnar: 5, // MAX_GNAR
 };
 
 // a tag: 3 to 10 letters, digits or spaces, upper case, like an arcade
@@ -40,6 +43,10 @@ export function validEntry(raw: unknown, today: string): Entry | null {
   if (!tag || !Number.isInteger(score) || !Number.isInteger(floor)) return null;
   if ((score as number) < 0 || (score as number) > BOARD.maxScore || (floor as number) < 1 || (floor as number) > BOARD.maxFloor) return null;
   const entry: Entry = { tag, score: score as number, floor: floor as number };
+  if (r.gnar !== undefined) {
+    if (!Number.isInteger(r.gnar) || (r.gnar as number) < 1 || (r.gnar as number) > BOARD.maxGnar) return null;
+    entry.gnar = r.gnar as number;
+  }
   if (r.day !== undefined) {
     //a daily run counts on today's board, or yesterday's for a run that started before midnight
     if (r.day !== today && r.day !== dayBefore(today)) return null;

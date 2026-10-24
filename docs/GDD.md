@@ -196,7 +196,7 @@ on every slam, and three close together catch you. See docs/overnight-decisions.
 ### 3. Risk and reward inside a floor
 
 - **Side lines:** optional harder lines on every floor (a long rail over traffic, a roof chain) with cash or Stoken
-  at the end.
+  at the end. Built Oct 24, 2026 as a climbing roof chain of four ledges (src/gen/sidelines.ts).
 - **Stoke cash-out:** a long combo pays cash when you land it and nothing if you slam, so you decide how greedy to be.
 - **Wanted posters:** an AI poster on a floor offers a bounty: finish the floor with Heat above 50 for double
   Stoken. Built Oct 24, 2026 (src/run/bounty.ts): from floor 2, one floor in three; at least 3 Stoken.

@@ -40,8 +40,8 @@ export async function GET(req: Request): Promise<Response> {
   try {
     const [raw] = await redis([['ZREVRANGE', boardKey(board, day), 0, BOARD.show - 1]]);
     const rows: Row[] = (raw as string[]).map((m, i) => {
-      const e = JSON.parse(m) as { tag: string; score: number; floor: number };
-      return { rank: i + 1, tag: e.tag, score: e.score, floor: e.floor };
+      const e = JSON.parse(m) as { tag: string; score: number; floor: number; gnar?: number };
+      return { rank: i + 1, tag: e.tag, score: e.score, floor: e.floor, ...(e.gnar ? { gnar: e.gnar } : {}) };
     });
     return json(rows);
   } catch (err) {
