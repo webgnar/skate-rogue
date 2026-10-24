@@ -108,6 +108,12 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Pieces live 1.1 s, with at most 24 at once** (12 on the low tier). They draw while they fly, then free up.
 - **Placement has one source: the sim's level.props.** I asked gameplay and models to agree on this, so the
   index in a smash event hides the right prop.
+- **Smashes are now wired end to end** (sim events from #53, z from #54, piece offsets fixed at the source in
+  #57).
+- **Visor glint (src/render/visor-glint.ts).** The strip from models (#58) sits at 0.3 opacity by day and rises to
+  0.75 at full neon. At night it tints toward the district's light: pink in the city, cyan in High-Tech and
+  Atlantis, amber in the Hive. It gleams for a quarter second on each trick and landing. Only the visor
+  brightens, and with reduce-flashing on there's no gleam at all.
 
 ## Effects thread: fx6 leftovers
 
