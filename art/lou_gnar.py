@@ -258,6 +258,16 @@ def gear(mats):
     return parts
 
 
+def wear_decals(shoe_w=0.12, shoe_y=-0.06):
+    """Gear wear on the lead (left) shoe, hidden in game till the shoes wear (src/render/wear.ts): a scuff on the
+    outside of the toe box where the ollie drags it up the grip, and the hole it wears through to the sock."""
+    side = HIP_X + shoe_w / 2  # the outside face of the left shoe
+    mid = ANKLE_Z - 0.075 + 0.055
+    scuff = box('WearScuff', (0.006, 0.1, 0.05), (side + 0.002, shoe_y - 0.075, mid), material('WearScuff', 0x8E8C90), 0.002)
+    hole = box('WearHole', (0.008, 0.045, 0.024), (side + 0.003, shoe_y - 0.085, mid + 0.004), material('WearHole', 0xE8E4DA))
+    return [(scuff, 'LeftFoot'), (hole, 'LeftFoot')]
+
+
 def rigid(ob, bone):
     vg = ob.vertex_groups.new(name=bone)
     vg.add(list(range(len(ob.data.vertices))), 1.0, 'REPLACE')
@@ -276,7 +286,7 @@ def build():
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
 
-    for ob, bone in helmet(mats) + gear(mats):
+    for ob, bone in helmet(mats) + gear(mats) + wear_decals():
         rigid(ob, bone)
         ob.select_set(True)
     suit.select_set(True)

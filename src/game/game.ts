@@ -655,6 +655,7 @@ export class Game {
     const sk = this.skater;
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
     this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
+    this.sprite.setGear(this.sim.gear);
     this.impacts.update(dt);
     this.chopper.update(this.level, this.sim.chopper, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);

@@ -170,7 +170,7 @@ def build(name, spec):
     rig.select_set(True)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
-    for part, bone in head(spec, mats) + feet(spec, mats):
+    for part, bone in head(spec, mats) + feet(spec, mats) + lg.wear_decals(0.11, -0.06):
         lg.rigid(part, bone)
         part.select_set(True)
     ob.select_set(True)
