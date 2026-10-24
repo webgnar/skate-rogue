@@ -431,6 +431,18 @@ and listed it here for review. Any of these can be flipped in the morning.
   `manual pads` (tier 1) and `pad line` (tier 2). The reference bot now follows its fall and skips the rescue flip
   when it's already coming down on a pad; before that it flipped over them, and at gnar speed overshot one floor.
 
+- **One district per run (zack: "biomes should not change until the player has gotten to the end of the game for
+  that biome").** I put this on a card and built the recommended option while waiting: a run's five acts all happen
+  in one district, picked before the run with a button on the run summary (src/run/districts.ts). Chicago is open
+  on a new save; a win opens the next district in the GDD's biome order, and the summary says which. Old saves
+  with a win get Chicago marked as escaped. The daily run's district comes from its seed, and it doesn't open
+  districts. The escape set pieces still go by act (roadblock, helicopter, chase, drones, finale), so every
+  district gets all five. The playtest bot now gives each seed its own district, which turned up a bug: in the Art
+  Museum a Ghost Rail could run into a lower ceiling in the next piece, and the skater popped into the ceiling and
+  re-landed on the rail's end forever. Ghost rails (and Sky Line's) now stop where a ceiling comes down to them.
+  One mash-bot finding is left: a fall through a moving car's roof on a Greece floor 12 (seed 47514). It's a
+  physics edge I didn't chase.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

@@ -240,7 +240,7 @@ export class Skater {
     //a 180 lands you riding the other way round
     if (spin === 180) this.fakie = !this.fakie;
     //Sky Line: a ghost rail under your feet to come down on
-    if (this.mods.skyLine) this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.skyLineTiles * TILE, y: this.y + PHYS.skyLineDrop, row: -1, ttl: PHYS.ghostFrames };
+    if (this.mods.skyLine) this.ghost = { kind: 'rail', x0: this.x, x1: this.ghostEnd(this.x + PHYS.skyLineTiles * TILE, this.y + PHYS.skyLineDrop), y: this.y + PHYS.skyLineDrop, row: -1, ttl: PHYS.ghostFrames };
   }
 
   private bankSpare(): void {
@@ -250,7 +250,16 @@ export class Skater {
   // Ghost Rail: the rail we just left keeps going for a while
   private spawnGhost(y: number): void {
     if (!this.mods.ghostRail || this.surface === this.ghost) return;
-    this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.ghostTiles * TILE, y, row: -1, ttl: PHYS.ghostFrames };
+    this.ghost = { kind: 'rail', x0: this.x, x1: this.ghostEnd(this.x + PHYS.ghostTiles * TILE, y), y, row: -1, ttl: PHYS.ghostFrames };
+  }
+
+  // a ghost rail stops where an Art Museum ceiling comes down to its height (else you'd grind inside the ceiling,
+  // popping into it and landing back on the rail's end over and over)
+  private ghostEnd(x1: number, y: number): number {
+    for (const c of this.level.ceiling ?? []) {
+      if (c.x1 > this.x && c.x0 < x1 && c.y + PHYS.height > y - PHYS.height) x1 = Math.max(this.x, Math.min(x1, c.x0));
+    }
+    return x1;
   }
 
   private leaveGround(): void {

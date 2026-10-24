@@ -182,6 +182,16 @@ Each act's district now changes the street, not just the look. Quickest check: `
 - [ ] **High-Tech City (act 4):** some flat rails have glowing chevrons. Cyan ones speed your grind up, orange ones slow it down.
 - [ ] *Feel:* are currents strong enough to notice but never unfair? Does the museum ceiling feel like a twist or just a limit?
 
+## One district per run
+
+- [ ] A whole run stays in one district: floors 1 to 15, the escapes and the finale all keep the same look, gravity
+      and twist. A new save starts in Chicago.
+- [ ] Win a run in Chicago: the summary says NEW DISTRICT OPEN: CLEMENTE PARK, and a district button appears beside
+      UNLOCKS. Tapping it cycles the opened districts; the next run starts in the one it shows.
+- [ ] `?unlockall` opens every district on the button. The daily run hides the button and has a district of its own.
+- [ ] Art Museum with the Ghost Rail boon: the ghost rail stops short of a lower ceiling instead of running into it
+      (the playtest bot used to get stuck popping into the ceiling at a ghost rail's end).
+
 ## Gnar levels (harder runs after a win)
 
 - [ ] **Locked until you win:** the run summary has no GNAR button until you've beaten act 5 once (or use `?unlockall`).

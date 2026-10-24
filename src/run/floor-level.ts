@@ -4,7 +4,7 @@ import type { Level } from '../physics/level';
 import type { Road } from '../gen/roads';
 import { rollFork } from '../gen/roads';
 import { validatedFloor } from '../gen/validate';
-import { actBiome, actOf, validatedEscape } from '../gen/escape';
+import { validatedEscape } from '../gen/escape';
 import { tutorialLevel } from '../gen/tutorial';
 import { DISTRICT_TWIST } from '../gen/twists';
 import { gnarDanger } from './gnar';
@@ -19,7 +19,7 @@ export interface FloorSpec {
   library: Library;
   gnar: number;
   tutorial?: boolean;
-  district?: BiomeId; // ?biome= pins one; otherwise the act's own
+  district?: BiomeId; // the run's district (src/run/districts.ts); Chicago if left out
 }
 
 export function floorLevel(s: FloorSpec): Level {
@@ -35,7 +35,7 @@ export function floorLevel(s: FloorSpec): Level {
   }).level;
 }
 
-// the district a floor is skated in
-export function floorDistrict(s: Pick<FloorSpec, 'seed' | 'floor' | 'road' | 'district'>): BiomeId {
-  return s.district ?? actBiome(s.seed, s.road.kind === 'escape' ? s.road.act : actOf(s.floor));
+// the district a floor is skated in: the run's, every act of it
+export function floorDistrict(s: Pick<FloorSpec, 'district'>): BiomeId {
+  return s.district ?? 'chicago';
 }

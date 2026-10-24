@@ -195,6 +195,7 @@ html, body {
 #over .reached { font-size: 20px; }
 #over .final { font-size: clamp(22px, 5vw, 34px); color: var(--trick); }
 #over .best { font-size: 14px; opacity: 0.85; }
+#over .opened { font-size: 16px; color: var(--good); letter-spacing: 0.06em; }
 #pick .reroll {
   all: unset;
   cursor: pointer;

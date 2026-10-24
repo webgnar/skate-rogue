@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { BOONS } from '../src/boons/defs';
 import { NO_MODS } from '../src/boons/mods';
 import { offerBoons } from '../src/boons/offer';
-import { actBiome } from '../src/gen/escape';
+import { dailyDistrict, DISTRICT_ORDER, districtsOpen, nextDistrict } from '../src/run/districts';
+import { floorDistrict, floorLevel } from '../src/run/floor-level';
+import { BIOME_GRAVITY } from '../src/physics/feel';
 import { rollFork } from '../src/gen/roads';
 import { buy, dailySeed, DECK_SLOTS, firstPick, FULL_LIBRARY, libraryOf, START_TYPES, STOCK, UNLOCKS, withLoadout } from '../src/run/meta';
 import { RunScore } from '../src/run/score';
@@ -88,12 +90,20 @@ describe('meta progression', () => {
     expect(a).toBeGreaterThan(0);
   });
 
-  it('each act is its own district: act 3 varies by seed', () => {
-    expect(actBiome(1, 1)).toBe('chicago');
-    expect(actBiome(1, 2)).toBe('clemente');
-    expect(actBiome(1, 4)).toBe('hightech');
-    expect(actBiome(1, 5)).toBe('hive');
-    const act3 = new Set(Array.from({ length: 50 }, (_, s) => actBiome(s, 3)));
-    expect([...act3].sort()).toEqual(['atlantis', 'greece', 'museum']);
+  it('a run stays in one district; a win there opens the next, Chicago first', () => {
+    expect(districtsOpen([])).toEqual(['chicago']);
+    expect(nextDistrict('chicago', [])).toBe('clemente');
+    expect(districtsOpen(['chicago'])).toEqual(['chicago', 'clemente']);
+    expect(nextDistrict('chicago', ['chicago'])).toBeNull(); // already open
+    expect(districtsOpen(['chicago', 'clemente', 'greece']).at(-1)).toBe('atlantis');
+    expect(nextDistrict('hive', DISTRICT_ORDER)).toBeNull(); // the last one
+    expect(districtsOpen(DISTRICT_ORDER)).toEqual(DISTRICT_ORDER);
+    for (const district of ['atlantis', 'hive'] as const) {
+      const road = { kind: 'boon', boonType: 'POP', danger: 1 } as const;
+      expect(floorDistrict({ district })).toBe(district);
+      expect(floorLevel({ seed: 5, floor: 13, road, library: FULL_LIBRARY, gnar: 0, district }).gravity ?? 1).toBe(BIOME_GRAVITY[district] ?? 1);
+    }
+    const daily = new Set(Array.from({ length: 60 }, (_, s) => dailyDistrict(s)));
+    expect(daily.size).toBeGreaterThan(5);
   });
 });
