@@ -195,8 +195,38 @@ html, body {
   cursor: pointer;
   animation: rise 0.25s ease-out backwards;
 }
-.card:nth-child(2) { animation-delay: 0.05s; }
-.card:nth-child(3) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.07s; }
+.card:nth-child(3) { animation-delay: 0.14s; }
+/* screen juice: cards deal in with a flick and a shine; the picked one pops, the others fall away */
+#pick .card { animation: deal 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; overflow: hidden; }
+#pick .card::after {
+  content: '';
+  position: absolute;
+  inset: -20% auto -20% -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-12deg);
+  animation: shine 0.7s ease-out 0.3s backwards;
+  pointer-events: none;
+  opacity: 0;
+}
+#pick .card:nth-child(2)::after { animation-delay: 0.37s; }
+#pick .card:nth-child(3)::after { animation-delay: 0.44s; }
+@media (hover: hover) {
+  #pick .card { transition: transform 0.12s, box-shadow 0.12s; }
+  #pick .card:hover { transform: translateY(-5px) rotate(-0.6deg); box-shadow: 0 11px 0 var(--shadow), 0 0 18px -4px var(--type); }
+}
+#pick.leaving { animation: fadeout 0.3s ease-in forwards; pointer-events: none; }
+@keyframes fadeout { to { opacity: 0; } }
+#pick.leaving .card { animation: drop 0.28s ease-in forwards; }
+#pick.leaving .card.chosen { animation: chosen 0.3s ease-out forwards; z-index: 1; }
+@keyframes deal { from { opacity: 0; transform: translateY(46px) rotate(-7deg) scale(0.86); } }
+@keyframes shine { from { opacity: 1; left: -60%; } to { opacity: 1; left: 130%; } }
+@keyframes drop { to { opacity: 0; transform: translateY(40px) rotate(4deg) scale(0.9); } }
+@keyframes chosen {
+  40% { transform: scale(1.12) translateY(-8px); box-shadow: 0 0 0 4px #fff7e8, 0 0 30px var(--type); }
+  to { transform: scale(1.06) translateY(-14px); opacity: 0; }
+}
 .card:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--shadow); }
 .card .type {
   align-self: flex-start;
@@ -338,6 +368,19 @@ html, body {
 #shop .slot.picked { background: #fff7e8; color: #1a1028; }
 #shop .slot.add { border: 2.5px dashed #7df0a0; color: #7df0a0; }
 #shop .slot small { font-size: 10px; opacity: 0.8; }
+#shop .slot.pop { animation: stamp 0.32s cubic-bezier(0.2, 1.6, 0.4, 1); }
+#shop .head { position: relative; }
+#shop .spent {
+  position: absolute;
+  right: -8px;
+  top: -4px;
+  color: #ff7a7a;
+  font-size: 18px;
+  animation: spent 0.9s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes stamp { from { transform: scale(1.5) rotate(-8deg); opacity: 0.2; } }
+@keyframes spent { to { transform: translateY(-26px); opacity: 0; } }
 #shop .hint { font: 12px/1.3 system-ui, sans-serif; opacity: 0.8; text-align: center; text-shadow: none; }
 #shop .stock { display: flex; gap: clamp(6px, 1.5vw, 12px); width: 100%; max-width: 760px; justify-content: center; }
 #shop .mod {
@@ -355,8 +398,11 @@ html, body {
   border: 2.5px solid var(--c, #666);
   box-shadow: 0 5px 0 var(--shadow);
   text-align: left;
-  animation: rise 0.25s ease-out backwards;
 }
+#shop.opening .mod { animation: deal 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
+#shop.opening .mod:nth-child(2) { animation-delay: 0.05s; }
+#shop.opening .mod:nth-child(3) { animation-delay: 0.1s; }
+#shop.opening .mod:nth-child(4) { animation-delay: 0.15s; }
 #shop .mod.trigger { --c: var(--trigger); }
 #shop .mod.effect { --c: var(--effect); }
 #shop .mod.picked { background: #3a2a5c; transform: translateY(-4px); box-shadow: 0 9px 0 var(--shadow), 0 0 0 2px #fff7e8; }
@@ -370,3 +416,6 @@ html, body {
 #shop .restock, #shop .done { padding: 10px 18px; min-height: 44px; border-radius: 999px; font-size: 14px; letter-spacing: 1.5px; }
 #shop .restock { border: 2px solid #7df0a0; color: #7df0a0; }
 #shop .done { background: var(--trick); color: #1a1028; text-shadow: none; }
+
+/* reduce motion (?calm or the device setting): no screen animations */
+#app.calm *, #app.calm *::before, #app.calm *::after { animation: none !important; transition: none !important; }

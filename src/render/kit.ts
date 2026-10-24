@@ -283,6 +283,7 @@ export function buildKit(level: Level): THREE.Group {
     new THREE.MeshBasicMaterial({ color: 0x7cf0ff }),
   );
   gate.position.set(toX(level.exitX) + 0.5, 0, 0);
+  gate.userData.gate = true; // gate-fx.ts fills the arch
   kit.add(gate);
 
   //--- the fork: a second gate up on the overpass and signs for both roads ----------------------
@@ -291,6 +292,7 @@ export function buildKit(level: Level): THREE.Group {
     const hy = toY(level, fork.y);
     const high = gate.clone();
     high.material = new THREE.MeshBasicMaterial({ color: 0xffd23f });
+    high.userData = { gate: true };
     high.scale.setScalar(0.8);
     high.position.set(toX(level.exitX) + 0.5, hy, -0.2);
     kit.add(high);

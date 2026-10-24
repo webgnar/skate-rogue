@@ -6,6 +6,7 @@ import { buildKit, toX, toY } from './kit';
 import { NightCity } from './night';
 import { FX } from './fx-settings';
 import { batchStatic } from './batch';
+import { GateFx } from './gate-fx';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution } from './toon';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
@@ -19,6 +20,7 @@ export class StreetView {
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
   readonly night = new NightCity();
+  readonly gates = new GateFx();
   private skyline: THREE.Mesh | null = null;
   private readonly hemis: THREE.HemisphereLight[] = [];
   private readonly suns: THREE.DirectionalLight[] = [];
@@ -61,7 +63,7 @@ export class StreetView {
       this.hemis.push(hemi);
       this.suns.push(sun);
     }
-    this.scene.add(this.sky, this.puddles.mesh, this.night.group);
+    this.scene.add(this.sky, this.puddles.mesh, this.night.group, this.gates.group);
     this.front.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
@@ -139,11 +141,13 @@ export class StreetView {
     this.kitInk();
     this.scene.add(this.kit);
     this.night.build(level, this.kit, seed, floor);
+    this.gates.build(this.kit);
   }
 
   // lock the camera on the skater's feet at (px, py), zoomed for what they're doing; dt in seconds
   follow(px: number, py: number, dt = 0): void {
     this.camX = toX(px);
+    this.gates.update(dt, toX(px));
     this.camY = toY(this.level, py);
     //a slam punches the camera in and rolls it, settling over about half a second (held through the hit-stop)
     const zoom = this.zoom.zoom * (1 + this.punchAmt * 0.35);

@@ -95,6 +95,20 @@ function makeHud(): Hud {
   let level = 0;
   let held: Held[] = [];
   let timer = 0;
+  //screen juice (src/style.css): the card you picked pops while the others fall away; the shop deals its stock in
+  //once on opening, pops a slot that changed, and floats what you spent off the cash
+  let chosen = -1;
+  let pickTimer = 0;
+  let shopOpen = false;
+  let shopCash = 0;
+  let shopSlots: string[] = [];
+  pickEl.addEventListener('pointerdown', (e) => {
+    const c = (e.target as HTMLElement).closest<HTMLElement>('[data-pick]');
+    if (c) chosen = Number(c.dataset.pick);
+  });
+  window.addEventListener('keydown', (e) => {
+    if (/^Digit[123]$/.test(e.code)) chosen = Number(e.code.slice(5)) - 1;
+  });
   return {
     floor: (n, road) => {
       floorEl.textContent = road.kind === 'escape' ? `ACT ${road.act} ESCAPE` : `ACT ${actOf(n)} · FLOOR ${n}`;
@@ -139,9 +153,34 @@ function makeHud(): Hud {
     },
     shop: (v) => {
       shopEl.hidden = !v;
-      if (!v) return;
+      if (!v) {
+        shopOpen = false;
+        return;
+      }
       const h = shopHtml(v);
-      shopEl.querySelector('.slots')!.innerHTML = h.slots;
+      if (!shopOpen) {
+        shopOpen = true;
+        shopCash = v.shop.cash;
+        shopSlots = [];
+        shopEl.classList.remove('opening');
+        void shopEl.offsetWidth;
+        shopEl.classList.add('opening');
+      }
+      const slotsEl = shopEl.querySelector('.slots')!;
+      slotsEl.innerHTML = h.slots;
+      const now = [...slotsEl.querySelectorAll('.slot')].map((el) => el.className.replace(/ ?(target|picked)/g, '') + el.textContent);
+      slotsEl.querySelectorAll('.slot').forEach((el, i) => {
+        if (shopSlots.length && shopSlots[i] !== now[i]) el.classList.add('pop');
+      });
+      shopSlots = now;
+      if (v.shop.cash < shopCash) {
+        const spent = document.createElement('span');
+        spent.className = 'spent';
+        spent.textContent = `-$${shopCash - v.shop.cash}`;
+        shopEl.querySelector('.head')!.appendChild(spent);
+        window.setTimeout(() => spent.remove(), 900);
+      }
+      shopCash = v.shop.cash;
       shopEl.querySelector('.stock')!.innerHTML = h.stock;
       shopEl.querySelector('.hint')!.textContent = h.hint;
       shopEl.querySelector('.cash')!.textContent = `$${v.shop.cash}`;
@@ -154,8 +193,24 @@ function makeHud(): Hud {
       boonsEl.innerHTML = h.map(chip).join('');
     },
     pick: (offer, info) => {
-      pickEl.hidden = !offer;
-      if (!offer) return;
+      clearTimeout(pickTimer);
+      pickEl.classList.remove('leaving');
+      if (!offer) {
+        //the picked card pops, the rest fall away, then the screen goes
+        if (pickEl.hidden || FX.reduceMotion) {
+          pickEl.hidden = true;
+          return;
+        }
+        pickEl.querySelectorAll('.card').forEach((c, i) => c.classList.toggle('chosen', i === chosen));
+        pickEl.classList.add('leaving');
+        pickTimer = window.setTimeout(() => {
+          pickEl.hidden = true;
+          pickEl.classList.remove('leaving');
+        }, 320);
+        return;
+      }
+      pickEl.hidden = false;
+      chosen = -1;
       pickEl.querySelector('.cards')!.innerHTML = offer.map((b, i) => card(b, i, held)).join('');
       if (info) {
         pickEl.querySelector('.title')!.textContent = info.title;
@@ -184,6 +239,7 @@ async function start() {
   const params = new URLSearchParams(location.search);
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   document.getElementById('app')!.classList.toggle('noflash', FX.reduceFlashing);
+  document.getElementById('app')!.classList.toggle('calm', FX.reduceMotion);
   const fixedSeed = Number(params.get('seed')) || 0;
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 

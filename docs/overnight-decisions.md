@@ -73,6 +73,16 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **The drone scan is red and sweeps steadily**, never blinking, so it stays clear of the photosensitivity rule.
 - **Both show in daylight at 45% strength**, because Heat can rise in the afternoon too.
 
+## Effects thread: fx12 screen and gate juice
+
+- **The pick screen closes with the picked card popping**, which delays hiding it by 0.3 s. The game is already
+  skating again underneath, so this adds no wait.
+- **The shop deals its stock in only when it opens.** Before this it replayed the deal on every tap, which felt
+  jittery.
+- **Gates wake within 12 tiles**: a portal of rings fills the arch and grows brighter.
+- **Fork signs are unchanged for now.** Lighting the chosen road's sign needs a live "high or low" signal while
+  skating, and that is the gameplay thread's call.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor
