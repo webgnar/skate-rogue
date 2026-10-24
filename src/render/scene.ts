@@ -18,6 +18,9 @@ export class StreetView {
   private pixelRatio: number;
   private slowMs = 0;
   private shakeAmt = 0;
+  private punchAmt = 0;
+  private punchRoll = 1;
+  private readonly buf = new THREE.Vector2();
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -86,18 +89,32 @@ export class StreetView {
     this.camX = snap ? tx : this.camX + (tx - this.camX) * 0.2;
     this.camY = snap ? ty : this.camY + (ty - this.camY) * k;
     //pull back a little at speed
-    const dist = 19 + Math.max(0, hsp - 3.5) * 0.8;
+    //a slam punches the camera in and rolls it, settling over about half a second
+    const dist = 19 + Math.max(0, hsp - 3.5) * 0.8 - this.punchAmt * 6;
     //a slam shakes the camera, dying off fast
     const sx = (Math.random() - 0.5) * this.shakeAmt;
     const sy = (Math.random() - 0.5) * this.shakeAmt;
     this.shakeAmt *= 0.86;
     this.camera.position.set(this.camX + sx, this.camY + 4 + sy, dist);
     this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0);
+    this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
+    this.punchAmt *= 0.91;
     if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
   }
 
   shake(amount: number): void {
     this.shakeAmt = Math.max(this.shakeAmt, amount);
+  }
+
+  punch(amount: number): void {
+    this.punchAmt = Math.max(this.punchAmt, amount);
+    this.punchRoll = Math.random() < 0.5 ? -1 : 1;
+  }
+
+  // pixels per world unit at distance 1, for sizing particles
+  get pointScale(): number {
+    const h = this.renderer.getDrawingBufferSize(this.buf).y;
+    return h / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
   }
 
   resize(): void {

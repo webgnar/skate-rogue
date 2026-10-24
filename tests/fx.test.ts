@@ -1,0 +1,75 @@
+import { describe, expect, it } from 'vitest';
+import { TimeWarp } from '../src/game/time-warp';
+import { FixedStep } from '../src/game/loop';
+import { ParticlePool } from '../src/render/particle-pool';
+
+describe('time warp', () => {
+  it('freezes, then slows, then returns to full speed', () => {
+    const w = new TimeWarp();
+    expect(w.scale).toBe(1);
+    w.hit(0.09, 0.3, 0.5);
+    expect(w.scale).toBe(0);
+    w.update(0.05);
+    expect(w.scale).toBe(0);
+    w.update(0.05); // 0.01 s into the slow-mo
+    expect(w.scale).toBeGreaterThan(0.29);
+    expect(w.scale).toBeLessThan(0.35);
+    w.update(0.25);
+    const mid = w.scale;
+    expect(mid).toBeGreaterThan(0.3);
+    expect(mid).toBeLessThan(1);
+    w.update(0.3);
+    expect(w.scale).toBe(1);
+  });
+
+  it('runs no physics steps while frozen, fewer while slow, and all of them after', () => {
+    const w = new TimeWarp();
+    const loop = new FixedStep();
+    const steps = (secs: number) => {
+      let n = 0;
+      for (let t = 0; t < secs - 1e-9; t += 1 / 60) {
+        loop.advance((1 / 60) * w.scale, () => n++);
+        w.update(1 / 60);
+      }
+      return n;
+    };
+    w.hit(0.1, 0.3, 0.5);
+    expect(steps(0.1)).toBe(0);
+    const slow = steps(0.5);
+    expect(slow).toBeGreaterThan(5);
+    expect(slow).toBeLessThan(27);
+    expect(steps(1)).toBeGreaterThanOrEqual(59);
+  });
+});
+
+describe('particle pool', () => {
+  it('never grows past its size and reuses the oldest slot', () => {
+    const pool = new ParticlePool(4);
+    const slots = Array.from({ length: 6 }, () => pool.alloc());
+    expect(slots).toEqual([0, 1, 2, 3, 0, 1]);
+  });
+
+  it('frees particles when their life runs out', () => {
+    const pool = new ParticlePool(8);
+    const i = pool.alloc();
+    pool.life[i] = 0.2;
+    pool.age[i] = 0;
+    pool.step(0.1);
+    expect(pool.alive(i)).toBe(true);
+    pool.step(0.15);
+    expect(pool.alive(i)).toBe(false);
+  });
+
+  it('applies gravity and drag', () => {
+    const pool = new ParticlePool(2);
+    const i = pool.alloc();
+    pool.life[i] = 1;
+    pool.vx[i] = 2;
+    pool.drag[i] = 1;
+    pool.grav[i] = 10;
+    pool.step(0.1);
+    expect(pool.vy[i]).toBeLessThan(0);
+    expect(pool.vx[i]).toBeLessThan(2);
+    expect(pool.px[i]).toBeGreaterThan(0);
+  });
+});
