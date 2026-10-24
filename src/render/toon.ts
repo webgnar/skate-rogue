@@ -95,7 +95,7 @@ const inkUniforms = {
 };
 let inkMat: THREE.ShaderMaterial | null = null;
 
-function outlineMaterial(): THREE.ShaderMaterial {
+export function outlineMaterial(): THREE.ShaderMaterial {
   inkMat ??= new THREE.ShaderMaterial({
     vertexShader: outlineVertex,
     fragmentShader: outlineFragment,
@@ -115,7 +115,7 @@ export function setInkResolution(width: number, height: number, pixelRatio: numb
 
 // smoothed normals: every vertex at the same spot gets the average of their normals, so the hull of a box has no
 // gaps at its corners
-function inkNormals(geo: THREE.BufferGeometry): void {
+export function inkNormals(geo: THREE.BufferGeometry): void {
   if (geo.getAttribute('inkNormal')) return;
   if (!geo.getAttribute('normal')) geo.computeVertexNormals();
   const pos = geo.getAttribute('position');
@@ -143,7 +143,7 @@ export interface InkOptions {
 }
 
 //hidden meshes (the rig's bone drivers) and see-through ones get no outline
-const solid = (mesh: THREE.Mesh) =>
+export const solid = (mesh: THREE.Mesh) =>
   mesh.visible &&
   [mesh.material].flat().some((m) => !m.transparent || (m as THREE.MeshLambertMaterial).alphaTest > 0);
 

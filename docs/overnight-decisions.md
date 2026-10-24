@@ -114,6 +114,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   0.75 at full neon. At night it tints toward the district's light: pink in the city, cyan in High-Tech and
   Atlantis, amber in the Hive. It gleams for a quarter second on each trick and landing. Only the visor
   brightens, and with reduce-flashing on there's no gleam at all.
+- **Fewer draw calls for the street kit (src/render/kit-merge.ts).** Floors were drawing 150 to 220 calls, far over
+  what an older iPhone handles well. Each building drew its front, top and sides separately, plus its own outline.
+  Now the tops and sides batch with matching kit, and every static outline merges into one mesh. Floor 1 dropped
+  from about 190 calls to about 60, and floor 12 from about 200 to about 45. In screenshots the look is unchanged.
+  Building fronts keep one draw each because each has its own window map; an atlas could cut those later.
+  Anything that moves keeps its own outline: gates, fork signs, and props.
+- **Cardboard boxes break like paper**, not wood. The name matched wood's "board" first.
 
 ## Effects thread: fx6 leftovers
 

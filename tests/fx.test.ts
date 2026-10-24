@@ -5,6 +5,9 @@ import { BoonFx } from '../src/render/boon-fx';
 import type { Particles } from '../src/render/particles';
 import { applyParams, FX } from '../src/render/fx-settings';
 import { VisorGlint, VISOR, VISOR_TINT } from '../src/render/visor-glint';
+import { mergeInk, splitSlabs } from '../src/render/kit-merge';
+import { batchStatic } from '../src/render/batch';
+import { inkify, solid } from '../src/render/toon';
 import { describe, expect, it } from 'vitest';
 import { TimeWarp } from '../src/game/time-warp';
 import { FixedStep } from '../src/game/loop';
@@ -284,5 +287,53 @@ describe('visor glint', () => {
     v.setNight(1);
     v.ping();
     expect(() => v.update(0.1)).not.toThrow();
+  });
+});
+
+describe('kit merge', () => {
+  const kit = () => {
+    const root = new THREE.Group();
+    const side = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const top = new THREE.MeshLambertMaterial({ color: 0x555555 });
+    for (let i = 0; i < 4; i++) {
+      const front = new THREE.MeshLambertMaterial({ color: 0xffffff });
+      front.userData.facade = { w: 2, h: 3, t: 0 }; // each building's own window map: never batched
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 2), [side, side, top, side, front, side]);
+      b.position.set(i * 3, 1.5, 0);
+      root.add(b);
+    }
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.1), new THREE.MeshLambertMaterial());
+    sign.userData.forkSign = 'high';
+    root.add(sign);
+    return root;
+  };
+  const draws = (root: THREE.Object3D) => {
+    let n = 0;
+    root.traverseVisible((o) => {
+      if (o instanceof THREE.Mesh) n += Array.isArray(o.material) ? o.geometry.groups.length : 1;
+    });
+    return n;
+  };
+  it('splits buildings so tops and sides batch, and merges the static outlines into one', () => {
+    const root = kit();
+    const slabs = splitSlabs(root);
+    expect(slabs).toHaveLength(4);
+    batchStatic(root);
+    inkify(root, { outline: (m) => !m.userData.noInk && solid(m) });
+    const ink = mergeInk(root, slabs)!;
+    expect(ink.userData.ink).toBe(true);
+    // 4 fronts + 1 side batch + 1 top batch + the sign + its own outline + the merged ink
+    expect(draws(root)).toBe(9);
+    // the sign moves, so it keeps its own outline
+    const sign = root.children.find((o) => o.userData.forkSign)!;
+    expect(sign.children.some((c) => c.userData.ink)).toBe(true);
+    // the merged outline spans every building, in kit space
+    ink.geometry.computeBoundingBox();
+    expect(ink.geometry.boundingBox!.max.x).toBeCloseTo(10);
+    expect(ink.geometry.getAttribute('inkNormal')).toBeTruthy();
+  });
+  it('cardboard breaks like paper', () => {
+    expect(stuffOf('CardboardBox')).toBe('paper');
+    expect(stuffOf('SandwichBoard')).toBe('wood');
   });
 });

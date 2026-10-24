@@ -35,6 +35,7 @@ export const SMASH = {
 
 // what a prop is made of, from its name
 const STUFF: [RegExp, Stuff][] = [
+  [/cardboard/i, 'paper'], // before wood's 'board'
   [/bottle|window|glass|lamp/i, 'glass'],
   [/hydrant|newsbox|mailbox|meter|sign|pole|can|rail/i, 'metal'],
   [/crate|bench|pallet|board|sandwich/i, 'wood'],
