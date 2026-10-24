@@ -321,3 +321,26 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Pause** is the top right button, Esc or P, and it pauses itself when you switch apps. Resume is a button so a
   stray tap doesn't drop you back in.
 - **Font:** Bangers (OFL), bundled with the game, so there is no font request at runtime.
+
+## Physics feel thread (pf1-physics-feel)
+
+- **The fixed timestep was already there** (60 Hz with render interpolation, from M0), so this change is the feel
+  layer on top of it, not a new engine. QFS's gravity, ollie and fall cap are unchanged.
+- **Landings by height, measured into the surface.** About 1 tile is a kiss, 3 tiles to flat is heavy (costs a little
+  flow speed), 5.5+ tiles to flat is sketchy (40% of flow speed and a heel-toe rock). A bank that falls away soaks up
+  any drop. Cruising speed is never lost to a landing. On the bot's runs that's 55% clean, 29% heavy, 16% sketchy:
+  the descents have lots of big drops to flat, which in real life (5.5 tiles is about 6 m) is a sketchy landing at
+  best. Easy to soften (`FEEL.huge` in src/physics/feel.ts).
+- **Landing mid-flip is a slam** (the GDD already said so; now it's real). Under 60% through the catch is a slam,
+  60-100% sketchy. Each trick's catch time is the key in its clip where the board stops turning, and a test keeps the
+  sim and the clips in step. In practice it only bites when you flip up onto something higher.
+- **Momentum carries into the ollie.** An ollie keeps the vertical speed the ground was giving you, so up banks
+  launch higher and an ollie off a down handrail still carries you down (it used to pop you straight up). Floors still
+  all clear (50 seeds x 8 floors).
+- **Grind materials: steel and concrete.** Curved rails lose a little speed to friction (steel mu 0.05). Concrete
+  bites harder and rocks you less. Every grind in the game today is steel, since ledges are platforms, not grinds;
+  making ledges grindable is a gameplay call for zack.
+- **The body response is split.** The sim owns the numbers (`skater.feel`: squash, lean, wobble, board pitch from the
+  two trucks), the models thread's `absorb()` in the rig animates them, and the effects thread scales landing dust and
+  camera kick by impact. Sketchy landings don't touch score or combo; that's the gameplay thread's call.
+

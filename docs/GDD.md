@@ -254,6 +254,10 @@ Input buffering (100 ms) and coyote time (80 ms) are on for everyone; touch late
 - **Trick names** pop on screen: ollie, kickflip, heelflip, 360 flip, hardflip, shuvit. Each trick in a combo
   without touching the ground adds to the combo multiplier.
 - **Landing**: land with the board under you or take a slam (see Getting hit). Landing on a slope downhill keeps speed.
+  Every landing has an impact (speed into the ground along its normal) and a quality: clean, heavy (about 3 tiles to
+  flat), sketchy (5.5+ tiles to flat, or a flip landed late in its catch) or a slam (stairs, or a flip barely
+  started). Heavy and sketchy landings cost flow speed only. Landing into a bank that falls away soaks up any drop.
+  Details: openspec/changes/pf1-physics-feel.
 
 ### Grinding
 

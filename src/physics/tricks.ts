@@ -24,6 +24,23 @@ export const SPIN: Record<TrickId, 0 | 180> = {
   kickflip: 0, heelflip: 0, shuv1: 0, shuv2: 0, bs180: 180, fs180: 180, tre: 0, hardflip: 0, varial: 0, varialHeel: 0, fsShuv: 0,
 };
 
+// When each flip is caught: the time (s) in its clip (src/render/poses.ts) where the board stops turning and the
+// feet are back on it. The sim and the rig share it: land before the catch and it's sketchy, well before and the
+// board isn't under you (a slam). tests/feel.test.ts checks these against the clips.
+export const TRICK_CATCH: Record<TrickId, number> = {
+  kickflip: 0.32,
+  heelflip: 0.33,
+  shuv1: 0.28,
+  shuv2: 0.32,
+  bs180: 0.36,
+  fs180: 0.36,
+  tre: 0.37,
+  hardflip: 0.33,
+  varial: 0.32,
+  varialHeel: 0.32,
+  fsShuv: 0.28,
+};
+
 const NAMES: Record<TrickId, string> = {
   kickflip: 'KICKFLIP',
   heelflip: 'HEELFLIP',
