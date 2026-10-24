@@ -14,6 +14,7 @@ export interface Save {
   deck: DeckId;
   daily: { day: string; best: number }; // today's daily run best
   tag?: string; // the leaderboard name
+  tutorialDone?: boolean; // the tutorial floor was cleared (or skipped by an old save)
 }
 
 export const EMPTY_SAVE: Save = { best: 0, stoken: 0, wins: 0, unlocked: [], skater: 'lou-gnar', deck: 'popsicle', daily: { day: '', best: 0 } };
@@ -31,6 +32,7 @@ export function loadSave(): Save {
       deck: isDeck(s.deck) ? s.deck : 'popsicle',
       daily: { day: String(s.daily?.day ?? ''), best: Number(s.daily?.best) || 0 },
       ...(typeof s.tag === 'string' && s.tag ? { tag: s.tag } : {}),
+      ...(s.tutorialDone ? { tutorialDone: true } : {}),
     };
   } catch {
     return { ...EMPTY_SAVE };

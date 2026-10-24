@@ -12,14 +12,15 @@ export interface ShopState {
 
 export const STOCK_SIZE = 4;
 
-// 4 mods, at least one trigger and one effect, no repeats
+// 4 mods, at least one trigger and one effect, no repeats; modifiers turn up among the rest
 export function rollStock(seed: number, visit: number, restocks: number): ModId[] {
   const rng = makeRng(seed * 7919 + visit * 104729 + restocks * 1299709);
   const triggers = MOD_DEFS.filter((m) => m.kind === 'trigger').map((m) => m.id);
   const effects = MOD_DEFS.filter((m) => m.kind === 'effect').map((m) => m.id);
+  const modifiers = MOD_DEFS.filter((m) => m.kind === 'modifier').map((m) => m.id);
   const take = (from: ModId[]) => from.splice(randInt(rng, from.length), 1)[0];
   const stock = [take(triggers), take(effects)];
-  const rest = [...triggers, ...effects];
+  const rest = [...triggers, ...effects, ...modifiers];
   while (stock.length < STOCK_SIZE) stock.push(take(rest));
   //shuffle so the trigger isn't always first
   for (let i = stock.length - 1; i > 0; i--) {

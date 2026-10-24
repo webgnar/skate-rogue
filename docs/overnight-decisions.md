@@ -354,6 +354,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   arcade tag (3 to 10 letters or digits) the first time; after that every run posts itself. No game key: a key
   shipped in the page doesn't stop anyone, so the server only checks that entries are sane. It stays hidden
   until zack connects an Upstash Redis store to the Vercel project (steps in docs/test-checklist.md).
+- **Board mod modifiers (the GDD's ×2, Delay, Only On Combo ×5, Chance 50%).** Sold in the shop with the other
+  mods: Times Two ($45), Delay 0.5 s ($15), Combo Only ($30) and Coin Flip ($25). They stack on the next effect.
+  Two calls of mine: Combo Only fires twice once you're in a combo of 5+ (so it pays for its slot), and the GDD's
+  "Chance 50%" became Coin Flip, nothing or three times, so it's a gamble rather than a plain nerf.
+- **Tutorial floor.** A new phone (no best score, no tutorial cleared) starts on a fixed seven-piece street with a
+  prompt per move and no traffic or Heat; through its gate the run starts fresh on floor 1. Any test URL flag skips
+  it, and `?tutorial` brings it back. Busting on it just restarts it.
 
 ## Models thread: animation
 
@@ -491,4 +498,3 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Tuning pass on bot stats, no number changed.** Sketchy landings: 14% at normal gravity, 9% in Atlantis, 6% in space.
   Slams from landings: under 1%. The sketchy rate comes from the descents' 5+ tile drops to flat, and it costs little
   (only flow speed, which you rarely have after a drop), so I left `FEEL.huge` at 9.5 for zack to judge in play.
-
