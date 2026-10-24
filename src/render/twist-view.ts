@@ -1,7 +1,7 @@
-// What each district's twist (src/gen/twists.ts) looks like: Atlantis currents as streams of bubbles drifting the
-// way the water pushes, with arrows on the street; the Art Museum's low ceiling as a dark coffered slab with a
-// light strip; High-Tech conveyor rails as glowing chevrons running along the bar (cyan forward, orange back).
-// Placeholders the models and effects threads can replace.
+// What each floor twist (src/gen/twists.ts) looks like in the one city: currents as gusts of wind, streaks blowing
+// the way it pushes with chalk arrows on the street; a low ceiling as the underside of a concrete overpass with its
+// girders and a sodium lamp; crumbling ledges as old-town marble; conveyor rails as glowing chevrons running along
+// the bar (cyan forward, orange back). Placeholders the models and effects threads can replace.
 import * as THREE from 'three';
 import type { Level, Surface } from '../physics/level';
 import type { Skater } from '../physics/skater';
@@ -9,9 +9,10 @@ import { FX } from './fx-settings';
 import { toX, toY } from './kit';
 import { inkify } from './toon';
 
-const BUBBLES = 28; // per current
+const STREAKS = 28; // per current
 const CHEVRON_GAP = 0.8; // world units between conveyor chevrons
-const FLOW = 2.2; // units a second the bubbles and chevrons travel
+const FLOW = 2.2; // units a second the chevrons travel
+const GUST = 3; // the wind streaks travel this much faster
 
 interface Mover {
   mesh: THREE.InstancedMesh;
@@ -62,8 +63,9 @@ export class TwistView {
     for (const m of this.movers) {
       const span = m.x1 - m.x0;
       m.base.forEach((b, i) => {
-        const x = m.x0 + ((((b.x - m.x0 + m.dir * FLOW * this.t) % span) + span) % span);
-        const bob = m.mesh.userData.bubbles ? Math.sin(this.t * 3 + i) * 0.08 : 0;
+        const wind = m.mesh.userData.wind ? GUST : 1;
+        const x = m.x0 + ((((b.x - m.x0 + m.dir * FLOW * wind * this.t) % span) + span) % span);
+        const bob = m.mesh.userData.wind ? Math.sin(this.t * 4 + i) * 0.12 : 0;
         this.dummy.position.set(x, b.y + bob, b.z);
         this.dummy.rotation.set(0, 0, m.dir < 0 ? Math.PI : 0);
         this.dummy.updateMatrix();
@@ -76,19 +78,19 @@ export class TwistView {
   private addCurrent(level: Level, px0: number, px1: number, dir: number): void {
     const x0 = toX(px0);
     const x1 = toX(px1);
-    const n = FX.tier === 'low' ? BUBBLES / 2 : BUBBLES;
+    const n = FX.tier === 'low' ? STREAKS / 2 : STREAKS;
     const mesh = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(0.1, 6, 4),
-      new THREE.MeshBasicMaterial({ color: 0xbff0ff, transparent: true, opacity: 0.7, depthWrite: false }),
+      new THREE.PlaneGeometry(0.9, 0.05),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false }),
       n,
     );
-    mesh.userData.bubbles = true;
+    mesh.userData.wind = true;
     mesh.frustumCulled = false;
     const base = Array.from({ length: n }, (_, i) => ({ x: x0 + ((i * 0.618) % 1) * (x1 - x0), y: 0.4 + ((i * 0.37) % 1) * 3.6, z: -0.8 + ((i * 0.71) % 1) * 1.6 }));
     this.group.add(mesh);
     this.movers.push({ mesh, x0, x1, dir, base });
     //arrows painted on the street, the way it pushes
-    const arrows = new THREE.InstancedMesh(chevron(), new THREE.MeshBasicMaterial({ color: 0x6fd8ff, transparent: true, opacity: 0.5, side: THREE.DoubleSide }), Math.max(1, Math.floor((x1 - x0) / 2)));
+    const arrows = new THREE.InstancedMesh(chevron(), new THREE.MeshBasicMaterial({ color: 0xf4f0e6, transparent: true, opacity: 0.45, side: THREE.DoubleSide }), Math.max(1, Math.floor((x1 - x0) / 2)));
     arrows.frustumCulled = false;
     const ab = Array.from({ length: arrows.count }, (_, i) => ({ x: x0 + 1 + i * 2, y: toY(level, level.streetY) + 0.02, z: 0.6 }));
     this.group.add(arrows);
@@ -125,19 +127,26 @@ export class TwistView {
   private addCeiling(level: Level, px0: number, px1: number, py: number): void {
     const w = toX(px1 - px0);
     const y = toY(level, py);
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.5, 7), new THREE.MeshLambertMaterial({ color: 0x3a3440 }));
-    slab.position.set(toX(px0) + w / 2, y + 0.25, -1.5);
+    //the overpass deck: concrete, deep enough to reach past the lane both ways
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.6, 7), new THREE.MeshLambertMaterial({ color: 0x8d889a }));
+    slab.position.set(toX(px0) + w / 2, y + 0.3, -1.5);
     inkify(slab);
     this.group.add(slab);
-    //coffers and a light strip on the underside
-    const light = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.04, 0.3), new THREE.MeshBasicMaterial({ color: 0xfff1c8 }));
+    //a sodium lamp strip and the steel girders across its underside (one instanced mesh)
+    const light = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.04, 0.3), new THREE.MeshBasicMaterial({ color: 0xffc070 }));
     light.position.set(toX(px0) + w / 2, y - 0.01, 0.4);
     this.group.add(light);
-    for (let x = toX(px0) + 1; x < toX(px1); x += 2) {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 7), new THREE.MeshLambertMaterial({ color: 0x2a2430 }));
-      beam.position.set(x, y - 0.12, -1.5);
-      this.group.add(beam);
-    }
+    const xs: number[] = [];
+    for (let x = toX(px0) + 1; x < toX(px1); x += 2) xs.push(x);
+    if (!xs.length) return;
+    const beams = new THREE.InstancedMesh(new THREE.BoxGeometry(0.25, 0.3, 7), new THREE.MeshLambertMaterial({ color: 0x4a4656 }), xs.length);
+    xs.forEach((x, i) => {
+      this.dummy.position.set(x, y - 0.12, -1.5);
+      this.dummy.rotation.set(0, 0, 0);
+      this.dummy.updateMatrix();
+      beams.setMatrixAt(i, this.dummy.matrix);
+    });
+    this.group.add(beams);
   }
 
   private addConveyor(x0: number, x1: number, y: number, dir: number): void {

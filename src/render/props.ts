@@ -13,6 +13,7 @@ import type { Level } from '../physics/level';
 import { makeRng } from '../gen/rng';
 import { TILE } from '../physics/constants';
 import type { BiomeId } from './biomes';
+import { worldAt } from './quarters';
 
 export interface PropPlacement {
   name: string;
@@ -22,6 +23,7 @@ export interface PropPlacement {
   w: number; // half its width
   h: number; // its height
   breakable: boolean; // false: it rings and sparks instead (solid iron and steel)
+  shown: string; // the model drawn: in a world's quarter of the city, that world's smashable (quarters.ts)
   start: number; // its vertices in the merged mesh
   count: number;
 }
@@ -146,11 +148,12 @@ export function buildProps(level: Level, biome: BiomeId = 'chicago'): THREE.Mesh
   const m = new THREE.Matrix4();
   let start = 0;
   for (const s of spots) {
-    const shown = restyle(s.name, biome);
+    //the one city: a smashable in a world's quarter is that world's; scenery stays Chicago street furniture
+    const shown = biome === 'chicago' ? (SCENERY_NAMES.has(s.name) ? s.name : restyle(s.name, worldAt(level, s.x))) : restyle(s.name, biome);
     const g = shown ? flatGeometry(shown) : null;
     const size = propSize(shown ?? s.name);
     const count = g ? g.getAttribute('position').count : 0;
-    props.placements.push({ ...s, ...size, breakable: !UNBREAKABLE.has(s.name), start, count });
+    props.placements.push({ ...s, ...size, breakable: !UNBREAKABLE.has(s.name), shown: shown ?? s.name, start, count });
     if (!g) continue; // unknown name: it keeps its index, with nothing to draw
     // cones and carts sit a little skew; everything else square to the street
     const yaw = s.name === 'Cone' || s.name === 'TrashCan' ? Math.sin(s.x * 12.9898) * 0.4 : 0;

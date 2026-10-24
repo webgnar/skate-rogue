@@ -203,6 +203,23 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] *Feel:* is the hill too fast, or not fast enough? Are the crest jumps readable at speed? Too much grey from
       the near sidewalk and rooftops at street level?
 - [ ] *Phone:* frame rate on the older iPhone on a hill floor with the L in view.
+- [ ] **From the SF photos:** the hill's houses mix painted Victorians with three-sided bay windows, white stucco
+      with red tile roofs, cedar shingle and flat modern houses with balconies. Power poles and sagging wires run
+      along the back sidewalk, with trees between the poles, cypresses behind and shrubs by the doors. Steep blocks
+      have stepped sidewalks, and crests have crosswalk lines.
+
+## One city: every world's art (docs/level-design-chicago.md)
+
+- [ ] Along the street, past the L, the city passes through quarters: a park, an old town, the waterfront, a
+      museum block, a tech block and a space port, with plain Chicago between them. Each quarter shows its own
+      wall, some of its buildings, its scenery, its landmark (Light Tower, Temple, Sunken Arch, Giant Bust, Data
+      Spire, Rocket) and its smashables (amphoras in old town, shells on the waterfront and so on).
+- [ ] Smash something in a quarter: it breaks as what you see (an amphora breaks like pottery).
+- [ ] The sky has planets up high, the skyline, and the sculptures in front of it. Rain and the time of day apply
+      everywhere, and there's no tint per quarter.
+- [ ] Twists: a current shows as gusts of white streaks with chalk arrows, a low ceiling shows as an overpass
+      underside with girders and an amber lamp.
+- [ ] *Phone:* the street with a quarter and the L in view stays smooth on the older iPhone.
 
 ## One world (no biomes)
 

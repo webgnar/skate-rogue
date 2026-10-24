@@ -404,8 +404,8 @@ export class Game {
 
   // a prop breaks (or rings, if it can't): the sim's smash events come through here
   smash(hit: SmashHit): void {
-    //as the world shows it: an amphora in Greece breaks like pottery, not like the barrel the sim placed
-    this.smashFx.smash({ ...hit, prop: restyle(hit.prop, props.biome) ?? hit.prop });
+    //as the city shows it: an amphora in the old town breaks like pottery, not like the barrel the sim placed
+    this.smashFx.smash({ ...hit, prop: props.placements[hit.index]?.shown ?? restyle(hit.prop, props.biome) ?? hit.prop });
   }
 
   // ?biome= previews one district's look (one fused world otherwise: the run never changes it)

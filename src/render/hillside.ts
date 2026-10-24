@@ -30,38 +30,57 @@ export const HILLSIDE = {
   upRow: [-10.5, -15.5, 2.6], // a second row further up the hill, standing this much higher
   crossW: 3.2, // a cross street's width
   crossFar: -28, // how far back it runs
+  stepGrade: 0.3, // a block this steep has steps for its back sidewalk
+  pole: { z: -3.25, height: 7.5, every: [9, 13], wire: 0.07 }, // power poles along the back sidewalk, tiles
 };
 
 // ---------------------------------------------------------------------------------------------- the painted atlas
 
 const PX = 16; // atlas pixels per tile
 const AW = 512;
-const AH = 128;
+const AH = 256;
 const FACADE = { w: 4 * PX, h: 6 * PX }; // three storeys
 
-// body, trim, accent (door and garage): San Francisco's painted ladies
-const PAINTS: [string, string, string][] = [
-  ['#e8c86a', '#fff6e0', '#5a7a9a'],
-  ['#9fd0c0', '#ffffff', '#a04050'],
-  ['#b8a0d8', '#ffffff', '#4a3a6a'],
-  ['#f0a088', '#fff4ea', '#3a5a7a'],
-  ['#8ab8e0', '#ffffff', '#c06030'],
-  ['#f2e6cf', '#7a5a40', '#2a4a3a'],
-  ['#d86a6a', '#fff0e0', '#304050'],
-  ['#8fae78', '#f0ead0', '#6a3a2a'],
+// the city's houses, from zack's photos: painted-lady Victorians with bay windows, white stucco with red tile roofs,
+// cedar shingle, and flat-roofed modern stucco with balconies. Body, trim, accent (door and garage).
+type Style = 'victorian' | 'stucco' | 'shingle' | 'modern';
+const HOUSES: { style: Style; paint: [string, string, string] }[] = [
+  { style: 'victorian', paint: ['#e8c86a', '#fff6e0', '#5a7a9a'] },
+  { style: 'victorian', paint: ['#9fd0c0', '#ffffff', '#a04050'] },
+  { style: 'victorian', paint: ['#b8a0d8', '#ffffff', '#4a3a6a'] },
+  { style: 'victorian', paint: ['#f0a088', '#fff4ea', '#3a5a7a'] },
+  { style: 'victorian', paint: ['#8ab8e0', '#ffffff', '#c06030'] },
+  { style: 'victorian', paint: ['#f2e6cf', '#7a5a40', '#2a4a3a'] },
+  { style: 'victorian', paint: ['#d86a6a', '#fff0e0', '#304050'] },
+  { style: 'victorian', paint: ['#b0a08c', '#f4efe6', '#6a3a2a'] },
+  { style: 'stucco', paint: ['#f4f0e8', '#2a2228', '#8a5a3a'] },
+  { style: 'stucco', paint: ['#f0dcc4', '#fff8ee', '#6a3a2a'] },
+  { style: 'stucco', paint: ['#ecc8bc', '#fff6ee', '#3a4a5a'] },
+  { style: 'shingle', paint: ['#8a5434', '#f4efe6', '#c87a3a'] },
+  { style: 'shingle', paint: ['#6e4a36', '#f4efe6', '#a04030'] },
+  { style: 'modern', paint: ['#d8d2c4', '#ffffff', '#5a5a64'] },
+  { style: 'modern', paint: ['#c4c8cc', '#f6f6f6', '#3a4a5a'] },
+  { style: 'modern', paint: ['#ece6da', '#ffffff', '#7a6a5a'] },
 ];
 
 type Rect = [number, number, number, number]; // px x, y, w, h in the atlas
 
+const SY = FACADE.h + PX; // the swatch row under the first row of facades
 const SWATCH = {
   siding: (i: number): Rect => [i * PX, FACADE.h, PX, PX],
-  roof: (i: number): Rect => [[0, 6, 8][i % 3] * PX, FACADE.h + PX, 2 * PX, PX],
-  trim: [2 * PX + 4, FACADE.h + PX + 4, 8, 8] as Rect,
-  brick: [3 * PX, FACADE.h + PX, 2 * PX, PX] as Rect,
-  dark: [5 * PX + 4, FACADE.h + PX + 4, 8, 8] as Rect,
+  roof: (i: number): Rect => [[0, 6, 8][i % 3] * PX, SY, 2 * PX, PX],
+  trim: [2 * PX + 4, SY + 4, 8, 8] as Rect,
+  brick: [3 * PX, SY, 2 * PX, PX] as Rect,
+  dark: [5 * PX + 4, SY + 4, 8, 8] as Rect,
+  tile: [10 * PX, SY, 2 * PX, PX] as Rect,
+  leaf: [12 * PX, SY, PX, PX] as Rect,
+  bloom: [13 * PX, SY, PX, PX] as Rect,
+  cypress: [14 * PX, SY, PX, PX] as Rect,
+  pole: [15 * PX + 4, SY + 2, 8, 12] as Rect,
+  grey: [16 * PX + 4, SY + 4, 8, 8] as Rect,
 };
 
-const facadeRect = (i: number): Rect => [i * FACADE.w, 0, FACADE.w, FACADE.h];
+const facadeRect = (i: number): Rect => [(i % 8) * FACADE.w, i < 8 ? 0 : 128, FACADE.w, FACADE.h];
 
 let atlas: THREE.Texture | null = null;
 
@@ -70,61 +89,187 @@ function shade(hex: string, k: number): string {
   return `#${c.getHexString()}`;
 }
 
-function paintFacade(g: CanvasRenderingContext2D, x0: number, [body, trim, accent]: [string, string, string], variant: number): void {
+// a window pane: frame, glass, the sky in it
+function pane(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frame: string): void {
+  g.fillStyle = frame;
+  g.fillRect(x - 1, y - 1, w + 2, h + 2);
+  g.fillStyle = '#2f4468';
+  g.fillRect(x, y, w, h);
+  g.fillStyle = '#6c8cc0';
+  g.fillRect(x + 1, y + 1, 2, Math.min(7, h - 2));
+  g.fillRect(x + 3, y + 1, 1, Math.min(4, h - 2));
+}
+
+// an arched window or door: its frame, then the glass (or `fill`) inside
+function arch(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frame: string, fill = '#2f4468'): void {
+  const r = w / 2;
+  g.fillStyle = frame;
+  g.fillRect(x - 1, y + r, w + 2, h - r + 1);
+  g.beginPath();
+  g.arc(x + r, y + r + 0.5, r + 1, Math.PI, 0);
+  g.fill();
+  g.fillStyle = fill;
+  g.fillRect(x, y + r, w, h - r);
+  g.beginPath();
+  g.arc(x + r, y + r + 0.5, r, Math.PI, 0);
+  g.fill();
+  if (fill === '#2f4468') {
+    g.fillStyle = '#6c8cc0';
+    g.fillRect(x + 2, y + r - 1, 2, 6);
+  }
+}
+
+// a garage door: frame and panels
+function garage(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, colour: string, planks: boolean): void {
+  g.fillStyle = '#1a1424';
+  g.fillRect(x - 1, y - 1, w + 2, h + 1);
+  g.fillStyle = colour;
+  g.fillRect(x, y, w, h);
+  g.fillStyle = shade(colour, 0.74);
+  if (planks) for (let px = x + 3; px < x + w; px += 4) g.fillRect(px, y, 1, h);
+  else for (let py = y + 5; py < y + h; py += 6) g.fillRect(x, py, w, 1);
+}
+
+// a front door with its knob and the steps up to it
+function door(g: CanvasRenderingContext2D, x: number, y: number, colour: string): void {
+  g.fillStyle = '#1a1424';
+  g.fillRect(x - 1, y - 1, 14, 25);
+  g.fillStyle = colour;
+  g.fillRect(x, y, 12, 24);
+  g.fillStyle = shade(colour, 1.3);
+  g.fillRect(x + 2, y + 3, 8, 7);
+  g.fillStyle = '#ffe08a';
+  g.fillRect(x + 9, y + 13, 2, 2);
+  g.fillStyle = '#9a96a4';
+  g.fillRect(x - 3, FACADE.h - 4, 18, 2);
+  g.fillRect(x - 5, FACADE.h - 2, 22, 2);
+}
+
+// photo 1: clapboard, tall sash windows under hoods, a dentil cornice, the garage and the door up its steps
+function paintVictorian(g: CanvasRenderingContext2D, x0: number, [body, trim, accent]: [string, string, string], variant: number): void {
   const { w, h } = FACADE;
   g.fillStyle = body;
   g.fillRect(x0, 0, w, h);
-  //clapboard siding
   g.fillStyle = shade(body, 0.86);
   for (let y = 2; y < h; y += 3) g.fillRect(x0, y, w, 1);
-  //corner boards and the band between storeys
   g.fillStyle = trim;
   g.fillRect(x0, 0, 3, h);
   g.fillRect(x0 + w - 3, 0, 3, h);
   for (const y of [2 * PX - 2, 4 * PX - 2]) g.fillRect(x0, y, w, 3);
-  //upper storeys: tall sash windows with hoods
+  //the dentils under the cornice
+  g.fillRect(x0, 0, w, 3);
+  g.fillStyle = shade(trim, 0.6);
+  for (let x = x0 + 1; x < x0 + w; x += 3) g.fillRect(x, 3, 2, 2);
   const wins = variant % 3 === 0 ? [8, 26, 44] : [10, 38];
   const ww = variant % 3 === 0 ? 12 : 16;
   for (const sy of [0, 2 * PX]) {
     for (const wx of wins) {
       const x = x0 + wx;
-      const y = sy + 7;
+      const y = sy + 8;
       g.fillStyle = trim;
-      g.fillRect(x - 2, y - 4, ww + 4, 3); // hood
-      g.fillRect(x - 1, y - 1, ww + 2, 22);
-      g.fillStyle = '#1a1424';
-      g.fillRect(x, y, ww, 20);
-      g.fillStyle = '#2f4468';
-      g.fillRect(x + 1, y + 1, ww - 2, 18);
-      g.fillStyle = '#6c8cc0'; // the sky in the glass
-      g.fillRect(x + 2, y + 2, 2, 7);
-      g.fillRect(x + 4, y + 2, 1, 4);
+      g.fillRect(x - 2, y - 4, ww + 4, 3);
+      pane(g, x, y, ww, 19, trim);
       g.fillStyle = trim;
-      g.fillRect(x, y + 9, ww, 2); // the sash
+      g.fillRect(x, y + 9, ww, 2);
     }
   }
-  //street level: garage door on one side, the front door up two steps on the other
+  //street level: brick for some (photo 1, left), the garage on one side and the door on the other
   const gy = 4 * PX + 4;
+  if (variant % 4 === 1) {
+    g.fillStyle = '#8a3e34';
+    g.fillRect(x0, 4 * PX + 1, w, h - 4 * PX - 1);
+    g.fillStyle = '#5a2620';
+    for (let y = 4 * PX + 4; y < h; y += 4) g.fillRect(x0, y, w, 1);
+  }
   const left = variant % 2 === 0;
-  const gx = x0 + (left ? 6 : 30);
-  g.fillStyle = '#1a1424';
-  g.fillRect(gx - 1, gy - 1, 28, 27);
-  g.fillStyle = shade(trim, 0.92);
-  g.fillRect(gx, gy, 26, 26);
-  g.fillStyle = shade(trim, 0.72);
-  for (let y = gy + 5; y < gy + 26; y += 6) g.fillRect(gx, y, 26, 1);
-  const dx = x0 + (left ? 42 : 10);
-  g.fillStyle = '#1a1424';
-  g.fillRect(dx - 1, gy - 1, 14, 25);
-  g.fillStyle = accent;
-  g.fillRect(dx, gy, 12, 24);
-  g.fillStyle = shade(accent, 1.3);
-  g.fillRect(dx + 2, gy + 3, 8, 7);
-  g.fillStyle = '#ffe08a';
-  g.fillRect(dx + 9, gy + 13, 2, 2);
-  g.fillStyle = '#9a96a4'; // steps
-  g.fillRect(dx - 3, h - 4, 18, 2);
-  g.fillRect(dx - 5, h - 2, 22, 2);
+  if (variant % 4 === 1) arch(g, x0 + (left ? 6 : 30), gy - 2, 26, 28, '#1a1424', shade(trim, 0.7));
+  else garage(g, x0 + (left ? 6 : 30), gy, 26, 26, shade(trim, 0.92), false);
+  door(g, x0 + (left ? 42 : 10), gy, accent);
+}
+
+// photo 2: white stucco, arched windows with an iron balcony, a wide mullioned window under a tile hood, a wood
+// garage door
+function paintStucco(g: CanvasRenderingContext2D, x0: number, [body, trim, accent]: [string, string, string], variant: number): void {
+  const { w, h } = FACADE;
+  g.fillStyle = body;
+  g.fillRect(x0, 0, w, h);
+  g.fillStyle = shade(body, 0.93);
+  for (let k = 0; k < 80; k++) g.fillRect(x0 + ((k * 29) % (w - 2)), (k * 17) % h, 2, 1);
+  const frame = trim === '#2a2228' ? trim : shade(body, 0.55);
+  for (const wx of [10, 38]) arch(g, x0 + wx, 6, 16, 22, frame);
+  if (variant % 2 === 0) {
+    const bx = x0 + 6;
+    g.fillStyle = '#1a1424';
+    g.fillRect(bx, 27, 24, 1);
+    for (let i = 0; i <= 24; i += 3) g.fillRect(bx + i, 27, 1, 5);
+    g.fillRect(bx, 31, 24, 1);
+  }
+  //the middle storey's wide window under a tile hood
+  g.fillStyle = '#b0503a';
+  g.fillRect(x0 + 5, 36, 54, 4);
+  g.fillStyle = '#7a3026';
+  for (let x = x0 + 6; x < x0 + 59; x += 3) g.fillRect(x, 38, 1, 2);
+  pane(g, x0 + 8, 42, 48, 17, frame);
+  g.fillStyle = frame;
+  for (const k of [1, 2]) g.fillRect(x0 + 8 + k * 16, 42, 1, 17);
+  //street level: an arched garage in wood, an arched door
+  const gy = 4 * PX + 4;
+  const left = variant % 2 === 1;
+  arch(g, x0 + (left ? 6 : 30), gy - 2, 26, 28, '#1a1424', accent);
+  g.fillStyle = shade(accent, 0.74);
+  for (let x = x0 + (left ? 9 : 33); x < x0 + (left ? 32 : 56); x += 4) g.fillRect(x, gy + 8, 1, 18);
+  arch(g, x0 + (left ? 42 : 10), gy, 12, 24, '#1a1424', shade(accent, 0.8));
+  g.fillStyle = '#9a96a4';
+  g.fillRect(x0 + (left ? 39 : 7), h - 2, 18, 2);
+}
+
+// photo 2: cedar shingle with white-trimmed windows and a plank garage door
+function paintShingle(g: CanvasRenderingContext2D, x0: number, [body, trim, accent]: [string, string, string], variant: number): void {
+  const { w, h } = FACADE;
+  g.fillStyle = body;
+  g.fillRect(x0, 0, w, h);
+  g.fillStyle = shade(body, 0.78);
+  for (let y = 0; y < h; y += 3) {
+    g.fillRect(x0, y + 2, w, 1);
+    for (let x = x0 + (y % 6 ? 1 : 3); x < x0 + w; x += 4) g.fillRect(x, y, 1, 2);
+  }
+  g.fillStyle = trim;
+  g.fillRect(x0, 0, w, 3);
+  for (const sy of [0, 2 * PX]) {
+    const wins = variant % 2 ? [8, 40] : [20];
+    for (const wx of wins) {
+      const ww = wins.length === 1 ? 24 : 16;
+      g.fillStyle = trim;
+      g.fillRect(x0 + wx - 3, sy + 6, ww + 6, 24);
+      pane(g, x0 + wx, sy + 9, ww, 18, trim);
+      g.fillStyle = trim;
+      g.fillRect(x0 + wx, sy + 17, ww, 2);
+      if (ww > 16) g.fillRect(x0 + wx + ww / 2, sy + 9, 1, 18);
+    }
+  }
+  const gy = 4 * PX + 4;
+  g.fillStyle = trim;
+  g.fillRect(x0 + 5, gy - 3, 32, 29);
+  garage(g, x0 + 7, gy, 28, 26, accent, true);
+  door(g, x0 + 44, gy, shade(trim, 0.9));
+}
+
+// photo 3: flat-fronted stucco, white bands between floors, ribbon windows, a wide garage
+function paintModern(g: CanvasRenderingContext2D, x0: number, [body, trim, accent]: [string, string, string], variant: number): void {
+  const { w, h } = FACADE;
+  g.fillStyle = body;
+  g.fillRect(x0, 0, w, h);
+  g.fillStyle = trim;
+  for (const y of [0, 2 * PX - 2, 4 * PX - 2]) g.fillRect(x0, y, w, 3);
+  for (const sy of [0, 2 * PX]) {
+    pane(g, x0 + 5, sy + 8, 54, 18, trim);
+    g.fillStyle = trim;
+    for (let x = x0 + 5 + (variant % 2 ? 18 : 13); x < x0 + 59; x += variant % 2 ? 18 : 13) g.fillRect(x, sy + 8, 2, 18);
+    g.fillRect(x0 + 5, sy + 15, 54, 1);
+  }
+  const gy = 4 * PX + 4;
+  garage(g, x0 + 5, gy, 34, 26, trim, false);
+  door(g, x0 + 46, gy, accent);
 }
 
 function houseAtlas(): THREE.Texture {
@@ -134,33 +279,63 @@ function houseAtlas(): THREE.Texture {
   c.height = AH;
   const g = c.getContext('2d')!;
   g.imageSmoothingEnabled = false;
-  PAINTS.forEach((p, i) => {
-    paintFacade(g, i * FACADE.w, p, i);
+  HOUSES.forEach(({ style, paint: p }, i) => {
+    const [fx, fy] = facadeRect(i);
+    g.save();
+    g.translate(0, fy);
+    const painter = { victorian: paintVictorian, stucco: paintStucco, shingle: paintShingle, modern: paintModern }[style];
+    painter(g, fx, p, i);
+    g.restore();
     //this house's plain siding, for its sides and its bay's sides
     const [sx, sy] = SWATCH.siding(i);
     g.fillStyle = p[0];
     g.fillRect(sx, sy, PX, PX);
-    g.fillStyle = shade(p[0], 0.86);
-    for (let y = sy + 2; y < sy + PX; y += 3) g.fillRect(sx, y, PX, 1);
+    g.fillStyle = shade(p[0], style === 'shingle' ? 0.78 : style === 'victorian' ? 0.86 : 0.93);
+    if (style === 'victorian') for (let y = sy + 2; y < sy + PX; y += 3) g.fillRect(sx, y, PX, 1);
+    else if (style === 'shingle') for (let y = sy; y < sy + PX; y += 3) for (let x = sx + (y % 6 ? 1 : 3); x < sx + PX; x += 4) g.fillRect(x, y, 1, 2);
+    else for (let k = 0; k < 6; k++) g.fillRect(sx + ((k * 5) % 14), sy + ((k * 7) % 14), 2, 1);
   });
   //roofs: tar, pale gravel, red membrane, each with specks
-  const ry = FACADE.h + PX;
   for (const [i, base, speck] of [[0, '#5a5464', '#6c6676'], [1, '#9a948a', '#b0aa9e'], [2, '#8a5a50', '#9e6a5e']] as const) {
     const [rx] = SWATCH.roof(i);
     g.fillStyle = base;
-    g.fillRect(rx, ry, 2 * PX, PX);
+    g.fillRect(rx, SY, 2 * PX, PX);
     g.fillStyle = speck;
-    for (let k = 0; k < 40; k++) g.fillRect(rx + ((k * 13) % (2 * PX)), ry + ((k * 7) % PX), 1, 1);
+    for (let k = 0; k < 40; k++) g.fillRect(rx + ((k * 13) % (2 * PX)), SY + ((k * 7) % PX), 1, 1);
   }
   g.fillStyle = '#f4efe6';
-  g.fillRect(2 * PX, ry, PX, PX); // trim
+  g.fillRect(2 * PX, SY, PX, PX); // trim
   const [bx, by] = SWATCH.brick;
   g.fillStyle = '#8a3e34';
   g.fillRect(bx, by, 2 * PX, PX);
   g.fillStyle = '#5a2620';
   for (let y = by + 3; y < by + PX; y += 4) g.fillRect(bx, y, 2 * PX, 1);
   g.fillStyle = '#2a2232';
-  g.fillRect(5 * PX, ry, PX, PX); // dark: chimney caps, vents
+  g.fillRect(5 * PX, SY, PX, PX); // dark: chimney caps, vents
+  //barrel tiles: rows of half-rounds
+  const [tx0] = SWATCH.tile;
+  g.fillStyle = '#b8563c';
+  g.fillRect(tx0, SY, 2 * PX, PX);
+  g.fillStyle = '#d07050';
+  for (let y = SY; y < SY + PX; y += 4) for (let x = tx0 + (y % 8 ? 2 : 0); x < tx0 + 2 * PX; x += 4) g.fillRect(x, y, 2, 3);
+  g.fillStyle = '#7a3026';
+  for (let y = SY + 3; y < SY + PX; y += 4) g.fillRect(tx0, y, 2 * PX, 1);
+  //foliage: street trees and shrubs, bougainvillea, cypress
+  for (const [r, base, hi, lo] of [[SWATCH.leaf, '#5a9a4a', '#7ab860', '#3e7438'], [SWATCH.bloom, '#c43a7a', '#e8609a', '#5a9a4a'], [SWATCH.cypress, '#3a6a44', '#4e8456', '#2a4e34']] as const) {
+    g.fillStyle = base;
+    g.fillRect(r[0], r[1], r[2], r[3]);
+    for (let k = 0; k < 24; k++) {
+      g.fillStyle = k % 3 ? hi : lo;
+      g.fillRect(r[0] + ((k * 7) % 15), r[1] + ((k * 11) % 15), 2, 2);
+    }
+  }
+  //the poles: weathered wood; grey for transformers
+  g.fillStyle = '#6a5040';
+  g.fillRect(15 * PX, SY, PX, PX);
+  g.fillStyle = '#56402f';
+  for (let x = 15 * PX + 5; x < 16 * PX; x += 4) g.fillRect(x, SY, 1, PX);
+  g.fillStyle = '#9a9aa4';
+  g.fillRect(16 * PX, SY, PX, PX);
   atlas = pixelTexture(c);
   return atlas;
 }
@@ -178,7 +353,7 @@ function tiling(w: number, h: number, paint: (g: CanvasRenderingContext2D, W: nu
   return t;
 }
 
-let mats: Record<'road' | 'walk' | 'concrete' | 'house', THREE.MeshLambertMaterial> | null = null;
+let mats: Record<Key, THREE.Material> | null = null;
 
 function materials(): NonNullable<typeof mats> {
   if (mats) return mats;
@@ -222,13 +397,15 @@ function materials(): NonNullable<typeof mats> {
     walk: new THREE.MeshLambertMaterial({ map: walk }),
     concrete: new THREE.MeshLambertMaterial({ map: concrete }),
     house: new THREE.MeshLambertMaterial({ map: houseAtlas() }),
+    //the power lines: flat ink, no outline of their own
+    wire: new THREE.MeshBasicMaterial({ color: 0x1a1424 }),
   };
   return mats;
 }
 
 // ------------------------------------------------------------------------------------------------- geometry
 
-type Key = 'road' | 'walk' | 'concrete' | 'house';
+type Key = 'road' | 'walk' | 'concrete' | 'house' | 'wire';
 type V3 = [number, number, number];
 type UvFn = (p: V3) => [number, number];
 
@@ -283,6 +460,7 @@ export class Mesher {
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(part.uv, 2));
       const mesh = new THREE.Mesh(geo, m[key].clone());
       mesh.name = `hillside-${key}`;
+      if (key === 'wire') mesh.userData.inked = true;
       group.add(mesh);
     }
   }
@@ -358,6 +536,61 @@ function gaps(ground: Ground[]): [number, number, number][] {
   return out;
 }
 
+// ------------------------------------------------------------------------------------------------ the shapes
+
+// a prism on a trapezoid footprint standing out from z (a three-sided bay): x0..x1 against the wall, its front
+// inset by e at each end and d out; faces given their atlas rects
+function trap(m: Mesher, x0: number, x1: number, e: number, z: number, d: number, yb: number, yt: number, face: { front: [number, number][]; side: [number, number][]; cap: [number, number][] }): void {
+  const p0: [number, number] = [x0, z];
+  const p1: [number, number] = [x0 + e, z + d];
+  const p2: [number, number] = [x1 - e, z + d];
+  const p3: [number, number] = [x1, z];
+  const at = ([x, zz]: [number, number], y: number): V3 => [x, y, zz];
+  m.quad('house', at(p0, yb), at(p1, yb), at(p1, yt), at(p0, yt), face.side);
+  m.quad('house', at(p1, yb), at(p2, yb), at(p2, yt), at(p1, yt), face.front);
+  m.quad('house', at(p2, yb), at(p3, yb), at(p3, yt), at(p2, yt), face.side);
+  m.quad('house', at(p1, yt), at(p2, yt), at(p3, yt), at(p0, yt), face.cap);
+  m.quad('house', at(p0, yb), at(p3, yb), at(p2, yb), at(p1, yb), face.cap);
+}
+
+// an octagonal prism: trunks, poles' transformers, and stacked up, a tree's canopy
+function oct(m: Mesher, cx: number, cz: number, r: number, yb: number, yt: number, uv: [number, number][], rt = r): void {
+  const at = (i: number, rr: number, y: number): V3 => {
+    const th = (i * Math.PI) / 4 + Math.PI / 8;
+    return [cx + rr * Math.cos(th), y, cz - rr * Math.sin(th)];
+  };
+  const top: V3 = [cx, yt, cz];
+  const bot: V3 = [cx, yb, cz];
+  for (let i = 0; i < 8; i++) {
+    m.quad('house', at(i, r, yb), at(i + 1, r, yb), at(i + 1, rt, yt), at(i, rt, yt), uv);
+    m.quad('house', top, at(i, rt, yt), at(i + 1, rt, yt), at(i + 1, rt, yt), uv);
+    m.quad('house', bot, at(i + 1, r, yb), at(i, r, yb), at(i, r, yb), uv);
+  }
+}
+
+// a street tree (photos 2 and 3): a trunk and a two-tier canopy; or a tall cypress
+function tree(m: Mesher, x: number, z: number, base: number, h: number, kind: 'leaf' | 'cypress'): void {
+  const bark = rectUv(SWATCH.pole);
+  if (kind === 'cypress') {
+    oct(m, x, z, 0.12, base, base + 1, bark);
+    const leaf = rectUv(SWATCH.cypress);
+    oct(m, x, z, 0.75, base + 0.8, base + h * 0.6, leaf, 0.9);
+    oct(m, x, z, 0.9, base + h * 0.6, base + h, leaf, 0.35);
+    return;
+  }
+  const leaf = rectUv(SWATCH.leaf);
+  oct(m, x, z, 0.14, base, base + h * 0.5, bark, 0.1);
+  oct(m, x, z, 0.9, base + h * 0.4, base + h * 0.75, leaf, 1.25);
+  oct(m, x + 0.15, z, 1.25, base + h * 0.75, base + h, leaf, 0.6);
+}
+
+// a shrub or a bougainvillea by a door (photo 2)
+function shrub(m: Mesher, x: number, z: number, base: number, bloom: boolean): void {
+  const uv = rectUv(bloom ? SWATCH.bloom : SWATCH.leaf);
+  oct(m, x, z, 0.3, base, base + 0.5, uv, 0.42);
+  oct(m, x, z, 0.42, base + 0.5, base + 0.95, uv, 0.18);
+}
+
 // ------------------------------------------------------------------------------------------------ the houses
 
 interface HouseOpts {
@@ -367,55 +600,96 @@ interface HouseOpts {
   bottom: number; // the foundation's foot
   z0: number;
   z1: number;
-  facing: 1 | -1; // +1: the front faces the camera (+z); -1 is never used, kept for clarity
-  paint: number;
+  paint: number; // which of HOUSES
   bay: boolean;
   chimney: boolean;
+  hip: boolean; // stucco gets a hipped tile roof (rows behind the lane); in front, only a tile eave under the lane
 }
 
 function house(m: Mesher, o: HouseOpts): void {
+  const style = HOUSES[o.paint].style;
   const top = o.street + 3 * HILLSIDE.storey;
   const side = rectUv(SWATCH.siding(o.paint));
+  const trim = rectUv(SWATCH.trim);
+  const tile = rectUv(SWATCH.tile);
   const concrete: UvFn = UV.front(2, 2);
+  const f = facadeRect(o.paint);
+  const w = o.x1 - o.x0;
   //the facade, and its foundation down the hill
-  m.quad('house', [o.x0, o.street, o.z1], [o.x1, o.street, o.z1], [o.x1, top, o.z1], [o.x0, top, o.z1], rectUv(facadeRect(o.paint)));
+  m.quad('house', [o.x0, o.street, o.z1], [o.x1, o.street, o.z1], [o.x1, top, o.z1], [o.x0, top, o.z1], rectUv(f));
   if (o.street > o.bottom) m.box(o.x0, o.x1, o.bottom, o.street, o.street, o.z0, o.z1, { front: ['concrete', concrete], left: ['concrete', UV.side(2, 2)], right: ['concrete', UV.side(2, 2)] });
   //sides and roof
   m.box(o.x0, o.x1, o.street, top, top, o.z0, o.z1, { top: ['house', rectUv(SWATCH.roof(o.paint))], left: ['house', side], right: ['house', side] });
-  //the cornice along the top of the front
-  const trim = rectUv(SWATCH.trim);
-  m.box(o.x0 - 0.06, o.x1 + 0.06, top - 0.12, top + 0.22, top + 0.22, o.z1 - 0.05, o.z1 + 0.22, { top: ['house', trim], front: ['house', trim], left: ['house', trim], right: ['house', trim] });
-  //a bay window out over the street on the upper storeys
+  //the roofline: a hipped tile roof or a tile eave on stucco, a thin parapet on modern, a cornice on the rest
+  if (style === 'stucco' && o.hip) {
+    const ov = 0.25;
+    const rh = 1.0;
+    const zm = (o.z0 + o.z1) / 2;
+    const r = Math.min(1.2, w / 2 - 0.2);
+    const [a0, a1, b0, b1] = [o.x0 - ov, o.x1 + ov, o.z0 - ov, o.z1 + ov];
+    const y = top;
+    m.quad('house', [a0, y, b1], [a1, y, b1], [o.x1 - r, y + rh, zm], [o.x0 + r, y + rh, zm], tile);
+    m.quad('house', [a1, y, b0], [a0, y, b0], [o.x0 + r, y + rh, zm], [o.x1 - r, y + rh, zm], tile);
+    m.quad('house', [a0, y, b0], [a0, y, b1], [o.x0 + r, y + rh, zm], [o.x0 + r, y + rh, zm], tile);
+    m.quad('house', [a1, y, b1], [a1, y, b0], [o.x1 - r, y + rh, zm], [o.x1 - r, y + rh, zm], tile);
+    m.quad('house', [a0, y, b0], [a1, y, b0], [a1, y, b1], [a0, y, b1], trim); // the eaves' underside
+  } else if (style === 'stucco') {
+    m.quad('house', [o.x0 - 0.1, top - 0.35, o.z1 + 0.4], [o.x1 + 0.1, top - 0.35, o.z1 + 0.4], [o.x1 + 0.1, top + 0.05, o.z1 - 0.3], [o.x0 - 0.1, top + 0.05, o.z1 - 0.3], tile);
+    m.quad('house', [o.x0 - 0.1, top - 0.35, o.z1 - 0.3], [o.x1 + 0.1, top - 0.35, o.z1 - 0.3], [o.x1 + 0.1, top - 0.35, o.z1 + 0.4], [o.x0 - 0.1, top - 0.35, o.z1 + 0.4], trim);
+  } else if (style === 'modern') {
+    m.box(o.x0 - 0.03, o.x1 + 0.03, top - 0.06, top + 0.14, top + 0.14, o.z1 - 0.1, o.z1 + 0.06, { top: ['house', trim], front: ['house', trim], left: ['house', trim], right: ['house', trim] });
+  } else {
+    m.box(o.x0 - 0.06, o.x1 + 0.06, top - 0.12, top + 0.22, top + 0.22, o.z1 - 0.05, o.z1 + 0.22, { top: ['house', trim], front: ['house', trim], left: ['house', trim], right: ['house', trim] });
+  }
+  //out over the street on the upper storeys: a bay window, or on modern a balcony
   if (o.bay) {
-    const w = o.x1 - o.x0;
-    const bw = Math.min(2, w * 0.55);
-    const bx = o.x0 + (w - bw) * (o.paint % 2 ? 0.25 : 0.75);
+    const bw = Math.min(2.2, w * 0.6);
+    const bx = o.x0 + (w - bw) * (o.paint % 2 ? 0.2 : 0.8);
     const y0 = o.street + HILLSIDE.storey + 0.15;
     const y1 = top - 0.3;
-    const f = facadeRect(o.paint);
     const s0 = (bx - o.x0) / w;
     const s1 = (bx + bw - o.x0) / w;
-    m.quad('house', [bx, y0, o.z1 + 0.42], [bx + bw, y0, o.z1 + 0.42], [bx + bw, y1, o.z1 + 0.42], [bx, y1, o.z1 + 0.42], rectUv(f, [s0, (y0 - o.street) / (top - o.street), s1, (y1 - o.street) / (top - o.street)]));
-    m.box(bx, bx + bw, y0, y1, y1, o.z1, o.z1 + 0.42, { top: ['house', trim], left: ['house', side], right: ['house', side] });
-    m.quad('house', [bx, y0, o.z1], [bx + bw, y0, o.z1], [bx + bw, y0, o.z1 + 0.42], [bx, y0, o.z1 + 0.42], trim); // its underside
+    const v0 = (y0 - o.street) / (top - o.street);
+    const v1 = (y1 - o.street) / (top - o.street);
+    if (style === 'modern') {
+      //a balcony on the middle storey: its slab and a solid white rail
+      const y = o.street + HILLSIDE.storey;
+      m.box(bx - 0.3, bx + bw + 0.3, y - 0.12, y, y, o.z1, o.z1 + 0.6, { top: ['house', trim], front: ['house', trim], left: ['house', trim], right: ['house', trim] });
+      m.quad('house', [bx - 0.3, y - 0.12, o.z1], [bx + bw + 0.3, y - 0.12, o.z1], [bx + bw + 0.3, y - 0.12, o.z1 + 0.6], [bx - 0.3, y - 0.12, o.z1 + 0.6], trim);
+      m.box(bx - 0.3, bx + bw + 0.3, y, y + 0.45, y + 0.45, o.z1 + 0.54, o.z1 + 0.6, { top: ['house', trim], front: ['house', trim], back: ['house', trim], left: ['house', trim], right: ['house', trim] });
+    } else if (style === 'victorian') {
+      //photo 1: the three-sided bay, two storeys tall, its windows wrapping round, a cap over it
+      const e = 0.3;
+      const d = 0.45;
+      const front = rectUv(f, [s0 + 0.08, v0, s1 - 0.08, v1]);
+      const sideWin = rectUv(f, [s0, v0, s0 + 0.12, v1]);
+      trap(m, bx, bx + bw, e, o.z1, d, y0, y1, { front, side: sideWin, cap: trim });
+      trap(m, bx - 0.08, bx + bw + 0.08, e, o.z1, d + 0.1, y1, y1 + 0.18, { front: trim, side: trim, cap: trim });
+    } else {
+      //a square bay; stucco's wears a little tile roof
+      m.quad('house', [bx, y0, o.z1 + 0.42], [bx + bw, y0, o.z1 + 0.42], [bx + bw, y1, o.z1 + 0.42], [bx, y1, o.z1 + 0.42], rectUv(f, [s0, v0, s1, v1]));
+      m.box(bx, bx + bw, y0, y1, y1, o.z1, o.z1 + 0.42, { top: ['house', trim], left: ['house', side], right: ['house', side] });
+      m.quad('house', [bx, y0, o.z1], [bx + bw, y0, o.z1], [bx + bw, y0, o.z1 + 0.42], [bx, y0, o.z1 + 0.42], trim);
+      if (style === 'stucco') m.quad('house', [bx - 0.1, y1, o.z1 + 0.55], [bx + bw + 0.1, y1, o.z1 + 0.55], [bx + bw + 0.1, y1 + 0.3, o.z1], [bx - 0.1, y1 + 0.3, o.z1], tile);
+    }
   }
   //a roof hatch or an air unit up top, now and then
-  if (o.chimney && o.paint % 2) {
+  if (o.chimney && o.paint % 2 && !(style === 'stucco' && o.hip)) {
     const ux = o.x1 - 1.3;
     const uz = o.z0 + 0.6;
-    const trim2 = rectUv(SWATCH.trim);
-    m.box(ux, ux + 0.8, top, top + 0.35, top + 0.35, uz, uz + 0.6, { top: ['house', rectUv(SWATCH.dark)], front: ['house', trim2], left: ['house', trim2], right: ['house', trim2] });
+    m.box(ux, ux + 0.8, top, top + 0.35, top + 0.35, uz, uz + 0.6, { top: ['house', rectUv(SWATCH.dark)], front: ['house', trim], left: ['house', trim], right: ['house', trim] });
   }
   if (o.chimney) {
     const cx = o.x0 + 0.5;
     const cz = (o.z0 + o.z1) / 2;
+    const ch = style === 'stucco' && o.hip ? 1.3 : 0.6;
     const brick = rectUv(SWATCH.brick);
-    m.box(cx, cx + 0.45, top, top + 0.6, top + 0.6, cz - 0.25, cz + 0.25, { top: ['house', rectUv(SWATCH.dark)], front: ['house', brick], back: ['house', brick], left: ['house', brick], right: ['house', brick] });
+    m.box(cx, cx + 0.45, top, top + ch, top + ch, cz - 0.25, cz + 0.25, { top: ['house', rectUv(SWATCH.dark)], front: ['house', brick], back: ['house', brick], left: ['house', brick], right: ['house', brick] });
   }
 }
 
-// a row of houses from x0 to x1 (tiles), each stood at `street(xa, xb)`, skipping the cut ranges
-function houseRow(m: Mesher, rng: () => number, x0: number, x1: number, z0: number, z1: number, street: (xa: number, xb: number) => number, foot: (xa: number, xb: number) => number, cut: (xa: number, xb: number) => boolean, extras: { bay: number; chimney: number }): void {
+// a row of houses from x0 to x1 (tiles), each stood at `street(xa, xb)`, skipping the cut ranges; a shrub by some doors
+function houseRow(m: Mesher, rng: () => number, x0: number, x1: number, z0: number, z1: number, street: (xa: number, xb: number) => number, foot: (xa: number, xb: number) => number, cut: (xa: number, xb: number) => boolean, extras: { bay: number; chimney: number; hip: boolean; shrub: number }): void {
   for (let x = x0; x < x1; ) {
     const w = 3 + randInt(rng, 3) * 0.75;
     if (cut(x, x + w)) {
@@ -423,7 +697,9 @@ function houseRow(m: Mesher, rng: () => number, x0: number, x1: number, z0: numb
       continue;
     }
     const s = street(x, x + w);
-    house(m, { x0: x, x1: x + w, street: s, bottom: Math.min(s, foot(x, x + w)), z0, z1, facing: 1, paint: randInt(rng, PAINTS.length), bay: rng() < extras.bay, chimney: rng() < extras.chimney });
+    const paint = randInt(rng, HOUSES.length);
+    house(m, { x0: x, x1: x + w, street: s, bottom: Math.min(s, foot(x, x + w)), z0, z1, paint, bay: rng() < extras.bay, chimney: rng() < extras.chimney, hip: extras.hip });
+    if (rng() < extras.shrub) shrub(m, x + (paint % 2 ? w - 0.6 : 0.6), z1 + 0.35, s, rng() < 0.4);
     x += w;
   }
 }
@@ -431,7 +707,7 @@ function houseRow(m: Mesher, rng: () => number, x0: number, x1: number, z0: numb
 // ------------------------------------------------------------------------------------------------ the hill
 
 // the descent as solid hill: road, sidewalks and stairways on ground that goes all the way down, row houses behind,
-// cross streets back into the city at the crests and under the crest jumps
+// cross streets back into the city at the crests and under the crest jumps, power lines and trees along the back
 export function buildHill(level: Level, group: THREE.Group): void {
   const m = new Mesher();
   const ground = descentGround(level);
@@ -443,11 +719,20 @@ export function buildHill(level: Level, group: THREE.Group): void {
   const c = HILLSIDE.curb;
   const cs = UV.side(2, 2);
   const cf = UV.front(2, 2);
-  //the street section across one piece of ground: sidewalk, road, sidewalk, retaining walls at its ends
+  const walkFaces: Parameters<Mesher['box']>[7] = { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] };
+  //the street section across one piece of ground: sidewalk, road, sidewalk, retaining walls at its ends. On the
+  //steep blocks the back sidewalk is a flight of steps, the way San Francisco's are (photo 3)
   const section = (x0: number, x1: number, t0: number, t1: number) => {
     m.box(x0, x1, B, t0, t1, rz0, rz1, { top: ['road', UV.top(4, rz1 - rz0, rz0)], left: ['concrete', cs], right: ['concrete', cs] });
-    m.box(x0, x1, B, t0 + c, t1 + c, back, rz0, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
-    m.box(x0, x1, B, t0 + c, t1 + c, rz1, near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+    const steep = Math.abs(t1 - t0) / (x1 - x0) >= HILLSIDE.stepGrade;
+    if (steep) {
+      const n = Math.max(1, Math.round((x1 - x0) / 0.5));
+      for (let k = 0; k < n; k++) {
+        const t = Math.max(t0 + ((t1 - t0) * k) / n, t0 + ((t1 - t0) * (k + 1)) / n) + c;
+        m.box(x0 + ((x1 - x0) * k) / n, x0 + ((x1 - x0) * (k + 1)) / n, B, t, t, back, rz0, walkFaces);
+      }
+    } else m.box(x0, x1, B, t0 + c, t1 + c, back, rz0, walkFaces);
+    m.box(x0, x1, B, t0 + c, t1 + c, rz1, near, walkFaces);
   };
   const crossings: [number, number, number][] = []; // x0, x1, height: cross streets at the crests
   ground.forEach((g, i) => {
@@ -456,7 +741,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
       const steps = Math.round(g.x1 - g.x0);
       for (let k = 0; k < steps; k++) {
         const t = g.t0 + ((g.t1 - g.t0) * (k + 1)) / steps;
-        m.box(g.x0 + k, g.x0 + k + 1, B, t, t, back, near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+        m.box(g.x0 + k, g.x0 + k + 1, B, t, t, back, near, walkFaces);
       }
       return;
     }
@@ -468,10 +753,12 @@ export function buildHill(level: Level, group: THREE.Group): void {
       crossings.push([cx - HILLSIDE.crossW / 2, cx + HILLSIDE.crossW / 2, g.t0]);
     }
   });
-  //the cross streets: flat roads back into the city with their kerbs
+  //the cross streets: flat roads back into the city with their kerbs, and crosswalk lines over the hill's road
+  const paint = rectUv(SWATCH.trim);
   for (const [x0, x1, t] of crossings) {
     m.box(x0, x1, B, t, t, HILLSIDE.crossFar, back, { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]], left: ['concrete', cs], right: ['concrete', cs] });
     for (const [a, b] of [[x0 - 0.7, x0], [x1, x1 + 0.7]]) m.box(a, b, B, t + c, t + c, HILLSIDE.crossFar, back, { top: ['walk', UV.top(1, 1)] });
+    for (const lx of [x0 - 0.75, x0 - 0.05, x1 + 0.05, x1 + 0.75]) m.quad('house', [lx - 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz0], [lx - 0.06, t + 0.01, rz0], paint);
   }
   //under each crest jump, the cross street it clears, running from the city behind to the camera
   const holes = gaps(ground);
@@ -485,9 +772,48 @@ export function buildHill(level: Level, group: THREE.Group): void {
   const end = finale + 1;
   const lane = (x: number) => laneHeight(ground, finale, x);
   const [bz0, bz1] = HILLSIDE.backRow;
-  houseRow(m, rng, -8, end, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, finale, a, b) - 0.5, cut, { bay: 0.75, chimney: 0 });
+  houseRow(m, rng, -8, end, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, finale, a, b) - 0.5, cut, { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
   const [uz1, uz0, up] = HILLSIDE.upRow;
-  houseRow(m, rng, -8, end, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3 });
+  houseRow(m, rng, -8, end, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
+  //cypresses between the rows, standing over the back row's roofs now and then
+  for (let x = -4 + rng() * 10; x < finale - 2; x += 14 + rng() * 16) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
+  //power poles along the back sidewalk with their wires sagging between them (photo 3), street trees between poles
+  const P = HILLSIDE.pole;
+  const poles: [number, number][] = [];
+  for (let x = ground.length ? ground[0].x0 + 2 : 0; x < finale - 2; x += P.every[0] + rng() * (P.every[1] - P.every[0])) {
+    if (holes.some(([a, b]) => x > a - 0.5 && x < b + 0.5)) continue;
+    const top = lane(x) + c + P.height;
+    poles.push([x, top]);
+    const pole = rectUv(SWATCH.pole);
+    oct(m, x, P.z, 0.11, B, top, pole, 0.08);
+    m.box(x - 0.07, x + 0.07, top - 0.5, top - 0.36, top - 0.36, P.z - 0.7, P.z + 0.7, { top: ['house', pole], front: ['house', pole], back: ['house', pole], left: ['house', pole], right: ['house', pole] });
+    m.box(x - 0.06, x + 0.06, top - 1.2, top - 1.08, top - 1.08, P.z - 0.45, P.z + 0.45, { top: ['house', pole], front: ['house', pole], left: ['house', pole], right: ['house', pole] });
+    if (rng() < 0.35) oct(m, x + 0.3, P.z, 0.2, top - 2.4, top - 1.6, rectUv(SWATCH.grey));
+  }
+  const sag = (a: V3, b: V3, drop: number) => {
+    const n = 8;
+    for (let k = 0; k < n; k++) {
+      const p = (i: number): V3 => {
+        const u = i / n;
+        return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u - drop * 4 * u * (1 - u), a[2]];
+      };
+      const [p0, p1] = [p(k), p(k + 1)];
+      const hw = P.wire / 2;
+      m.quad('wire', [p0[0], p0[1] - hw, p0[2]], [p1[0], p1[1] - hw, p1[2]], [p1[0], p1[1] + hw, p1[2]], [p0[0], p0[1] + hw, p0[2]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    }
+  };
+  for (let i = 1; i < poles.length; i++) {
+    const [xa, ta] = poles[i - 1];
+    const [xb, tb] = poles[i];
+    for (const dz of [-0.55, 0, 0.55]) sag([xa, ta - 0.32, P.z + dz], [xb, tb - 0.32, P.z + dz], 0.35 + Math.abs(dz) * 0.3);
+    for (const dz of [-0.35, 0.35]) sag([xa, ta - 1.04, P.z + dz], [xb, tb - 1.04, P.z + dz], 0.55);
+  }
+  for (let i = 1; i < poles.length; i++) {
+    const [xa] = poles[i - 1];
+    const [xb] = poles[i];
+    const x = (xa + xb) / 2 + (rng() - 0.5) * 2;
+    if (xb - xa > 7 && rng() < 0.55 && !cut(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
+  }
   m.build(group);
 }
 
@@ -549,7 +875,7 @@ export function buildForeground(level: Level, group: THREE.Group): void {
   const [az0, az1, adrop] = HILLSIDE.rowA;
   const [bz0, bz1, bdrop] = HILLSIDE.rowB;
   const storeys = 3 * HILLSIDE.storey;
-  houseRow(m, rng, -10, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, open, { bay: 0.7, chimney: 0.35 });
-  houseRow(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, open, { bay: 0.6, chimney: 0.3 });
+  houseRow(m, rng, -10, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, open, { bay: 0.7, chimney: 0.35, hip: false, shrub: 0.25 });
+  houseRow(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, open, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
   m.build(group);
 }
