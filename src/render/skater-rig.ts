@@ -94,7 +94,8 @@ export class SkaterRig {
   // skinned model bones and the joints they follow
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
   private board: THREE.Object3D | null = null; // the Blender board, which shows gear wear
-  private worn = ''; // the gear the wear was last drawn for, in steps of 5
+  private worn = '';
+  private held: 'idle' | 'busted' | null = null; // the gear the wear was last drawn for, in steps of 5
   // the bones and board as the clip posed them, before the slope; crossfades start from these
   private raw: { pos: THREE.Vector3[]; rot: THREE.Quaternion[]; board: THREE.Matrix4 } | null = null;
   // Clips keyed in Blender (lou-gnar.glb's animations, art/lou_gnar.py): sampled straight onto the bones, and they
@@ -581,13 +582,22 @@ export class SkaterRig {
     }
   }
 
+  // hold a pose clip whatever the skater is doing ('idle' under a menu, 'busted' when caught); null lets go
+  hold(name: 'idle' | 'busted' | null): void {
+    this.held = name;
+  }
+
   update(dtMs: number, sk: Skater, angle: number): void {
     const dt = dtMs / 1000;
     const len = clipLength(this.clip);
     const done = !this.clip.loop && this.t >= len;
     const grinding = sk.mode === 'grind' || sk.mode === 'rail';
 
-    if (sk.mode === 'roll') {
+    if (this.held) {
+      if (this.clipName !== this.held) this.play(this.held, 0.25);
+    } else if (this.clipName === 'idle' || this.clipName === 'busted') {
+      this.play(sk.mode === 'air' ? 'air' : 'ride', 0.2);
+    } else if (sk.mode === 'roll') {
       if (done || this.clipName === 'air' || this.clipName === 'freefall' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
       } else if (this.clipName === 'push') {

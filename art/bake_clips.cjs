@@ -68,6 +68,7 @@ function modeFor(name) {
         for (let f = 0; f <= n; f++) {
           s.play(name, 0);
           s.t = clip.loop && f === n ? 0 : Math.min(f / FPS, len - 1e-4); // a loop ends where it starts
+          s.hold?.(name === 'idle' || name === 'busted' ? name : null); // held clips: the rig would leave them otherwise
           s.update(0, sk, 0);
           const fr = {};
           for (const bone of bones) fr[bone.name] = round(rel(bone));
