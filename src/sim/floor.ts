@@ -18,7 +18,8 @@ export type FloorEvent =
   | { type: 'pickup'; kind: PickupKind; index: number }
   | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
   | { type: 'drone'; index: number } // stomped a drone out of the sky
-  | { type: 'near' }; // a close call: cleared a vehicle by a few px without touching it
+  | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
+  | { type: 'decoy' }; // the Decoy boon pulled the cruiser back
 
 // which board trigger a skater event is
 const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
@@ -56,6 +57,7 @@ export class FloorSim {
   ) {
     this.skater = new Skater(level, mods);
     this.heat.value = startHeat;
+    if (mods) this.heat.mods = { rise: mods.heatRise, hopCool: mods.hopCool, decoy: mods.decoy, slow: mods.slowHeat };
     this.taken = level.pickups.map(() => false);
     const esc = level.escape;
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
@@ -82,7 +84,8 @@ export class FloorSim {
     this.closeCalls(skaterEvents);
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
-    if (this.chopper?.step(this.skater)) this.heat.value = Math.min(100, this.heat.value + CHOPPER.heatPerSec / 60);
+    if (this.chopper?.step(this.skater)) this.heat.add(CHOPPER.heatPerSec / 60);
+    if (this.heat.decoyFired) this.events.push({ type: 'decoy' });
     if (this.skater.mode === 'bail') this.state = 'bail';
     else if (this.skater.mode === 'exit') {
       this.state = 'exit';
@@ -90,6 +93,13 @@ export class FloorSim {
       const fork = this.level.fork;
       this.road = fork && this.skater.y <= fork.y + 1 ? 'high' : 'low';
     } else if (this.heat.caught) this.state = 'caught';
+  }
+
+  // which road the skater is on right now, once they reach the fork's overpass (null before it, or no fork)
+  get roadAhead(): 'high' | 'low' | null {
+    const fork = this.level.fork;
+    if (!fork || this.skater.x < fork.x0) return null;
+    return this.skater.y <= fork.y + 1 ? 'high' : 'low';
   }
 
   // the board: each trigger event fires its effects; effects on the skater and traffic land here, the rest
@@ -163,7 +173,7 @@ export class FloorSim {
         this.near.delete(c);
         if (!n.touched && n.gap >= 0 && n.gap < NEAR_MISS) {
           this.events.push({ type: 'near' });
-          this.heat.value = Math.max(0, this.heat.value + HEAT.nearMiss);
+          this.heat.add(HEAT.nearMiss);
         }
       }
     }

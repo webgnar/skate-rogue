@@ -1,6 +1,7 @@
 // Builds a floor's 3D kit from the physics level: street slabs, canals, buildings under rooftops, ledges, rails,
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
+import { BOON_COLORS } from '../boons/defs';
 import { model } from './models';
 import { buildProps } from './props';
 import { TILE } from '../physics/constants';
@@ -504,7 +505,7 @@ function roadSign(road: Road, high: boolean): THREE.Mesh {
   g.fillText(high ? '\u25B2 HIGH ROAD' : '\u25B6 LOW ROAD', 14, 12);
   g.font = '12px Arial, sans-serif';
   g.fillText(high ? 'ollie + flip up' : 'keep rolling', 150, 16);
-  g.fillStyle = road.kind === 'boon' ? (road.boonType === 'GRIND' ? '#ff8c2b' : '#ffd23f') : ROAD_COLORS[road.kind];
+  g.fillStyle = road.kind === 'boon' ? BOON_COLORS[road.boonType] : ROAD_COLORS[road.kind];
   g.font = 'bold 26px Arial Black, Arial, sans-serif';
   g.fillText(label(road), 14, 38);
   //danger: car icons

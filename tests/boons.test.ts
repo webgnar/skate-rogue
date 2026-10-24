@@ -29,10 +29,12 @@ function peak(sk: Skater, frames: number, script: (f: number) => StepInput): num
 }
 
 describe('boon data', () => {
-  it('has 6 POP and 6 GRIND boons with unique ids', () => {
+  it('has 6 POP, 6 GRIND, 5 FLOW and 7 COOL boons with unique ids', () => {
     expect(BOONS.filter((b) => b.type === 'POP')).toHaveLength(6);
     expect(BOONS.filter((b) => b.type === 'GRIND')).toHaveLength(6);
-    expect(new Set(BOONS.map((b) => b.id)).size).toBe(12);
+    expect(BOONS.filter((b) => b.type === 'FLOW')).toHaveLength(5);
+    expect(BOONS.filter((b) => b.type === 'COOL')).toHaveLength(7);
+    expect(new Set(BOONS.map((b) => b.id)).size).toBe(BOONS.length);
   });
 
   it('stacks up to max and no further', () => {
