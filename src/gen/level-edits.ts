@@ -29,6 +29,11 @@ export function useLevelEdits(edits: LevelEdits): void {
   active = edits;
 }
 
+// the edits in use, for the floor worker (src/run/floor-worker.ts) to build with the same ones
+export function levelEdits(): LevelEdits {
+  return active;
+}
+
 export function floorEdit(floor: number): FloorEdit {
   return active.floors[String(floor)] ?? {};
 }

@@ -3,6 +3,7 @@
 // runs) they're built on the spot. Same spec, same floor: floorLevel is pure.
 import { CurvedRail, type Level } from '../physics/level';
 import { floorLevel, type FloorSpec } from './floor-level';
+import { levelEdits } from '../gen/level-edits';
 
 export function specKey(s: FloorSpec): string {
   return JSON.stringify([s.seed, s.floor, s.road, s.library, s.gnar, !!s.tutorial]);
@@ -55,7 +56,7 @@ export class FloorPrefetch {
     if (this.worker) {
       const id = ++this.id;
       this.waiting.set(id, key);
-      this.worker.postMessage({ id, spec });
+      this.worker.postMessage({ id, spec, edits: levelEdits() });
     }
     return key;
   }
