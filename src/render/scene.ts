@@ -7,6 +7,7 @@ import { NightCity } from './night';
 import { FX } from './fx-settings';
 import { batchStatic } from './batch';
 import { GateFx } from './gate-fx';
+import { SirenFx } from './siren-fx';
 import { Ambience, BACKDROP_SPAN, BACKDROPS, type BiomeId } from './biomes';
 import { loadSheet } from './skins';
 import { loadImage, pixelTexture } from './textures';
@@ -29,6 +30,7 @@ export class StreetView {
   private floor = 1;
   readonly night = new NightCity();
   readonly gates = new GateFx();
+  readonly sirens = new SirenFx();
   readonly ambience = new Ambience();
   private wet = 0;
   private backdrop: { mesh: THREE.Mesh; parallax: number }[] = [];
@@ -74,7 +76,7 @@ export class StreetView {
       this.hemis.push(hemi);
       this.suns.push(sun);
     }
-    this.scene.add(this.sky, this.puddles.mesh, this.night.group, this.gates.group, this.ambience.points);
+    this.scene.add(this.sky, this.puddles.mesh, this.night.group, this.gates.group, this.sirens.group, this.ambience.points);
     this.front.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
@@ -164,6 +166,7 @@ export class StreetView {
     this.wetKit();
     this.puddles.setSky(m.skyTop, m.skyBottom, m.neon);
     this.night.setNight(m.neon);
+    this.sirens.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
     this.flash = 99;
   }
@@ -197,6 +200,7 @@ export class StreetView {
     this.scene.add(this.kit);
     this.night.build(level, this.kit, seed, floor);
     this.gates.build(this.kit);
+    this.sirens.build(this.kit);
   }
 
   // the district's kit (skins.ts): loads its tiles, then rebuilds the floor's kit in them. Chicago if they fail.
@@ -215,6 +219,7 @@ export class StreetView {
   follow(px: number, py: number, dt = 0): void {
     this.camX = toX(px);
     this.gates.update(dt, toX(px));
+    this.sirens.update(dt);
     this.camY = toY(this.level, py);
     //a slam punches the camera in and rolls it, settling over about half a second (held through the hit-stop)
     const zoom = this.zoom.zoom * (1 + this.punchAmt * 0.35);
