@@ -182,6 +182,27 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 - [ ] **Tuning:** does any backdrop look too big, too high, or float oddly? Clemente's wall card is the one I'm
       least sure about.
 
+**Boon, curse and duo looks** (each shows only when that boon is held)
+
+- [ ] Hood Pop: a red ring off a car hop. Siren Song: blue notes rising. Kicker Boost: cyan streaks off a tailgate.
+      Slingshot: streaks ahead off a rail's end. Butter: a yellow smear on a fast landing.
+- [ ] Bubble Pads: the free slam pops into soap bubbles. Tuck and Roll: a blue ring as you bounce out. Slam Stoke:
+      pink sparks off a slam.
+- [ ] Bomb Hill: a cyan trail while extra speed lasts. Perpetual Motion: a pink trail.
+- [ ] Curses are purple. Moon Shoes leaves a slow moon-dust puff on each ollie. Speed Wobbles sheds wisps when
+      you're airborne too fast. Wanted sends a bounty pixel up now and then.
+- [ ] Duos are pink. Rocket Grind blasts a column off a fast grind. Sky Line draws a pink line under each trick.
+- [ ] **Tuning:** is anything too busy once you hold several boons?
+
+**Roadblock** (the act 1 escape)
+
+- [ ] Red and blue pools glow on the street under the parked cruisers, swapping slowly side to side, stronger at
+      night. With `?noflash` they hold steady.
+
+**Weather by district**
+
+- [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
+
 **Speed lines**
 
 - [ ] They only show at high speed and stay subtle (toned down after your note).

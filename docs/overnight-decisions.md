@@ -142,6 +142,22 @@ and listed it here for review. Any of these can be flipped in the morning.
   Each card drifts at its own parallax and takes the mood tint, so red and blue neon stays lit at night. Images are
   cropped and padded from the QFS sprites into public/tex/bkgd_*.png. The models thread did the per-biome kits
   (#71), and I took the backdrops.
+- **Looks for the rest of the boons, the curses and the duos (boon-fx.ts).** Each one shows only on its own moment,
+  in its card's colour:
+  - Hood Pop: a red ring off the roof. Siren Song: blue notes rising from a car hop.
+  - Kicker Boost: cyan streaks off the tailgate. Slingshot: streaks ahead off a rail's end.
+  - Butter: a yellow smear on a fast landing. Bubble Pads: a slam pops into soap bubbles.
+  - Tuck and Roll: a blue ring. Slam Stoke: pink sparks.
+  - Bomb Hill: a cyan trail while extra speed lasts. Perpetual Motion: a pink trail.
+  - Curses wear purple. Moon Shoes leaves a slow moon-dust puff. Speed Wobbles sheds wisps when you're airborne too
+    fast. Wanted sends a bounty pixel up now and then.
+  - Duos wear pink. Rocket Grind blasts a column off a fast grind. Sky Line draws a pink line under each trick.
+  - Not given a look: Low Profile, Decoy, Jaywalker, Spoofed Plate, Double Stoken, Hustler, Lucky Reroll, Stoken
+    Magnet, Roof Rider, Slipstream. They're either menu effects, or the sim doesn't tell the view when they fire.
+- **No rain in Atlantis, the museum or space** (BIOMES `dry`). It's under the sea, indoors and a vacuum.
+- **Roadblock sirens (siren-fx.ts).** Each parked cruiser's light bar throws red and blue pools on the street. They
+  swap smoothly at 0.9 per second, like the chasing cruiser, and are brighter at night. With reduce-flashing on they
+  hold steady. Two instanced draws cover the whole roadblock.
 
 ## Effects thread: fx6 leftovers
 

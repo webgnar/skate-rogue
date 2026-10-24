@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
+import { SirenFx, SIREN } from '../src/render/siren-fx';
+import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
 import { landDust, landKick } from '../src/render/land-fx';
 import { FEEL } from '../src/physics/feel';
@@ -177,6 +179,37 @@ describe('boon and board mod looks', () => {
       fx.mod(e, 0, 0);
       expect(calls.length, e).toBeGreaterThan(0);
     }
+  });
+  it('curses, duos and the FLOW, COOL and STREET boons show on their moments', () => {
+    const fx = new BoonFx(fake);
+    const at = (id: BoonId, e: Parameters<BoonFx['event']>[0], speed = 3) => {
+      fx.setBoons([{ id, stacks: 1 }]);
+      calls.length = 0;
+      fx.event(e, 0, 0, speed);
+      return calls.length;
+    };
+    expect(at('hoodPop', { type: 'hop' })).toBeGreaterThan(0);
+    expect(at('sirenSong', { type: 'hop' })).toBeGreaterThan(0);
+    expect(at('kickerBoost', { type: 'kicker' })).toBeGreaterThan(0);
+    expect(at('slingshot', { type: 'exit' })).toBeGreaterThan(0);
+    expect(at('slamStoke', { type: 'slam' })).toBeGreaterThan(0);
+    expect(at('bubblePads', { type: 'pad' })).toBeGreaterThan(0);
+    expect(at('moonShoes', { type: 'ollie', spin: 0 })).toBeGreaterThan(0);
+    expect(at('skyLine', { type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false })).toBeGreaterThan(0);
+    expect(at('butter', { type: 'land' }, 1)).toBe(0); // only when the air speed carries on
+    expect(at('butter', { type: 'land' }, 9)).toBeGreaterThan(0);
+    expect(at('hoodPop', { type: 'slam' })).toBe(0);
+    //Rocket Grind only off a fast grind
+    fx.setBoons([{ id: 'rocketGrind', stacks: 1 }]);
+    fx.update(1 / 60, { ...look, mode: 'grind' }, 0, 0);
+    calls.length = 0;
+    fx.event({ type: 'ollie', spin: 0 }, 0, 0, 8);
+    expect(calls.length).toBe(2);
+    //the curses that run while they're held
+    fx.setBoons([{ id: 'wanted', stacks: 1 }, { id: 'speedWobbles', stacks: 1 }]);
+    calls.length = 0;
+    fx.update(1 / 60, { ...look, hsp: 30 }, 0, 0);
+    expect(calls).toEqual(expect.arrayContaining(['wanted', 'wobbles']));
   });
 });
 
@@ -363,5 +396,29 @@ describe('landing by impact', () => {
     expect(landKick(FEEL.heavy)).toBeGreaterThan(0);
     expect(landKick(FEEL.huge)).toBeGreaterThan(landKick(FEEL.heavy));
     expect(landKick(40)).toBe(0.2);
+  });
+});
+
+describe('roadblock sirens', () => {
+  it('swap red and blue smoothly, and hold steady with reduced flashing', () => {
+    const [r0, b0] = SirenFx.mix(0, false);
+    expect(r0 + b0).toBeCloseTo(1);
+    const [r1] = SirenFx.mix(0.25 / SIREN.sweep, false);
+    expect(r1).toBeCloseTo(1);
+    expect(SirenFx.mix(0.123, true)).toEqual([SIREN.steady, SIREN.steady]);
+  });
+  it('light the street under each parked cruiser in two draws', () => {
+    const kit = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const car = new THREE.Group();
+      car.userData.sirens = [{ x: i * 4 - 1, y: 0, z: -0.3, color: 'red' }, { x: i * 4 + 1, y: 0, z: 0.3, color: 'blue' }];
+      kit.add(car);
+    }
+    const fx = new SirenFx();
+    fx.build(kit);
+    expect(fx.group.children).toHaveLength(2);
+    expect((fx.group.children[0] as THREE.InstancedMesh).count).toBe(3);
+    fx.build(new THREE.Group());
+    expect(fx.group.children).toHaveLength(0);
   });
 });

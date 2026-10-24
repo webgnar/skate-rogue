@@ -584,11 +584,15 @@ function makeParkedCruiser(x0: number, x1: number, bottom: number, roof: number,
   const car = makeCar(x0, x1, bottom, roof, 0x1c1c24, 'Cruiser');
   const top = new THREE.Box3().setFromObject(car).max.y;
   const flip = i % 2 === 0;
+  const sirens: { x: number; y: number; z: number; color: 'red' | 'blue' }[] = [];
   for (const [dz, color] of [[-0.3, flip ? 0xff2a2a : 0x2a6bff], [0.3, flip ? 0x2a6bff : 0xff2a2a]] as const) {
     const light = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.11, 0.58), new THREE.MeshBasicMaterial({ color }));
     light.position.set(-0.05, top + 0.055, dz);
     car.add(light);
+    //their light on the street, for the effects (siren-fx.ts): red one end of the car, blue the other
+    sirens.push({ x: car.position.x + (dz < 0 ? -1 : 1) * (x1 - x0) * 0.5, y: bottom, z: dz, color: color === 0xff2a2a ? 'red' : 'blue' });
   }
+  car.userData.sirens = sirens;
   return car;
 }
 

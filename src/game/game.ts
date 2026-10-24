@@ -33,7 +33,7 @@ import { SmashFx, type SmashHit } from '../render/smash';
 import { VisorGlint, VISOR_TINT } from '../render/visor-glint';
 import { propPieces } from '../render/models';
 import { hideProp, props, restyle } from '../render/props';
-import { biomeMood, type BiomeId } from '../render/biomes';
+import { BIOMES, biomeMood, type BiomeId } from '../render/biomes';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
@@ -282,7 +282,7 @@ export class Game {
 
   //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level
   private applyMood(): number {
-    const rain = rainLevel(this.seed, this.floor);
+    const rain = BIOMES[this.biome].dry ? 0 : rainLevel(this.seed, this.floor); // no rain under the sea, indoors or in space
     const mood = moodAt(clockFor(this.floor));
     const look = biomeMood(rain > 0 ? rainy(mood) : mood, this.biome);
     this.view.setMood(look, rain);

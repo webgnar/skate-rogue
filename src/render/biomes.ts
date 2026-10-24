@@ -29,6 +29,7 @@ export interface BiomeLook {
   stars?: number; // floor for the stars
   fogScale?: number; // fog distances times this
   gravity: number; // from the GDD table; the sim applies it, this is for reference
+  dry?: boolean; // no rain here: under the sea, indoors, in space
   ambient: Ambient | null;
 }
 
@@ -52,13 +53,13 @@ export const BIOMES: Record<BiomeId, BiomeLook> = {
   //under the sea: teal water for sky, close blue fog, bubbles rising
   atlantis: {
     name: 'Atlantis', grade: 0.75, skyTop: 0x04304a, skyBottom: 0x2aa0b0, fog: 0x0a4a60, hemiSky: 0x80e0ff,
-    hemiGround: 0x062030, skyline: 0x5ab8c8, neon: 0.4, fogScale: 0.6, gravity: 0.8,
+    hemiGround: 0x062030, skyline: 0x5ab8c8, neon: 0.4, fogScale: 0.6, gravity: 0.8, dry: true,
     ambient: { colors: [0xd0f8ff, 0x90e0f8, 0xffffff], rate: 22, size: [0.11, 0.22], vy: [0.8, 1.6], sway: 0.25, life: [2, 3.5] },
   },
   //indoors: a dim warm hall instead of a sky, dust drifting in the gallery lights
   museum: {
     name: 'Art Museum', grade: 0.85, skyTop: 0x1a1418, skyBottom: 0x4a3a34, fog: 0x2a2024, hemiSky: 0xffe8d0,
-    hemiGround: 0x2a2020, skyline: 0x6a5850, fogScale: 0.7, gravity: 1,
+    hemiGround: 0x2a2020, skyline: 0x6a5850, fogScale: 0.7, gravity: 1, dry: true,
     ambient: { colors: [0xfff0d8, 0xe8d8c0], rate: 12, size: [0.08, 0.13], vy: [-0.15, 0.15], sway: 0.3, life: [3, 5] },
   },
   //cold glass and neon: cyan-magenta grade, data pixels streaming up
@@ -70,7 +71,7 @@ export const BIOMES: Record<BiomeId, BiomeLook> = {
   //black sky full of stars, no haze, slow cosmic dust
   space: {
     name: 'Outer Space', grade: 0.9, skyTop: 0x02020a, skyBottom: 0x1a0c34, fog: 0x08061a, hemiSky: 0xc0c8ff,
-    hemiGround: 0x0a0818, skyline: 0x403a6a, neon: 0.6, stars: 1, fogScale: 1.6, gravity: 0.6,
+    hemiGround: 0x0a0818, skyline: 0x403a6a, neon: 0.6, stars: 1, fogScale: 1.6, gravity: 0.6, dry: true,
     ambient: { colors: [0xb8c0ff, 0xffffff, 0xd8a8ff], rate: 8, size: [0.08, 0.14], vy: [-0.1, 0.1], sway: 0.15, life: [4, 6] },
   },
   //the AI's stronghold: red-amber glow, embers rising
