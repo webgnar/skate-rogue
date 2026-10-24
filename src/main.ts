@@ -12,7 +12,7 @@ import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { isBiome } from './render/biomes';
 import { props } from './render/props';
-import { SkaterRig } from './render/skater-rig';
+import { SkaterRig, isSkater } from './render/skater-rig';
 import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
 
@@ -320,7 +320,9 @@ async function start() {
   await Promise.all([loadCityTiles(`${base}tex/chicago_tiles.png`), loadModels(base)]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await view.loadBackdrop(base);
-  const sprite = await SkaterRig.create(base);
+  //?skater=webster (keanu, roxy, goldie) until the deck shop unlocks them
+  const skater = params.get('skater');
+  const sprite = await SkaterRig.create(base, isSkater(skater) ? skater : undefined);
   const input = new OneButton(document.getElementById('app')!);
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud());
   //?debug exposes the game for headless checks

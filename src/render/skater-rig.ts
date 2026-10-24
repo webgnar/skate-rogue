@@ -39,7 +39,20 @@ const COLORS = {
 const GRINDS = new Set(Object.keys(GRIND_NAMES));
 const ON_GROUND = new Set(['push', 'ride', ...GRINDS]); // clips that make no sense in the air
 const DOWN = new THREE.Vector3(0, -1, 0);
+// the sim's body response (the physics feel thread's src/physics/feel.ts), when it has one
+interface Feel {
+  squash?: number;
+  lean?: number;
+  wobble?: number;
+}
 const BASE_HIP_Y = 0.9; // pelvis height in the model's bind pose
+const SLOPE_DROP = 0.35; // on a slope the hips sink by this times the sine of the angle, so the low leg still reaches
+const SQUASH_DROP = 0.18; // how far a full landing squash sinks the hips
+const SLOPE_RATE = 14; // how fast the board settles to a new slope, per second
+
+export const SKATERS = ['lou-gnar', 'webster', 'keanu', 'roxy', 'goldie'] as const;
+export type SkaterId = (typeof SKATERS)[number];
+export const isSkater = (s: string | null): s is SkaterId => SKATERS.includes(s as SkaterId);
 
 export class SkaterRig {
   readonly mesh = new THREE.Group();
@@ -79,6 +92,9 @@ export class SkaterRig {
 
   // skinned model bones and the joints they follow
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
+  private slope = 0; // the ground's angle the board is tilted to, eased
+  // the bones and board as the clip posed them, before the slope; crossfades start from these
+  private raw: { pos: THREE.Vector3[]; rot: THREE.Quaternion[]; board: THREE.Matrix4 } | null = null;
   // Clips keyed in Blender (lou-gnar.glb's animations, art/lou_gnar.py): sampled straight onto the bones, and they
   // win over the code clip of the same name. The board follows the model's Board bone.
   private readonly baked = new Map<string, { bone: THREE.Bone; pos?: THREE.Interpolant; rot?: THREE.Interpolant }[]>();
@@ -185,14 +201,20 @@ export class SkaterRig {
     this.applyPose(BASE);
   }
 
-  static async create(base: string): Promise<SkaterRig> {
+  // the QFS skaters (art/skaters.py) share Lou's rig and play his clips, from lou-gnar.glb
+  static async create(base: string, skater: SkaterId = 'lou-gnar'): Promise<SkaterRig> {
     const load = (file: string) =>
       new GLTFLoader().loadAsync(`${base}models/${file}`).catch((err) => {
         console.warn(`${file} failed to load, using the built-in one`, err);
         return undefined;
       });
-    const [model, board] = await Promise.all([load('lou-gnar.glb'), load('board.glb')]);
-    return new SkaterRig(model?.scene, board?.scene, model?.animations);
+    const [lou, board, own] = await Promise.all([
+      load('lou-gnar.glb'),
+      load('board.glb'),
+      skater === 'lou-gnar' ? undefined : load(`${skater}.glb`),
+    ]);
+    const model = own ?? lou;
+    return new SkaterRig(model?.scene, board?.scene, lou?.animations);
   }
 
   private loadBaked(clips: THREE.AnimationClip[]): void {
@@ -400,15 +422,16 @@ export class SkaterRig {
     const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -spin);
     const pos: THREE.Vector3[] = [];
     const rot: THREE.Quaternion[] = [];
+    const raw = this.raw;
     this.bound.forEach(({ bone }, i) => {
-      pos.push(bone.position.clone());
-      rot.push(bone.quaternion.clone());
+      pos.push((raw ? raw.pos[i] : bone.position).clone());
+      rot.push((raw ? raw.rot[i] : bone.quaternion).clone());
       if (bone.name === 'Hips' && spin) {
         pos[i].applyQuaternion(turn); // the root bone is in rig space: turn it about the vertical
         rot[i].premultiply(turn);
       }
     });
-    const board = this.boardMatrix();
+    const board = raw ? raw.board.clone() : this.boardMatrix();
     if (spin) board.premultiply(new THREE.Matrix4().makeRotationFromQuaternion(turn));
     this.snap = { pos, rot, board };
   }
@@ -582,6 +605,9 @@ export class SkaterRig {
     if (this.bound.length) {
       // the skinned model: pose it from the Blender clip or the code clip, then crossfade bone by bone
       this.pose = pose;
+      // start from the clip's own pose, not last frame's slope
+      this.raw?.pos.forEach((p, i) => this.bound[i].bone.position.copy(p));
+      this.raw?.rot.forEach((q, i) => this.bound[i].bone.quaternion.copy(q));
       if (baked) {
         const len = clipLength(this.clip);
         this.applyBaked(baked, this.clip.loop && len > 0 ? ((this.t % len) + len) % len : Math.min(this.t, len));
@@ -594,12 +620,85 @@ export class SkaterRig {
       this.pose = pose;
       this.applyPose(pose);
     }
-    // turned half round about the vertical first, then tilted with the slope
-    this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, angle, 'ZYX');
+    // turned half round about the vertical first, then tilted with the slope: the skinned model tilts only its
+    // board, and its legs soak up the slope with the torso kept upright over the board
+    this.slope += (angle - this.slope) * Math.min(1, dt * SLOPE_RATE);
+    if (this.bound.length) {
+      this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, 0);
+      const feel = (sk as { feel?: Feel }).feel;
+      const turn = this.fakie ? -1 : 1;
+      this.absorb(turn * this.slope, feel?.squash ?? 0, turn * (feel?.lean ?? 0), feel?.wobble ?? 0);
+    } else {
+      this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, angle, 'ZYX');
+    }
 
     if (this.flash > 0) this.flash -= dt;
     const blink = this.flash > 0 && Math.floor(this.flash * 20) % 2 === 0;
     for (const mat of this.mats) mat.emissive.setRGB(blink ? 0.75 : 0, 0, 0);
+  }
+
+  // Tilt the board to the slope about the wheels' contact under the rig's origin, keep the feet planted on it, and
+  // re-aim each leg (two-bone IK from the hip) at its foot. The hips sink a little so the downhill leg still reaches;
+  // the torso stays upright and centred. `slope` is in rig space, + = nose up. The physics feel (when the sim has it)
+  // sinks the hips by `squash` (0..1) and leans the body over the planted feet by `lean` (forward/back) and `wobble`
+  // (side to side), radians.
+  private absorb(slope: number, squash = 0, lean = 0, wobble = 0): void {
+    this.raw = {
+      pos: this.bound.map(({ bone }) => bone.position.clone()),
+      rot: this.bound.map(({ bone }) => bone.quaternion.clone()),
+      board: this.boardMatrix(),
+    };
+    if (Math.abs(slope) < 1e-3 && !squash && !lean && !wobble) return;
+    const tilt = new THREE.Matrix4().makeRotationZ(slope);
+    this.setBoard(tilt.clone().multiply(this.raw.board));
+    const bone = (name: string) => this.bound.find((b) => b.bone.name === name)?.bone;
+    const legs = (['Left', 'Right'] as const).map((side) => [bone(`${side}UpLeg`), bone(`${side}Leg`), bone(`${side}Foot`)]);
+    // where the feet go: where the clip put them, tilted with the board
+    const feet = legs.map(([, , foot]) => (foot ? tilt.clone().multiply(this.inRig(foot)) : null));
+    const hips = bone('Hips');
+    if (hips) {
+      const m = this.inRig(hips);
+      const at = new THREE.Vector3().setFromMatrixPosition(m);
+      const drop = SLOPE_DROP * Math.abs(Math.sin(slope)) + SQUASH_DROP * squash;
+      const body = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(wobble, 0, -lean));
+      const about = new THREE.Matrix4().makeTranslation(at.x, at.y - drop, at.z);
+      m.premultiply(new THREE.Matrix4().makeTranslation(-at.x, -at.y, -at.z)).premultiply(body).premultiply(about);
+      this.setInRig(hips, m);
+    }
+    const at = (o: THREE.Object3D) => new THREE.Vector3().setFromMatrixPosition(this.inRig(o));
+    legs.forEach(([up, low, foot], i) => {
+      const target = feet[i];
+      if (!up || !low || !foot || !target) return;
+      const hip = at(up);
+      const knee = at(low);
+      const ankle = at(foot);
+      const goal = new THREE.Vector3().setFromMatrixPosition(target);
+      const thigh = knee.distanceTo(hip);
+      const shin = ankle.distanceTo(knee);
+      // bend the knee the way it already bends
+      const pole = knee.clone().sub(hip.clone().add(ankle).multiplyScalar(0.5));
+      const k = kneePoint(hip, goal, thigh, shin, pole);
+      this.aim(up, hip, knee, new THREE.Vector3(k.x, k.y, k.z));
+      this.aim(low, at(low), at(foot), goal);
+      this.setInRig(foot, target.setPosition(at(foot)));
+    });
+  }
+
+  // turn a bone about its head so the point `from` swings to `to`
+  private aim(b: THREE.Object3D, head: THREE.Vector3, from: THREE.Vector3, to: THREE.Vector3): void {
+    const a = from.clone().sub(head);
+    const c = to.clone().sub(head);
+    if (a.lengthSq() < 1e-10 || c.lengthSq() < 1e-10) return;
+    const turn = new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(a.normalize(), c.normalize()));
+    const m = this.inRig(b);
+    const about = new THREE.Matrix4().makeTranslation(head.x, head.y, head.z);
+    this.setInRig(b, about.clone().multiply(turn).multiply(about.invert()).multiply(m));
+  }
+
+  // set an object's local transform from a transform in rig space
+  private setInRig(o: THREE.Object3D, m: THREE.Matrix4): void {
+    const parent = o.parent && o.parent !== this.mesh ? this.inRig(o.parent) : new THREE.Matrix4();
+    parent.invert().multiply(m).decompose(o.position, o.quaternion, o.scale);
   }
 
   // push at cruising speed, roll when carrying extra speed from rails or drops
@@ -610,6 +709,8 @@ export class SkaterRig {
   private applyPose(p: Pose): void {
     // board: lift, pitch about its pivot, then spin about its centre (roll applied after yaw)
     this.boardRoot.position.set(p.boardX, p.boardY + BOARD.deckTop, p.boardZ);
+    this.boardRoot.quaternion.identity(); // a crossfade or a slope may have left it turned (setBoard)
+    this.boardRoot.scale.setScalar(1);
     this.boardPivot.position.x = p.boardPivot;
     this.boardPivot.rotation.z = p.boardPitch;
     this.boardSpin.position.x = -p.boardPivot;

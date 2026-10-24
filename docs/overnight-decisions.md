@@ -291,3 +291,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   crossfades blend bone by bone. To change a move: edit its action in `art/lou-gnar.blend`, then
   `blender -b art/lou-gnar.blend -P art/lou_gnar.py -- --export-only`. A new move still needs a code clip entry
   (its timing and looping come from `src/render/poses.ts`).
+- **Webster, Keanu, Roxy and Goldie are built** (`art/skaters.py`) on Lou's rig and bind pose, so they play Lou's
+  clips unchanged; their GLBs carry no animation. Looks follow the QFS title cast art without the swords and
+  shields (Gnar Run has no combat). Pick one with `?skater=webster` (keanu, roxy, goldie) until the deck shop
+  unlocks them.
+- **Goldie rides a board.** She skates quads in QFS, but every Gnar Run move is a board trick, so a roller-skate
+  Goldie would need her own trick set. She wears purple high-tops with orange soles, her skates' colours. If you
+  want her on quads, that's a separate move list to design.
+- **Slopes tilt the board, not the skater.** zack asked for IK legs that soak up slopes with the torso centred. On
+  the skinned model the ground angle now tilts only the board; the feet stay on it, the legs re-aim by two-bone IK
+  and the hips sink a little, over any clip. The physics feel thread's `feel` values (squash, lean, wobble) feed the
+  same hook, and its `feel.pitch` becomes the board angle.
