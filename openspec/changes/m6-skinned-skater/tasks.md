@@ -16,3 +16,5 @@ Built with Blender 5.2 in the cloud (`blender -b -P art/lou_gnar.py`), 1.5k tria
 
 - [x] 3.1 Board in Blender to the `BOARD` measurements (8.25" x 32" popsicle proportions), export `public/models/board.glb`
 - [x] 3.2 The rig shows it in place of the code-built board, with the same toon materials; screenshots of the tricks
+- [x] 3.3 Rebuilt from zack's references: curved kicks and deeper concave, colored ply edge, hardware bolts, Venture-style
+  trucks (polished, purple bushings, gold washers and nuts, red V), Spitfire-style swirl wheels
