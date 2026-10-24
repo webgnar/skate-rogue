@@ -10,4 +10,5 @@
 - [x] 2.3 Rain intensity roll (drizzle / rain / downpour), soft lightning glow
 - [ ] 2.4 Drips off ledges and helmet splashes (deferred)
 ## 3. Check
-- [x] 3.1 Screenshots in all four moods; draw calls and frame time
+- [x] 3.1 Screenshots of a dusk downpour (floor 6, seed 5)
+- [ ] 3.2 Screenshots in all four moods on device
