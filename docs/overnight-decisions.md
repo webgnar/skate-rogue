@@ -113,7 +113,15 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Close calls.** Clear a vehicle (parked, roadblock or moving, including an oncoming car passing under you)
   with your wheels within 10 px of its roof the whole way over, without touching it: "CLOSE CALL!", +200 into the
   combo, -5 Heat (the GDD's number), and a short slow-mo beat. Landing on the roof is a car hop instead.
-- **Not yet:** cross traffic at intersections, parked car doors, and the bus stop pulling into the lane are next.
+- **Cross traffic (from floor 5).** About one intersection per floor on open street (never by a parked car,
+  glass or a canal), with a traffic light and a crosswalk. Its car pulls off in the back lane when you come in
+  range, takes over a second to reach the skate lane (the light is red the whole time), crosses it in about half
+  a second and carries on into the front lane, then repeats every 200 frames. The floor seed times it, so it
+  might block the lane as you arrive (ollie it, or land on it for a car hop), be just clearing, or let you beat
+  it across (that one can be a close call). Hitting it is a slam.
+- **Parked car doors: held back.** In the side view a door swings toward the camera, across lanes, not along the
+  street, so it can't really be in your way or launch you without faking it. Worth a quick look together; for
+  now parked cars stay platforms. The bus stop that pulls a bus into the lane is also still to do.
 
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,

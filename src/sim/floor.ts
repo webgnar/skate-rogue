@@ -9,6 +9,7 @@ import { Swarm } from './drones';
 import type { Car, Level, PickupKind } from '../physics/level';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
+import { crossPlan } from '../traffic/cross';
 
 export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
 
@@ -60,14 +61,15 @@ export class FloorSim {
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
-    this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed));
+    this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed), crossPlan(level, level.layout.seed));
   }
 
   step(input: StepInput): void {
     if (this.state !== 'skate') return;
     this.traffic.step(this.skater.x);
     this.swarm?.step(this.skater);
-    this.skater.movers = this.swarm ? [...this.traffic.inLane, ...this.swarm.boxes] : this.traffic.inLane;
+    const crossing = this.traffic.crossing;
+    this.skater.movers = this.swarm || crossing.length ? [...this.traffic.inLane, ...crossing, ...(this.swarm?.boxes ?? [])] : this.traffic.inLane;
     this.skater.step(input);
     const skaterEvents = this.skater.events.slice();
     this.skater.events.length = 0;

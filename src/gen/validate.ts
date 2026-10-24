@@ -4,13 +4,14 @@ import { TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
 import { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
+import type { CrossCar } from '../traffic/cross';
 import { buildFloor, type FloorOptions } from './descent';
 import { maxTier } from './layout';
 import { PIECES } from './pieces';
 
 const REROLLS = 8;
 
-function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: Car[]): boolean {
+function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: Car[], cross: CrossCar[]): boolean {
   for (let dx = 20; dx <= 70; dx += 4) {
     if (!isStreetAt(level, x + dx)) return true;
     if (level.cars.some((c) => x + dx >= c.x0 && x + dx <= c.x1)) return true;
@@ -19,6 +20,8 @@ function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: 
     //where moving cars will be by the time we get there
     const t = dx / Math.max(1, hsp);
     if (movers.some((v) => x + dx >= v.x0 + v.speed * t && x + dx <= v.x1 + v.speed * t)) return true;
+    //cross traffic that will be in the lane by then
+    if (cross.some((c) => x + dx >= c.box.x0 && x + dx <= c.box.x1 && (c.inLane || c.inLaneIn(t)))) return true;
   }
   return false;
 }
@@ -41,8 +44,8 @@ export function botRun(level: Level): { result: string; slams: number; maxHeat: 
     //the drone swarm: drones on their way down count as already there
     const drones = sim.swarm ? sim.swarm.drones.filter((d) => d.state === 'dive' || d.state === 'hover').map((d) => d.box) : [];
     const onSurface = sk.mode === 'grind' || (sk.mode === 'roll' && sk.surface !== null);
-    if (sk.mode === 'roll' && !sk.surface && danger(level, sk.x, sk.hsp, movers, drones)) pressed = true;
-    if (onSurface && sk.surface && sk.x > sk.surface.x1 - 24 && danger(level, sk.x, sk.hsp, movers, drones)) pressed = true;
+    if (sk.mode === 'roll' && !sk.surface && danger(level, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
+    if (onSurface && sk.surface && sk.x > sk.surface.x1 - 24 && danger(level, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30) pressed = true;
     // falling with no street ahead: flip for more air
     if (sk.mode === 'air' && sk.vsp > 0.5 && sk.jumps > 0 && !isStreetAt(level, sk.x + 40)) pressed = true;

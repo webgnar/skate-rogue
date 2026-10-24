@@ -4,6 +4,7 @@
 import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
+import { CrossCar, type Intersection } from './cross';
 
 // robotaxis, buses and box trucks drive your way (slower than you); oncoming cars come at you
 export type VehicleKind = 'robotaxi' | 'oncoming' | 'bus' | 'truck';
@@ -80,13 +81,17 @@ export function vehicleSize(kind: VehicleKind): [number, number] {
 
 export class Traffic {
   vehicles: Vehicle[] = [];
+  readonly cross: CrossCar[]; // cars crossing at intersections
   private next = 0;
   private ids = 0;
 
   constructor(
     private readonly level: Level,
     private readonly plan: Spawn[],
-  ) {}
+    intersections: Intersection[] = [],
+  ) {
+    this.cross = intersections.map((i) => new CrossCar(i, level.streetY));
+  }
 
   private blockedAt(x0: number, x1: number): boolean {
     for (let x = x0; x <= x1; x += TILE / 2) if (!isStreetAt(this.level, x)) return true;
@@ -110,6 +115,7 @@ export class Traffic {
   }
 
   step(skaterX: number): void {
+    for (const c of this.cross) c.step(skaterX);
     while (this.next < this.plan.length && skaterX >= this.plan[this.next].at) this.spawn(this.plan[this.next++]);
 
     for (const v of this.vehicles) {
@@ -135,5 +141,10 @@ export class Traffic {
   // vehicles the skater can touch
   get inLane(): Vehicle[] {
     return this.vehicles.filter((v) => !v.leaving);
+  }
+
+  // cross traffic in the skate lane right now
+  get crossing(): Car[] {
+    return this.cross.filter((c) => c.inLane).map((c) => c.box);
   }
 }

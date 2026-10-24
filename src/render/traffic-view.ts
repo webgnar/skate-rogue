@@ -4,6 +4,7 @@ import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import type { Vehicle, VehicleKind } from '../traffic/traffic';
 import { TRAFFIC } from '../traffic/traffic';
+import { CROSS, type CrossCar } from '../traffic/cross';
 import { makeBus, makeCar, makeTruck, toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
@@ -29,6 +30,7 @@ export class TrafficView {
   private lights: THREE.Mesh[] = [];
   private drone: THREE.Group;
   private rotors: THREE.Mesh[] = [];
+  private crossings: { car: THREE.Group; post: THREE.Group; red: THREE.Mesh; green: THREE.Mesh }[] = [];
   private cruiserGap = 10; // tiles behind the skater
   private t = 0;
   readonly heatLights = new HeatLights();
@@ -99,6 +101,8 @@ export class TrafficView {
   clear(): void {
     for (const m of this.meshes.values()) this.group.remove(m);
     this.meshes.clear();
+    for (const c of this.crossings) this.group.remove(c.car, c.post);
+    this.crossings = [];
     this.cruiserGap = 10;
   }
 
@@ -131,6 +135,60 @@ export class TrafficView {
         this.meshes.delete(id);
       }
     }
+  }
+
+  // cross traffic: each intersection's car, coming nose-first out of the back lanes and across, and its light
+  syncCross(level: Level, cross: CrossCar[]): void {
+    if (this.crossings.length !== cross.length) {
+      for (const c of this.crossings) this.group.remove(c.car, c.post);
+      this.crossings = cross.map((c, i) => this.makeCrossing(level, c, i));
+    }
+    cross.forEach((c, i) => {
+      const v = this.crossings[i];
+      v.car.position.z = c.z;
+      v.car.visible = c.t >= 0 && c.z < CROSS.endZ;
+      v.red.visible = c.red;
+      v.green.visible = !c.red;
+    });
+  }
+
+  private makeCrossing(level: Level, c: CrossCar, i: number): { car: THREE.Group; post: THREE.Group; red: THREE.Mesh; green: THREE.Mesh } {
+    const street = toY(level, level.streetY);
+    const len = 2.1;
+    //a car with its length along z: built along x, turned so the nose faces the camera
+    const body = makeCar(0, len, street, toY(level, c.box.roof), PAINTS.oncoming[i % PAINTS.oncoming.length], 'Sedan');
+    body.position.x = 0;
+    const beams = headlights(len);
+    beams.position.y = street;
+    body.add(beams);
+    body.rotation.y = -Math.PI / 2;
+    inkify(body);
+    const car = new THREE.Group();
+    car.add(body);
+    car.position.x = toX((c.box.x0 + c.box.x1) / 2);
+    car.visible = false;
+    //the light: a post just before the crossing, back of the skate lane, red and green lamps facing the camera
+    const post = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 6), new THREE.MeshLambertMaterial({ color: 0x2a2a30 }));
+    pole.position.y = 1.5;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.7, 0.25), new THREE.MeshLambertMaterial({ color: 0x1a1a1f }));
+    head.position.y = 3.1;
+    const red = new THREE.Mesh(new THREE.CircleGeometry(0.1, 12), new THREE.MeshBasicMaterial({ color: 0xff2a2a }));
+    red.position.set(0, 3.27, 0.13);
+    const green = new THREE.Mesh(new THREE.CircleGeometry(0.1, 12), new THREE.MeshBasicMaterial({ color: 0x3aff7a }));
+    green.position.set(0, 2.93, 0.13);
+    inkify(post.add(pole, head));
+    post.add(red, green);
+    post.position.set(toX(c.box.x0) - 0.6, street, -1.2);
+    //a crosswalk on the street just before it: bars running across the lanes
+    const zebra = new THREE.MeshBasicMaterial({ color: 0xd8d8de, transparent: true, opacity: 0.5, depthWrite: false });
+    for (let k = 0; k < 4; k++) {
+      const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 3.4).rotateX(-Math.PI / 2), zebra);
+      bar.position.set(-1.6 + k * 0.4, 0.015, 1.2);
+      post.add(bar);
+    }
+    this.group.add(car, post);
+    return { car, post, red, green };
   }
 
   // heat 0..100; hold: don't creep closer during a remount; caught: pull level with the skater
