@@ -66,6 +66,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   `openspec/changes/fx10-boon-looks/proposal.md`.
 - **Ghost Rail gets nothing new**, because the ghost rail it draws is already its look.
 
+## Effects thread: fx11 Heat searchlight and drone scan
+
+- **The searchlight comes on at Heat 45 and locks on by 85.** Below the lock it wanders up to 2 tiles round Lou,
+  so it reads as searching rather than finding.
+- **The drone scan is red and sweeps steadily**, never blinking, so it stays clear of the photosensitivity rule.
+- **Both show in daylight at 45% strength**, because Heat can rise in the afternoon too.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor

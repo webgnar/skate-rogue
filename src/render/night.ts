@@ -86,7 +86,7 @@ function windowMask(t: number, variant: number): THREE.Texture | null {
 }
 
 // a soft additive beam: brightest at its source (the cone's tip), fading down
-function beamMaterial(color: number): THREE.ShaderMaterial {
+export function beamMaterial(color: number): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: /* glsl */ `
       varying vec2 vUv;
