@@ -496,6 +496,9 @@ export class Skater {
   }
 
   private carHop(): void {
+    //the knees take the roof and fire you back up; caught mid-flip, the board's only half under you and you rock
+    this.feel.bounce(Math.max(0, this.vsp), this.caught < 1 ? this.looseWheels : 0);
+    this.trickCatch = 0;
     this.kicked = false;
     this.vsp = PHYS.carHop * this.mods.hopScale;
     this.jumps = this.maxJumps;
@@ -590,6 +593,8 @@ export class Skater {
   }
 
   private kick(): void {
+    //rolling up the tailgate loads the knees before it throws you
+    this.feel.bounce(this.hsp, 0);
     this.leaveGround();
     this.y = this.level.streetY - PHYS.tailgateLip;
     this.vsp = PHYS.kickerPop * this.mods.kickerScale;
