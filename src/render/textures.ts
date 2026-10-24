@@ -19,6 +19,12 @@ export const CITY = {
 };
 
 let tiles: HTMLImageElement | null = null;
+let active: HTMLImageElement | null = null; // a biome's sheet while its kit is built (useSheet), else Chicago's
+
+// draw tiles from this sheet until useSheet(null)
+export function useSheet(sheet: HTMLImageElement | null): void {
+  active = sheet;
+}
 
 // the loaded Chicago tile sheet (null before loadCityTiles)
 export function cityTiles(): HTMLImageElement | null {
@@ -49,7 +55,7 @@ export function pixelTexture(source: HTMLCanvasElement | HTMLImageElement): THRE
 // a canvas of tiles: grid[row][col] = tile index, or several indices drawn on top of each other (-1 = transparent)
 export type TileCell = number | number[];
 
-export function tileCanvas(grid: TileCell[][]): HTMLCanvasElement {
+export function tileCanvas(grid: TileCell[][], sheet = active ?? tiles): HTMLCanvasElement {
   const rows = grid.length;
   const cols = Math.max(...grid.map((r) => r.length));
   const canvas = document.createElement('canvas');
@@ -60,18 +66,18 @@ export function tileCanvas(grid: TileCell[][]): HTMLCanvasElement {
   grid.forEach((row, r) =>
     row.forEach((cellTiles, c) => {
       for (const t of [cellTiles].flat()) {
-        if (t < 0 || !tiles) continue;
+        if (t < 0 || !sheet) continue;
         const sx = (t % COLUMNS) * TILE_PX;
         const sy = Math.floor(t / COLUMNS) * TILE_PX;
-        ctx.drawImage(tiles, sx, sy, TILE_PX, TILE_PX, c * TILE_PX, r * TILE_PX, TILE_PX, TILE_PX);
+        ctx.drawImage(sheet, sx, sy, TILE_PX, TILE_PX, c * TILE_PX, r * TILE_PX, TILE_PX, TILE_PX);
       }
     }),
   );
   return canvas;
 }
 
-export function tileTexture(grid: TileCell[][]): THREE.Texture {
-  return pixelTexture(tileCanvas(grid));
+export function tileTexture(grid: TileCell[][], sheet = active ?? tiles): THREE.Texture {
+  return pixelTexture(tileCanvas(grid, sheet));
 }
 
 // a flat pixel-art canvas drawn by hand (street tops, sidewalks), w x h tiles

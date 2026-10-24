@@ -7,7 +7,8 @@ import { NightCity } from './night';
 import { FX } from './fx-settings';
 import { batchStatic } from './batch';
 import { GateFx } from './gate-fx';
-import { Ambience } from './biomes';
+import { Ambience, type BiomeId } from './biomes';
+import { loadSheet } from './skins';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution, solid } from './toon';
 import { mergeInk, splitSlabs } from './kit-merge';
@@ -21,6 +22,11 @@ export class StreetView {
   readonly front = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
+  private biome: BiomeId = 'chicago';
+  private sheet: HTMLImageElement | null = null; // the biome's tile sheet (skins.ts)
+  private base = '';
+  private seed = 0;
+  private floor = 1;
   readonly night = new NightCity();
   readonly gates = new GateFx();
   readonly ambience = new Ambience();
@@ -73,6 +79,7 @@ export class StreetView {
   }
 
   async loadBackdrop(base: string): Promise<void> {
+    this.base = base;
     //QFS's Chicago sky behind everything, and its pink skyline as a far card
     //the sky is a gradient drawn per mood (QFS's Chicago sky is a plain blue gradient, the afternoon mood)
     this.scene.background = null;
@@ -128,6 +135,8 @@ export class StreetView {
   // seed and floor place the night city's lamps, cameras and billboards
   setLevel(level: Level, seed = 0, floor = 1): void {
     this.level = level;
+    this.seed = seed;
+    this.floor = floor;
     if (this.kit) {
       this.scene.remove(this.kit);
       this.kit.traverse((o) => {
@@ -142,7 +151,7 @@ export class StreetView {
         }
       });
     }
-    this.kit = buildKit(level);
+    this.kit = buildKit(level, this.biome, this.sheet);
     const slabs = splitSlabs(this.kit);
     batchStatic(this.kit);
     inkify(this.kit, { outline: (m) => !m.userData.noInk && solid(m) });
@@ -152,6 +161,17 @@ export class StreetView {
     this.scene.add(this.kit);
     this.night.build(level, this.kit, seed, floor);
     this.gates.build(this.kit);
+  }
+
+  // the district's kit (skins.ts): loads its tiles, then rebuilds the floor's kit in them. Chicago if they fail.
+  async setBiome(id: BiomeId): Promise<void> {
+    const sheet = await loadSheet(this.base, id).catch((err) => {
+      console.warn(`${id} tiles failed to load, staying in Chicago`, err);
+      return null;
+    });
+    this.biome = sheet ? id : 'chicago';
+    this.sheet = sheet;
+    if (this.kit) this.setLevel(this.level, this.seed, this.floor);
   }
 
   // lock the camera on the skater's feet at (px, py), zoomed for what they're doing; dt in seconds

@@ -9,7 +9,9 @@ import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
 import { makeRng, randInt } from '../gen/rng';
-import { CITY, paintTexture, tileTexture, type TileCell } from './textures';
+import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
+import { SKINS, type Skin } from './skins';
+import type { BiomeId } from './biomes';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
@@ -34,11 +36,23 @@ function slab(w: number, h: number, d: number, front: THREE.Material, top: THREE
   return new THREE.Mesh(geo, [side, side, top, side, front, side]);
 }
 
-export function buildKit(level: Level): THREE.Group {
+// a floor's kit in a biome (skins.ts): Chicago's street by default; another biome's tiles come from its sheet
+export function buildKit(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null): THREE.Group {
+  const skin = SKINS[biome];
+  const city = skin.sheet === 'chicago' || !sheet;
+  useSheet(city ? null : sheet);
+  try {
+    return build(level, city ? SKINS.chicago : skin, city);
+  } finally {
+    useSheet(null);
+  }
+}
+
+function build(level: Level, skin: Skin, city: boolean): THREE.Group {
   const kit = new THREE.Group();
   const rng = makeRng(level.layout.seed * 31 + level.layout.floor);
   const cols = level.street.length;
-  const sideMat = lambert(null, 0x3a3640);
+  const sideMat = lambert(null, skin.side);
 
   //--- the alley far below the descent: you only see it if you fall ---------------------------
   const first = Math.round(toX(level.finaleX));
@@ -59,35 +73,51 @@ export function buildKit(level: Level): THREE.Group {
     if (isStreet) {
       //front face: QFS's 3-row city street with crumbled corners next to canals
       const front: number[][] = [[], [], []];
+      const ground = skin.ground;
       for (let i = 0; i < n; i++) {
         const col = c + i;
-        let t = CITY.road(col);
-        if (c > 0 && i < 3 && n > 4) t = CITY.cornerLeft[i];
-        if (end < cols - 1 && n - 1 - i < 3 && n > 4) t = CITY.cornerRight[2 - (n - 1 - i)];
-        front[0].push(t);
-        front[1].push(t + 15);
-        front[2].push(t + 30);
+        if (ground === 'city') {
+          let t = CITY.road(col);
+          if (c > 0 && i < 3 && n > 4) t = CITY.cornerLeft[i];
+          if (end < cols - 1 && n - 1 - i < 3 && n > 4) t = CITY.cornerRight[2 - (n - 1 - i)];
+          front[0].push(t);
+          front[1].push(t + 15);
+          front[2].push(t + 30);
+        } else {
+          //the biome's ground: its top row (with end pieces next to canals) over its fill
+          let t = ground.top[col % ground.top.length];
+          if (i === 0 && c > 0 && ground.left >= 0) t = ground.left;
+          if (i === n - 1 && end < cols - 1 && ground.right >= 0) t = ground.right;
+          front[0].push(t);
+          front[1].push(ground.fill[col % ground.fill.length]);
+          front[2].push(ground.fill[(col + 1) % ground.fill.length]);
+        }
       }
+      const look = skin.top;
       const top = paintTexture(n, STREET_DEPTH, (ctx, W, H) => {
         const lane = H * 0.55;
-        ctx.fillStyle = '#2a2830'; // asphalt
+        ctx.fillStyle = look.road; // asphalt (a park path, sand, the sea floor...)
         ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = '#7d7a86'; // sidewalk at the back
+        ctx.fillStyle = look.back; // sidewalk at the back
         ctx.fillRect(0, 0, W, H * 0.3);
-        ctx.fillStyle = '#5d5a66';
+        ctx.fillStyle = look.seam;
         for (let px = 0; px < W; px += 16) ctx.fillRect(px, 0, 1, H * 0.3);
-        ctx.fillStyle = '#9a97a3'; // curb
+        ctx.fillStyle = look.edge; // curb
         ctx.fillRect(0, H * 0.3, W, 2);
-        ctx.fillStyle = '#d8b84a'; // centre line
-        for (let px = (c * 8) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
+        if (look.line) {
+          ctx.fillStyle = look.line; // centre line
+          for (let px = (c * 8) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
+        }
       });
       const mesh = slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
       mesh.position.set(x, -1.5, STREET_BACK + STREET_DEPTH / 2);
       kit.add(mesh);
     } else {
       //canal: water a bit below the street, QFS's clean water tiles
-      const front = [new Array(n).fill(CITY.waterTop), new Array(n).fill(CITY.water), new Array(n).fill(CITY.water)];
-      const water = slab(n, 2.4, STREET_DEPTH, lambert(tileTexture(front)), lambert(null, 0x3a5fb0), sideMat);
+      const pit = skin.pit === 'city' ? { top: CITY.waterTop, fill: CITY.water } : skin.pit;
+      const front = [new Array(n).fill(pit.top), new Array(n).fill(pit.fill), new Array(n).fill(pit.fill)];
+      const tex = tileTexture(front, skin.pit === 'city' ? cityTiles() : undefined);
+      const water = slab(n, 2.4, STREET_DEPTH, lambert(tex), lambert(null, 0x3a5fb0), sideMat);
       water.position.set(x, -1.8, STREET_BACK + STREET_DEPTH / 2);
       kit.add(water);
     }
@@ -96,9 +126,10 @@ export function buildKit(level: Level): THREE.Group {
 
   //--- the wall along the back of the sidewalk, and buildings behind it ----------------------
   const wallRows = [[], []] as number[][];
+  const wallTiles = city ? CITY.brick : skin.block.fill;
   for (let i = 0; i < cols; i++) {
-    wallRows[0].push(CITY.brick[(i * 7) % CITY.brick.length]);
-    wallRows[1].push(CITY.brick[(i * 5 + 3) % CITY.brick.length]);
+    wallRows[0].push(wallTiles[(i * 7) % wallTiles.length]);
+    wallRows[1].push(wallTiles[(i * 5 + 3) % wallTiles.length]);
   }
   //cross streets cut the wall and the block behind it
   const gaps = level.crossings.map((i) => toX(i.x + CROSS.w / 2)).map((cx) => [cx - CROSS.street, cx + CROSS.street]);
@@ -108,7 +139,7 @@ export function buildKit(level: Level): THREE.Group {
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
     if (a1 > a0) {
-      const wall = slab(a1 - a0, 2, 0.5, lambert(tileTexture(wallRows.map((row) => row.slice(a0, a1)))), lambert(null, 0x6b5a55), sideMat);
+      const wall = slab(a1 - a0, 2, 0.5, lambert(tileTexture(wallRows.map((row) => row.slice(a0, a1)))), lambert(null, city ? 0x6b5a55 : skin.side), sideMat);
       wall.position.set((a0 + a1) / 2, 1, STREET_BACK - 0.25);
       kit.add(wall);
     }
@@ -117,6 +148,10 @@ export function buildKit(level: Level): THREE.Group {
   for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
   const props = buildProps(level); // hydrants, benches, newspaper boxes... along the back of the sidewalk
   if (props) kit.add(props);
+  if (!city) {
+    const cards = scenery(skin, first, cols, rng, inGap);
+    if (cards) kit.add(cards);
+  }
 
   for (let bx = -8; bx < cols + 20; ) {
     const w = 4 + randInt(rng, 5);
@@ -124,7 +159,7 @@ export function buildKit(level: Level): THREE.Group {
     const t = CITY.facade[randInt(rng, CITY.facade.length)];
     const back = randInt(rng, 3);
     if (!inGap(bx, bx + w)) {
-      const b = slab(w, h, 4, facadeMat(w, h, t, 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
+      const b = slab(w, h, 4, city ? facadeMat(w, h, t, 0xd8c8e8) : blockMat(w, h, skin, 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
       b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - back);
       kit.add(b);
     }
@@ -151,7 +186,8 @@ export function buildKit(level: Level): THREE.Group {
         continue;
       }
       const t = CITY.facade[randInt(rng, CITY.facade.length)];
-      const b = slab(w, y, BLOCK_DEPTH, facadeMat(Math.round(w), Math.ceil(y), t), lambert(null, 0x6a6478), sideMat);
+      const face = city ? facadeMat(Math.round(w), Math.ceil(y), t) : blockMat(Math.round(w), Math.ceil(y), skin);
+      const b = slab(w, y, BLOCK_DEPTH, face, lambert(null, city ? 0x6a6478 : skin.side), sideMat);
       b.position.set(x, y / 2, BLOCK_Z);
       kit.add(b);
     } else if (s.kind === 'overpass') {
@@ -168,9 +204,9 @@ export function buildKit(level: Level): THREE.Group {
       railing.position.set(x, y + 0.7, -1.4);
       kit.add(railing);
     } else if (s.kind === 'ledge') {
-      const row = new Array(Math.round(w)).fill(CITY.ledge[1]);
-      row[0] = CITY.ledge[0];
-      row[row.length - 1] = CITY.ledge[2];
+      const row = new Array(Math.round(w)).fill(skin.ledge[1]);
+      row[0] = skin.ledge[0];
+      row[row.length - 1] = skin.ledge[2];
       //as deep as the blocks in front of the skater (zack: platforms have to stick out toward the camera), less at the back
       const l = slab(w, 0.35, BLOCK_FRONT + LEDGE_BACK, lambert(tileTexture([row])), lambert(null, 0x8a6a50), sideMat);
       l.position.set(x, y - 0.175, (BLOCK_FRONT - LEDGE_BACK) / 2);
@@ -376,6 +412,66 @@ function facadeMat(w: number, h: number, t: number, color = 0xffffff): THREE.Mes
   const m = lambert(tileTexture(facade(w, h, t)), color);
   m.userData.facade = { w, h, t };
   return m;
+}
+
+// a biome block's front: its fill tiles, with its cap along the top when it has one
+function blockMat(w: number, h: number, skin: Skin, color = 0xffffff): THREE.MeshLambertMaterial {
+  const { fill, cap } = skin.block;
+  const grid: TileCell[][] = [];
+  for (let r = 0; r < h; r++) grid.push(Array.from({ length: w }, (_, c) => fill[(r * 3 + c) % fill.length]));
+  if (cap) grid[0] = grid[0].map((t, i): TileCell => [t as number, i === 0 ? cap[0] : i === w - 1 ? cap[2] : cap[1]]);
+  return lambert(tileTexture(grid), color);
+}
+
+// The biome's scenery as flat pixel-art cards, as QFS draws it: decor (trees, temples, signs) stood on the sidewalk
+// against the wall or hung on it (paintings), and small props along the sidewalk. All in one mesh off one atlas.
+function scenery(skin: Skin, first: number, cols: number, rng: () => number, inGap: (x0: number, x1: number) => boolean): THREE.Mesh | null {
+  const stamps: { rows: TileCell[][]; x: number; y: number; z: number }[] = [];
+  const decor = skin.decor;
+  for (let x = first + 3; decor.length && x < cols - 8; x++) {
+    const d = decor[randInt(rng, decor.length)];
+    if (rng() > d.chance * 0.5) continue;
+    const w = d.rows[0].length;
+    if (inGap(x, x + w)) continue;
+    stamps.push({ rows: d.rows, x, y: d.hang ? 0.6 : 0, z: d.hang ? STREET_BACK - 0.01 : STREET_BACK + 0.08 });
+    x += w + 3;
+  }
+  for (let x = first + 2; skin.props.length && x < cols - 2; x++) {
+    if (rng() > 0.14 || inGap(x, x + 1)) continue;
+    const p = skin.props[randInt(rng, skin.props.length)];
+    stamps.push({ rows: [p].flat().map((t) => [t]), x, y: skin.sink ? -1 : 0, z: STREET_BACK + 0.55 + rng() * 0.4 });
+    x += 2;
+  }
+  if (!stamps.length) return null;
+  //one atlas: each stamp's tiles side by side
+  const width = stamps.reduce((a, s) => a + s.rows[0].length, 0);
+  const height = Math.max(...stamps.map((s) => s.rows.length));
+  const grid: TileCell[][] = Array.from({ length: height }, () => new Array(width).fill(-1));
+  let u = 0;
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const index: number[] = [];
+  for (const s of stamps) {
+    const w = s.rows[0].length;
+    const h = s.rows.length;
+    s.rows.forEach((row, r) => row.forEach((t, c) => (grid[r][u + c] = t)));
+    const [u0, u1] = [u / width, (u + w) / width];
+    const [v0, v1] = [1 - h / height, 1];
+    const i = pos.length / 3;
+    pos.push(s.x, s.y, s.z, s.x + w, s.y, s.z, s.x + w, s.y + h, s.z, s.x, s.y + h, s.z);
+    uv.push(u0, v0, u1, v0, u1, v1, u0, v1);
+    index.push(i, i + 1, i + 2, i, i + 2, i + 3);
+    u += w;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(index);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, lambert(pixelTexture(tileCanvas(grid)), 0xffffff, true));
+  mesh.userData.keep = true; // already one mesh
+  mesh.userData.inked = true; // flat cards: no outline round their quads
+  return mesh;
 }
 
 function facade(w: number, h: number, t: number): TileCell[][] {

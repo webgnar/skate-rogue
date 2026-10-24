@@ -319,6 +319,10 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Gear wear shows before it costs you.** The deck chips, trucks rust and wheels grub up from the first use, a
   little at a time; the shoe scuff appears below 65 and the hole below 30 (the gameplay thread's `GEAR.busted` + 15).
   It's drawn on the rig from `game.sim.gear`, redrawn only when a part crosses a step of 5.
+- **Biome kits come from QFS's own skins.** Each world's street, wall, blocks, ledges, water, decor and props use the
+  tiles QFS's survivor mode already picked for it (survivor_worlds.gml), so a biome looks like that QFS world. Decor
+  and props are flat pixel-art cards like QFS draws them; 3D landmarks per world are a later step. The skyline is
+  still Chicago's until each world gets its backdrop. The Hive borrows High-Tech City's tiles.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

@@ -213,11 +213,44 @@ Test on the iPhone in landscape, both ways round (notch on the left, then on the
 
 ## Models and animation
 
-- [ ] Lou plays his Blender actions; props break into their own pieces.
-- [ ] **Other skaters:** `?skater=webster`, `keanu`, `roxy`, `goldie` (Goldie rides a board too).
-- [ ] Legs soak up slopes; only the board tilts.
+Quickest way in for most of these: `?debug&seed=7` and play floor 1 (it starts up on the roofs, so stairs, rails,
+banks and drops come fast). Add `?skater=roxy` to see any item on another skater.
 
-## Performance
+**Lou and the tricks**
+- [ ] **Lou's moves come from Blender now** (PR #57): push, ride, ollie, every flip, grind, slam and land. Nothing should pop or snap between moves, including into and out of grinds.
+- [ ] **Trick suite** (PR #33): kickflip, heelflip, pop shove-it, frontside shove-it, 360 flip (spins left, like your clip), hardflip, varial kickflip, varial heelflip. *Check:* after any shove-it the feet land where they were, with no crossed legs.
+- [ ] **180s into fakie:** a backside or frontside 180 turns Lou round, and he rides away with the other foot forward (the callout says FAKIE). The next 180 turns him back.
+- [ ] **Grinds:** 50-50, 5-0, crooked, smith, feeble, boardslide. *Check:* on a smith the nose dips down toward the camera, and on a feeble it dips away.
+- [ ] **Manuals** (when the gameplay thread wires them): the nose or tail stays down and the other truck is up.
+- [ ] **Visor glint:** a white streak across Lou's visor, faint by day and tinted at night.
+
+**Slopes (zack's IK legs, PR #62)**
+- [ ] **Roll up and down a bank:** only the board tilts. The knees bend to soak it up and the torso stays upright over the board.
+- [ ] **Handrails down stair sets:** the board follows the rail and Lou stays upright, with no leaning over sideways.
+- [ ] **Landings:** a big drop sinks the hips (the knees bend) and Lou stands back up. Sketchy landings rock him heel to toe while his feet stay on the board.
+- [ ] Riding fakie on a bank still tilts the board the right way.
+
+**The QFS skaters (PR #62)**
+- [ ] `?skater=webster`, `?skater=keanu`, `?skater=roxy`, `?skater=goldie`: each one plays every trick, grind, slam and fakie that Lou does.
+- [ ] *Look:* Webster is shirtless with long blond hair and red shades. Keanu wears a grey hoodie with the hood up. Roxy has auburn hair, a purple crop top and jeans. Goldie has blonde hair, a lavender crop top, flared light-blue pants, and purple high-tops with orange soles on a board (you OK'd that). No swords or shields.
+- [ ] *Open question:* do they read as themselves at game zoom? Is anything about them wrong (hair, skin tones, builds)?
+
+**Worn gear (PR #68)**
+- [ ] Play until the gear bars drop (or use the shop to compare against a new part). The deck's nose and tail chip and the graphic rubs through to the wood. The trucks go dull, then rusty. The wheels go grubby and flat-spotted.
+- [ ] Lou's front shoe gets a grey scuff on the outside below 65, then a hole below 30. It's easiest to see in flips and grinds, when the foot turns.
+- [ ] Buying a new part puts its look back to new.
+- [ ] *Open question:* is the wear visible enough at game zoom, or should it be louder?
+
+**Vehicles and props (PRs #43, #46, #51)**
+- [ ] **CTA bus and box truck (floor 4 or later, `?floor=4`):** a white bus with the blue stripe, and a box truck with its tailgate down.
+- [ ] **Street props** along the back of the sidewalk: hydrants, benches, blue garbage carts, news boxes, mailboxes, meters and sign poles.
+- [ ] **Smashables** break into their own chunks (a bottle shatters, a crate splinters), and the pieces fly from where the prop stood.
+
+**Biome kits (the next PR, after #68)**
+- [ ] `?biome=clemente`, `greece`, `atlantis`, `museum`, `hightech`, `space` (and `hive`): the street front, the back wall, the buildings under the roofs and the ledges all use that QFS world's tiles. Look for Clemente's trees and signs, Greece's temples, arches and red pillars, the museum's paintings and statue of David, and Atlantis's coral. Chicago looks exactly as before.
+- [ ] *Open question:* the city skyline behind is still Chicago in every biome. Should each world get its own backdrop next (QFS's skies and far layers)?
+
+## Performance## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
       should show roughly 45 to 80 draws. Note the fps and the floor if it stutters.
