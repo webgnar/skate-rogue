@@ -124,7 +124,10 @@ lampPool.uniforms.uPool.value = 1;
 const headCone = beamMaterial(0xfff2c8);
 const headPool = beamMaterial(0xfff2c8);
 headPool.uniforms.uPool.value = 1;
-const BEAMS = [lampCone, lampPool, headCone, headPool];
+const tailGlow = beamMaterial(0xff2a3a);
+tailGlow.uniforms.uPool.value = 1;
+const BEAMS = [lampCone, lampPool, headCone, headPool, tailGlow];
+const tailGeo = new THREE.PlaneGeometry(1.8, 0.34);
 
 const coneGeo = new THREE.ConeGeometry(1.1, 2.6, 16, 1, true).translate(0, -1.3, 0); // tip at the origin
 const poolGeo = new THREE.PlaneGeometry(3, 3).rotateX(-Math.PI / 2);
@@ -139,8 +142,50 @@ export function headlights(len: number): THREE.Group {
   cone.scale.set(1, 0.35, 0.6);
   const pool = new THREE.Mesh(headPoolGeo, headPool);
   pool.position.set(len / 2, 0.02, 0.3);
-  g.add(cone, pool);
+  //tail lights smear red behind the car
+  const tail = new THREE.Mesh(tailGeo, tailGlow);
+  tail.position.set(-len / 2 - 0.5, 0.55, 0.35);
+  g.add(cone, pool, tail);
   return g;
+}
+
+// shop signs in neon: one atlas of words, every sign on a floor merged into one mesh
+const NEON_WORDS: [string, string][] = [
+  ['BAR', '#ff4fa8'],
+  ['PIZZA', '#ffb340'],
+  ['OPEN', '#4ad8ff'],
+  ['LIQUOR', '#7dff8a'],
+  ['TATTOO', '#c07cff'],
+  ['24H', '#ff5050'],
+  ['NOODLES', '#ffe14a'],
+  ['ARCADE', '#4affd8'],
+];
+let neonAtlas: THREE.Texture | null = null;
+function neonTexture(): THREE.Texture {
+  if (neonAtlas) return neonAtlas;
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 512;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, 512, 512);
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = 'bold 40px Arial Black, Arial, sans-serif';
+  NEON_WORDS.forEach(([word, color], i) => {
+    const y = i * 64 + 32;
+    g.shadowColor = color;
+    g.shadowBlur = 14;
+    g.strokeStyle = color;
+    g.lineWidth = 5;
+    g.strokeText(word, 256, y);
+    g.shadowBlur = 0;
+    g.fillStyle = '#fff';
+    g.fillText(word, 256, y);
+  });
+  neonAtlas = new THREE.CanvasTexture(c);
+  neonAtlas.colorSpace = THREE.SRGBColorSpace;
+  return neonAtlas;
 }
 
 function billboardTexture(text: string): THREE.Texture {
@@ -195,6 +240,9 @@ export class NightCity {
   private readonly headMat = toon({ color: 0x3a3844, emissive: 0x000000 });
   private readonly camMat = toon({ color: 0xd8dbe2 });
   private readonly eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2030 });
+  private readonly neonMat = new THREE.MeshBasicMaterial({ map: neonTexture(), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  private neon: THREE.Mesh | null = null;
+  private neonFlicker: { sign: number; t: number }[] = [];
 
   // lamps, cameras and billboards for a floor, and the window masks on its kit
   build(level: Level, kit: THREE.Object3D, seed: number, floor: number): void {
@@ -289,6 +337,43 @@ export class NightCity {
       this.group.add(b);
       this.watchers.push({ obj: turn, x: s.x + 3.5, base: 0, screen });
     }
+
+    //neon shop signs on the walls between the street lamps
+    this.neon = null;
+    this.neonFlicker = [];
+    const signs = lamps.filter((l) => l.y === 0 && r() < 0.6);
+    if (signs.length) {
+      const pos: number[] = [];
+      const uv: number[] = [];
+      const col: number[] = [];
+      const idx: number[] = [];
+      signs.forEach((l, k) => {
+        const word = Math.floor(r() * NEON_WORDS.length);
+        const w = 0.7 + NEON_WORDS[word][0].length * 0.5;
+        const h = 1;
+        const x = l.x + NIGHT.lampEvery / 2 + (r() - 0.5) * 2;
+        const y = 3.4 + r() * 1.2; // above the wall and the street props
+        const z = l.z - 0.32;
+        pos.push(x - w / 2, y - h / 2, z, x + w / 2, y - h / 2, z, x + w / 2, y + h / 2, z, x - w / 2, y + h / 2, z);
+        //the word's row in the atlas, trimmed to its width
+        const v0 = 1 - (word + 1) / NEON_WORDS.length;
+        const v1 = 1 - word / NEON_WORDS.length;
+        const u = Math.min(0.5, w / 9);
+        uv.push(0.5 - u, v0, 0.5 + u, v0, 0.5 + u, v1, 0.5 - u, v1);
+        col.push(...Array(12).fill(1));
+        idx.push(k * 4, k * 4 + 1, k * 4 + 2, k * 4, k * 4 + 2, k * 4 + 3);
+      });
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3).setUsage(THREE.DynamicDrawUsage));
+      geo.setIndex(idx);
+      this.neon = new THREE.Mesh(geo, this.neonMat);
+      this.neon.renderOrder = 3;
+      this.group.add(this.neon);
+      //a sign or two with a tired tube
+      for (let k = 0; k < signs.length; k += 3) this.neonFlicker.push({ sign: k, t: r() * 5 });
+    }
   }
 
   // night 0..1 (from the mood)
@@ -303,11 +388,24 @@ export class NightCity {
       b.visible = beams > 0.02 && (FX.tier === 'high' || (b !== lampCone && b !== headCone));
     }
     this.headMat.emissive.setRGB(amount, amount * 0.8, amount * 0.5);
+    this.neonMat.color.setScalar(beams);
+    this.neonMat.visible = beams > 0.02;
   }
 
   // skater x in world units; heat 0..100 brightens the billboards
   update(dt: number, skaterX: number, heat: number): void {
     this.t += dt;
+    //a tired neon tube: now and then it dims for a moment and comes back (never with reduce flashing)
+    if (this.neon && !FX.reduceFlashing) {
+      const c = this.neon.geometry.getAttribute('color') as THREE.BufferAttribute;
+      for (const f of this.neonFlicker) {
+        f.t += dt;
+        const cycle = f.t % 6;
+        const k = cycle > 5.4 && cycle < 5.75 ? 0.35 : 1;
+        for (let v = 0; v < 4; v++) c.setXYZ(f.sign * 4 + v, k, k, k);
+      }
+      c.needsUpdate = true;
+    }
     for (const w of this.watchers) {
       const dx = skaterX - w.x;
       const near = Math.abs(dx) < NIGHT.watch;
