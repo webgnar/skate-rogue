@@ -10,6 +10,7 @@ export type Road =
   | { kind: 'hot'; danger: number } // rush hour, Heat starts at 30; pays a pick of 4 and cash
   | { kind: 'stash'; danger: number } // a short floor ending in a Stoken stash
   | { kind: 'shop'; boonType: BoonType; danger: number } // the skate shop (no floor), then a boon street
+  | { kind: 'spot'; boonType: BoonType; danger: number } // the underground spot (no floor), then a boon street
   | { kind: 'escape'; act: number; danger: number }; // an act's escape set piece (no fork, no road choice)
 
 export interface Fork {
@@ -26,11 +27,14 @@ export const ROADS = {
   shopFrom: 2, // the shop can turn up from this floor's fork on
   shopEvery: 3, // and always does at the end of every third floor
   shopChance: 0.12,
+  spotFrom: 3, // the underground spot can turn up from this floor's fork on
+  spotChance: 0.15,
+  heatCarry: 0.5, // the share of your Heat that follows you to the next floor
 };
 
-// the floor a road leads to: the shop has none, so its road is the boon street after it
+// the floor a road leads to: the shop and the spot have none, so their road is the boon street after them
 export function floorRoad(road: Road): Road {
-  return road.kind === 'shop' ? { kind: 'boon', boonType: road.boonType, danger: road.danger } : road;
+  return road.kind === 'shop' || road.kind === 'spot' ? { kind: 'boon', boonType: road.boonType, danger: road.danger } : road;
 }
 
 // what the first floor of a run is
@@ -61,6 +65,12 @@ export function rollFork(seed: number, floor: number): Fork {
     const other = boonStreet();
     return rng() < 0.5 ? { high: shop, low: other } : { high: other, low: shop };
   }
+  //the underground spot, beside a boon street
+  if (floor >= ROADS.spotFrom && rng() < ROADS.spotChance) {
+    const spot: Road = { kind: 'spot', boonType: BOON_TYPES[randInt(rng, 2)], danger: 1 };
+    const other = boonStreet();
+    return rng() < 0.5 ? { high: spot, low: other } : { high: other, low: spot };
+  }
   const high = roll(rng, floor);
   //at least one road is a boon street, so a run keeps building
   const low = high.kind === 'boon' ? roll(rng, floor, high) : boonStreet();
@@ -79,6 +89,8 @@ export function label(road: Road): string {
       return 'STOKEN STASH';
     case 'shop':
       return 'SKATE SHOP';
+    case 'spot':
+      return 'UNDERGROUND SPOT';
     case 'escape':
       return ESCAPE_NAMES[escapeKind(road.act)];
   }

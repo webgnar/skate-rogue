@@ -1,6 +1,7 @@
 import './style.css';
 import { BOON_COLORS, boonById, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';
+import type { UnderView } from './run/spot';
 import { modDef, type ModId } from './board/mods';
 import { label } from './gen/roads';
 import { actOf } from './gen/escape';
@@ -36,6 +37,30 @@ function card(b: Boon, i: number, held: Held[]): string {
     <span class="pips">${pips}</span>
     <span class="key">${i + 1}</span>
   </button>`;
+}
+
+// the underground spot's cards: a plain choice card, coloured, maybe greyed out
+function choice(key: string, color: string, tag: string, name: string, effect: string, note: string, off = false): string {
+  return `<button class="card${off ? ' off' : ''}" data-under="${key}" ${off ? 'disabled' : ''} style="--type:${color}">
+    <span class="type">${tag}</span>
+    <b class="name">${esc(name)}</b>
+    <span class="effect">${esc(effect)}</span>
+    <span class="note">${esc(note)}</span>
+  </button>`;
+}
+
+function underCards(v: UnderView): string {
+  if (v.step === 'drop') {
+    return v.boons.map((h) => {
+      const b = boonById(h.id);
+      return choice(`drop:${h.id}`, BOON_COLORS[b.type], b.type, b.name, b.effect, h.stacks > 1 ? `drop one of ${h.stacks}` : 'drop it');
+    }).join('');
+  }
+  return [
+    choice('low', '#7df0a0', 'HEAT', 'Lay low', 'Start the next floor at 0 Heat', `You're carrying ${v.heat} Heat`),
+    choice('swap', '#4ad8ff', 'BOON', 'Swap a boon', 'Drop one of your boons, pick any type', v.canSwap ? 'Then a pick of 3' : 'No boons to swap yet', !v.canSwap),
+    choice('curse', '#b98cff', 'CURSE', 'Remove a curse', 'Lift one cursed boon', v.curses ? `${v.curses} cursed` : 'No curses on you', !v.curses),
+  ].join('');
 }
 
 function modKind(id: ModId | null): string {
@@ -92,6 +117,7 @@ function makeHud(): Hud {
   const roadEl = document.getElementById('road')!;
   const boardEl = document.getElementById('board')!;
   const shopEl = document.getElementById('shop')!;
+  const underEl = document.getElementById('under')!;
   let level = 0;
   let held: Held[] = [];
   let timer = 0;
@@ -192,6 +218,12 @@ function makeHud(): Hud {
       held = h;
       boonsEl.innerHTML = h.map(chip).join('');
     },
+    under: (v) => {
+      underEl.hidden = !v;
+      if (!v) return;
+      underEl.querySelector('.sub')!.textContent = v.step === 'menu' ? 'A DIY spot under the expressway. Take one.' : 'Drop which boon?';
+      underEl.querySelector('.cards')!.innerHTML = underCards(v);
+    },
     pick: (offer, info) => {
       clearTimeout(pickTimer);
       pickEl.classList.remove('leaving');
@@ -217,6 +249,7 @@ function makeHud(): Hud {
         const btn = pickEl.querySelector<HTMLButtonElement>('.reroll')!;
         btn.textContent = `REROLL $${info.rerollCost}`;
         btn.disabled = !info.canReroll;
+        btn.hidden = info.rerollCost < 0; // no reroll on this pick
       }
     },
     over: (result) => {

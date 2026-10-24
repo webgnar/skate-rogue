@@ -155,7 +155,9 @@ Built Oct 24, 2026 (first version): the high road is an overpass 2 tiles up over
 on it), signs on a gantry before it, a gate on each road. Launch roads so far: boon street (POP or GRIND), cash
 street, hot street and Stoken stash. The skate shop followed the same day with board mods: it can turn up from the
 floor 2 fork and is always offered at the end of every third floor, beside a boon street; after shopping you skate
-that boon street. The underground spot comes with carried-over Heat.
+that boon street. The underground spot comes with carried-over Heat. Built overnight Oct 24, 2026: Heat
+carries into the next floor at half, and the spot can turn up from the floor 3 fork (lay low, swap a boon, or
+remove a curse once curses exist), then you skate the boon street after it.
 
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.

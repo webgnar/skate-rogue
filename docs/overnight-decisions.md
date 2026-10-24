@@ -133,6 +133,17 @@ and listed it here for review. Any of these can be flipped in the morning.
   street, so it can't really be in your way or launch you without faking it. Worth a quick look together; for
   now parked cars stay platforms. The bus stop that pulls a bus into the lane is also still to do.
 
+- **Heat now carries between floors, at half.** The GDD's Heat table says clearing a floor resets Heat to 0, but
+  the run-structure section says the underground spot "comes with carried-over Heat", and "start the next floor
+  at 0 Heat" means nothing without it. So the Heat you leave a floor with, halved, is where the next floor starts
+  (a hot street or an escape starts at the higher of its own 30 and that). This makes runs a bit hotter overall;
+  easy to tune (`ROADS.heatCarry`) or turn off (0).
+- **Underground spot (from the floor 3 fork, 15% of forks, beside a boon street).** No floor of its own, like the
+  shop: a screen with three cards, take one. **Lay low** (the next floor starts at 0 Heat; the card shows what
+  you're carrying), **Swap a boon** (pick one of yours to drop a stack of, then a pick of 3 of any type, never
+  the one you dropped, no reroll) or **Remove a curse** (greyed out until curses exist). Then you skate the boon
+  street after it. A green sign on the fork.
+
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
   shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin

@@ -1,6 +1,7 @@
 // Wires a run together: floors from the generator, the fixed-step skater, input, the view and the HUD.
 import * as THREE from 'three';
 import { addBoon, type Boon, type Held } from '../boons/defs';
+import { carriedHeat, dropBoon, startHeat, type UnderView } from '../run/spot';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
@@ -40,7 +41,7 @@ import { FixedStep } from './loop';
 
 export interface PickInfo {
   title: string;
-  rerollCost: number;
+  rerollCost: number; // below 0: no reroll on this pick
   canReroll: boolean;
 }
 
@@ -82,9 +83,10 @@ export interface Hud {
   board(slots: Slots): void;
   fire(slot: number): void; // a board slot just fired
   shop(view: ShopView | null): void; // null hides the shop
+  under(view: UnderView | null): void; // the underground spot; null hides it
 }
 
-type State = 'skate' | 'caught' | 'pick' | 'shop' | 'over';
+type State = 'skate' | 'caught' | 'pick' | 'shop' | 'under' | 'over';
 
 const CAUGHT_BEAT_MS = 800;
 
@@ -123,6 +125,8 @@ export class Game {
   private rerolls = 0;
   private readonly pickups = new PickupView();
   private nextRoad: Road = FIRST_ROAD;
+  private carry = 0; // Heat carried into the next floor
+  private swapping = false; // the pick on screen is the underground spot's swap
   private flip: { rgb: number[]; left: number; at: number } | null = null; // the last trick thrown this air
   private fallSpeed = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
@@ -194,6 +198,7 @@ export class Game {
     this.board = newBoard();
     this.shopVisits = 0;
     this.run = new RunScore();
+    this.carry = 0;
     this.road = FIRST_ROAD;
     this.level = this.makeLevel();
     this.hud.over(null);
@@ -212,7 +217,9 @@ export class Game {
     this.particles.clear();
     this.input.clear();
     this.boonFx.setBoons(this.boons);
-    this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0, this.board);
+    const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
+    this.sim = new FloorSim(this.level, skaterMods(this.boons), startHeat(roadHeat, this.carry), this.board);
+    this.carry = 0;
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
@@ -236,6 +243,7 @@ export class Game {
 
   // the floor's gate: pay floor clear, then this floor's reward; the road taken is the next floor
   private finishFloor(now: number): void {
+    this.carry = carriedHeat(this.sim.heat.value);
     if (this.road.kind === 'escape') return this.clearAct(now, this.road.act);
     const pts = this.run.clearFloor(this.floor);
     const fork = this.level.fork;
@@ -293,6 +301,7 @@ export class Game {
   }
 
   private reroll(): void {
+    if (this.swapping) return;
     const cost = this.rerollCost();
     if (this.run.cash < cost) return;
     this.run.cash -= cost;
@@ -308,9 +317,14 @@ export class Game {
       this.startFloor();
       return;
     }
-    //the shop road: shop first, then the boon street after it
+    //the shop road: shop first, then the boon street after it; the same for the underground spot
     if (this.nextRoad.kind === 'shop') {
       this.openShop();
+      return;
+    }
+    if (this.nextRoad.kind === 'spot') {
+      this.openMenu('under', performance.now());
+      this.hud.under({ step: 'menu', heat: this.carry, canSwap: this.boons.length > 0, curses: 0 });
       return;
     }
     this.floor++;
@@ -387,9 +401,45 @@ export class Game {
     this.advance();
   }
 
+  // a tap at the underground spot
+  private underTap(target: Element): void {
+    const el = target.closest<HTMLElement>('[data-under]');
+    if (!el) return;
+    const v = el.dataset.under!;
+    if (v === 'low') {
+      this.carry = 0;
+      this.hud.callout('LAYING LOW: HEAT 0', 'good');
+      this.leaveUnder();
+    } else if (v === 'swap' && this.boons.length) {
+      this.hud.under({ step: 'drop', boons: this.boons });
+    } else if (v.startsWith('drop:')) {
+      //drop it, then a pick of any type
+      const dropped = v.slice(5) as Held['id'];
+      this.boons = dropBoon(this.boons, dropped);
+      this.hud.boons(this.boons);
+      this.hud.under(null);
+      this.nextRoad = floorRoad(this.nextRoad);
+      //never the one you just dropped
+      const offer = offerBoons(this.seed, { floor: this.floor, boons: this.boons }, 4, undefined, 1000 + this.floor);
+      this.offer = offer.filter((b) => b.id !== dropped).slice(0, 3);
+      this.swapping = true;
+      this.hud.pick(this.offer, { title: 'SWAP: PICK ANY BOON', rerollCost: -1, canReroll: false });
+      this.openMenu('pick', performance.now());
+    } else if (v === 'skip') {
+      this.leaveUnder();
+    }
+  }
+
+  private leaveUnder(): void {
+    this.hud.under(null);
+    this.nextRoad = floorRoad(this.nextRoad);
+    this.advance();
+  }
+
   private pickBoon(i: number): void {
     const boon = this.offer[i];
     if (!boon) return;
+    this.swapping = false;
     this.boons = addBoon(this.boons, boon.id);
     this.hud.pick(null);
     this.advance();
@@ -440,6 +490,8 @@ export class Game {
       const card = press ? this.input.lastTarget?.closest<HTMLElement>('[data-pick]') : null;
       if (card) this.choose(Number(card.dataset.pick));
       else if (press && this.input.lastTarget?.closest('[data-reroll]')) this.reroll();
+    } else if (this.state === 'under') {
+      if (this.input.takePress() && this.input.lastTarget && now - this.menuAt >= MENU_LOCK_MS) this.underTap(this.input.lastTarget);
     } else if (this.state === 'shop') {
       if (this.input.takePress() && this.input.lastTarget && now - this.menuAt >= MENU_LOCK_MS) this.shopTap(this.input.lastTarget);
     } else if (this.state === 'over') {
