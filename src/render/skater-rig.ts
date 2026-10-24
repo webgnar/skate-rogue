@@ -41,6 +41,10 @@ const ON_GROUND = new Set(['push', 'ride', ...GRINDS]); // clips that make no se
 const DOWN = new THREE.Vector3(0, -1, 0);
 const BASE_HIP_Y = 0.9; // pelvis height in the model's bind pose
 
+export const SKATERS = ['lou-gnar', 'webster', 'keanu', 'roxy', 'goldie'] as const;
+export type SkaterId = (typeof SKATERS)[number];
+export const isSkater = (s: string | null): s is SkaterId => SKATERS.includes(s as SkaterId);
+
 export class SkaterRig {
   readonly mesh = new THREE.Group();
   private readonly mats: THREE.MeshToonMaterial[] = [];
@@ -185,14 +189,20 @@ export class SkaterRig {
     this.applyPose(BASE);
   }
 
-  static async create(base: string): Promise<SkaterRig> {
+  // the QFS skaters (art/skaters.py) share Lou's rig and play his clips, from lou-gnar.glb
+  static async create(base: string, skater: SkaterId = 'lou-gnar'): Promise<SkaterRig> {
     const load = (file: string) =>
       new GLTFLoader().loadAsync(`${base}models/${file}`).catch((err) => {
         console.warn(`${file} failed to load, using the built-in one`, err);
         return undefined;
       });
-    const [model, board] = await Promise.all([load('lou-gnar.glb'), load('board.glb')]);
-    return new SkaterRig(model?.scene, board?.scene, model?.animations);
+    const [lou, board, own] = await Promise.all([
+      load('lou-gnar.glb'),
+      load('board.glb'),
+      skater === 'lou-gnar' ? undefined : load(`${skater}.glb`),
+    ]);
+    const model = own ?? lou;
+    return new SkaterRig(model?.scene, board?.scene, lou?.animations);
   }
 
   private loadBaked(clips: THREE.AnimationClip[]): void {
