@@ -1,6 +1,6 @@
-// Models built in Blender (art/*.py, exported to public/models): the cars, the drone, the helicopter, the props and
-// the other worlds' landmarks. Loaded once at startup; anything that fails to load falls back to the code-built
-// version (or, for a landmark, isn't drawn).
+// Models built in Blender (art/*.py, exported to public/models): the cars, the drone, the helicopter, the props, the
+// other worlds' landmarks and act 3's chasers. Loaded once at startup; anything that fails to load falls back to the
+// code-built version (or, for a landmark, isn't drawn).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
@@ -11,7 +11,7 @@ const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlu
 export async function loadModels(base: string): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
-    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb'].map(async (file) => {
+    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb'].map(async (file) => {
       try {
         const gltf = await loader.loadAsync(`${base}models/${file}`);
         gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));

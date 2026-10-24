@@ -1,11 +1,13 @@
 // Act 3's chaser (src/sim/chaser.ts), drawn for its district: a tidal wave in Atlantis, a chariot and horses in
-// Greece, a pack of guards in the museum. Built from primitives and inked like the rest; it eases toward the sim's
-// position so a slam reads as it surging forward, and it bobs as it runs. Hidden on any other floor.
+// Greece, a pack of guards in the museum. The Blender models (art/chasers.py), or primitives if they fail to load,
+// inked like the rest; it eases toward the sim's position so a slam reads as it surging forward, and it bobs as it
+// runs. Hidden on any other floor.
 import * as THREE from 'three';
 import type { Chaser } from '../sim/chaser';
 import type { Level } from '../physics/level';
 import type { BiomeId } from './biomes';
 import { toX, toY } from './kit';
+import { model } from './models';
 import { inkify } from './toon';
 
 export type ChaserLook = 'wave' | 'chariot' | 'guards';
@@ -102,19 +104,79 @@ function makeGuards(): THREE.Group {
       leg.name = 'leg';
       guard.add(leg);
     }
-    if (i === 0) {
-      const beam = new THREE.Mesh(
-        new THREE.ConeGeometry(0.5, 2.2, 10, 1, true),
-        new THREE.MeshBasicMaterial({ color: 0xfff2b0, transparent: true, opacity: 0.25, depthWrite: false }),
-      );
-      beam.rotation.z = Math.PI / 2 + 0.25;
-      beam.position.set(1.3, 1.1, 0);
-      guard.add(beam);
-    }
+    if (i === 0) guard.add(torchBeam());
     guard.position.set(x, 0, z);
     guard.name = 'guard';
     g.add(guard);
   });
+  return g;
+}
+
+// the guard in front's torch beam, shining ahead
+function torchBeam(): THREE.Mesh {
+  const beam = new THREE.Mesh(
+    new THREE.ConeGeometry(0.5, 2.2, 10, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xfff2b0, transparent: true, opacity: 0.25, depthWrite: false }),
+  );
+  beam.rotation.z = Math.PI / 2 + 0.25;
+  beam.position.set(1.3, 1.1, 0);
+  return beam;
+}
+
+// a model with its legs hung at the hips, named for the run cycle
+function legged(body: string, leg: string, hips: [number, number, number][]): THREE.Group | null {
+  const b = model(body);
+  if (!b) return null;
+  const g = new THREE.Group();
+  g.add(b);
+  for (const [x, y, z] of hips) {
+    const l = model(leg);
+    if (!l) return null;
+    l.position.set(x, y, z);
+    l.name = 'leg';
+    g.add(l);
+  }
+  return g;
+}
+
+// the chaser from art/chasers.py: null if those models didn't load
+function fromModels(look: ChaserLook): THREE.Group | null {
+  const g = new THREE.Group();
+  if (look === 'wave') {
+    const w = model('Wave');
+    if (!w) return null;
+    g.add(w);
+    return g;
+  }
+  if (look === 'chariot') {
+    const car = model('Chariot');
+    if (!car) return null;
+    car.position.x = -1.4;
+    g.add(car);
+    for (const z of [-0.62, 0.62]) {
+      const wheel = model('ChariotWheel');
+      if (!wheel) return null;
+      wheel.position.set(-1.4, 0.5, z);
+      wheel.name = 'spin';
+      g.add(wheel);
+    }
+    for (const z of [-0.35, 0.35]) {
+      const h = legged('Horse', 'HorseLeg', [[0.5, 1.05, -0.1], [0.4, 1.05, 0.1], [-0.4, 1.08, -0.1], [-0.5, 1.08, 0.1]]);
+      if (!h) return null;
+      h.position.set(0.45, 0, z);
+      h.name = 'horse';
+      g.add(h);
+    }
+    return g;
+  }
+  for (const [i, [x, z]] of [[0, 0.4], [-0.9, -0.5], [-1.7, 0.7]].entries()) {
+    const guard = legged('Guard', 'GuardLeg', [[0.1, 0.76, -0.1], [-0.1, 0.76, 0.1]]);
+    if (!guard) return null;
+    if (i === 0) guard.add(torchBeam());
+    guard.position.set(x, 0, z);
+    guard.name = 'guard';
+    g.add(guard);
+  }
   return g;
 }
 
@@ -131,7 +193,7 @@ export class ChaserView {
     const look = chaserLook(biome);
     if (look !== this.look) {
       if (this.body) this.group.remove(this.body);
-      this.body = look === 'wave' ? makeWave() : look === 'chariot' ? makeChariot() : makeGuards();
+      this.body = fromModels(look) ?? (look === 'wave' ? makeWave() : look === 'chariot' ? makeChariot() : makeGuards());
       inkify(this.body);
       this.group.add(this.body);
       this.look = look;
@@ -146,6 +208,7 @@ export class ChaserView {
     this.body!.traverse((o) => {
       if (o.name === 'leg') o.rotation.z = run * 0.6 * (o.position.x > 0 ? 1 : -1);
       if (o.name === 'wheel') o.rotation.y += dt * 12;
+      if (o.name === 'spin') o.rotation.z -= dt * 12; // the model's wheels turn about their axle, along z
       if (o.name === 'horse' || o.name === 'guard') o.position.y = Math.abs(run) * 0.12;
     });
     if (look === 'wave') this.body!.position.y = Math.sin(this.t * 3) * 0.08;
