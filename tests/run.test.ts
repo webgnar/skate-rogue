@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { offerBoons } from '../src/boons/offer';
-import { buildFloor, PICKUPS } from '../src/gen/descent';
+import { buildFloor } from '../src/gen/descent';
 import { label, rollFork } from '../src/gen/roads';
 import { validatedFloor } from '../src/gen/validate';
-import { PHYS, TILE } from '../src/physics/constants';
+import { PHYS } from '../src/physics/constants';
 import { RunScore, SCORE } from '../src/run/score';
 import { FloorSim } from '../src/sim/floor';
+import { Pilot } from '../src/bot/pilot';
+import { inLane } from '../src/physics/level';
 
 const fork = { high: { kind: 'cash', danger: 2 }, low: { kind: 'boon', boonType: 'GRIND', danger: 1 } } as const;
 
@@ -22,59 +24,71 @@ describe('the fork', () => {
     }
   });
 
-  it('puts an overpass over the last street piece, up past a plain ollie, running past the gate', () => {
-    const l = buildFloor(5, 2, undefined, { fork });
-    const o = l.surfaces.find((s) => s.kind === 'overpass')!;
-    expect(o).toBeDefined();
-    expect(l.streetY - o.y).toBe(PICKUPS.fork);
-    expect(PICKUPS.fork).toBeGreaterThan(50); // a full single ollie peaks at 50 px
-    expect(o.x0).toBeLessThan(l.exitX - 8 * TILE);
-    expect(o.x1).toBeGreaterThan(l.exitX);
-    expect(l.fork?.high.kind).toBe('cash');
-  });
-
-  it('leaving on the overpass is the high road, on the street the low road', () => {
-    const l = buildFloor(5, 2, undefined, { fork });
-    const o = l.fork!;
-    const high = new FloorSim(l);
-    high.skater.x = o.x0 + 2 * TILE;
-    high.skater.y = o.y;
-    high.skater.surface = l.surfaces.find((s) => s.kind === 'overpass')!;
-    high.skater.mode = 'roll';
-    high.traffic.vehicles.length = 0;
-    for (let f = 0; f < 600 && high.state === 'skate'; f++) high.step({ pressed: false, held: false });
-    expect(high.state).toBe('exit');
-    expect(high.road).toBe('high');
-
-    const low = new FloorSim(l);
-    low.skater.x = o.x0 + 2 * TILE;
-    low.skater.y = l.streetY;
-    low.skater.surface = null;
-    low.skater.mode = 'roll';
-    for (let f = 0; f < 600 && low.state === 'skate'; f++) low.step({ pressed: false, held: false });
-    expect(low.road).toBe('low');
-  });
-
-  it('the high road is reachable from the street with an ollie and a flip', () => {
-    const l = buildFloor(5, 2, undefined, { fork });
-    const o = l.fork!;
-    let reached = false;
-    for (let lead = 2; lead <= 6 && !reached; lead++) {
-      const sim = new FloorSim(l);
-      sim.traffic.vehicles.length = 0;
-      sim.skater.x = o.x0 - 6 * TILE; // the start of the runway
-      sim.skater.y = l.streetY;
-      sim.skater.surface = null;
-      sim.skater.mode = 'roll';
-      sim.skater.hsp = PHYS.baseSpeed;
-      const popAt = Math.round(((6 - lead) * TILE) / PHYS.baseSpeed);
-      for (let f = 0; f < 400 && sim.state === 'skate'; f++) {
-        const flip = f === popAt + 18;
-        sim.step({ pressed: f === popAt || flip, held: (f >= popAt && f < popAt + 14) || (f >= popAt + 18 && f < popAt + 30) });
-        if ((sim.skater.surface as { kind: string } | null)?.kind === 'overpass') reached = true;
+  it('runs two lanes from a quarter of the way down, with hop and forced switches spread along it', () => {
+    let forced = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const l = buildFloor(seed, 2 + (seed % 6), undefined, { fork });
+      const sw = l.fork!.switches!;
+      expect(sw.length).toBeGreaterThanOrEqual(3);
+      expect(sw[0].to).toBeUndefined(); // the first and last are luck
+      expect(sw.at(-1)!.to).toBeUndefined();
+      forced += sw.filter((s) => s.to !== undefined).length;
+      const len = l.exitX - l.finaleX;
+      expect(sw[0].x).toBeGreaterThan(l.finaleX + 0.2 * len);
+      expect(sw.at(-1)!.x).toBeLessThan(l.exitX);
+      expect(l.surfaces.some((s) => s.kind === 'overpass')).toBe(false);
+      //nothing lane-only straddles a switch or sits before the first one
+      for (const o of [...l.surfaces, ...l.cars, ...l.glass].filter((o) => o.track !== undefined)) {
+        expect(o.x0).toBeGreaterThan(sw[0].x);
+        for (const s of sw) expect(o.x1 < s.x || o.x0 > s.x).toBe(true);
       }
     }
-    expect(reached).toBe(true);
+    expect(forced).toBeGreaterThan(2);
+    const all = Array.from({ length: 12 }, (_, s) => buildFloor(s + 1, 4, undefined, { fork }));
+    expect(all.some((l) => l.surfaces.some((s) => s.track === 1))).toBe(true);
+    expect(all.some((l) => l.surfaces.some((s) => s.track === 0))).toBe(true);
+  });
+
+  it('at a hop switch, in the air you hop lanes and rolling you stay; a forced one moves everyone', () => {
+    const l = buildFloor(5, 2, undefined, { fork });
+    const go = (x: number, air: boolean, lane: 0 | 1 = 0) => {
+      const sim = new FloorSim(l);
+      sim.traffic.vehicles.length = 0;
+      Object.assign(sim.skater, { x: x - 3, y: air ? l.streetY - 30 : l.streetY, surface: null, mode: air ? 'air' : 'roll', vsp: 0, hsp: PHYS.baseSpeed, lane });
+      sim.step({ pressed: false, held: false });
+      return sim;
+    };
+    const x = l.fork!.switches![0].x;
+    const hop = go(x, true);
+    expect(hop.skater.lane).toBe(1);
+    expect(hop.events).toContainEqual({ type: 'lane', lane: 1 });
+    expect(hop.roadAhead).toBe('high');
+    expect(go(x, true, 1).skater.lane).toBe(0); // and back again
+    const stay = go(x, false);
+    expect(stay.skater.lane).toBe(0);
+    expect(stay.roadAhead).toBe('low');
+    expect(go(x + 20, false, 0).skater.lane).toBe(0); // only as you cross it
+    const forced = { x: x + 40, to: 1 as const };
+    l.fork!.switches = [...l.fork!.switches!, forced];
+    expect(go(forced.x, false, 0).skater.lane).toBe(1);
+    expect(go(forced.x, true, 1).skater.lane).toBe(1);
+  });
+
+  it('the lane at the gate picks the road, and back-lane things are only solid in the back lane', () => {
+    const l = validatedFloor(5, 4, { fork }).level;
+    for (const lane of [0, 1] as const) {
+      const sim = new FloorSim(l);
+      sim.skater.laneLock = lane;
+      const pilot = new Pilot('ref');
+      for (let f = 0; f < 60 * 120 && sim.state === 'skate'; f++) sim.step(pilot.input(sim));
+      expect(sim.state).toBe('exit');
+      //the last switch decides: forced, or the lane taken at the hop
+      const last = l.fork!.switches!.at(-1)!;
+      expect(sim.road).toBe((last.to ?? lane) === 1 ? 'high' : 'low');
+    }
+    expect(inLane({ track: 1 }, 1)).toBe(true);
+    expect(inLane({ track: 1 }, 0)).toBe(false);
+    expect(inLane({}, 0) && inLane({}, 1)).toBe(true);
   });
 
   it('every floor gets coins and at least one Stoken', () => {

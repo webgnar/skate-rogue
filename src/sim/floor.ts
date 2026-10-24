@@ -7,7 +7,7 @@ import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
 import { Chaser } from './chaser';
 import { Swarm } from './drones';
-import type { Car, Level, PickupKind } from '../physics/level';
+import { inLane, type Car, type Level, type PickupKind } from '../physics/level';
 import { PROP_SIZE } from '../gen/props';
 import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
@@ -145,16 +145,22 @@ export class FloorSim {
     if (this.skater.mode === 'bail') this.state = 'bail';
     else if (this.skater.mode === 'exit' || this.skater.exited) {
       this.state = 'exit';
-      //on (or above) the overpass at the gate = the high road
-      const fork = this.level.fork;
-      this.road = fork && this.skater.y <= fork.y + 1 ? 'high' : 'low';
+      this.road = this.roadAt();
     } else if (this.heat.caught || this.chaser?.caught) this.state = 'caught';
   }
 
   // which road the skater is on right now, once they reach the fork's overpass (null before it, or no fork)
   get roadAhead(): 'high' | 'low' | null {
     const fork = this.level.fork;
-    if (!fork || this.skater.x < fork.x0) return null;
+    if (!fork || this.skater.x < (fork.switches?.[0].x ?? fork.x0)) return null;
+    return this.roadAt();
+  }
+
+  // lane B (the back lane) is the high road; without lane switches, on (or above) the overpass is
+  private roadAt(): 'high' | 'low' {
+    const fork = this.level.fork;
+    if (!fork) return 'low';
+    if (fork.switches) return this.skater.lane === 1 ? 'high' : 'low';
     return this.skater.y <= fork.y + 1 ? 'high' : 'low';
   }
 
@@ -222,7 +228,8 @@ export class FloorSim {
     const sk = this.skater;
     const half = PHYS.width / 2;
     const contact = sk.mode !== 'air' || events.some((e) => e.type === 'hop' || e.type === 'slam' || e.type === 'kicker');
-    const cars = sk.movers.length ? [...this.level.cars, ...sk.movers] : this.level.cars;
+    const parked = this.level.cars.filter((c) => inLane(c, sk.lane));
+    const cars = sk.movers.length && sk.lane === 0 ? [...parked, ...sk.movers] : parked;
     for (const c of cars) {
       const over = sk.x + half > c.x0 && sk.x - half < c.x1;
       const n = this.near.get(c);
@@ -317,7 +324,7 @@ export class FloorSim {
     const reach = PICKUP_RADIUS * sk.mods.magnet;
     const r2 = reach * reach;
     this.level.pickups.forEach((p, i) => {
-      if (this.taken[i] || Math.abs(p.x - sk.x) > reach) return;
+      if (this.taken[i] || Math.abs(p.x - sk.x) > reach || !inLane(p, sk.lane)) return;
       const dy = p.y - (sk.y - BODY);
       if ((p.x - sk.x) ** 2 + dy * dy > r2) return;
       this.taken[i] = true;

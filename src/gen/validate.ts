@@ -2,7 +2,7 @@
 // layouts it can't clear are re-rolled from a sub-seed, then generated one tier lower. Pure and deterministic.
 import { RunScore, SCORE } from '../run/score';
 import { TILE } from '../physics/constants';
-import type { Level } from '../physics/level';
+import type { Lane, Level } from '../physics/level';
 import { FloorSim } from '../sim/floor';
 import type { Gear } from '../run/gear';
 import { Pilot } from '../bot/pilot';
@@ -28,8 +28,10 @@ export interface BotRun {
 
 // boost: skate in the gnar state, at its cruising speed (SCORE.gnarBoost) with slams free of Heat
 // boost 'game': the gnar state comes and goes as the run's stoke meter fills and drains, as in the game
-export function botRun(level: Level, boost: number | 'game' = 1): BotRun {
+// lane: take that depth lane at every hop switch (src/gen/lanes.ts), whatever the bot is doing there
+export function botRun(level: Level, boost: number | 'game' = 1, lane: Lane | null = null): BotRun {
   const sim = new FloorSim(level);
+  sim.skater.laneLock = lane;
   const run = boost === 'game' ? new RunScore() : null;
   const fixed = (k: number) => {
     sim.skater.boost = k;
@@ -67,7 +69,10 @@ export function botRun(level: Level, boost: number | 'game' = 1): BotRun {
 // state switching on and off mid-floor as it does in the game, so filling the stoke meter can never make a floor
 // impossible. Logged 2026-10-24, from the playtest bot's findings.
 export function clearable(level: Level): boolean {
-  return botRun(level).result === 'exit' && botRun(level, GNAR_BOOST).result === 'exit' && botRun(level, 'game').result === 'exit';
+  const ok = (boost: number | 'game', lane: Lane | null = null) => botRun(level, boost, lane).result === 'exit';
+  //with lanes, every stretch has to go through in either lane the bot could end up in
+  const lanes = level.fork?.switches ? ok(1, 0) && ok(1, 1) && ok(GNAR_BOOST, 0) && ok(GNAR_BOOST, 1) : true;
+  return ok(1) && lanes && ok(GNAR_BOOST) && ok('game');
 }
 
 export interface Validated {
