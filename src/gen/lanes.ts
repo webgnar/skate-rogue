@@ -12,7 +12,7 @@
 // traffic keeps to lane A); the street and the gaps are the same for both. The validator's bot clears the floor
 // taking lane A at every hop, and again taking lane B.
 import { TILE } from '../physics/constants';
-import { isStreetAt, type Lane, type LaneSwitch, type Level } from '../physics/level';
+import { inHill, isStreetAt, type Lane, type LaneSwitch, type Level } from '../physics/level';
 import { makeRng } from './rng';
 
 export const LANES = {
@@ -27,26 +27,51 @@ export const LANES = {
   back: 0.4,
 };
 
+// the street part of the floor, without its stretches of hill: [x0, x1] runs, a tile at a time
+function flats(level: Level): [number, number][] {
+  const out: [number, number][] = [];
+  for (let x = level.finaleX; x < level.exitX; x += TILE) {
+    if (inHill(level, x) || inHill(level, x + TILE)) continue;
+    const last = out[out.length - 1];
+    if (last && last[1] === x) last[1] = x + TILE;
+    else out.push([x, x + TILE]);
+  }
+  return out;
+}
+
+// the x a share d of the way along the flats; and the end of the flat run it's in
+function alongFlats(runs: [number, number][], d: number): [number, number] {
+  for (const [a, b] of runs) {
+    if (d <= b - a) return [a + d, b];
+    d -= b - a;
+  }
+  const [, b] = runs[runs.length - 1];
+  return [b, b];
+}
+
 // a hop switch's spot in [x0, x1]: just past a gap if there's one, else the middle
 function hopAt(level: Level, x0: number, x1: number): number {
-  for (let x = x0; x < x1; x += TILE / 2) {
+  for (let x = x0; x < x1 - LANES.afterGap - TILE; x += TILE / 2) {
     if (!isStreetAt(level, x) && isStreetAt(level, x + TILE / 2)) return Math.round((x + TILE / 2 + LANES.afterGap) / TILE) * TILE;
   }
   return Math.round((x0 + x1) / 2 / TILE) * TILE;
 }
 
+// spread along the street, never on a stretch of hill (the hills of a longer floor run between street blocks)
 export function laneSwitches(level: Level, seed: number): LaneSwitch[] {
   const rng = makeRng(seed * 41 + level.layout.floor * 523);
-  const len = level.exitX - level.finaleX;
+  const runs = flats(level);
+  const len = runs.reduce((n, [a, b]) => n + b - a, 0);
   const n = LANES.count[0] + Math.floor(rng() * (LANES.count[1] - LANES.count[0] + 1));
   const step = ((LANES.to - LANES.from) * len) / n;
   const out: LaneSwitch[] = [];
   for (let i = 0; i < n; i++) {
-    const x0 = level.finaleX + LANES.from * len + i * step;
+    const [x0, runEnd] = alongFlats(runs, LANES.from * len + i * step);
+    const x1 = Math.min(runEnd, x0 + step * 0.6);
     const r = rng();
     //the first and last are hops: how you get into the lanes, and the lane you leave in, are down to you (and luck)
-    if (i === 0 || i === n - 1 || r < LANES.hop) out.push({ x: hopAt(level, x0, x0 + step * 0.6) });
-    else out.push({ x: Math.round((x0 + step * 0.3) / TILE) * TILE, to: r < LANES.hop + (1 - LANES.hop) / 2 ? 0 : 1 });
+    if (i === 0 || i === n - 1 || r < LANES.hop) out.push({ x: hopAt(level, x0, x1) });
+    else out.push({ x: Math.round((x0 + Math.min(step * 0.3, (x1 - x0) / 2)) / TILE) * TILE, to: r < LANES.hop + (1 - LANES.hop) / 2 ? 0 : 1 });
   }
   return out;
 }
@@ -57,7 +82,7 @@ export function assignLanes(level: Level, switches: LaneSwitch[], seed: number):
   const start = switches[0].x + LANES.clear;
   const end = level.exitX - LANES.runway;
   const free = (x0: number, x1: number) =>
-    x0 >= start && x1 <= end && switches.every((s) => x1 < s.x - LANES.clear || x0 > s.x + LANES.clear);
+    x0 >= start && x1 <= end && !inHill(level, x0) && !inHill(level, x1) && switches.every((s) => x1 < s.x - LANES.clear || x0 > s.x + LANES.clear);
   const roll = (): Lane | undefined => {
     const r = rng();
     return r < LANES.front ? 0 : r < LANES.front + LANES.back ? 1 : undefined;

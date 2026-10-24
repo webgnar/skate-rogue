@@ -7,7 +7,7 @@ import { PHYS } from '../src/physics/constants';
 import { RunScore, SCORE } from '../src/run/score';
 import { FloorSim } from '../src/sim/floor';
 import { Pilot } from '../src/bot/pilot';
-import { inLane } from '../src/physics/level';
+import { inHill, inLane } from '../src/physics/level';
 
 const fork = { high: { kind: 'cash', danger: 2 }, low: { kind: 'boon', boonType: 'GRIND', danger: 1 } } as const;
 
@@ -24,6 +24,16 @@ describe('the fork', () => {
     }
   });
 
+  it('keeps lane switches and lane-only things off the stretches of hill on a longer floor', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const l = buildFloor(seed, 1 + (seed % 7), undefined, { fork, hills: true });
+      for (const s of l.fork!.switches!) expect(inHill(l, s.x)).toBe(false);
+      for (const o of [...l.surfaces, ...l.rails, ...l.cars].filter((o) => o.track !== undefined)) {
+        expect(inHill(l, o.x0) || inHill(l, o.x1)).toBe(false);
+      }
+    }
+  });
+
   it('runs two lanes from a quarter of the way down, with hop and forced switches spread along it', () => {
     let forced = 0;
     for (let seed = 1; seed <= 12; seed++) {
@@ -34,7 +44,7 @@ describe('the fork', () => {
       expect(sw.at(-1)!.to).toBeUndefined();
       forced += sw.filter((s) => s.to !== undefined).length;
       const len = l.exitX - l.finaleX;
-      expect(sw[0].x).toBeGreaterThan(l.finaleX + 0.2 * len);
+      expect(sw[0].x).toBeGreaterThan(l.finaleX + 0.2 * len); // (no hills here: the street is the whole stretch)
       expect(sw.at(-1)!.x).toBeLessThan(l.exitX);
       expect(l.surfaces.some((s) => s.kind === 'overpass')).toBe(false);
       //nothing lane-only straddles a switch or sits before the first one
