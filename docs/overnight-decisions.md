@@ -518,6 +518,12 @@ and listed it here for review. Any of these can be flipped in the morning.
   muted gallery-goer coats. Space: white and orange flight suits, most in a white helmet with a dark visor (new
   `PedHeadHelmet`). High-tech: black techwear with neon. Chicago, Clemente and the hive keep the street mix.
   game.ts passes the biome to `pedView.update`.
+- **Fixes from zack's local test (2026-10-24).** (1) Lou's feet sank into the deck: the Blender board track was
+  recorded at the deck top while the game adds the deck height again, so the board played 0.12 tiles high.
+  art/bake_clips.cjs now records the board at its ground point; clips re-baked and lou-gnar.glb rebuilt, and the
+  board now plays where the code clips put it. (2) Cars, cruisers and buses rendered one flat colour: splitSlabs
+  split a model's material groups with a draw range, which batchStatic's merge ignores, so every piece drew the
+  whole car in one material. It now copies out each group's vertices.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

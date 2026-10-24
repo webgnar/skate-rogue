@@ -28,10 +28,20 @@ export function splitSlabs(root: THREE.Object3D): THREE.BufferGeometry[] {
     const parent = mesh.parent!;
     const index = geo.index;
     for (const g of geo.groups) {
-      const sub = geo.clone();
-      sub.clearGroups();
-      if (index) sub.setIndex(Array.from(index.array.slice(g.start, g.start + g.count)));
-      else sub.setDrawRange(g.start, g.count);
+      let sub: THREE.BufferGeometry;
+      if (index) {
+        sub = geo.clone();
+        sub.clearGroups();
+        sub.setIndex(Array.from(index.array.slice(g.start, g.start + g.count)));
+      } else {
+        //a draw range would be lost when batchStatic merges the piece: copy out just the group's vertices
+        sub = new THREE.BufferGeometry();
+        for (const [name, attr] of Object.entries(geo.attributes)) {
+          const a = attr as THREE.BufferAttribute;
+          const n = a.itemSize;
+          sub.setAttribute(name, new THREE.BufferAttribute(a.array.slice(g.start * n, (g.start + g.count) * n), n, a.normalized));
+        }
+      }
       const piece = new THREE.Mesh(sub, mats[g.materialIndex ?? 0]);
       piece.position.copy(mesh.position);
       piece.quaternion.copy(mesh.quaternion);
