@@ -15,6 +15,7 @@ import { makeRng, randInt, type Rng } from '../gen/rng';
 import { model } from './models';
 import { props } from './props';
 import { toX, toY } from './kit';
+import type { BiomeId } from './biomes';
 import { inkify } from './toon';
 import type { Phone } from './phone-fx';
 
@@ -32,6 +33,50 @@ const SKIN = [0xf0c8a8, 0xd8a888, 0xc8946a, 0x9a6a48, 0x6a4430, 0x4a3022];
 const HAIR = [0x1a1210, 0x2a1a10, 0x5a3a20, 0xc89a48, 0xe8d8a8, 0x8a2a1a, 0x6a6a6a];
 const SHOES = [0xf0f0f0, 0x16161c, 0xd94a4a, 0x3a7be8];
 const HEADS = ['PedHeadShort', 'PedHeadLong', 'PedHeadCap'];
+
+// what the locals wear in each world; a world left out dresses like Chicago
+interface Dress {
+  tops?: number[];
+  pants?: number[];
+  shoes?: number[];
+  heads?: string[];
+  skin?: number[];
+}
+const DRESS: Partial<Record<BiomeId, Dress>> = {
+  // tunics and chitons: undyed linen, terracotta, olive, the odd purple; bare legs, sandals, laurels on some
+  greece: {
+    tops: [0xf0ead8, 0xe8dcc0, 0xc8643a, 0x8a8a4a, 0x6a3a8a, 0xf0ead8],
+    pants: SKIN,
+    shoes: [0x8a5a2a, 0x6a4020],
+    heads: ['PedHeadShort', 'PedHeadLong', 'PedHeadWreath', 'PedHeadWreath'],
+  },
+  // sea colours: teal, coral, pearl, kelp
+  atlantis: {
+    tops: [0x2ab8b0, 0xff7a6a, 0xe8f0f0, 0x3a8a6a, 0x5a6ad8, 0x8ad8e8],
+    pants: [0x1a4a6a, 0x2a6a6a, 0x3a3a5a],
+    shoes: [0xe8f0f0, 0x2ab8b0],
+    heads: ['PedHeadShort', 'PedHeadLong', 'PedHeadLong'],
+  },
+  // gallery-goers: muted coats, a guide in navy here and there
+  museum: {
+    tops: [0x6a6a72, 0x8a7a6a, 0x1a2a48, 0xc8b898, 0x4a3a3a, 0x2a2a34],
+    pants: [0x2a2a34, 0x4a4a52, 0x6a5a4a],
+    shoes: [0x16161c, 0x4a3020],
+  },
+  // flight suits and helmets
+  space: {
+    tops: [0xf0f0f0, 0xff8a3a, 0xd8d8e0, 0x3a7be8],
+    pants: [0xf0f0f0, 0xd8d8e0, 0x6a6a72],
+    shoes: [0x6a6a72, 0x16161c],
+    heads: ['PedHeadHelmet', 'PedHeadHelmet', 'PedHeadHelmet', 'PedHeadShort'],
+  },
+  // black techwear with neon trim colours
+  hightech: {
+    tops: [0x16161c, 0x2a2a34, 0x3affe8, 0xff3ad8, 0xe8ff3a],
+    pants: [0x16161c, 0x2a2a34],
+    shoes: [0xf0f0f0, 0x3affe8, 0x16161c],
+  },
+};
 
 // bones, by index
 const ROOT = 0;
@@ -61,13 +106,15 @@ interface Person {
 const pick = <T>(rng: Rng, list: T[]): T => list[randInt(rng, list.length)];
 
 // one person's parts, recoloured from their palette, merged and skinned to a fresh skeleton
-function makePerson(rng: Rng): { mesh: THREE.SkinnedMesh; bones: THREE.Bone[] } | null {
+function makePerson(rng: Rng, biome: BiomeId): { mesh: THREE.SkinnedMesh; bones: THREE.Bone[] } | null {
+  const dress = DRESS[biome] ?? {};
+  const skin = pick(rng, dress.skin ?? SKIN);
   const palette: Record<string, number> = {
-    pedTop: pick(rng, TOPS),
-    pedPants: pick(rng, PANTS),
-    pedSkin: pick(rng, SKIN),
+    pedTop: pick(rng, dress.tops ?? TOPS),
+    pedPants: dress.pants === SKIN ? skin : pick(rng, dress.pants ?? PANTS), // bare legs under a tunic
+    pedSkin: skin,
     pedHair: pick(rng, HAIR),
-    pedShoe: pick(rng, SHOES),
+    pedShoe: pick(rng, dress.shoes ?? SHOES),
   };
   const parts: [string, number, THREE.Vector3][] = [
     ['PedTorso', HIPS, new THREE.Vector3(0, HIP_Y, 0)],
@@ -75,7 +122,7 @@ function makePerson(rng: Rng): { mesh: THREE.SkinnedMesh; bones: THREE.Bone[] } 
     ['PedLeg', LEG_R, new THREE.Vector3(HIP_X, HIP_Y, 0)],
     ['PedArmL', ARM_L, new THREE.Vector3(-SHOULDER.x, SHOULDER.y, 0)],
     ['PedArmR', ARM_R, new THREE.Vector3(SHOULDER.x, SHOULDER.y, 0)],
-    [pick(rng, HEADS), HEAD, new THREE.Vector3(0, NECK_Y, 0)],
+    [pick(rng, dress.heads ?? HEADS), HEAD, new THREE.Vector3(0, NECK_Y, 0)],
   ];
   const geos: THREE.BufferGeometry[] = [];
   const c = new THREE.Color();
@@ -144,13 +191,16 @@ export class PedView {
   private readonly hand = new THREE.Vector3();
 
   // stand people along the floor's street sidewalk: not in the cross streets, the canals, at bus stops or on props
-  private populate(level: Level): void {
+  private biome: BiomeId = 'chicago';
+
+  private populate(level: Level, biome: BiomeId): void {
     for (const p of this.people) {
       this.group.remove(p.mesh);
       p.mesh.geometry.dispose();
     }
     this.people = [];
     this.level = level;
+    this.biome = biome;
     const rng = makeRng(level.width * 7 + level.layout.floor * 131 + level.props.length);
     const cols = level.width / TILE;
     const gaps = level.crossings.map((c) => toX(c.x + CROSS.w / 2)).map((cx) => [cx - CROSS.street - 0.6, cx + CROSS.street + 0.6]);
@@ -164,7 +214,7 @@ export class PedView {
     const end = level.fork ? toX(level.fork.x0) - 3 : cols - 4; // clear of the fork's doors
     for (let x = toX(level.finaleX) + 4 + rng() * 4; x < end; x += 3 + rng() * 6) {
       if (blocked(x)) continue;
-      const made = makePerson(rng);
+      const made = makePerson(rng, biome);
       if (!made) return; // peds.glb didn't load: an empty sidewalk
       const walker = rng() < 0.4;
       const person: Person = {
@@ -188,8 +238,8 @@ export class PedView {
     }
   }
 
-  update(level: Level, sk: Skater, dt: number, camX: number): void {
-    if (level !== this.level) this.populate(level);
+  update(level: Level, sk: Skater, dt: number, camX: number, biome: BiomeId = 'chicago'): void {
+    if (level !== this.level || biome !== this.biome) this.populate(level, biome);
     this.t += dt;
     const street = toY(level, level.streetY);
     this.group.position.y = street;

@@ -505,6 +505,11 @@ and listed it here for review. Any of these can be flipped in the morning.
   their arms over their heads when you fly in low past them (airborne, 0.8 to 4.5 tiles over the street, within
   1.8 tiles). The overpass gets concrete pillars with flared caps and a railing with posts and balusters
   (art/street.py `OverpassPillar`, `OverpassCap`, `OverpassRail`); its deck stays the textured slab.
+- **Pedestrians dress for their world** (peds.ts `DRESS`). Greece: linen, terracotta and olive tunics over bare
+  legs, sandals, laurel wreaths on about half (new `PedHeadWreath`). Atlantis: teal, coral and pearl. The museum:
+  muted gallery-goer coats. Space: white and orange flight suits, most in a white helmet with a dark visor (new
+  `PedHeadHelmet`). High-tech: black techwear with neon. Chicago, Clemente and the hive keep the street mix.
+  game.ts passes the biome to `pedView.update`.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

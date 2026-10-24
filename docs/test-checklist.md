@@ -440,6 +440,11 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Fly low past people on the sidewalk (an ollie off a kicker or a car near them): they fold over with their arms over their heads. People filming keep filming.
 - [ ] The overpass on the low road has concrete pillars with flared caps and a railing with balusters along the back of its deck.
 
+**Pedestrians per world (the PR after #96)**
+- [ ] `?biome=greece`: people in tunics with bare legs and sandals, some with laurel wreaths.
+- [ ] `?biome=space`: flight suits, most wearing white helmets with dark visors.
+- [ ] `?biome=atlantis`, `museum`, `hightech`: sea colours, muted coats, black and neon respectively. Chicago looks as before.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
