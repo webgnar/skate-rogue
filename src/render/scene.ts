@@ -21,6 +21,9 @@ export class StreetView {
   private pixelRatio: number;
   private slowMs = 0;
   private shakeAmt = 0;
+  private punchAmt = 0;
+  private punchRoll = 1;
+  private readonly buf = new THREE.Vector2();
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -79,7 +82,9 @@ export class StreetView {
   follow(px: number, py: number, dt = 0): void {
     this.camX = toX(px);
     this.camY = toY(this.level, py);
-    this.camera.fov = (2 * Math.atan(this.baseH / (2 * this.zoom.zoom * this.dist)) * 180) / Math.PI;
+    //a slam punches the camera in and rolls it, settling over about half a second (held through the hit-stop)
+    const zoom = this.zoom.zoom * (1 + this.punchAmt * 0.35);
+    this.camera.fov = (2 * Math.atan(this.baseH / (2 * zoom * this.dist)) * 180) / Math.PI;
     this.camera.updateProjectionMatrix();
     //a slam shakes the camera, dying off fast
     const sx = (Math.random() - 0.5) * this.shakeAmt;
@@ -88,11 +93,24 @@ export class StreetView {
     //a little above the skater looking down at them, so the street reads in depth; the feet stay centred
     this.camera.position.set(this.camX + sx, this.camY + this.dist * 0.18 + sy, this.dist);
     this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0.25);
+    this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
+    this.punchAmt *= Math.pow(0.91, dt * 60);
     if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
   }
 
   shake(amount: number): void {
     this.shakeAmt = Math.max(this.shakeAmt, amount);
+  }
+
+  punch(amount: number): void {
+    this.punchAmt = Math.max(this.punchAmt, amount);
+    this.punchRoll = Math.random() < 0.5 ? -1 : 1;
+  }
+
+  // pixels per world unit at distance 1, for sizing particles
+  get pointScale(): number {
+    const h = this.renderer.getDrawingBufferSize(this.buf).y;
+    return h / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
   }
 
   resize(): void {
@@ -103,7 +121,9 @@ export class StreetView {
     //Lou Gnar's 800 x 600 box: full height on wide screens, full width on narrow ones; back off rather than go fish-eye
     this.baseH = viewHeight(w / h);
     this.dist = Math.max(22, this.baseH / (2 * Math.tan((32 * Math.PI) / 180)));
-    this.camera.fov = (2 * Math.atan(this.baseH / (2 * this.zoom.zoom * this.dist)) * 180) / Math.PI;
+    //a slam punches the camera in and rolls it, settling over about half a second (held through the hit-stop)
+    const zoom = this.zoom.zoom * (1 + this.punchAmt * 0.35);
+    this.camera.fov = (2 * Math.atan(this.baseH / (2 * zoom * this.dist)) * 180) / Math.PI;
     this.camera.updateProjectionMatrix();
   }
 

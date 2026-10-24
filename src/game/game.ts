@@ -14,8 +14,12 @@ import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
 import { Impacts } from '../render/impact';
+import { Particles } from '../render/particles';
+import { FocusLines } from '../render/focus-lines';
+import { SoundWords } from '../render/sound-word';
+import { TimeWarp } from './time-warp';
 import { FloorSim } from '../sim/floor';
-import { TILE } from '../physics/constants';
+import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
 import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
@@ -57,6 +61,13 @@ const CAUGHT_BEAT_MS = 800;
 
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
 const BIG_LANDING = 8; // px/frame of fall: a drop of about 4 tiles or more
+//slam: hit-stop, then slow motion easing back to full speed
+const SLAM_FREEZE = 0.09;
+const SLAM_SLOW = 0.3;
+const SLAM_EASE = 0.55;
+//grind sparks per second at cruising speed
+const SPARKS_RAIL = 150;
+const SPARKS_LEDGE = 70;
 
 export class Game {
   private level: Level;
@@ -77,6 +88,10 @@ export class Game {
   private nextRoad: Road = FIRST_ROAD;
   private fallSpeed = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
+  private readonly particles = new Particles();
+  private readonly focus = new FocusLines();
+  private readonly words = new SoundWords();
+  private readonly warp = new TimeWarp();
   private ghostMesh: THREE.Mesh;
 
   constructor(
@@ -91,7 +106,7 @@ export class Game {
     this.sim = new FloorSim(this.level);
     this.view.front.add(this.sprite.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
-    this.view.front.add(this.impacts.group);
+    this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -130,6 +145,8 @@ export class Game {
 
   private startFloor(): void {
     this.state = 'skate';
+    this.warp.reset();
+    this.particles.clear();
     this.input.clear();
     this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : 0);
     this.trafficView.clear();
@@ -242,8 +259,11 @@ export class Game {
   }
 
   frame(now: number): void {
-    const dt = Math.min(0.1, (now - this.last) / 1000);
+    const realDt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
+    //game time: frozen on a slam's hit-stop, then slow motion
+    const dt = realDt * this.warp.scale;
+    this.warp.update(realDt);
 
     if (this.state === 'pick') {
       const press = this.input.takePress();
@@ -315,12 +335,44 @@ export class Game {
     this.sprite.update(dt * 1000, this.skater, angle);
     this.impacts.update(dt);
     this.pickups.update(dt);
+    this.sparks(dt);
+    this.particles.update(dt, this.view.pointScale);
+    this.words.update(realDt);
+    this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs);
     this.view.zoom.update(dt, this.skater.mode);
     this.view.follow(x, y, dt);
-    this.view.adapt(dt * 1000);
+    this.view.adapt(realDt * 1000);
     this.view.render();
-    this.hud.debug(`${Math.round(1 / Math.max(dt, 1e-3))} fps · ${this.skater.hsp.toFixed(1)} px/f · res ${this.view.resolution.toFixed(2)}`);
+    this.hud.debug(`${Math.round(1 / Math.max(realDt, 1e-3))} fps · ${this.skater.hsp.toFixed(1)} px/f · res ${this.view.resolution.toFixed(2)}`);
+  }
+
+  // sparks off the back truck while grinding: a rail throws more than a ledge, and more the faster you go
+  private sparks(dt: number): void {
+    const sk = this.skater;
+    if (this.state !== 'skate' || (sk.mode !== 'rail' && sk.mode !== 'grind')) return;
+    const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
+    const rate = (sk.mode === 'rail' ? SPARKS_RAIL : SPARKS_LEDGE) * Math.min(2, Math.max(0.4, speed / PHYS.baseSpeed));
+    const [x, y] = this.backTruck();
+    this.particles.grind(x, y, 1, rate, dt);
+  }
+
+  // where the back truck meets the rail, from the rig's tilt
+  private backTruck(): [number, number] {
+    const a = this.sprite.mesh.rotation.z;
+    const p = this.sprite.mesh.position;
+    return [p.x - 0.3 * Math.cos(a), p.y - 0.3 * Math.sin(a)];
+  }
+
+  private slam(): void {
+    const x = toX(this.skater.x);
+    const y = toY(this.level, this.skater.y);
+    this.burst(1, 0.45);
+    this.view.punch(1);
+    this.warp.hit(SLAM_FREEZE, SLAM_SLOW, SLAM_EASE);
+    this.focus.trigger();
+    this.words.spawn(x, y);
+    this.particles.debris(x, y, 1);
   }
 
   private burst(size: number, shake: number): void {
@@ -339,9 +391,11 @@ export class Game {
         this.hud.callout(TRICK_NAMES[TRICKS[e.index % TRICKS.length]] + combo, 'trick');
         break;
       case 'grind':
+        this.particles.grindStart(...this.backTruck(), 1);
         this.hud.callout(this.sprite.grindName + combo, 'trick');
         break;
       case 'rail':
+        this.particles.grindStart(...this.backTruck(), 1);
         this.hud.callout('BOARDSLIDE' + combo, 'trick');
         break;
       case 'hop':
@@ -352,12 +406,12 @@ export class Game {
           this.hud.callout(`+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), 'good');
           this.hud.money(this.run.cash, this.run.stoken);
         }
-        //a big drop lands with a smaller burst
+        //dust on every landing; a big drop also lands with a smaller burst
+        this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), Math.min(1.5, Math.max(0.5, this.fallSpeed / BIG_LANDING)));
         if (this.fallSpeed >= BIG_LANDING) this.burst(0.6, 0.12);
         break;
       case 'slam':
-        this.hud.callout('SLAM!', 'bad');
-        this.burst(1, 0.45);
+        this.slam();
         navigator.vibrate?.(60);
         break;
       case 'pickup':
