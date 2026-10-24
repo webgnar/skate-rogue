@@ -153,7 +153,9 @@ export class Skater {
   private stepMove(held: boolean): void {
     //horizontal speed
     if (this.mode === 'roll') {
-      this.carry = Math.max(0, this.carry - PHYS.carryBleed * this.mods.carryBleedScale);
+      const excess = Math.max(0, this.carry - PHYS.baseSpeed);
+      const bleed = Math.max(PHYS.carryBleedMin, excess * PHYS.carryDecay) * this.mods.carryBleedScale;
+      this.carry = Math.max(0, this.carry - bleed);
       const cap = Math.max(this.baseSpeed(), this.carry);
       this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : cap;
     } else if (this.mode === 'grind') {

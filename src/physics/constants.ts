@@ -12,7 +12,10 @@ export const PHYS = {
   jumps: 2, // QFS jumps_initial
   baseSpeed: 3.5, // auto-run (QFS walks at 2; a runner needs more)
   accel: 0.15,
-  carryBleed: 0.15, // QFS rail_carry bleeds this much per frame on the ground
+  // speed from rails fades on the ground: this share of the extra speed per frame (about half gone in 1 s,
+  // mostly gone in 4 s), never slower than carryBleedMin. QFS bled a flat 0.15/frame, which felt abrupt.
+  carryDecay: 0.012,
+  carryBleedMin: 0.01,
   grindSpeed: 5, // flat rails pull you up to this (QFS max_speed_grind is 2x walking)
   grindAccel: 0.08,
   grindMin: 3.5,

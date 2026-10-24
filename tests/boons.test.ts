@@ -171,7 +171,7 @@ describe('GRIND boons', () => {
     const carryAfter = (...ids: BoonId[]) => {
       const sk = skater(FLAT, ...ids);
       sk.carry = 8;
-      run(sk, 20);
+      run(sk, 120);
       return sk.carry;
     };
     expect(carryAfter('exitWax')).toBeGreaterThan(carryAfter() + 2);
