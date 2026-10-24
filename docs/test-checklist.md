@@ -31,6 +31,8 @@ Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 - [ ] **Escapes:** act 1's roadblock, act 2's helicopter, and act 4's drone swarm (stomp the drones to car-hop).
 - [ ] **Act 3's chase (after floor 9; quickest is `?floor=9`, clear it and take a road):** the district's chaser comes in a few tiles behind you: a tidal wave in Atlantis, a gold chariot in Greece, three guards with a torch in the museum. The callout names it ("THE WAVE IS COMING!"). Each slam lets it surge closer, and the "!" warning shows when it's close. Clean skating slowly opens the gap. Three slams close together and it catches you ("WIPED OUT!", "TRAMPLED!", "COLLARED!"). *Tuning:* too forgiving or too harsh? *Looks:* these are placeholder shapes until the models thread builds real ones.
 
+- [ ] **Wanted posters (floor 2+, about one floor in three):** a red WANTED board at the start of the street, and a callout as you pass it. Reach the gate with Heat at 50 or more and you get "BOUNTY CLAIMED": the floor's Stoken again, at least 3. Below 50 it says "BOUNTY MISSED". *Tuning:* worth the risk?
+
 ## Unlocks between runs (meta progression)
 
 Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS** button.

@@ -337,6 +337,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   three separate set pieces (the flood forcing you up high, a chariot overtaking in your lane, guards and laser
   tripwires) or keeping the roadblock; those twists can go on top of the chase later.
 
+- **Wanted posters.** From floor 2, about one floor in three has a WANTED board where the street starts. Reach
+  the gate with Heat 50 or more and the Stoken you grabbed on that floor pays again (at least 3). It's a choice
+  between this run (the cruiser is close) and the unlock tree. Not on stash floors or escapes.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

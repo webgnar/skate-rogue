@@ -170,6 +170,7 @@ export interface Level {
   gravity?: number; // the district's gravity, a share of QFS's (BIOME_GRAVITY in src/physics/feel.ts); left out = 1
   busStops: BusStop[]; // where a bus pulls in (src/traffic/street.ts)
   doors: number[]; // parked cars (by index) whose door swings open as you come up
+  bounty?: { x: number }; // a wanted poster's bounty (src/run/bounty.ts)
 }
 
 const CAR_W = 2 * TILE;

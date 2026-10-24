@@ -41,6 +41,8 @@ import { ChopperView } from '../render/chopper-view';
 import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
 import { CHASER } from '../sim/chaser';
+import { BountyView } from '../render/bounty-view';
+import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig } from '../render/skater-rig';
 import { trickName } from '../physics/tricks';
@@ -163,6 +165,9 @@ export class Game {
   private readonly chopper = new ChopperView();
   private readonly droneView = new DroneView();
   private readonly chaserView = new ChaserView();
+  private readonly bountyView = new BountyView();
+  private floorStoken = 0; // Stoken at the floor's start, for a bounty
+  private bountySeen = false;
   private spotState = 'hunt';
   private readonly particles = new Particles();
   private readonly focus = new FocusLines();
@@ -217,7 +222,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group);
+    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -323,6 +328,9 @@ export class Game {
     this.carry = 0;
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
+    this.bountyView.set(this.level);
+    this.floorStoken = this.run.stoken;
+    this.bountySeen = false;
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level, this.seed, this.floor);
     const rain = this.applyMood();
@@ -351,6 +359,12 @@ export class Game {
     this.gear = { ...this.sim.gear };
     if (this.road.kind === 'escape') return this.clearAct(now, this.road.act);
     const pts = this.run.clearFloor(this.floor);
+    //a wanted poster's bounty: the floor's Stoken again, for reaching the gate hot
+    if (this.level.bounty) {
+      const pay = bountyPay(this.run.stoken - this.floorStoken, this.sim.heat.value);
+      this.run.stoken += pay;
+      this.hud.callout(pay ? `BOUNTY CLAIMED +◆${pay}` : 'BOUNTY MISSED', pay ? 'good' : 'bad');
+    }
     const fork = this.level.fork;
     this.nextRoad = fork ? (this.sim.road === 'high' ? fork.high : fork.low) : FIRST_ROAD;
     const road = this.road;
@@ -716,6 +730,10 @@ export class Game {
     this.chopper.update(this.level, this.sim.chopper, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, this.biome, dt);
+    if (this.level.bounty && !this.bountySeen && this.state === 'skate' && this.skater.x >= this.level.bounty.x - 4 * TILE) {
+      this.bountySeen = true;
+      this.hud.callout(`WANTED: HEAT ${BOUNTY.heat}+ AT THE GATE PAYS 2× ◆`, 'trick');
+    }
     const spot = this.sim.chopper?.state ?? 'hunt';
     if (spot !== this.spotState && this.state === 'skate') {
       if (spot === 'lock') this.hud.callout('SPOTTED!', 'bad');
