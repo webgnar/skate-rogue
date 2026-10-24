@@ -28,6 +28,8 @@ import { FX } from '../render/fx-settings';
 import { HeatCue } from '../render/heat-cue';
 import { BoonFx } from '../render/boon-fx';
 import { SmashFx, type SmashHit } from '../render/smash';
+import { propPieces } from '../render/models';
+import { hideProp } from '../render/props';
 import { biomeMood, type BiomeId } from '../render/biomes';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
@@ -144,6 +146,8 @@ export class Game {
   readonly smashFx = new SmashFx(this.particles, {
     word: (x, y, w) => this.words.spawn(x, y, w),
     shake: (a) => this.view.shake(a),
+    pieces: (prop) => propPieces(prop), // the Blender break pieces (art/props.py)
+    hide: (index) => hideProp(index),
   });
   private biome: BiomeId = 'chicago';
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);

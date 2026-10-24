@@ -102,3 +102,14 @@ export function flatGeometry(name: string): THREE.BufferGeometry | null {
   flat.set(name, geo);
   return geo;
 }
+
+// a prop's break pieces ('<name>_piece0'..N in props.glb): vertex-coloured geometry centred on the piece, and where
+// that centre sits in the whole prop
+export function propPieces(name: string): { geometry: THREE.BufferGeometry; offset: THREE.Vector3 }[] {
+  const out: { geometry: THREE.BufferGeometry; offset: THREE.Vector3 }[] = [];
+  for (let i = 0; parts.has(`${name}_piece${i}`); i++) {
+    const piece = `${name}_piece${i}`;
+    out.push({ geometry: flatGeometry(piece)!, offset: parts.get(piece)!.position.clone() });
+  }
+  return out;
+}
