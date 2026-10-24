@@ -5,6 +5,7 @@ import { BOARD, fires, type EffectId, type Slots, type TriggerId } from '../boar
 import { PHYS, TILE } from '../physics/constants';
 import { Heat } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
+import { Swarm } from './drones';
 import type { Level, PickupKind } from '../physics/level';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
@@ -14,7 +15,8 @@ export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
 export type FloorEvent =
   | SkaterEvent
   | { type: 'pickup'; kind: PickupKind; index: number }
-  | { type: 'mod'; effect: EffectId; slot: number }; // a board mod fired
+  | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
+  | { type: 'drone'; index: number }; // stomped a drone out of the sky
 
 // which board trigger a skater event is
 const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
@@ -38,6 +40,7 @@ export class FloorSim {
   readonly taken: boolean[]; // pickups collected
   road: 'high' | 'low' | null = null; // which road the skater left the floor on
   readonly chopper: Chopper | null; // the helicopter escape's spotlight
+  readonly swarm: Swarm | null; // the drone swarm escape
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
 
@@ -52,6 +55,7 @@ export class FloorSim {
     this.taken = level.pickups.map(() => false);
     const esc = level.escape;
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
+    this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
     this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed));
   }
@@ -59,11 +63,15 @@ export class FloorSim {
   step(input: StepInput): void {
     if (this.state !== 'skate') return;
     this.traffic.step(this.skater.x);
-    this.skater.movers = this.traffic.inLane;
+    this.swarm?.step(this.skater);
+    this.skater.movers = this.swarm ? [...this.traffic.inLane, ...this.swarm.boxes] : this.traffic.inLane;
     this.skater.step(input);
     const skaterEvents = this.skater.events.slice();
     this.skater.events.length = 0;
     this.events = skaterEvents;
+    if (this.swarm?.stomp(this.skater, skaterEvents)) {
+      for (const e of this.swarm.events) if (e.type === 'down') this.events.push({ type: 'drone', index: e.index });
+    }
     this.runBoard(skaterEvents);
     this.collect();
     this.heat.step(this.skater, skaterEvents);

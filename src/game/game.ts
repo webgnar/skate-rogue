@@ -29,6 +29,7 @@ import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
+import { DroneView } from '../render/drone-view';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig } from '../render/skater-rig';
 import { trickName } from '../physics/tricks';
@@ -121,6 +122,7 @@ export class Game {
   private fallSpeed = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
   private readonly chopper = new ChopperView();
+  private readonly droneView = new DroneView();
   private spotState = 'hunt';
   private readonly particles = new Particles();
   private readonly focus = new FocusLines();
@@ -158,7 +160,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.chopper.group);
+    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -499,6 +501,7 @@ export class Game {
     this.sprite.update(dt * 1000, this.skater, angle);
     this.impacts.update(dt);
     this.chopper.update(this.level, this.sim.chopper, dt);
+    this.droneView.update(this.level, this.sim.swarm, dt);
     const spot = this.sim.chopper?.state ?? 'hunt';
     if (spot !== this.spotState && this.state === 'skate') {
       if (spot === 'lock') this.hud.callout('SPOTTED!', 'bad');
@@ -622,6 +625,19 @@ export class Game {
     }
   }
 
+  // stomped a drone: it's worth a trick's style, and goes down with a crunch
+  private droneDown(index: number): void {
+    const d = this.sim.swarm!.drones[index];
+    this.run.addStyle(SCORE.drone);
+    this.hud.callout('DRONE DOWN!', 'good');
+    const x = toX(d.x) + 0.5;
+    const y = toY(this.level, d.roof);
+    this.particles.grindStart(x, y, -1);
+    this.particles.grindStart(x, y, 1);
+    this.words.spawn(x, y + 0.6, 'KRNCH!');
+    this.view.shake(0.12);
+  }
+
   private burst(size: number, shake: number): void {
     this.impacts.spawn(toX(this.skater.x), toY(this.level, this.skater.y), size);
     this.view.shake(shake);
@@ -629,6 +645,7 @@ export class Game {
 
   private handle(e: FloorSim['events'][number]): void {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
+    if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type !== 'pickup') this.sprite.onEvent(e);
     const wasGnar = this.run.gnar;
     const bank = this.run.onEvent(e, this.skater.hsp);

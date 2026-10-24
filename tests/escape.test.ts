@@ -91,3 +91,70 @@ describe('the helicopter', () => {
     expect(freed).toBe(true);
   });
 });
+
+describe('the drone swarm', () => {
+  const setup = (seed = 9) => {
+    const l = buildEscape(seed, 4);
+    const sim = new FloorSim(l, undefined, 0);
+    sim.traffic.vehicles.length = 0;
+    return { l, sim };
+  };
+  const roll = (sim: FloorSim, x: number) => Object.assign(sim.skater, { x, y: sim.level.streetY, surface: null, mode: 'roll' });
+
+  it('act 4 is the drone swarm: waves over flat street, a single and a pair first', () => {
+    const { l } = setup();
+    expect(escapeKind(4)).toBe('drones');
+    expect(label({ kind: 'escape', act: 4, danger: 3 })).toBe('DRONE SWARM');
+    const d = l.escape!.drones!;
+    expect(d.length).toBeGreaterThan(5);
+    expect(d.slice(0, 3).map((s) => s.h)).toEqual([40, 40, 40]);
+    for (const s of d) {
+      expect(s.x).toBeGreaterThanOrEqual(l.escape!.x0);
+      expect(s.x).toBeLessThan(l.exitX);
+    }
+  });
+
+  it('dives in ahead of the skater and hovers across the lane', () => {
+    const { l, sim } = setup();
+    const s0 = l.escape!.drones![0];
+    roll(sim, s0.x - 14 * TILE);
+    const d = sim.swarm!.drones[0];
+    expect(d.state).toBe('wait');
+    let dove = false;
+    for (let f = 0; f < 90 && d.state !== 'hover'; f++) {
+      sim.step({ pressed: false, held: false });
+      if (d.state === 'dive') dove = true;
+    }
+    expect(dove).toBe(true);
+    expect(d.state).toBe('hover');
+    expect(sim.skater.x).toBeLessThan(s0.x);
+    expect(Math.abs(l.streetY - d.box.roof - s0.h)).toBeLessThan(2);
+  });
+
+  it('ride into one and you slam; stomp it and it goes down', () => {
+    const a = setup();
+    const s0 = a.l.escape!.drones![0];
+    roll(a.sim, s0.x - 14 * TILE);
+    let slams = 0;
+    for (let f = 0; f < 300; f++) {
+      a.sim.step({ pressed: false, held: false });
+      slams += a.sim.events.filter((e) => e.type === 'slam').length;
+    }
+    expect(slams).toBeGreaterThan(0);
+
+    const b = setup();
+    roll(b.sim, s0.x - 14 * TILE);
+    let downs = 0;
+    let hold = 0;
+    for (let f = 0; f < 300; f++) {
+      //ollie a little before it, and hold for full height
+      const pressed = b.sim.skater.mode === 'roll' && b.sim.skater.x > s0.x - 90 && b.sim.skater.x < s0.x;
+      if (pressed) hold = 30;
+      b.sim.step({ pressed, held: hold-- > 0 });
+      downs += b.sim.events.filter((e) => e.type === 'drone').length;
+    }
+    expect(downs).toBeGreaterThan(0);
+    expect(b.sim.swarm!.drones[0].state).toBe('down');
+    expect(b.sim.swarm!.boxes).not.toContain(b.sim.swarm!.drones[0].box);
+  });
+});
