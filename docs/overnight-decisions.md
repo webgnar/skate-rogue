@@ -132,3 +132,7 @@ and listed it here for review. Any of these can be flipped in the morning.
   times. The GDD's QFS list (kickflip, 360 flip, hardflip) are all in it.
 - **Lou and the board draw in 6 calls, not 18** (12 with outlines, not 36). Plain-coloured parts merge into one
   mesh with vertex colours when they load; the visor, flag patch, deck ply and wheel swirl stay separate.
+- **Clips get into Blender by baking them from the game.** `art/bake_clips.cjs` runs the game headless and records
+  every bone and the board at 30 fps; `art/lou_gnar.py` keys them as one action per clip in `art/lou-gnar.blend`,
+  with the board on a new `Board` bone. The legs come in as baked FK keys (the game's IK result), not IK controls.
+  Easy to edit a pose in Blender, but not yet a full animator's rig with foot controls.
