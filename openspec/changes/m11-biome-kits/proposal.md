@@ -19,6 +19,11 @@ effects grade (fx13) told the districts apart.
   `StreetView.setBiome(id)` rebuilds the floor's kit once the sheet is in, and `Game.setBiome` calls it. `?biome=`
   previews a biome.
 
+- **Smashables per world** (`art/props.py`, `WORLD_PROPS` in `src/render/props.ts`): a small, medium and large
+  breakable for each world, with break pieces. Each one stands in for the Chicago smashable the sim placed, by size,
+  so the hit boxes still fit. The AI's things stay in every world. Chicago's street furniture shows only in Chicago,
+  and other worlds show their scenery as cards. Smash effects use the shown prop (`Game.smash`).
+
 ## Impact
 
 - `src/render/{skins,kit,textures,scene}.ts`, `src/game/game.ts`, `public/tex/*_tiles.png` (QFS's own sheets).

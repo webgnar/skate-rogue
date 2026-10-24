@@ -251,6 +251,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 **Biome kits (the next PR, after #68)**
 - [ ] `?biome=clemente`, `greece`, `atlantis`, `museum`, `hightech`, `space` (and `hive`): the street front, the back wall, the buildings under the roofs and the ledges all use that QFS world's tiles. Look for Clemente's trees and signs, Greece's temples, arches and red pillars, the museum's paintings and statue of David, and Atlantis's coral. Chicago looks exactly as before.
+- [ ] **Each world has its own smashables:** soda cups, pumpkins and hay bales in Clemente; oil jugs, kraters and amphorae in Greece; shells, coral and treasure chests in Atlantis; mugs, porcelain vases and marble busts in the museum; batteries, glowing holo-cubes and server racks in High-Tech City and the Hive; crystals and fuel cells in space. They stand where Chicago's cones, crates and barrels would, and break into their own pieces (pottery chips like stone, crystal like glass). The AI's kiosks, bots and Flock poles stay in every world. Chicago's hydrants, benches and meters only show in Chicago.
 - [ ] *Open question:* the city skyline behind is still Chicago in every biome. Should each world get its own backdrop next (QFS's skies and far layers)?
 
 ## Performance## Performance

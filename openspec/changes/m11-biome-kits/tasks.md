@@ -5,5 +5,6 @@
 - [x] 1.3 Decor and props as cards in one mesh
 - [x] 1.4 `StreetView.setBiome` loads the sheet and rebuilds the kit
 - [ ] 1.5 Backdrops per world (QFS skies, far and mid layers) in place of Chicago's skyline
-- [ ] 1.6 3D landmark props per world (columns, coral, statues, servers) from Blender
+- [x] 1.6 Smashables per world from Blender (small, medium and large for each), standing in for Chicago's by size
+- [ ] 1.8 Bigger 3D landmarks per world (columns, statues) as scenery
 - [ ] 1.7 Gameplay picks the biome per act (gameplay thread)

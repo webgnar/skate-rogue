@@ -35,6 +35,11 @@ export const SMASH = {
 
 // what a prop is made of, from its name
 const STUFF: [RegExp, Stuff][] = [
+  //the other worlds' smashables (props.ts WORLD_PROPS): pottery and marble chip like stone, crystal like glass
+  [/crystal/i, 'glass'],
+  [/jug|urn|amphora|vase|mug|bust|shell|coral/i, 'stone'],
+  [/chest|haybale/i, 'wood'],
+  [/battery|holocube|serverrack|fuelcell/i, 'metal'],
   [/cardboard/i, 'paper'], // before wood's 'board'
   [/bottle|window|glass|lamp/i, 'glass'],
   [/hydrant|newsbox|mailbox|meter|sign|pole|can|rail/i, 'metal'],
