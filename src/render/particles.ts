@@ -49,6 +49,32 @@ const DUST = [
   [0.66, 0.62, 0.6],
   [0.86, 0.82, 0.76],
 ];
+// a metal rail: hotter, whiter sparks
+const SPARK_HOT = [
+  [1, 1, 1],
+  [0.85, 0.93, 1],
+  [1, 0.96, 0.7],
+];
+
+// a concrete ledge: duller orange sparks, with chips of concrete
+const SPARK_WARM = [
+  [1, 0.7, 0.25],
+  [1, 0.55, 0.15],
+  [1, 0.85, 0.45],
+];
+
+// flip trails by trick: kickflips cyan, heelflips magenta, shuvs yellow, 180s white
+export const TRICK_TRAIL: Record<string, number[]> = {
+  kickflip: [0.35, 0.95, 1],
+  heelflip: [1, 0.4, 0.85],
+  shuv1: [1, 0.88, 0.3],
+  shuv2: [1, 0.88, 0.3],
+  bs180: [0.95, 0.95, 1],
+  fs180: [0.95, 0.95, 1],
+};
+
+export type GrindStyle = 'metal' | 'concrete';
+
 const WATER = [
   [0.85, 0.92, 1],
   [0.7, 0.82, 0.98],
@@ -78,6 +104,7 @@ export class Particles {
   private sparkDebt = 0;
   private trailDebt = 0;
   private splashDebt = 0;
+  private flipDebt = 0;
 
   constructor() {
     const geo = new THREE.BufferGeometry();
@@ -121,14 +148,25 @@ export class Particles {
   }
 
   // a frame of grind sparks from the contact point (x, y); `rate` is sparks per second, `dir` the way they ride
-  grind(x: number, y: number, dir: number, rate: number, dt: number): void {
+  // `style`: a metal rail throws hot white sparks; a concrete ledge throws orange ones and chips of concrete
+  grind(x: number, y: number, dir: number, rate: number, dt: number, style: GrindStyle = 'metal'): void {
     this.sparkDebt += rate * dt * (FX.tier === 'low' ? 0.5 : 1);
     const p = this.pool;
+    const metal = style === 'metal';
     while (this.sparkDebt >= 1) {
       this.sparkDebt--;
-      const i = this.spawn(x + rand(-0.05, 0.05), y + rand(0, 0.06), rand(0.05, 0.25), rand(0.18, 0.42), pick(SPARK), rand(0.12, 0.2), 0.03, 1, 0.5, false);
-      p.vx[i] = dir * rand(-2.5, 1.5);
-      p.vy[i] = rand(0.8, 3.6);
+      if (!metal && Math.random() < 0.3) {
+        const c = this.spawn(x + rand(-0.08, 0.08), y + rand(0, 0.05), rand(0.05, 0.3), rand(0.35, 0.6), pick(DUST), rand(0.06, 0.1), 0.05, 1, 0.6, true);
+        p.vx[c] = dir * rand(-1.8, 0.4);
+        p.vy[c] = rand(0.6, 2);
+        p.vz[c] = rand(-0.3, 1);
+        p.grav[c] = 14;
+        p.floor[c] = y - 1.5;
+        continue;
+      }
+      const i = this.spawn(x + rand(-0.05, 0.05), y + rand(0, 0.06), rand(0.05, 0.25), metal ? rand(0.18, 0.42) : rand(0.12, 0.3), pick(metal ? SPARK_HOT : SPARK_WARM), metal ? rand(0.12, 0.2) : rand(0.1, 0.16), 0.03, 1, 0.5, false);
+      p.vx[i] = dir * rand(-2.5, 1.5) * (metal ? 1.2 : 0.8);
+      p.vy[i] = rand(0.8, 3.6) * (metal ? 1.1 : 0.8);
       p.vz[i] = rand(-0.6, 1.6);
       p.grav[i] = 16;
       p.drag[i] = 1.2;
@@ -185,6 +223,51 @@ export class Particles {
       p.vz[i] = Math.sin(a) * rand(0.8, 2) * size;
       p.grav[i] = 15;
       p.floor[i] = y;
+    }
+  }
+
+  // a flip's trail: pixels in the trick's colour left hanging where the board spun; `rgb` from TRICK_TRAIL
+  flipTrail(x: number, y: number, rgb: number[], dt: number): void {
+    this.flipDebt += (FX.tier === 'low' ? 60 : 120) * dt;
+    const p = this.pool;
+    while (this.flipDebt >= 1) {
+      this.flipDebt--;
+      const i = this.spawn(x + rand(-0.22, 0.22), y + rand(-0.06, 0.1), rand(0.1, 0.35), rand(0.22, 0.36), rgb, rand(0.13, 0.19), 0.03, 1, 0.25, false);
+      p.vx[i] = rand(-0.8, -0.2);
+      p.vy[i] = rand(-0.2, 0.3);
+      p.drag[i] = 3;
+    }
+  }
+
+  // a clean landing: a flat ring of white sparkle round the wheels, and a few gold ones popping up
+  cleanLanding(x: number, y: number): void {
+    const p = this.pool;
+    const n = FX.tier === 'low' ? 8 : 14;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const i = this.spawn(x, y + 0.04, 0.2, rand(0.22, 0.3), [1, 1, 1], 0.12, 0.03, 1, 0.3, false);
+      p.vx[i] = Math.cos(a) * 3.2;
+      p.vz[i] = Math.sin(a) * 1.6;
+      p.drag[i] = 5;
+    }
+    for (let k = 0; k < 4; k++) {
+      const i = this.spawn(x + rand(-0.3, 0.3), y + 0.1, 0.3, rand(0.4, 0.55), pick(SPARK), 0.16, 0.05, 1, 0.5, false);
+      p.vx[i] = rand(-0.6, 0.6);
+      p.vy[i] = rand(1.6, 2.6);
+      p.grav[i] = 6;
+      p.drag[i] = 1.5;
+    }
+  }
+
+  // a sketchy landing: the board scuffs down one end first, a lopsided puff kicked out behind
+  sketchyLanding(x: number, y: number, dir: number): void {
+    const p = this.pool;
+    for (let k = 0; k < 10; k++) {
+      const i = this.spawn(x - dir * rand(0.2, 0.45), y + rand(0, 0.06), rand(-0.1, 0.4), rand(0.3, 0.55), pick(DUST), rand(0.08, 0.13), rand(0.25, 0.4), 0.8, 0, false);
+      p.vx[i] = -dir * rand(1, 3.2);
+      p.vy[i] = rand(0.3, 1.4);
+      p.drag[i] = 4;
+      p.grav[i] = -0.3;
     }
   }
 
