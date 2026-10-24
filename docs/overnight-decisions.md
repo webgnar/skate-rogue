@@ -564,6 +564,9 @@ and listed it here for review. Any of these can be flipped in the morning.
   origin, on the running rail heads), 1.9 wide between the rails (game z 0.2). Blue and red stripe, dark window
   band, two door pairs a side, low roof gear. The front variant has the cab at +x with a windshield, an amber
   destination sign and headlights. The other end of each car is a plain end door, for coupling. About 700 tris each.
+- **Pedestrians in the fused city.** With the worlds fused into one city, about a third of the people on the
+  Chicago street now dress from another world (tunics and laurels, sea colours, gallery coats, flight suits and
+  helmets, techwear); the rest dress for Chicago.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 
