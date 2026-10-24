@@ -43,6 +43,8 @@ interface Gate {
 export class GateFx {
   readonly group = new THREE.Group();
   private gates: Gate[] = [];
+  private signs: { mesh: THREE.Mesh; road: 'high' | 'low'; base: THREE.Vector3 }[] = [];
+  private road: 'high' | 'low' | null = null;
   private t = 0;
 
   // find the gates in a fresh kit (meshes tagged userData.gate) and fill each arch with a portal
@@ -53,7 +55,10 @@ export class GateFx {
     }
     this.group.clear();
     this.gates = [];
+    this.signs = [];
+    this.road = null;
     kit.traverse((o) => {
+      if (o instanceof THREE.Mesh && o.userData.forkSign) this.signs.push({ mesh: o, road: o.userData.forkSign, base: o.scale.clone() });
       if (!(o instanceof THREE.Mesh) || !o.userData.gate) return;
       const color = (o.material as THREE.MeshBasicMaterial).color.clone();
       const mat = new THREE.ShaderMaterial({
@@ -74,9 +79,21 @@ export class GateFx {
     });
   }
 
+  // the road the skater is on past the fork (FloorSim.roadAhead): its sign swells, the other dims
+  setRoad(road: 'high' | 'low' | null): void {
+    this.road = road;
+  }
+
   // skaterX in world units; dt in seconds
   update(dt: number, skaterX: number): void {
     this.t += dt;
+    for (const s of this.signs) {
+      const on = this.road === s.road;
+      const off = this.road !== null && !on;
+      const k = on ? 1.1 + 0.04 * Math.sin(this.t * 6) : 1;
+      s.mesh.scale.lerp(new THREE.Vector3(s.base.x * k, s.base.y * k, s.base.z), Math.min(1, dt * 10));
+      (s.mesh.material as THREE.MeshBasicMaterial).color.setScalar(off ? 0.45 : 1);
+    }
     for (const g of this.gates) {
       const d = g.x - skaterX;
       const near = d < -1 ? 0 : 1 - THREE.MathUtils.clamp(d / GATE_FX.near, 0, 1);

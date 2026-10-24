@@ -15,7 +15,7 @@ Shaders and visual effects for Gnar Run. Each item is an OpenSpec change in `ope
 | fx9-trick-fx | Flip trails by trick, grind sparks by surface, clean vs sketchy landings | Built |
 | fx10-boon-looks | A look for each of the 12 boons and the board mod effects | Built |
 | fx11-heat-beams | Cruiser searchlight that hunts then locks on, drone scan beam | Built |
-| fx12-ui-juice | Card deal and pick pop, shop stamps, gate portals | Built (fork signs left) |
+| fx12-ui-juice | Card deal and pick pop, shop stamps, gate portals | Built |
 | fx13-biome-looks | A colour grade and ambient drift per GDD biome; ?biome= preview | Built (first pass, waits on biome kits) |
 | fx14-smash | Smashable props: pieces, chips, dust, words, kick, by material | Built (waits on sim events and model pieces) |
 
