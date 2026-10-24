@@ -65,9 +65,9 @@ function modeFor(name) {
         sk.mode = modes[name];
         const n = Math.max(1, Math.round(len * FPS));
         const frames = [];
-        for (let f = 0; f <= (clip.loop ? n - 1 : n); f++) {
+        for (let f = 0; f <= n; f++) {
           s.play(name, 0);
-          s.t = Math.min(f / FPS, len - 1e-4);
+          s.t = clip.loop && f === n ? 0 : Math.min(f / FPS, len - 1e-4); // a loop ends where it starts
           s.update(0, sk, 0);
           const fr = {};
           for (const bone of bones) fr[bone.name] = round(rel(bone));

@@ -1,12 +1,19 @@
 # Builds Lou Gnar's astronaut (the Gnar Run player model) in Blender and exports public/models/lou-gnar.glb.
 #
 #   blender -b -P art/lou_gnar.py            (or run it from Blender's Text Editor; it rebuilds the scene)
+#   blender -b art/lou-gnar.blend -P art/lou_gnar.py -- --export-only
+#                                            (after editing the actions in Blender: writes the GLB from the file)
+#
+# The clips: art/bake_clips.cjs records them from the game into art/anim/clips.json, this script keys them as one
+# action per clip, and the GLB carries them to the game, which plays them in place of the code clips. Rebuilding
+# from scratch re-keys every action from clips.json, so after hand edits in Blender use --export-only.
 #
 # Everything is in the skater rig's own units (see openspec/changes/m6-skinned-skater/design.md): Blender +X is the
 # way you skate (the lead, left side), Blender -Y faces the game camera, Z is up. The model is in the bind pose:
 # every rig joint at zero, legs and arms hanging straight down, toes toward the camera.
 import math
 import os
+import sys
 
 import bpy  # first: the bpy module provides bmesh and mathutils
 import bmesh
@@ -275,14 +282,19 @@ def build():
 
 def export():
     os.makedirs(os.path.dirname(GLB), exist_ok=True)
-    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in bpy.data.objects:  # the rig and the suit; the board is its own GLB (board.glb)
+        ob.select_set(ob.type == 'ARMATURE' or ob.name == 'LouGnar')
     bpy.ops.export_scene.gltf(
         filepath=GLB,
         export_format='GLB',
         use_selection=True,
         export_yup=True,
         export_skins=True,
-        export_animations=False,
+        export_animations=True,
+        export_animation_mode='ACTIONS',
+        export_force_sampling=True,
+        export_frame_step=1,
         export_apply=True,
         export_materials='EXPORT',
     )
@@ -372,14 +384,17 @@ def actions(rig):
     return made
 
 
-if __name__ == '__main__':
+if __name__ == '__main__' and '--export-only' in sys.argv:
+    export()
+    print('wrote', GLB)
+elif __name__ == '__main__':
     rig, suit = build()
     tris = sum(len(p.vertices) - 2 for p in suit.data.polygons)
     print(f'LouGnar: {len(suit.data.vertices)} verts, {tris} tris, {len(rig.data.bones)} bones')
-    export()
-    print('wrote', GLB)
-    # the Blender file also gets the board and the clips as actions, to view and edit them in Blender
+    # the board (to see the clips in Blender) and the clips as actions, which the GLB carries to the game
     deck = board(rig)
     acts = actions(rig)
     print(f'{len(acts)} actions, board {"in" if deck else "missing"}')
-    bpy.ops.wm.save_as_mainfile(filepath=BLEND)
+    rig.animation_data.action = None
+    export()
+    print('wrote', GLB)

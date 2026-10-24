@@ -79,8 +79,15 @@ export class SkaterRig {
 
   // skinned model bones and the joints they follow
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
+  // Clips keyed in Blender (lou-gnar.glb's animations, art/lou_gnar.py): sampled straight onto the bones, and they
+  // win over the code clip of the same name. The board follows the model's Board bone.
+  private readonly baked = new Map<string, { bone: THREE.Bone; pos?: THREE.Interpolant; rot?: THREE.Interpolant }[]>();
+  private boardBone: THREE.Bone | null = null;
+  private boardRest = new THREE.Matrix4(); // the Board bone's rest pose (rig space), inverted
+  // the bones and board where a crossfade starts from (skinned model only)
+  private snap: { pos: THREE.Vector3[]; rot: THREE.Quaternion[]; board: THREE.Matrix4 } | null = null;
 
-  constructor(model?: THREE.Object3D, board?: THREE.Object3D) {
+  constructor(model?: THREE.Object3D, board?: THREE.Object3D, clips: THREE.AnimationClip[] = []) {
     const m = this.mesh;
     m.scale.setScalar(SCALE);
     m.position.z = 0.25;
@@ -174,20 +181,37 @@ export class SkaterRig {
     this.feet = [shoe(), shoe()];
     if (model) this.bind(model);
     if (board) this.fitBoard(board);
+    if (model) this.loadBaked(clips);
     this.applyPose(BASE);
   }
 
   static async create(base: string): Promise<SkaterRig> {
     const load = (file: string) =>
-      new GLTFLoader().loadAsync(`${base}models/${file}`).then(
-        (gltf) => gltf.scene,
-        (err) => {
-          console.warn(`${file} failed to load, using the built-in one`, err);
-          return undefined;
-        },
-      );
+      new GLTFLoader().loadAsync(`${base}models/${file}`).catch((err) => {
+        console.warn(`${file} failed to load, using the built-in one`, err);
+        return undefined;
+      });
     const [model, board] = await Promise.all([load('lou-gnar.glb'), load('board.glb')]);
-    return new SkaterRig(model, board);
+    return new SkaterRig(model?.scene, board?.scene, model?.animations);
+  }
+
+  private loadBaked(clips: THREE.AnimationClip[]): void {
+    const bones = new Map(this.bound.map((b) => [b.bone.name, b.bone]));
+    if (this.boardBone) bones.set('Board', this.boardBone);
+    for (const clip of clips) {
+      if (!CLIPS[clip.name]) continue; // timing, looping and the rig's logic come from the code clip of that name
+      const byBone = new Map<THREE.Bone, { bone: THREE.Bone; pos?: THREE.Interpolant; rot?: THREE.Interpolant }>();
+      for (const track of clip.tracks) {
+        const [node, prop] = track.name.split('.');
+        const bone = bones.get(node);
+        if (!bone || (prop !== 'position' && prop !== 'quaternion')) continue;
+        const entry = byBone.get(bone) ?? { bone };
+        if (prop === 'position') entry.pos = new THREE.LinearInterpolant(track.times, track.values, 3, new Float32Array(3));
+        else entry.rot = new THREE.QuaternionLinearInterpolant(track.times, track.values, 4, new Float32Array(4));
+        byBone.set(bone, entry);
+      }
+      if (byBone.size) this.baked.set(clip.name, [...byBone.values()]);
+    }
   }
 
   // The Blender board (art/board.py) has its origin at the middle of the deck's top, like boardSpin.
@@ -321,7 +345,82 @@ export class SkaterRig {
         this.bound.push({ bone, driver, offset: d.invert().multiply(b), local: new THREE.Matrix4() });
       }
     });
+    model.traverse((o) => {
+      if ((o as THREE.Bone).isBone && o.name === 'Board') this.boardBone = o as THREE.Bone;
+    });
+    if (this.boardBone) this.boardRest.copy(this.inRig(this.boardBone)).invert();
     this.toonMaterials(model);
+  }
+
+  // an object's transform in the rig's own space (this.mesh), from the local transforms up the tree
+  private inRig(o: THREE.Object3D): THREE.Matrix4 {
+    o.updateMatrix();
+    const m = o.matrix.clone();
+    for (let p = o.parent; p && p !== this.mesh; p = p.parent) {
+      p.updateMatrix();
+      m.premultiply(p.matrix);
+    }
+    return m;
+  }
+
+  // the board's transform in rig space (what boardRoot, boardPivot and boardSpin add up to)
+  private boardMatrix(): THREE.Matrix4 {
+    return this.inRig(this.boardSpin);
+  }
+
+  private setBoard(m: THREE.Matrix4): void {
+    m.decompose(this.boardRoot.position, this.boardRoot.quaternion, this.boardRoot.scale);
+    this.boardPivot.position.set(0, 0, 0);
+    this.boardPivot.rotation.set(0, 0, 0);
+    this.boardSpin.position.set(0, 0, 0);
+    this.boardSpin.rotation.set(0, 0, 0);
+  }
+
+  // a Blender clip at time t: bones straight from its keys, the board riding the Board bone
+  private applyBaked(tracks: { bone: THREE.Bone; pos?: THREE.Interpolant; rot?: THREE.Interpolant }[], t: number): void {
+    for (const { bone, pos, rot } of tracks) {
+      if (pos) bone.position.fromArray(pos.evaluate(t));
+      if (rot) bone.quaternion.fromArray(rot.evaluate(t));
+    }
+    if (this.boardBone) {
+      // at rest the board sits on the bone with its origin at the deck top, over the middle of the feet
+      const deck = new THREE.Matrix4().makeTranslation(0, BOARD.deckTop, 0);
+      this.setBoard(this.inRig(this.boardBone).multiply(this.boardRest).multiply(deck));
+    }
+  }
+
+  // remember the bones and board for a crossfade; `spin` turns them back round after a 180 hands over to fakie
+  private snapshot(spin: number): void {
+    if (!this.bound.length) return;
+    const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -spin);
+    const pos: THREE.Vector3[] = [];
+    const rot: THREE.Quaternion[] = [];
+    this.bound.forEach(({ bone }, i) => {
+      pos.push(bone.position.clone());
+      rot.push(bone.quaternion.clone());
+      if (bone.name === 'Hips' && spin) {
+        pos[i].applyQuaternion(turn); // the root bone is in rig space: turn it about the vertical
+        rot[i].premultiply(turn);
+      }
+    });
+    const board = this.boardMatrix();
+    if (spin) board.premultiply(new THREE.Matrix4().makeRotationFromQuaternion(turn));
+    this.snap = { pos, rot, board };
+  }
+
+  // blend from the snapshot toward the pose just applied, k from 0 (snapshot) to 1
+  private blendSnap(k: number): void {
+    const s = this.snap;
+    if (!s) return;
+    this.bound.forEach(({ bone }, i) => {
+      bone.position.lerpVectors(s.pos[i], bone.position, k);
+      bone.quaternion.slerpQuaternions(s.rot[i], bone.quaternion.clone(), k);
+    });
+    const a = { p: new THREE.Vector3(), q: new THREE.Quaternion(), s: new THREE.Vector3() };
+    const b = { p: new THREE.Vector3(), q: new THREE.Quaternion(), s: new THREE.Vector3() };
+    s.board.decompose(a.p, a.q, a.s);
+    this.boardMatrix().decompose(b.p, b.q, b.s);
+    this.setBoard(new THREE.Matrix4().compose(a.p.lerp(b.p, k), a.q.slerp(b.q, k), a.s.lerp(b.s, k)));
   }
 
   // bones copy their joints: world = joint · offset, then back into each bone's parent space
@@ -379,7 +478,8 @@ export class SkaterRig {
   }
 
   play(name: string, fade = FADE): void {
-    this.settleSpin();
+    const spin = this.settleSpin();
+    this.snapshot(spin);
     this.from = { ...this.pose };
     this.fade = fade;
     this.fadeLen = fade;
@@ -392,12 +492,13 @@ export class SkaterRig {
   // Leaving a 180 (finished or cut short by the landing): the skater now rides the other way round, so turn the
   // whole rig to fakie (or back) and take the half turn back out of the pose. It looks the same, and a cut-short spin
   // finishes its turn in the crossfade.
-  private settleSpin(): void {
+  private settleSpin(): number {
     const spin = SPINS[this.clipName];
-    if (!spin) return;
+    if (!spin) return 0;
     this.fakie = !this.fakie;
     this.pose = { ...this.pose, yaw: this.pose.yaw - spin, boardYaw: this.pose.boardYaw - spin };
     this.clipName = '';
+    return spin;
   }
 
   get current(): string {
@@ -471,12 +572,23 @@ export class SkaterRig {
 
     this.t += dt;
     let pose = sample(this.clip, this.t);
-    if (this.fade > 0) {
-      this.fade = Math.max(0, this.fade - dt);
-      pose = mix(this.from, pose, 1 - this.fade / this.fadeLen);
+    const k = this.fade > 0 ? 1 - (this.fade = Math.max(0, this.fade - dt)) / this.fadeLen : 1;
+    const baked = this.baked.get(this.clipName);
+    if (this.bound.length) {
+      // the skinned model: pose it from the Blender clip or the code clip, then crossfade bone by bone
+      this.pose = pose;
+      if (baked) {
+        const len = clipLength(this.clip);
+        this.applyBaked(baked, this.clip.loop && len > 0 ? ((this.t % len) + len) % len : Math.min(this.t, len));
+      } else {
+        this.applyPose(pose);
+      }
+      if (k < 1) this.blendSnap(k);
+    } else {
+      if (k < 1) pose = mix(this.from, pose, k);
+      this.pose = pose;
+      this.applyPose(pose);
     }
-    this.pose = pose;
-    this.applyPose(pose);
     // turned half round about the vertical first, then tilted with the slope
     this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, angle, 'ZYX');
 
