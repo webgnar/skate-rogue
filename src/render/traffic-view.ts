@@ -5,6 +5,7 @@ import type { Level } from '../physics/level';
 import type { Vehicle } from '../traffic/traffic';
 import { TRAFFIC } from '../traffic/traffic';
 import { makeCar, toX, toY } from './kit';
+import { model } from './models';
 import { inkify } from './toon';
 import { HeatLights } from './heat-light';
 
@@ -18,6 +19,7 @@ export class TrafficView {
   private cruiser: THREE.Group;
   private lights: THREE.Mesh[] = [];
   private drone: THREE.Group;
+  private rotors: THREE.Mesh[] = [];
   private cruiserGap = 10; // tiles behind the skater
   private t = 0;
   readonly heatLights = new HeatLights();
@@ -53,6 +55,21 @@ export class TrafficView {
 
   private makeDrone(): THREE.Group {
     const drone = new THREE.Group();
+    const model3d = model('Drone');
+    if (model3d) {
+      //the Blender drone (art/drone.py): it faces -x, back at the skater; the rotors spin in chase()
+      drone.add(model3d);
+      for (let i = 0; i < 4; i++) {
+        const rotor = model(`Rotor${i}`);
+        if (rotor) {
+          this.rotors.push(rotor);
+          drone.add(rotor);
+        }
+      }
+      drone.scale.setScalar(1.5);
+      drone.visible = false;
+      return drone;
+    }
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.5), new THREE.MeshLambertMaterial({ color: 0x30303a }));
     const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), new THREE.MeshBasicMaterial({ color: 0xff3030 }));
     eye.position.set(0.2, -0.06, 0);
@@ -117,6 +134,9 @@ export class TrafficView {
     this.drone.visible = heat >= 75 || caught;
     if (this.drone.visible) {
       this.drone.position.set(toX(skaterX) + 3.5, 3.2 + Math.sin(this.t / 200) * 0.15, 0.4);
+      //a slight bank and bob, rotors spinning in opposite pairs
+      this.drone.rotation.set(Math.sin(this.t / 330) * 0.06, 0, Math.sin(this.t / 260) * 0.05);
+      this.rotors.forEach((r, i) => (r.rotation.y += (i % 3 === 0 ? 1 : -1) * dtMs * 0.06));
     }
   }
 }
