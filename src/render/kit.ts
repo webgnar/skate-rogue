@@ -260,7 +260,8 @@ function facade(w: number, h: number, t: number): TileCell[][] {
   return grid;
 }
 
-// the Blender cars (art/cars.py) are 2.3 long and 1.25 to the roof, for a 2 tile hitbox; others are stretched
+// the Blender hatchbacks (art/cars.py) are 2.3 long and 1.25 to the roof, for a 2 tile hitbox, and are stretched to
+// other hitboxes; the cruiser SUV only chases, so it keeps its own size
 export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser';
 const MODEL_LEN = 2.3;
 const MODEL_ROOF = 1.25;
@@ -271,7 +272,7 @@ export function makeCar(x0: number, x1: number, bottom: number, roof: number, pa
   const h = roof - bottom;
   const body3d = model(kind, paint);
   if (body3d) {
-    body3d.scale.set((w + 0.3) / MODEL_LEN, h / MODEL_ROOF, 1);
+    if (kind !== 'Cruiser') body3d.scale.set((w + 0.3) / MODEL_LEN, h / MODEL_ROOF, 1);
     body3d.position.y = bottom;
     car.add(body3d);
     car.position.x = x0 + w / 2;

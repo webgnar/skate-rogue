@@ -1,12 +1,14 @@
-# Builds Gnar Run's cars in Blender and exports public/models/cars.glb: a sedan (traffic and parked cars), the
-# robotaxi and the enforcer cruiser.
+# Builds Gnar Run's cars in Blender and exports public/models/cars.glb: a Prius-style hatchback (traffic and parked
+# cars), the robotaxi on the same body, and the enforcer cruiser, a Tahoe-style sheriff SUV (zack's references,
+# 2026-10-24).
 #
 #   blender -b -P art/cars.py            (or run it from Blender's Text Editor; it rebuilds the scene)
 #
 # Units are tiles (1 tile = 1 world unit). Blender +X is the front of the car, Y is across it (the game's depth),
-# Z is up from the street. Each car is one object with its origin on the street under its middle. The size matches
-# the physics hitbox in makeCar (src/render/kit.ts): 2.3 long, 1.6 wide, and the flat roof exactly 1.25 up, because
-# the skater lands on it. The game stretches a car to other hitbox sizes and swaps the `paint` material per car.
+# Z is up from the street. Each car is one object with its origin on the street under its middle. The hatchbacks
+# match the physics hitbox in makeCar (src/render/kit.ts): 2.3 long, 1.6 wide, and the top of the roof exactly 1.25
+# up, because the skater lands on it; the game stretches them to other hitbox sizes and swaps the `paint` material
+# per car. The cruiser only chases, so it is its real, bigger size.
 import math
 import os
 
@@ -19,14 +21,43 @@ ROOT = os.path.dirname(HERE)
 GLB = os.path.join(ROOT, 'public', 'models', 'cars.glb')
 BLEND = os.path.join(HERE, 'cars.blend')
 
-LEN = 2.3
-WIDE = 1.6
-ROOF = 1.25
-FRONT = LEN / 2
-WHEEL_R = 0.24
-WHEEL_X = 0.72
-BELT = 0.72  # where the windows start
-CABIN_W = 1.38
+# Prius-style hatchback: long raked windscreen into a roof that peaks over the front seats, a long slope down to the
+# kammback tail with its spoiler bar, and tall tail lamps
+PRIUS = {
+    'len': 2.3,
+    'wide': 1.6,
+    'cabin_w': 1.4,
+    'wheel_r': 0.24,
+    'wheel_x': 0.74,
+    'clear': 0.14,
+    'lower': [(1.12, 0.14), (1.165, 0.22), (1.17, 0.42), (1.1, 0.53), (0.6, 0.68), (-0.95, 0.86), (-1.13, 0.9),
+              (-1.165, 0.62), (-1.165, 0.22), (-1.12, 0.14)],
+    'cabin': [(0.6, 0.68), (-0.04, 1.25), (-0.36, 1.24), (-0.98, 0.95), (-0.95, 0.86)],
+    'pillars': [-0.27],
+    'seams': [0.42, -0.3],
+    'handles': [0.22, -0.48],
+    'mirror_x': 0.45,
+    'head': (1.06, 1.15, 0.46, 0.55, 0.45, 0.74),  # x0 x1 z0 z1 y0 y1
+    'tail': (-1.17, -1.12, 0.6, 0.88, 0.48, 0.74),
+}
+# Tahoe-style SUV: tall flat hood and grille, upright windscreen, long flat roof, square back, three side windows
+SUV = {
+    'len': 2.7,
+    'wide': 1.75,
+    'cabin_w': 1.6,
+    'wheel_r': 0.3,
+    'wheel_x': 0.86,
+    'clear': 0.2,
+    'lower': [(1.31, 0.2), (1.37, 0.3), (1.37, 0.86), (1.3, 0.95), (0.62, 0.99), (-1.32, 0.99), (-1.36, 0.95),
+              (-1.36, 0.3), (-1.31, 0.2)],
+    'cabin': [(0.62, 0.99), (0.33, 1.6), (-1.27, 1.62), (-1.33, 0.99)],
+    'pillars': [-0.2, -0.82],
+    'seams': [0.5, -0.22, -0.84],
+    'handles': [0.3, -0.42],
+    'mirror_x': 0.5,
+    'head': (1.3, 1.385, 0.72, 0.84, 0.5, 0.82),
+    'tail': (-1.375, -1.33, 0.95, 1.4, 0.68, 0.84),
+}
 
 COLORS = {
     'paint': 0xD94A4A,  # replaced per car in game
@@ -40,6 +71,8 @@ COLORS = {
     'black': 0x1C1C24,
     'sensor': 0x2E3440,
     'accent': 0x3FE0F0,
+    'badge': 0xD9A92E,  # sheriff gold
+    'darkrim': 0x2A2C33,
 }
 
 
@@ -88,21 +121,18 @@ def cyl(bm, r, depth, at, segs=14):
     bmesh.ops.translate(bm, verts=vs, vec=at)
 
 
-def lower_profile():
-    """Body below the windows, with the wheel arches cut out, front to back along the bottom."""
-    pts = [(FRONT - 0.04, 0.14), (FRONT + 0.01, 0.22), (FRONT + 0.01, 0.46), (FRONT - 0.06, 0.6), (0.42, BELT)]
-    pts += [(-0.98, BELT), (-FRONT + 0.03, BELT - 0.02), (-FRONT - 0.01, 0.5), (-FRONT - 0.01, 0.22), (-FRONT + 0.04, 0.14)]
-    arch = WHEEL_R + 0.06
-    for cx in (-WHEEL_X, WHEEL_X):  # back arch first, walking forward along the bottom
-        pts.append((cx - arch, 0.14))
+def lower_profile(spec):
+    """Body below the windows with the wheel arches cut out: the outline from the spec, then along the bottom."""
+    pts = list(spec['lower'][:-1])
+    r, wx, clear = spec['wheel_r'], spec['wheel_x'], spec['clear']
+    arch = r + 0.06
+    for cx in (-wx, wx):  # back arch first, walking forward along the bottom
+        pts.append((cx - arch, clear))
         for i in range(9):
             a = math.pi - i / 8 * math.pi
-            pts.append((cx + arch * math.cos(a), WHEEL_R + arch * math.sin(a) * 0.95))
-        pts.append((cx + arch, 0.14))
+            pts.append((cx + arch * math.cos(a), r + arch * math.sin(a) * 0.95))
+        pts.append((cx + arch, clear))
     return pts
-
-
-CABIN = [(0.42, BELT), (0.05, ROOF), (-0.62, ROOF), (-0.98, BELT)]
 
 
 def inset(pts, d):
@@ -112,71 +142,108 @@ def inset(pts, d):
 
 
 def car(name, mats, kind):
+    spec = SUV if kind == 'cruiser' else PRIUS
+    L, W, CW = spec['len'], spec['wide'], spec['cabin_w']
+    front, back = spec['lower'][2][0], spec['lower'][-3][0]
+    r, wx = spec['wheel_r'], spec['wheel_x']
+    belt = min(z for _, z in spec['cabin'])
+    roof = max(z for _, z in spec['cabin'])
     paint = mats['white'] if kind == 'robotaxi' else mats['black'] if kind == 'cruiser' else mats['paint']
     parts = []
 
     bm = bmesh.new()
-    prism(bm, lower_profile(), -WIDE / 2, WIDE / 2)
-    prism(bm, CABIN, -CABIN_W / 2, CABIN_W / 2)
-    box(bm, -0.24, -0.16, -CABIN_W / 2 - 0.012, CABIN_W / 2 + 0.012, BELT, ROOF - 0.02)  # B pillar
-    for y in (-1, 1):  # mirrors
-        box(bm, 0.3, 0.4, y * WIDE / 2, y * (WIDE / 2 + 0.1), BELT + 0.02, BELT + 0.1)
+    prism(bm, lower_profile(spec), -W / 2, W / 2)
+    prism(bm, spec['cabin'], -CW / 2, CW / 2)
+    for px in spec['pillars']:  # B and C pillars split the side glass
+        box(bm, px - 0.05, px + 0.05, -CW / 2 - 0.012, CW / 2 + 0.012, belt, roof - 0.03)
+    for y in (-1, 1):  # mirrors on little stalks
+        mx = spec['mirror_x']
+        box(bm, mx - 0.06, mx + 0.06, y * (W / 2), y * (W / 2 + 0.11), belt + 0.03, belt + 0.13)
     parts.append(link('body', bm, paint))
 
-    if kind == 'cruiser':  # white doors
-        bm = bmesh.new()
-        for y in (-1, 1):
-            box(bm, -0.42, 0.38, y * (WIDE / 2 - 0.004), y * (WIDE / 2 + 0.008), 0.2, BELT - 0.04)
-        parts.append(link('doors', bm, mats['white']))
-
-    bm = bmesh.new()  # windows: a dark band just proud of the cabin sides, plus windscreen and back glass
-    prism(bm, inset(CABIN, 0.08), -CABIN_W / 2 - 0.006, CABIN_W / 2 + 0.006)
+    bm = bmesh.new()  # the glasshouse: dark band just proud of the cabin sides, windscreen and back glass
+    prism(bm, inset(spec['cabin'], 0.07), -CW / 2 - 0.006, CW / 2 + 0.006)
     parts.append(link('glass', bm, mats['glass']))
 
-    bm = bmesh.new()  # bumpers, grille, door seams and handles
-    box(bm, FRONT - 0.02, FRONT + 0.05, -WIDE / 2 + 0.02, WIDE / 2 - 0.02, 0.14, 0.3)
-    box(bm, -FRONT - 0.05, -FRONT + 0.02, -WIDE / 2 + 0.02, WIDE / 2 - 0.02, 0.14, 0.3)
-    box(bm, FRONT, FRONT + 0.03, -0.35, 0.35, 0.34, 0.46)
+    bm = bmesh.new()  # bumpers, grille, door seams, handles
+    clear = spec['clear']
+    box(bm, front - 0.03, front + 0.04, -W / 2 + 0.02, W / 2 - 0.02, clear, clear + 0.16)
+    box(bm, back - 0.04, back + 0.03, -W / 2 + 0.02, W / 2 - 0.02, clear, clear + 0.16)
+    hz = spec['head']
+    if kind == 'cruiser':  # tall grille between the lamps
+        box(bm, front - 0.01, front + 0.02, -hz[4], hz[4], hz[2] - 0.2, hz[3] + 0.04)
+    else:  # Prius: a low intake under the nose
+        box(bm, front - 0.01, front + 0.02, -0.45, 0.45, 0.3, 0.4)
     for y in (-1, 1):
-        for sx in (0.4, -0.2):
-            box(bm, sx - 0.008, sx + 0.008, y * (WIDE / 2 - 0.002), y * (WIDE / 2 + 0.006), 0.22, BELT - 0.03)
-        for hx in (0.25, -0.35):
-            box(bm, hx - 0.06, hx, y * (WIDE / 2), y * (WIDE / 2 + 0.012), 0.58, 0.61)
-    if kind == 'cruiser':  # push bar
-        box(bm, FRONT + 0.05, FRONT + 0.12, -0.5, 0.5, 0.18, 0.5)
-        box(bm, FRONT + 0.05, FRONT + 0.12, -0.5, 0.5, 0.18, 0.24)
+        for sx in spec['seams']:
+            box(bm, sx - 0.008, sx + 0.008, y * (W / 2 - 0.002), y * (W / 2 + 0.006), clear + 0.1, belt - 0.03)
+        for hx in spec['handles']:
+            box(bm, hx - 0.07, hx, y * (W / 2), y * (W / 2 + 0.012), belt - 0.14, belt - 0.1)
+    if kind == 'cruiser':
+        # grille guard: two uprights and three cross bars out in front
+        gx = front + 0.1
+        for y in (-0.38, 0.38):
+            box(bm, gx - 0.03, gx + 0.03, y - 0.04, y + 0.04, 0.25, 0.95)
+        for z in (0.3, 0.62, 0.9):
+            box(bm, gx - 0.025, gx + 0.025, -0.5, 0.5, z - 0.03, z + 0.03)
+        for y in (-0.38, 0.38):
+            box(bm, front, gx, y - 0.03, y + 0.03, 0.4, 0.46)
+        # running boards
+        for y in (-1, 1):
+            box(bm, -wx + r + 0.08, wx - r - 0.08, y * (W / 2 - 0.05), y * (W / 2 + 0.07), clear + 0.04, clear + 0.08)
+    else:  # spoiler bar across the back glass
+        box(bm, -1.02, -0.9, -CW / 2, CW / 2, 0.93, 0.97)
     parts.append(link('trim', bm, mats['trim']))
 
     bm = bmesh.new()
     for y in (-1, 1):
-        box(bm, FRONT - 0.02, FRONT + 0.025, y * 0.5, y * 0.72, 0.4, 0.5)
+        box(bm, hz[0], hz[1], y * hz[4], y * hz[5], hz[2], hz[3])
     parts.append(link('lamp', bm, mats['lamp']))
     bm = bmesh.new()
+    tz = spec['tail']
     for y in (-1, 1):
-        box(bm, -FRONT - 0.025, -FRONT + 0.02, y * 0.5, y * 0.74, 0.42, 0.56)
+        box(bm, tz[0], tz[1], y * tz[4], y * tz[5], tz[2], tz[3])
     parts.append(link('tail', bm, mats['tail']))
 
     bm = bmesh.new()
-    for x in (-WHEEL_X, WHEEL_X):
+    for x in (-wx, wx):
         for y in (-1, 1):
-            cyl(bm, WHEEL_R, 0.22, (x, y * (WIDE / 2 - 0.1), WHEEL_R))
+            cyl(bm, r, 0.24, (x, y * (W / 2 - 0.11), r), segs=16)
     parts.append(link('tire', bm, mats['tire']))
-    bm = bmesh.new()
-    for x in (-WHEEL_X, WHEEL_X):
+    bm = bmesh.new()  # Prius aero wheel covers, the SUV's black rims
+    for x in (-wx, wx):
         for y in (-1, 1):
-            cyl(bm, 0.14, 0.02, (x, y * (WIDE / 2 + 0.012), WHEEL_R), segs=10)
-    parts.append(link('rim', bm, mats['rim']))
+            cyl(bm, r * 0.66, 0.02, (x, y * (W / 2 + 0.012), r), segs=12)
+    parts.append(link('rim', bm, mats['darkrim'] if kind == 'cruiser' else mats['rim']))
+
+    if kind == 'cruiser':
+        # gold swoosh along the doors, rising toward the back like the sheriff livery, and a star on the front door
+        bm = bmesh.new()
+        for y in (-1, 1):
+            yy = y * (W / 2 + 0.008)
+            band = [(0.55, 0.42), (0.55, 0.5), (-0.6, 0.62), (-1.22, 0.9), (-1.22, 0.78), (-0.6, 0.52)]
+            vs = [bm.verts.new((x, yy, z)) for x, z in band]
+            bm.faces.new(vs if y < 0 else vs[::-1])  # facing out of the side it's on
+            vs = bmesh.ops.create_circle(bm, cap_ends=True, segments=10, radius=0.085)['verts']
+            bmesh.ops.rotate(bm, verts=vs, cent=(0, 0, 0), matrix=Matrix.Rotation(y * -math.pi / 2, 3, 'X'))
+            bmesh.ops.translate(bm, verts=vs, vec=(0.3, y * (W / 2 + 0.01), belt - 0.25))
+        parts.append(link('badge', bm, mats['badge']))
+        # spotlight on the A pillar
+        bm = bmesh.new()
+        for y in (-1,):
+            box(bm, 0.52, 0.62, y * (CW / 2 + 0.02), y * (CW / 2 + 0.1), belt + 0.08, belt + 0.16)
+        parts.append(link('spot', bm, mats['trim']))
 
     if kind == 'robotaxi':  # lidar puck at the back of the roof, sensor pods on the fenders, a cyan light strip
         bm = bmesh.new()
-        vs = bmesh.ops.create_cone(bm, cap_ends=True, segments=12, radius1=0.13, radius2=0.11, depth=0.08)['verts']
-        bmesh.ops.translate(bm, verts=vs, vec=(-0.42, 0, ROOF + 0.04))
+        vs = bmesh.ops.create_cone(bm, cap_ends=True, segments=12, radius1=0.12, radius2=0.1, depth=0.07)['verts']
+        bmesh.ops.translate(bm, verts=vs, vec=(-0.5, 0, 1.22))
         for y in (-1, 1):
-            box(bm, 0.55, 0.68, y * (WIDE / 2 - 0.01), y * (WIDE / 2 + 0.04), 0.62, 0.72)
+            box(bm, 0.62, 0.74, y * (W / 2 - 0.01), y * (W / 2 + 0.04), 0.58, 0.68)
         parts.append(link('sensor', bm, mats['sensor']))
         bm = bmesh.new()
         for y in (-1, 1):
-            box(bm, -0.95, 0.4, y * (WIDE / 2), y * (WIDE / 2 + 0.008), 0.36, 0.39)
+            box(bm, -0.95, 0.5, y * (W / 2), y * (W / 2 + 0.008), 0.34, 0.37)
         parts.append(link('accent', bm, mats['accent']))
 
     bpy.ops.object.select_all(action='DESELECT')

@@ -7,8 +7,9 @@ visible models: traffic is the main hazard and the enforcer cruiser is the Heat 
 
 ## What Changes
 
-- `public/models/cars.glb` (`art/cars.py`): a sedan (traffic and parked cars, repainted per car), a white robotaxi
-  (lidar puck, fender sensors, cyan strip) and the black and white enforcer cruiser (push bar), each about 750 tris,
+- `public/models/cars.glb` (`art/cars.py`): a Prius-style hatchback (traffic and parked cars, repainted per car), a
+  white robotaxi on the same body (lidar puck, fender sensors, cyan strip) and the enforcer cruiser, a Tahoe-style
+  sheriff SUV (black, gold swoosh and star, grille guard), which only chases so it keeps its own bigger size, each about 750 tris,
   with wheel arches, windows, B pillar, mirrors, door seams, handles, bumpers, grille, lamps and rims.
 - Sized to the car hitbox: 2.3 long, 1.6 wide, the flat roof exactly at the hitbox roof so landing on it still
   lines up. `makeCar` stretches a model to other hitbox sizes and falls back to the box car if the GLB is missing.
