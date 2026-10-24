@@ -5,7 +5,7 @@ import { NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
-import { isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { ceilingAt, currentAt, isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
@@ -278,9 +278,12 @@ export class Skater {
       this.onRailT++;
       const frenzy = this.mods.feebleFrenzy ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
       const mat = MATERIALS[this.material];
-      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * this.gear.grind * mat.grindScale * frenzy, this.carry);
+      //a High-Tech conveyor rail runs you faster, or holds you back
+      const belt = this.surface?.conveyor ?? 0;
+      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * this.gear.grind * mat.grindScale * frenzy, this.carry) + belt;
       const accel = PHYS.grindAccel * mat.grindAccel;
-      this.hsp = Math.max(PHYS.grindMin, this.hsp < target ? Math.min(target, this.hsp + accel) : this.hsp);
+      const slowed = belt < 0 ? Math.max(target, this.hsp - accel) : this.hsp;
+      this.hsp = Math.max(PHYS.grindMin, this.hsp < target ? Math.min(target, this.hsp + accel) : slowed);
     }
 
     //vertical speed
@@ -301,6 +304,9 @@ export class Skater {
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
       if (this.trickCatch > 0) this.trickT++;
+      //Atlantis: a current pushes you forward or back while you're off the ground
+      const push = currentAt(this.level, this.x);
+      if (push) this.hsp = Math.max(1, this.hsp + push);
     } else {
       this.vsp = 0;
     }
@@ -309,6 +315,12 @@ export class Skater {
     const py = this.y;
     this.x += this.hsp;
     this.y += this.vsp;
+    //the Art Museum's low ceiling: you bump your head and come down
+    const ceiling = this.mode === 'air' ? ceilingAt(this.level, this.x) : undefined;
+    if (ceiling !== undefined && this.y < ceiling) {
+      this.y = ceiling;
+      this.vsp = Math.max(0, this.vsp);
+    }
 
     if (this.mode === 'roll' || this.mode === 'grind') {
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);

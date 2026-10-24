@@ -483,6 +483,10 @@ Biomes are QFS's worlds, a new one every 3 floors, each with its own gravity, 3D
 | 7 | Outer Space | 0.6 | Huge air; gaps sized for it |
 | 8+ | Mixed worlds | varies | QFS mixed skins at random, same seed = same floor |
 
+Built Oct 24, 2026 (src/gen/twists.ts): Clemente's rail weighting, Greece's curved rails, Atlantis currents (air
+only), the museum's low ceilings and High-Tech conveyor rails. Collapsing ruins and per-district hazards are still to
+come.
+
 ## Boons
 
 After every floor you pick 1 of 3. Cards keep QFS's layout: a coloured type label, a name, a big effect line, an

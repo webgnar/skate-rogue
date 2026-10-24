@@ -152,6 +152,17 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 - [ ] **Through the gate:** "YOU'RE READY. LET'S GO!" and the real run starts on floor 1 with score 0. Reload: it doesn't come back (`?tutorial` brings it back).
 - [ ] *Feel:* is it too long, too short, or missing a move you'd want taught (fakie, a car hop for Heat)?
 
+## District twists
+
+Each act's district now changes the street, not just the look. Quickest check: `?biome=atlantis&floor=4` (and `museum`, `hightech`, `clemente`, `greece`).
+
+- [ ] **Clemente Park (act 2):** more rail and ledge pieces than Chicago.
+- [ ] **Ancient Greece (act 3, some seeds):** curved rails (arches, downhill rails) come up a lot more.
+- [ ] **Atlantis (act 3, some seeds):** stretches of street with bubbles streaming one way and arrows on the ground. Jump in one and the water carries you further (arrows forward) or holds you back (arrows back). It only works in the air.
+- [ ] **Art Museum (act 3, some seeds):** a dark ceiling with a light strip over the street. A plain ollie fits under it; a flip bumps your head and you drop. Nothing to collect is ever above it.
+- [ ] **High-Tech City (act 4):** some flat rails have glowing chevrons. Cyan ones speed your grind up, orange ones slow it down.
+- [ ] *Feel:* are currents strong enough to notice but never unfair? Does the museum ceiling feel like a twist or just a limit?
+
 ## Sound, vibration and settings
 
 - [ ] **Sound starts on your first tap:** with the phone's sound on, the gameplay music (Lou Gnar's track) comes in, plus a quiet rolling sound from the wheels that gets louder as you speed up and stops in the air.
