@@ -188,7 +188,9 @@ export class Game {
     private readonly sprite: SkaterRig,
     private readonly input: OneButton,
     private readonly hud: Hud,
+    private readonly startAt = 1, // ?floor=: the first floor of every run, for testing
   ) {
+    this.floor = startAt;
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
     this.view.front.add(this.sprite.mesh);
@@ -223,7 +225,7 @@ export class Game {
 
   private newRun(): void {
     if (!this.fixedSeed) this.seed = Math.floor(Math.random() * 1e6);
-    this.floor = 1;
+    this.floor = this.startAt;
     this.boons = [];
     this.board = newBoard();
     this.gear = freshGear();
