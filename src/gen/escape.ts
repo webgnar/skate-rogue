@@ -15,6 +15,7 @@ import { clearable } from './validate';
 import { droneSpots } from '../sim/drones';
 import { placeProps } from './props';
 import { makeRng, randInt } from './rng';
+import type { BiomeId } from '../render/biomes';
 
 export const ACTS = 5;
 export const FLOORS_PER_ACT = 3;
@@ -29,6 +30,14 @@ export const ESCAPE = {
   actCash: (act: number) => 30 + 15 * act,
   actStoken: (act: number) => 3 * act,
 };
+
+// the district each act is in (GDD: Run structure 2): act 3 is Greece, Atlantis or the museum, by the run's seed
+const DISTRICTS: BiomeId[][] = [['chicago'], ['clemente'], ['greece', 'atlantis', 'museum'], ['hightech'], ['hive']];
+
+export function actBiome(seed: number, act: number): BiomeId {
+  const pool = DISTRICTS[Math.min(DISTRICTS.length, Math.max(1, act)) - 1];
+  return pool[randInt(makeRng(seed * 31 + act * 977), pool.length)];
+}
 
 export function actOf(floor: number): number {
   return Math.ceil(floor / FLOORS_PER_ACT);

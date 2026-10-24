@@ -44,6 +44,9 @@ export interface Mods {
   wobbles: boolean; // Speed Wobbles: landing this much over cruising speed slams
   rocketGrind: boolean;
   skyLine: boolean;
+  // the skater and deck (src/run/meta.ts)
+  airCool: number; // multiplier on Heat cooling while airborne (Keanu)
+  wearScale: number; // multiplier on gear wear (Bombhill deck)
 }
 
 export const NO_MODS: Mods = {
@@ -84,6 +87,8 @@ export const NO_MODS: Mods = {
   wobbles: false,
   rocketGrind: false,
   skyLine: false,
+  airCool: 1,
+  wearScale: 1,
 };
 
 export function skaterMods(boons: Held[]): Mods {
@@ -126,5 +131,7 @@ export function skaterMods(boons: Held[]): Mods {
     wobbles: s('speedWobbles') > 0,
     rocketGrind: s('rocketGrind') > 0,
     skyLine: s('skyLine') > 0,
+    airCool: 1,
+    wearScale: 1,
   };
 }

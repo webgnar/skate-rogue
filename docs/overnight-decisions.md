@@ -287,6 +287,20 @@ and listed it here for review. Any of these can be flipped in the morning.
   does. A heavy landing (a big drop, landed) adds 100 "BIG DROP" style, and pays even with no tricks. An ollie
   popped right at the lip adds 30 style and counts in the combo.
 
+- **Meta progression (PR: unlocks between runs).** The unlock tree is one screen off the run-over screen, four
+  columns: skaters, decks, boon library, spots. Prices are 15 to 60 Stoken (465 for everything), a first guess.
+  A new phone draws from POP and GRIND only (the GDD's 12 starting boons); FLOW, COOL, STREET and LUCK are packs,
+  and curses and duos are their own unlocks. Road signs only lead to types you own. Skater passives are the GDD's
+  drafts. Decks are trades, never straight upgrades: Cruiser (+10% speed, -5% ollie), Bombhill (+15% speed, gear
+  wears 30% faster), Slab (4 slots, -8% ollie). Changing skater or deck reloads the page, since the skater's model
+  loads at start. The daily run is a 20 Stoken unlock with its own best score; leaderboards come later. Left for
+  later: biomes as starting points and the harder "gnar mode" spot (the name clashes with the stoke meter's GNAR
+  MODE, so it needs another name, maybe "Gnar levels" from the GDD's win unlocks). `?unlockall` opens everything
+  for testing.
+
+- **Each act gets its own district.** Act 1 Chicago, act 2 Clemente Park (Los Angeles has no kit), act 3 Greece,
+  Atlantis or the museum by the run's seed, act 4 High-Tech City, act 5 the Hive. Space is unused for now.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

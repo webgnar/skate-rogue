@@ -13,6 +13,9 @@ import { FX, initFx } from './render/fx-settings';
 import { isBiome } from './render/biomes';
 import { props } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
+import { dailySeed, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
+import { loadSave } from './run/save';
+import { MetaScreen } from './ui/meta-screen';
 import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
 
@@ -272,6 +275,9 @@ function makeHud(): Hud {
         : `You made it to act ${result.act}, floor ${result.floor}`;
       overEl.querySelector('.final')!.textContent = `${result.score.toLocaleString()}${result.newBest ? ' · NEW BEST' : ''}`;
       overEl.querySelector('.best')!.textContent = `best ${result.best.toLocaleString()} · ◆ ${result.stoken} Stoken this run (${result.bank} banked)`;
+      overEl.querySelector('.best')!.textContent += result.daily
+        ? ` · today's daily best ${result.daily.best.toLocaleString()}${result.daily.newBest ? ' (NEW)' : ''}`
+        : '';
       overEl.querySelector('.held')!.innerHTML = result.boons.length ? result.boons.map(chip).join('') : '<span class="none">no boons</span>';
     },
   };
@@ -283,17 +289,26 @@ async function start() {
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   document.getElementById('app')!.classList.toggle('noflash', FX.reduceFlashing);
   document.getElementById('app')!.classList.toggle('calm', FX.reduceMotion);
-  const fixedSeed = Number(params.get('seed')) || 0;
+  //the meta tree: what's unlocked, and the skater and deck you ride (?unlockall opens everything for testing)
+  const save = loadSave();
+  const all = params.has('unlockall');
+  const owns = (id: UnlockId) => all || has(save.unlocked, id);
+  const daily = params.has('daily') && owns('daily');
+  const fixedSeed = daily ? dailySeed() : Number(params.get('seed')) || 0;
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 
   await Promise.all([loadCityTiles(`${base}tex/chicago_tiles.png`), loadModels(base)]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await view.loadBackdrop(base);
-  //?skater=webster (keanu, roxy, goldie) until the deck shop unlocks them
-  const skater = params.get('skater');
-  const sprite = await SkaterRig.create(base, isSkater(skater) ? skater : undefined);
+  //?skater=webster (keanu, roxy, goldie) rides one without unlocking it
+  const urlSkater = params.get('skater');
+  const skater = isSkater(urlSkater) ? urlSkater : owns(save.skater) ? save.skater : 'lou-gnar';
+  const deck = owns(save.deck) ? save.deck : 'popsicle';
+  const sprite = await SkaterRig.create(base, skater);
   const input = new OneButton(document.getElementById('app')!);
-  const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud(), Math.max(1, Math.floor(Number(params.get('floor')) || 1)));
+  const startAt = Math.max(1, Math.floor(Number(params.get('floor')) || 1));
+  const library = all ? FULL_LIBRARY : libraryOf(save.unlocked);
+  const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud(), startAt, { loadout: { skater, deck }, library, daily });
   //?debug exposes the game for headless checks
   if (params.has('debug')) Object.assign(window, { game, props });
   const biome = params.get('biome');
@@ -309,6 +324,27 @@ async function start() {
     });
   };
   tapOnly('pausebtn', () => game.setPaused(true));
+  //between runs: the unlock tree, and the daily run once it's unlocked. A change reloads into the new setup.
+  const reloadWith = (key: string, on: boolean) => {
+    const q = new URLSearchParams(location.search);
+    if (on) q.set(key, '');
+    else q.delete(key);
+    location.search = q.toString().replace(/=(&|$)/g, '$1');
+  };
+  const metaScreen = new MetaScreen(document.getElementById('meta')!, all, (changed) => {
+    //the new skater or deck is picked up from the save, so a ?skater= in the link would only override it
+    if (changed) reloadWith('skater', false);
+  });
+  const dailyBtn = document.querySelector<HTMLElement>('#over [data-daily]')!;
+  dailyBtn.hidden = !owns('daily') && !daily;
+  dailyBtn.textContent = daily ? 'NORMAL RUN' : 'DAILY RUN';
+  document.querySelector('#over .metarow')!.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const t = e.target instanceof Element ? e.target : null;
+    if (t?.closest('[data-open-meta]')) metaScreen.open();
+    else if (t?.closest('[data-daily]')) reloadWith('daily', !daily);
+  });
   tapOnly('resume', () => game.setPaused(false));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) game.setPaused(true);
@@ -321,7 +357,7 @@ async function start() {
   const resize = () => view.resize();
   window.addEventListener('resize', resize);
   resize();
-  document.getElementById('seed')!.textContent = `seed ${seed}`;
+  document.getElementById('seed')!.textContent = daily ? `daily · seed ${seed}` : `seed ${seed}`;
   document.querySelector('#paused .seed')!.textContent = `seed ${seed}`;
   document.getElementById('app')!.classList.toggle('debug', params.has('debug'));
   document.getElementById('loading')!.remove();

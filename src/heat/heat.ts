@@ -23,6 +23,7 @@ export interface HeatMods {
   hopCool: number; // extra Heat off per car hop (Siren Song)
   decoy: boolean;
   slow: number; // multiplier on Heat from skating slow (Ghost Mode)
+  airCool?: number; // multiplier on cooling while airborne (Keanu)
 }
 
 export const NO_HEAT_MODS: HeatMods = { rise: 1, hopCool: 0, decoy: false, slow: 1 };
@@ -54,6 +55,7 @@ export class Heat {
     if (sk.mode === 'roll' && sk.hsp < PHYS.baseSpeed - 0.01) d += (HEAT.slowPerSec / 60) * this.mods.slow;
     if (sk.mode === 'grind' || sk.mode === 'rail') d += HEAT.grindPerSec / 60;
     if (this.sinceSlam >= HEAT.cleanAfter) d += HEAT.cleanPerSec / 60;
+    if (d < 0 && sk.mode === 'air') d *= this.mods.airCool ?? 1;
     this.sinceSlam++;
     if (this.holdT > 0) this.holdT--;
     this.add(d);
