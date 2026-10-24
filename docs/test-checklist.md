@@ -124,6 +124,9 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 
 **Slopes and banks**
 
+- [ ] **Lining up in the air.** Drop off a roof onto a bank that falls away: on the way down the board tips nose-down
+      to the bank's angle and lands flush, with no snap on touchdown. Fly at an up bank: the nose comes up to meet it.
+      Over flat ground or way up high, the board stays level. Ollie onto a stair handrail: the board lines up with the rail.
 - [ ] **Bug fix (PR after #69): flying into a bank.** Ollie or fall toward an up bank low, so you meet its face
       rather than dropping onto it from above. You should land on the bank and ride up it. Before the fix you passed through
       and fell to your death. It was broken on the old build too.
