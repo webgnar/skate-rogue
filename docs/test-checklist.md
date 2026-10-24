@@ -514,6 +514,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] On a parked car's roof, Lou never boardslides; he does the other grinds.
 - [ ] FS boardslide: board across the rail, Lou's back facing the way he slides, looking back over his shoulder.
 - [ ] Knees always bend toward the camera when Lou lands, squashes or rides a slope; never backward or sideways.
+- [ ] Pedestrians are mostly Chicago, with a mix of other worlds' looks: laurels, space helmets, techwear, sea colours.
 
 ## Performance
 

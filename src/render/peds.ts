@@ -78,6 +78,8 @@ const DRESS: Partial<Record<BiomeId, Dress>> = {
   },
 };
 
+const MIXED = Object.values(DRESS);
+
 // bones, by index
 const ROOT = 0;
 const HIPS = 1;
@@ -107,7 +109,8 @@ const pick = <T>(rng: Rng, list: T[]): T => list[randInt(rng, list.length)];
 
 // one person's parts, recoloured from their palette, merged and skinned to a fresh skeleton
 function makePerson(rng: Rng, biome: BiomeId): { mesh: THREE.SkinnedMesh; bones: THREE.Bone[] } | null {
-  const dress = DRESS[biome] ?? {};
+  // the city mixes every world into one (zack): most people dress for Chicago, about a third come from the others
+  const dress = DRESS[biome] ?? (rng() < 0.35 ? pick(rng, MIXED) : {});
   const skin = pick(rng, dress.skin ?? SKIN);
   const palette: Record<string, number> = {
     pedTop: pick(rng, dress.tops ?? TOPS),
