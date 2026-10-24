@@ -457,11 +457,58 @@ def box_truck(mats):
     return join(parts, 'BoxTruck')
 
 
+def car_door(mats):
+    """A parked car's driver door, swung open into the bike lane (src/traffic/street.ts CarDoor). Origin at the
+    hinge, on the ground: the door runs back from the hinge to -X, the window's front edge raked like the cars'."""
+    W, T = 0.95, 0.035
+    parts = []
+    bm = bmesh.new()
+    prism(bm, [(-W, 0.28), (0, 0.28), (0, 0.83), (-W, 0.83)], -T, T)  # the skin, in the car's paint
+    box(bm, -W, -W + 0.06, -T, T, 0.83, 1.17)  # the window frame: back post, top rail, front rake
+    box(bm, -W, -0.32, -T, T, 1.13, 1.19)
+    prism(bm, [(-0.32, 1.13), (-0.27, 1.19), (0.0, 0.83), (-0.06, 0.83)], -T, T)
+    parts.append(link('paint', bm, mats['paint']))
+    bm = bmesh.new()
+    prism(bm, [(-W + 0.06, 0.83), (-0.06, 0.83), (-0.3, 1.13), (-W + 0.06, 1.13)], -T * 0.6, T * 0.6)
+    parts.append(link('glass', bm, mats['glass']))
+    bm = bmesh.new()  # the inside: the trim panel and the armrest, and the mirror at the hinge
+    box(bm, -W + 0.04, -0.04, T, T + 0.03, 0.32, 0.8)
+    box(bm, -0.75, -0.2, T + 0.03, T + 0.1, 0.6, 0.66)
+    box(bm, -0.02, 0.1, -T - 0.12, -T, 0.86, 0.98)
+    parts.append(link('trim', bm, mats['trim']))
+    bm = bmesh.new()  # the handle, outside, near the back edge
+    box(bm, -W + 0.1, -W + 0.26, -T - 0.025, -T, 0.7, 0.74)
+    parts.append(link('rim', bm, mats['rim']))
+    return join(parts, 'CarDoor')
+
+
+def bus_stop(mats):
+    """A CTA bus stop sign: a blue sign with the white band on a grey pole, the route plate under it. Origin at the
+    foot of the pole."""
+    parts = []
+    bm = bmesh.new()
+    box(bm, -0.08, 0.08, -0.08, 0.08, 0, 0.04)  # base plate
+    vs = bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=0.035, radius2=0.035, depth=2.75)['verts']
+    bmesh.ops.translate(bm, verts=vs, vec=(0, 0, 1.375))
+    parts.append(link('frame', bm, mats['frame']))
+    bm = bmesh.new()
+    box(bm, -0.28, 0.28, -0.07, -0.03, 2.0, 2.7)  # the sign, on the camera side of the pole
+    parts.append(link('ctaBlue', bm, mats['ctaBlue']))
+    bm = bmesh.new()
+    box(bm, -0.23, 0.23, -0.075, -0.025, 2.33, 2.5)  # the white band
+    box(bm, -0.12, 0.12, -0.075, -0.025, 2.1, 2.24)  # the bus symbol's box
+    parts.append(link('busWhite', bm, mats['busWhite']))
+    bm = bmesh.new()
+    box(bm, -0.2, 0.2, -0.065, -0.03, 1.72, 1.92)  # the route plate
+    parts.append(link('ctaRed', bm, mats['ctaRed']))
+    return join(parts, 'BusStop')
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     mats = {k: material(k, v) for k, v in COLORS.items()}
     cars = [car('Sedan', mats, 'sedan'), car('Robotaxi', mats, 'robotaxi'), car('Cruiser', mats, 'cruiser'),
-            bus(mats), box_truck(mats)]
+            bus(mats), box_truck(mats), car_door(mats), bus_stop(mats)]
     for i, ob in enumerate(cars):  # side by side in the file; the game reads each from its origin
         ob.location.y = i * 2.5
     return cars

@@ -6,7 +6,7 @@ import type { Traffic, Vehicle, VehicleKind } from '../traffic/traffic';
 import { TRAFFIC } from '../traffic/traffic';
 import { CROSS, type CrossCar } from '../traffic/cross';
 import { STOP, type CarDoor } from '../traffic/street';
-import { makeBus, makeCar, makeTruck, toX, toY } from './kit';
+import { makeBus, makeCar, makeTruck, parkedPaint, toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 import { headlights } from './night';
@@ -227,6 +227,21 @@ export class TrafficView {
   private makeStopSign(level: Level, x: number): THREE.Group {
     const street = toY(level, level.streetY);
     const g = new THREE.Group();
+    //the Blender sign (art/cars.py) and the street bench (art/props.py)
+    const sign3d = model('BusStop');
+    const bench3d = model('Bench');
+    if (sign3d && bench3d) {
+      bench3d.position.set(-1.4, 0, -0.1);
+      g.add(sign3d, bench3d);
+    } else this.stopSignPrims(g);
+    inkify(g);
+    //at the bus's front end, back of the sidewalk
+    g.position.set(toX(x + STOP.busW) + 0.4, street, -2.0);
+    this.group.add(g);
+    return g;
+  }
+
+  private stopSignPrims(g: THREE.Group): void {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.6, 6), new THREE.MeshLambertMaterial({ color: 0x8a8f99 }));
     pole.position.y = 1.3;
     const sign = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.05), new THREE.MeshLambertMaterial({ color: 0x1f5fbf, emissive: 0x0a1f40 }));
@@ -238,26 +253,28 @@ export class TrafficView {
     const bench = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 0.4), new THREE.MeshLambertMaterial({ color: 0x5a3a26 }));
     bench.position.set(-1.2, 0.45, -0.1);
     g.add(pole, sign, band, bench);
-    inkify(g);
-    //at the bus's front end, back of the sidewalk
-    g.position.set(toX(x + STOP.busW) + 0.4, street, -2.0);
-    this.group.add(g);
-    return g;
   }
 
   private makeDoor(level: Level, d: CarDoor): THREE.Group {
     const g = new THREE.Group();
+    //the Blender door (art/cars.py), hinged at its origin, in its car's paint
+    const door3d = model('CarDoor', parkedPaint(level, level.cars.indexOf(d.car)));
+    if (door3d) g.add(door3d);
+    else this.doorPrims(g);
+    inkify(g);
+    g.position.set(toX(d.car.x0) + 0.05, toY(level, d.car.bottom), 0.9);
+    g.visible = false;
+    this.group.add(g);
+    return g;
+  }
+
+  private doorPrims(g: THREE.Group): void {
     const w = 0.95;
     const panel = new THREE.Mesh(new THREE.BoxGeometry(w, 0.55, 0.07), new THREE.MeshLambertMaterial({ color: 0x3a4250 }));
     panel.position.set(-w / 2, 0.55, 0);
     const glass = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.35, 0.06), new THREE.MeshLambertMaterial({ color: 0x9fc3d8, emissive: 0x203040 }));
     glass.position.set(-w / 2 + 0.05, 1.0, 0);
     g.add(panel, glass);
-    inkify(g);
-    g.position.set(toX(d.car.x0) + 0.05, toY(level, d.car.bottom), 0.9);
-    g.visible = false;
-    this.group.add(g);
-    return g;
   }
 
   // heat 0..100; hold: don't creep closer during a remount; caught: pull level with the skater
