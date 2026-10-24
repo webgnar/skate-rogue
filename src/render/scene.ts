@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { Level } from '../physics/level';
 import { LouZoom, viewHeight } from './camera';
 import { buildKit, toX, toY } from './kit';
+import { NightCity } from './night';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution } from './toon';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
@@ -15,6 +16,7 @@ export class StreetView {
   readonly front = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
+  readonly night = new NightCity();
   private skyline: THREE.Mesh | null = null;
   private readonly hemis: THREE.HemisphereLight[] = [];
   private readonly suns: THREE.DirectionalLight[] = [];
@@ -56,7 +58,7 @@ export class StreetView {
       this.hemis.push(hemi);
       this.suns.push(sun);
     }
-    this.scene.add(this.sky, this.puddles.mesh);
+    this.scene.add(this.sky, this.puddles.mesh, this.night.group);
     this.front.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
@@ -107,11 +109,13 @@ export class StreetView {
     }
     this.rain.amount = rain;
     this.puddles.setSky(m.skyTop, m.skyBottom, m.neon);
+    this.night.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
     this.flash = 99;
   }
 
-  setLevel(level: Level): void {
+  // seed and floor place the night city's lamps, cameras and billboards
+  setLevel(level: Level, seed = 0, floor = 1): void {
     this.level = level;
     if (this.kit) {
       this.scene.remove(this.kit);
@@ -129,6 +133,7 @@ export class StreetView {
     this.kit = buildKit(level);
     inkify(this.kit);
     this.scene.add(this.kit);
+    this.night.build(level, this.kit, seed, floor);
   }
 
   // lock the camera on the skater's feet at (px, py), zoomed for what they're doing; dt in seconds

@@ -7,6 +7,7 @@ import { TRAFFIC } from '../traffic/traffic';
 import { makeCar, toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
+import { headlights } from './night';
 import { HeatLights } from './heat-light';
 
 const PAINTS = { robotaxi: [0xf2f2f6, 0xd8dce6], oncoming: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a] };
@@ -100,6 +101,9 @@ export class TrafficView {
         mesh = makeCar(0, toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[v.id % paints.length], v.kind === 'robotaxi' ? 'Robotaxi' : 'Sedan');
         if (v.speed < 0) mesh.rotation.y = Math.PI; // oncoming: headlights toward the skater
         inkify(mesh);
+        const beams = headlights(toX(v.x1 - v.x0));
+        beams.position.y = toY(level, v.bottom);
+        mesh.add(beams);
         this.meshes.set(v.id, mesh);
         this.group.add(mesh);
       }

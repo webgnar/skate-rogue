@@ -104,7 +104,7 @@ export function buildKit(level: Level): THREE.Group {
     const w = 4 + randInt(rng, 5);
     const h = 5 + randInt(rng, 9);
     const t = CITY.facade[randInt(rng, CITY.facade.length)];
-    const b = slab(w, h, 4, lambert(tileTexture(facade(w, h, t)), 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
+    const b = slab(w, h, 4, facadeMat(w, h, t, 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
     b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - randInt(rng, 3));
     kit.add(b);
     bx += w + randInt(rng, 2);
@@ -130,7 +130,7 @@ export function buildKit(level: Level): THREE.Group {
         continue;
       }
       const t = CITY.facade[randInt(rng, CITY.facade.length)];
-      const b = slab(w, y, BLOCK_DEPTH, lambert(tileTexture(facade(Math.round(w), Math.ceil(y), t))), lambert(null, 0x6a6478), sideMat);
+      const b = slab(w, y, BLOCK_DEPTH, facadeMat(Math.round(w), Math.ceil(y), t), lambert(null, 0x6a6478), sideMat);
       b.position.set(x, y / 2, BLOCK_Z);
       kit.add(b);
     } else if (s.kind === 'overpass') {
@@ -310,6 +310,13 @@ export function buildKit(level: Level): THREE.Group {
 }
 
 // a building front: facade tiles with QFS's roof-line cap drawn over the top row
+// a building front; userData.facade lets the night pass (night.ts) light its windows
+function facadeMat(w: number, h: number, t: number, color = 0xffffff): THREE.MeshLambertMaterial {
+  const m = lambert(tileTexture(facade(w, h, t)), color);
+  m.userData.facade = { w, h, t };
+  return m;
+}
+
 function facade(w: number, h: number, t: number): TileCell[][] {
   const grid: TileCell[][] = [];
   for (let r = 0; r < h; r++) grid.push(new Array(w).fill(t));

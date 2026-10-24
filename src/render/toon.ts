@@ -41,6 +41,7 @@ function toToon(m: THREE.Material): THREE.Material {
     fog: m.fog,
   });
   t.name = m.name;
+  t.userData = { ...m.userData };
   return t;
 }
 

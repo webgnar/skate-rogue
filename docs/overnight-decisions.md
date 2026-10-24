@@ -16,6 +16,20 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Deferred:** the wet toon look (glinting ledge tops), drips off ledges and splashes on the helmet. They need a
   shader patch to every toon material. Left for after the night city work, and still listed in fx6's tasks.
 
+## Effects thread: fx7 night city
+
+- **Lit windows come from the facade tiles themselves.** Each QFS window tile gets a seeded mask; about 42% of
+  window cells light, in warm lamp tones with the odd blue TV. They glow with the mood's neon level, so they fade in
+  at golden hour and are full at night. One emissive map per facade, no extra draws.
+- **Street lamps every 8 tiles on the sidewalk and every 7 on wide roofs.** The cone and the ground pool are additive
+  fakes (no real lights), instanced: four draws for every lamp on the floor.
+- **Every third lamp carries a Flock camera** with a red eye that turns to follow Lou when he is within 10 tiles.
+  This is the "surveillance city" from the GDD, purely visual.
+- **Three AI billboards a floor**, with slogans like "COMPLIANCE IS FREEDOM" and "REPORT ALL SKATERS". They turn
+  slightly toward Lou and brighten and pulse with Heat (a slow pulse, not a strobe).
+- **Car headlights** are an additive cone and pool on each car, shown from dusk. Oncoming cars light the road ahead of
+  Lou, which telegraphs them at night. Brake light trails, neon signs and a visor highlight on Lou are left for later.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor

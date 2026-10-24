@@ -200,7 +200,7 @@ export class Game {
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
-    this.view.setLevel(this.level);
+    this.view.setLevel(this.level, this.seed, this.floor);
     //the run's clock: afternoon into neon night, rain on some floors
     const rain = rainLevel(this.seed, this.floor);
     const mood = moodAt(clockFor(this.floor));
@@ -461,6 +461,7 @@ export class Game {
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000);
     this.hud.heat(heat);
+    this.view.night.update(dt, this.skater.x / TILE, heat);
     this.hud.warn(
       this.state === 'skate' &&
         this.sim.traffic.inLane.some((v) => v.speed < 0 && v.x0 - this.skater.x > 17 * TILE),
