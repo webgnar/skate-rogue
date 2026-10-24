@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#2a1d4a" />
+    <title>Gnar Run</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud">
+        <div id="floor">FLOOR 1</div>
+        <div id="callout"></div>
+        <div id="hint">TAP / HOLD = OLLIE &middot; TAP IN THE AIR = FLIP</div>
+        <div id="boons"></div>
+        <div id="warn" hidden>&#9664;</div>
+        <div id="debug"></div>
+        <div id="seed"></div>
+        <div id="rotate">Turn your phone sideways</div>
+      </div>
+      <div id="pick" hidden>
+        <div class="title">PICK A BOON</div>
+        <div class="cards"></div>
+      </div>
+      <div id="over" hidden>
+        <b>BAILED</b>
+        <span class="reached"></span>
+        <div class="held"></div>
+        <span class="again">tap for a new run</span>
+      </div>
+      <div id="loading">Loading the streets…</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
