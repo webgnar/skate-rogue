@@ -475,6 +475,7 @@ export class Game {
 
     //traffic, the cruiser and the warnings
     this.trafficView.sync(this.level, this.sim.traffic.vehicles);
+    this.trafficView.syncCross(this.level, this.sim.traffic.cross);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, this.skater.y);
     this.hud.heat(heat);
