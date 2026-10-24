@@ -648,6 +648,11 @@ x and y and the z axis is only for looks.
   plus thick black outlines drawn per mesh (no full-screen pass), matching the comic slam burst and cheap on phones.
 - **Skater:** one rigged human model (Lou Gnar first) whose animations are built from Lou Gnar's sprite frames
   (see Art pipeline). Flip tricks spin the board as a separate object, so new tricks are mostly code.
+- **Hair and t-shirt physics (planned, later; zack, Oct 24, 2026):** the skater will show hair and a t-shirt,
+  not only the astronaut suit (helmet off, or other skaters' outfits), and both get secondary motion: hair and
+  shirt hem trail back with speed, lift on an ollie, flop down on a landing, whip on a slam and ripple at flow
+  speed. Cheap on phones: a few spring bones (a short chain per lock of hair, a few on the shirt hem) stepped
+  with the sim, not cloth simulation. Not built yet; the models thread owns it when it's picked up.
 - **Traffic:** low-poly cars, buses, trucks and enforcer cruisers with working headlights, brake lights and
   indicators, plus drones and pigeons. Rank colours become paint jobs and an emissive outline (QFS's rank outline).
 - **Juice:** squash and stretch on the model, landing dust and grind sparks as GPU particles, trick name text,
