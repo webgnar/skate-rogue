@@ -2,7 +2,10 @@
 // wheels) as rigid low-poly parts on a joint hierarchy, posed from the clips in poses.ts. The legs are solved with
 // IK to the feet, and the feet ride the board, so the deck's pop, flip and spin come from where the feet are.
 // Same interface as the sprite it replaces: play, onEvent, update and a mesh to place.
+// When the Blender model (public/models/lou-gnar.glb, built by art/lou_gnar.py) loads, the parts are hidden and
+// become drivers: each frame the model's bones copy the joints, so the clips pose the skinned suit the same way.
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { toon } from './toon';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
@@ -42,6 +45,7 @@ const COLORS = {
 const GRINDS = new Set(Object.keys(GRIND_NAMES));
 const ON_GROUND = new Set(['push', 'ride', ...GRINDS]); // clips that make no sense in the air
 const DOWN = new THREE.Vector3(0, -1, 0);
+const BASE_HIP_Y = 0.9; // pelvis height in the model's bind pose
 
 export class SkaterRig {
   readonly mesh = new THREE.Group();
@@ -78,7 +82,10 @@ export class SkaterRig {
   private rideT = 0;
   private ledgeGrinds = 0;
 
-  constructor() {
+  // skinned model bones and the joints they follow
+  private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
+
+  constructor(model?: THREE.Object3D) {
     const m = this.mesh;
     m.scale.setScalar(SCALE);
     m.position.z = 0.25;
@@ -170,11 +177,102 @@ export class SkaterRig {
       return g;
     };
     this.feet = [shoe(), shoe()];
+    if (model) this.bind(model);
     this.applyPose(BASE);
   }
 
-  static async create(_base: string): Promise<SkaterRig> {
-    return new SkaterRig();
+  static async create(base: string): Promise<SkaterRig> {
+    try {
+      const gltf = await new GLTFLoader().loadAsync(`${base}models/lou-gnar.glb`);
+      return new SkaterRig(gltf.scene);
+    } catch (err) {
+      console.warn('skater model failed to load, using the built-in body', err);
+      return new SkaterRig();
+    }
+  }
+
+  // Hide the built-in body and hang the model's bones off its joints. Both are in the bind pose here: every joint
+  // at zero, legs and arms straight down (see openspec/changes/m6-skinned-skater/design.md).
+  private bind(model: THREE.Object3D): void {
+    const drivers: Record<string, THREE.Object3D> = {
+      Hips: this.pelvis,
+      Spine: this.spine,
+      Spine1: this.spine,
+      Neck: this.spine,
+      Head: this.head,
+    };
+    (['Left', 'Right'] as const).forEach((side, i) => {
+      drivers[`${side}Arm`] = this.shoulders[i];
+      drivers[`${side}ForeArm`] = drivers[`${side}Hand`] = this.elbows[i];
+      drivers[`${side}UpLeg`] = this.thighs[i];
+      drivers[`${side}Leg`] = this.shins[i];
+      drivers[`${side}Foot`] = drivers[`${side}ToeBase`] = this.feet[i];
+    });
+    for (const child of this.mesh.children) {
+      if (child === this.boardRoot) continue;
+      child.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) o.visible = false;
+      });
+    }
+
+    // drivers in the bind pose
+    this.pelvis.position.set(0, BASE_HIP_Y, 0);
+    this.pelvis.rotation.set(0, 0, 0);
+    this.spine.rotation.set(0, 0, 0);
+    this.head.rotation.set(0, 0, 0);
+    for (const i of [0, 1]) {
+      const hip = this.hips[i].position.clone().add(this.pelvis.position);
+      this.shoulders[i].rotation.set(0, 0, 0);
+      this.elbows[i].rotation.set(0, 0, 0);
+      this.thighs[i].position.copy(hip);
+      this.thighs[i].quaternion.identity();
+      this.shins[i].position.set(hip.x, hip.y - THIGH, hip.z);
+      this.shins[i].quaternion.identity();
+      this.feet[i].position.set(hip.x, hip.y - THIGH - SHIN - ANKLE, 0.05);
+      this.feet[i].rotation.set(0, 0, 0);
+    }
+    this.mesh.add(model);
+    this.mesh.updateMatrixWorld(true);
+    const toRig = this.mesh.matrixWorld.clone().invert();
+    model.traverse((o) => {
+      const bone = o as THREE.Bone;
+      if (bone.isBone && drivers[bone.name]) {
+        const driver = drivers[bone.name];
+        const d = toRig.clone().multiply(driver.matrixWorld);
+        const b = toRig.clone().multiply(bone.matrixWorld);
+        this.bound.push({ bone, driver, offset: d.invert().multiply(b), local: new THREE.Matrix4() });
+      }
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.frustumCulled = false; // the bind-pose bounds don't follow flips and slams
+      const swap = (src: THREE.Material) => {
+        const std = src as THREE.MeshStandardMaterial;
+        if (std.name === 'visor') {
+          return new THREE.MeshPhongMaterial({ color: COLORS.visor, shininess: 90, specular: 0x8899ff, flatShading: true });
+        }
+        const mat = this.lambert(std.color.getHex());
+        mat.map = std.map;
+        return mat;
+      };
+      mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
+    });
+  }
+
+  // bones copy their joints: world = joint · offset, then back into each bone's parent space
+  private followJoints(): void {
+    if (!this.bound.length) return;
+    this.mesh.updateMatrixWorld(true);
+    const toRig = this.mesh.matrixWorld.clone().invert();
+    const parentInv = new THREE.Matrix4();
+    const placed = new Map<THREE.Object3D, THREE.Matrix4>();
+    for (const b of this.bound) {
+      const target = b.local.copy(toRig).multiply(b.driver.matrixWorld).multiply(b.offset);
+      const parent = b.bone.parent!;
+      const parentRig = placed.get(parent) ?? toRig.clone().multiply(parent.matrixWorld);
+      placed.set(b.bone, target.clone());
+      parentInv.copy(parentRig).invert();
+      parentInv.multiply(target).decompose(b.bone.position, b.bone.quaternion, b.bone.scale);
+    }
   }
 
   // deck with kicked nose and tail, trucks and wheels. The deck's top surface is at y = 0 of boardSpin.
@@ -348,6 +446,7 @@ export class SkaterRig {
       place(this.thighs[i], hip, k);
       place(this.shins[i], k, ankle);
     }
+    this.followJoints();
   }
 }
 

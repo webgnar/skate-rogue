@@ -597,6 +597,11 @@ Workflow in Blender:
 5. The board is its own object with its own clips (pop, flip spin, catch), so tricks can mix body and board clips.
 6. Export one GLB with all clips (Draco-compressed), checked against the sprite in a side-by-side preview page.
 
+Decided Oct 24, 2026 (zack): the model is built in Blender (`art/lou_gnar.py`, exported to
+`public/models/lou-gnar.glb`) and, for now, its bones follow the code clips in `src/render/poses.ts`, so the tuned
+trick mechanics carry over. Moves that benefit from hand keying (idle, slams, new tricks) get Blender clips later
+and are mixed in.
+
 The 3D clips then line up with the existing game logic: the same states (push, ollie, trick, grind, impact,
 freefall) pick the same clips Lou Gnar's `player.ts` picks today.
 

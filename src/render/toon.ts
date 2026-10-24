@@ -137,7 +137,9 @@ export interface InkOptions {
   outline?: (mesh: THREE.Mesh) => boolean; // which meshes get an outline (default: all solid ones)
 }
 
+//hidden meshes (the rig's bone drivers) and see-through ones get no outline
 const solid = (mesh: THREE.Mesh) =>
+  mesh.visible &&
   [mesh.material].flat().some((m) => !m.transparent || (m as THREE.MeshLambertMaterial).alphaTest > 0);
 
 // give a model the ink look: toon materials and outlines. Safe to call again; meshes are only done once.
