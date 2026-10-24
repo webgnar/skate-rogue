@@ -42,6 +42,7 @@ import { ChopperView } from '../render/chopper-view';
 import { EscapeFx } from '../render/escape-fx';
 import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
+import { PedView } from '../render/peds';
 import { CHASER } from '../sim/chaser';
 import { BountyView } from '../render/bounty-view';
 import { BOUNTY, bountyPay } from '../run/bounty';
@@ -168,6 +169,7 @@ export class Game {
   private readonly chopper = new ChopperView();
   private readonly droneView = new DroneView();
   private readonly chaserView = new ChaserView();
+  private readonly pedView = new PedView();
   private readonly bountyView = new BountyView();
   private floorStoken = 0; // Stoken at the floor's start, for a bounty
   private bountySeen = false;
@@ -229,7 +231,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group);
+    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -762,6 +764,7 @@ export class Game {
       if (ch) this.escapeFx.chopper(toX(ch.x), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
       if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, street, this.chaserView.surging, dt);
     }
+    this.pedView.update(this.level, this.skater, dt, toX(this.skater.x));
     if (this.level.bounty && !this.bountySeen && this.state === 'skate' && this.skater.x >= this.level.bounty.x - 4 * TILE) {
       this.bountySeen = true;
       this.hud.callout(`WANTED: HEAT ${BOUNTY.heat}+ AT THE GATE PAYS 2× ◆`, 'trick');

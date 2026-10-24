@@ -430,6 +430,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   band, a red route plate) beside the street bench from props.glb, and a driver's door with its window, mirror,
   handle and inside trim, painted the same colour as its parked car (kit.ts `parkedPaint`). The gameplay thread's
   placement and swing are unchanged.
+- **Pedestrians on the sidewalk (GDD: "pedestrians who react").** art/pedestrians.py builds peds.glb: a torso,
+  legs, arms (the right one holding a phone) and three heads (short hair, long hair, cap). src/render/peds.ts mixes
+  them into skinned people with random clothes, skin and hair colours, a few every 3 to 9 tiles along the street
+  part of a floor, clear of cross streets, bus stops, props, escape set pieces and the fork's doors. They are purely
+  visual (no collision, no score): some stroll, all turn to watch you come past, about a third hold their phone up
+  to film, they throw their arms up when you land a big air near them and flinch when you slam. Ducking was left
+  out for now. game.ts gets one view and one update call next to the chasers.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 
