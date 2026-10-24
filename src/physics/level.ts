@@ -142,10 +142,11 @@ export interface EscapeSite {
   x1: number;
   chopperFrom?: number; // the helicopter joins the chase here
   covers: { x0: number; x1: number; y: number }[]; // L tracks overhead: the spotlight can't see under them
+  chaseFrom?: number; // act 3's chaser joins here (src/sim/chaser.ts)
   drones?: { x: number; h: number }[]; // the drone swarm: where each drone hovers, and its roof above the street
 }
 
-export type EscapeKind = 'roadblock' | 'chopper' | 'drones' | 'finale';
+export type EscapeKind = 'roadblock' | 'chopper' | 'chase' | 'drones' | 'finale';
 
 export interface Level {
   layout: Layout;

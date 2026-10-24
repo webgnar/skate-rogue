@@ -48,16 +48,18 @@ export function endsAct(floor: number): boolean {
   return floor % FLOORS_PER_ACT === 0;
 }
 
-// act 3 gets its own set piece with its biome; until then it repeats the roadblock
+// act 1 the roadblock, act 2 the helicopter, act 3 the district's chaser, act 4 the drones, act 5 the finale
 export function escapeKind(act: number): EscapeKind {
   if (act >= ACTS) return 'finale';
   if (act === 4) return 'drones';
+  if (act === 3) return 'chase';
   return act % 2 === 0 ? 'chopper' : 'roadblock';
 }
 
 export const ESCAPE_NAMES: Record<EscapeKind, string> = {
   roadblock: 'ROADBLOCK',
   chopper: 'HELICOPTER',
+  chase: 'RUN FOR IT',
   drones: 'DRONE SWARM',
   finale: 'THE LAST ROADBLOCK',
 };
@@ -96,7 +98,8 @@ export function buildEscape(seed: number, act: number): Level {
   //the street run: library pieces at this act's depth, then flat street for the set piece and the gate
   const chopper = kind === 'chopper' || kind === 'finale';
   const swarm = kind === 'drones';
-  const run = makeLayout(seed * 3 + act * 92821, floor, PIECES, ESCAPE.streetPieces + (chopper ? 3 : 0));
+  const chase = kind === 'chase';
+  const run = makeLayout(seed * 3 + act * 92821, floor, PIECES, ESCAPE.streetPieces + (chopper || chase ? 3 : 0));
   const blocks = kind === 'finale' ? 2 : kind === 'roadblock' ? 1 : 0;
   const flats = swarm ? ESCAPE.droneFlats : Math.max(1, blocks * 3);
   const pieces = [START_PIECE, ...run.pieces.slice(1, -1), ...new Array<Piece>(flats).fill(FLAT), EXIT_PIECE];
@@ -124,6 +127,11 @@ export function buildEscape(seed: number, act: number): Level {
     const rng = makeRng(seed * 7 + act * 4093);
     const drones = droneSpots(x0, level.exitX - 4 * TILE, rng);
     return withProps({ ...level, danger: 3, escape: { kind, act, x0, x1: level.exitX, covers, drones } });
+  }
+  //the chase: from the end of the start piece to the gate
+  if (chase) {
+    const from = CHUNK_W * TILE;
+    return withProps({ ...level, danger: 3, escape: { kind, act, x0: from, x1: level.exitX, covers, chaseFrom: from } });
   }
   return withProps({
     ...level,

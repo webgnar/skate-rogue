@@ -5,6 +5,7 @@ import { BOARD, fires, type EffectId, type Slots, type TriggerId } from '../boar
 import { PHYS, TILE } from '../physics/constants';
 import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
+import { Chaser } from './chaser';
 import { Swarm } from './drones';
 import type { Car, Level, PickupKind } from '../physics/level';
 import { PROP_SIZE } from '../gen/props';
@@ -61,6 +62,7 @@ export class FloorSim {
   road: 'high' | 'low' | null = null; // which road the skater left the floor on
   readonly chopper: Chopper | null; // the helicopter escape's spotlight
   readonly swarm: Swarm | null; // the drone swarm escape
+  readonly chaser: Chaser | null; // act 3's chaser
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
   private slipT = 0; // frames drafting behind a car
@@ -86,6 +88,7 @@ export class FloorSim {
     const esc = level.escape;
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
+    this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
     this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed), level.crossings, level.busStops ?? [], level.doors ?? []);
     this.traffic.noBrake = mods?.spoofed ?? false;
@@ -116,6 +119,7 @@ export class FloorSim {
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
     if (this.chopper?.step(this.skater)) this.heat.add(CHOPPER.heatPerSec / 60);
+    this.chaser?.step(this.skater, skaterEvents);
     if (this.heat.decoyFired) this.events.push({ type: 'decoy' });
     if (this.skater.mode === 'bail') this.state = 'bail';
     else if (this.skater.mode === 'exit') {
@@ -123,7 +127,7 @@ export class FloorSim {
       //on (or above) the overpass at the gate = the high road
       const fork = this.level.fork;
       this.road = fork && this.skater.y <= fork.y + 1 ? 'high' : 'low';
-    } else if (this.heat.caught) this.state = 'caught';
+    } else if (this.heat.caught || this.chaser?.caught) this.state = 'caught';
   }
 
   // which road the skater is on right now, once they reach the fork's overpass (null before it, or no fork)

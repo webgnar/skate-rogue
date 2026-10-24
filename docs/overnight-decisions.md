@@ -329,6 +329,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   BIOME_GRAVITY). Floors are generated and bot-checked in it, and they validated first try at 0.8 and 0.6 in a
   20-floor sample. Escape set pieces stay at normal gravity for now.
 
+- **Act 3's escape is a chase (decision card posted; going with my recommendation).** One mechanic with a look
+  per district: a tidal wave (Atlantis), a chariot (Greece), museum guards. It sits 7 tiles behind (8 at most),
+  each slam lets it close 2.5 tiles, and clean skating wins back 0.6 tiles a second, so three slams close
+  together get you caught. It tracks slams, not speed, because uphill rails and climbs drop your forward speed
+  through no fault of yours. The looks are primitive placeholders for the models thread. zack's other options were
+  three separate set pieces (the flood forcing you up high, a chariot overtaking in your lane, guards and laser
+  tripwires) or keeping the roadblock; those twists can go on top of the chase later.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)
