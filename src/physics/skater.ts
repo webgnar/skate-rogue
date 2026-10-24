@@ -15,6 +15,8 @@ export type SkaterEvent =
   | { type: 'rail' }
   | { type: 'hop' }
   | { type: 'kicker' } // launched off a box truck's tailgate
+  | { type: 'pad' } // a slam the Bubble Pads took
+  | { type: 'tuck' } // Tuck and Roll: fell in a gap and bounced back out
   | { type: 'slam' }
   | { type: 'bail' }
   | { type: 'exit' };
@@ -55,6 +57,8 @@ export class Skater {
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
   fakie = false; // riding with the other foot forward, after a 180
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
+  pads = 0; // Bubble Pads slams left this floor
+  tucks = 0; // Tuck and Roll saves left this floor
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
 
@@ -68,6 +72,8 @@ export class Skater {
     this.surface = level.surfaces.find((s) => s.kind !== 'rail' && s.x0 <= this.x && s.x1 >= this.x && s.y === this.y) ?? null;
     this.hsp = PHYS.baseSpeed; // rolling start
     this.jumps = this.maxJumps;
+    this.pads = this.mods.bubblePads;
+    this.tucks = this.mods.tuckAndRoll;
   }
 
   get maxJumps(): number {
@@ -160,7 +166,7 @@ export class Skater {
   private baseSpeed(): number {
     //after a slam you're back to full speed over slamFrames
     const k = this.slamT > 0 ? 1 - (1 - PHYS.slamSpeed) * (this.slamT / PHYS.slamFrames) : 1;
-    return PHYS.baseSpeed * k * this.boost;
+    return PHYS.baseSpeed * k * this.boost * this.mods.speedScale;
   }
 
   private stepMove(held: boolean): void {
@@ -216,7 +222,15 @@ export class Skater {
     this.checkHazards();
 
     //in the canal
-    if (this.mode === 'air' && this.y > this.level.streetY + PHYS.bailDepth) {
+    if (this.mode === 'air' && this.y > this.level.streetY + PHYS.bailDepth && this.tucks > 0) {
+      //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
+      this.tucks--;
+      this.vsp = PHYS.tuckBounce;
+      this.hsp = Math.max(this.hsp, PHYS.baseSpeed);
+      this.jumps = this.maxJumps;
+      this.kicked = true;
+      this.events.push({ type: 'tuck' });
+    } else if (this.mode === 'air' && this.y > this.level.streetY + PHYS.bailDepth) {
       this.mode = 'bail';
       this.hsp = 0;
       this.events.push({ type: 'bail' });
@@ -329,6 +343,8 @@ export class Skater {
     } else {
       this.spare = 0;
       this.mode = 'roll';
+      //Butter: the air speed rolls on (it bleeds off like rail speed)
+      if (this.mods.butter) this.carry = Math.max(this.carry, Math.abs(this.hsp));
       this.events.push({ type: 'land' });
       //landing on the steps
       if (s?.kind === 'stairs') this.slam();
@@ -374,8 +390,10 @@ export class Skater {
     if (this.railD >= rail.length) {
       //ride off the end: launch along the rail and keep the speed
       const e = rail.at(rail.length);
-      this.hsp = this.railV * e.tx;
-      this.vsp = this.railV * e.ty;
+      //Slingshot: launches harder, up to a cap
+      const v = Math.min(PHYS.slingshotMax, this.railV * this.mods.slingshot);
+      this.hsp = Math.max(this.railV * e.tx, v * e.tx);
+      this.vsp = this.railV * e.ty * (e.ty < 0 ? v / this.railV : 1);
       this.x = e.x;
       this.y = e.y;
       this.carry = Math.abs(this.hsp);
@@ -426,16 +444,21 @@ export class Skater {
   private kick(): void {
     this.leaveGround();
     this.y = this.level.streetY - PHYS.tailgateLip;
-    this.vsp = PHYS.kickerPop;
+    this.vsp = PHYS.kickerPop * this.mods.kickerScale;
     this.kicked = true;
-    this.hsp = Math.max(this.hsp, PHYS.bombSpeed);
-    this.carry = Math.max(this.carry, PHYS.bombSpeed);
+    this.hsp = Math.max(this.hsp, PHYS.bombSpeed * this.mods.kickerScale);
+    this.carry = Math.max(this.carry, PHYS.bombSpeed * this.mods.kickerScale);
     this.jumps = this.maxJumps;
     this.flipped = false;
     this.events.push({ type: 'kicker' });
   }
 
   private slam(): void {
+    if (this.pads > 0) {
+      this.pads--;
+      this.events.push({ type: 'pad' });
+      return;
+    }
     this.slamT = PHYS.slamFrames;
     this.carry = 0;
     this.hsp = PHYS.baseSpeed * PHYS.slamSpeed;

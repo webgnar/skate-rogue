@@ -29,6 +29,8 @@ export const PHYS = {
   kickerPop: -6.6, // about 87 px of air, over a 64 px truck box
   bombSpeed: 6.5,
   tailgateLip: 14, // the tailgate's top edge, where you leave it
+  tuckBounce: -8, // Tuck and Roll: out of a gap, about 2 tiles over the street
+  slingshotMax: 12, // px/frame: the most a Slingshot launch reaches
   slamSpeed: 0.5, // speed drops to half of base
   slamFrames: 36, // ~0.6 s to get back to full speed
   bufferFrames: 6, // 100 ms input buffer

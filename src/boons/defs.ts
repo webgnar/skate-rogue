@@ -1,10 +1,12 @@
-// The first playable boon set: 6 POP and 6 GRIND boons. Card fields follow QFS survivor_boons
-// (type label, name, effect line, optional small line, max stacks, when filter).
-export type BoonType = 'POP' | 'GRIND';
+// The boon pool: POP and GRIND (the first playable set), then FLOW and COOL. Card fields follow QFS
+// survivor_boons (type label, name, effect line, optional small line, max stacks, when filter).
+export type BoonType = 'POP' | 'GRIND' | 'FLOW' | 'COOL';
 
 export type BoonId =
   | 'tripleThreat' | 'bigPop' | 'floatyFlip' | 'lateFlip' | 'pressureFlip' | 'spareChange'
-  | 'railMagnet' | 'grease' | 'railLaunch' | 'exitWax' | 'feebleFrenzy' | 'ghostRail';
+  | 'railMagnet' | 'grease' | 'railLaunch' | 'exitWax' | 'feebleFrenzy' | 'ghostRail'
+  | 'newWheels' | 'bombHill' | 'butter' | 'kickerBoost' | 'slingshot'
+  | 'lowProfile' | 'bubblePads' | 'tuckAndRoll' | 'slamStoke' | 'sirenSong' | 'decoy' | 'ghostMode';
 
 export interface Held {
   id: BoonId;
@@ -26,7 +28,7 @@ export interface Boon {
   when?: (run: RunView) => boolean;
 }
 
-export const BOON_COLORS: Record<BoonType, string> = { POP: '#ffd23f', GRIND: '#ff8c2b' };
+export const BOON_COLORS: Record<BoonType, string> = { POP: '#ffd23f', GRIND: '#ff8c2b', FLOW: '#3ee0f0', COOL: '#5a8cff' };
 
 export const BOONS: Boon[] = [
   { id: 'tripleThreat', type: 'POP', name: 'Triple Threat', effect: '+1 jump', max: 1 },
@@ -44,6 +46,21 @@ export const BOONS: Boon[] = [
     id: 'ghostRail', type: 'GRIND', name: 'Ghost Rail', effect: 'Rails keep going 4 tiles past their end',
     note: 'for 2 s after you leave', max: 1,
   },
+  { id: 'newWheels', type: 'FLOW', name: 'New Wheels', effect: 'Cruise 20% faster', note: 'and score 20% more', max: 2 },
+  { id: 'bombHill', type: 'FLOW', name: 'Bomb Hill', effect: 'Extra speed bleeds off half as fast', max: 1 },
+  { id: 'butter', type: 'FLOW', name: 'Butter', effect: 'Land on flat ground with all your air speed', max: 1 },
+  {
+    id: 'kickerBoost', type: 'FLOW', name: 'Kicker Boost', effect: 'Kickers launch 30% harder', note: 'and bomb harder',
+    max: 1, when: (r) => r.floor >= 3, // box trucks come in on floor 4
+  },
+  { id: 'slingshot', type: 'FLOW', name: 'Slingshot', effect: 'Riding off the end of a rail launches you 50% harder', max: 2 },
+  { id: 'lowProfile', type: 'COOL', name: 'Low Profile', effect: 'Heat rises 25% slower', max: 3 },
+  { id: 'bubblePads', type: 'COOL', name: 'Bubble Pads', effect: 'Your first slam each floor costs nothing', note: 'no speed, no Heat', max: 2 },
+  { id: 'tuckAndRoll', type: 'COOL', name: 'Tuck and Roll', effect: 'Fall in a gap and bounce back out', note: 'once per floor, for a slam', max: 1 },
+  { id: 'slamStoke', type: 'COOL', name: 'Slam Stoke', effect: 'Slams fill your stoke instead of draining it', note: 'and keep your combo', max: 1 },
+  { id: 'sirenSong', type: 'COOL', name: 'Siren Song', effect: 'Car hops take 10 more Heat off', max: 2 },
+  { id: 'decoy', type: 'COOL', name: 'Decoy', effect: 'The first time Heat hits 75 on a floor, it drops to 35', max: 1 },
+  { id: 'ghostMode', type: 'COOL', name: 'Ghost Mode', effect: 'Half the Heat from skating slow', note: 'the Flock cameras lose you', max: 1 },
 ];
 
 export function boonById(id: BoonId): Boon {

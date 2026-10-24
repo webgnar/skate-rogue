@@ -49,6 +49,8 @@ export class RunScore {
   stoke = 0; // 0..1
   gnarT = 0; // seconds of gnar state left
   private idle = 0;
+  scoreScale = 1; // New Wheels: banked points
+  slamStoke = false; // Slam Stoke: a slam keeps the combo and adds stoke
 
   get gnar(): boolean {
     return this.gnarT > 0;
@@ -88,6 +90,11 @@ export class RunScore {
       case 'land':
         return this.bank(hsp);
       case 'slam':
+      case 'tuck':
+        if (this.slamStoke) {
+          this.fill(SCORE.slamStoke);
+          break;
+        }
         this.combo = 0;
         this.comboPoints = 0;
         if (!this.gnar) this.stoke = Math.max(0, this.stoke - SCORE.slamStoke);
@@ -123,7 +130,7 @@ export class RunScore {
   private bank(hsp: number): Bank | null {
     if (this.combo === 0) return null;
     const mult = Math.min(SCORE.speedMultMax, Math.max(1, hsp / PHYS.baseSpeed));
-    const points = Math.round(this.comboPoints * this.combo * mult);
+    const points = Math.round(this.comboPoints * this.combo * mult * this.scoreScale);
     const cash = Math.max(0, this.combo - SCORE.cashOutFrom + 1) * SCORE.cashOutPer;
     const count = this.combo;
     this.score += points;
@@ -131,13 +138,17 @@ export class RunScore {
     this.combo = 0;
     this.comboPoints = 0;
     this.idle = 0;
-    if (!this.gnar) {
-      this.stoke = Math.min(1, this.stoke + points / SCORE.stokeFull);
-      if (this.stoke >= 1) {
-        this.stoke = 0;
-        this.gnarT = SCORE.gnarSecs;
-      }
-    }
+    this.fill(points / SCORE.stokeFull);
     return { points, count, cash };
+  }
+
+  // fill the stoke meter; full is the gnar state (not while already in it)
+  private fill(share: number): void {
+    if (this.gnar) return;
+    this.stoke = Math.min(1, this.stoke + share);
+    if (this.stoke >= 1) {
+      this.stoke = 0;
+      this.gnarT = SCORE.gnarSecs;
+    }
   }
 }

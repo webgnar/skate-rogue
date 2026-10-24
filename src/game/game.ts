@@ -237,7 +237,10 @@ export class Game {
     this.input.clear();
     this.boonFx.setBoons(this.boons);
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
-    this.sim = new FloorSim(this.level, skaterMods(this.boons), startHeat(roadHeat, this.carry), this.board);
+    const mods = skaterMods(this.boons);
+    this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board);
+    this.run.scoreScale = mods.scoreScale;
+    this.run.slamStoke = mods.slamStoke;
     this.carry = 0;
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
@@ -730,7 +733,7 @@ export class Game {
   private handle(e: FloorSim['events'][number]): void {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
-    if (e.type !== 'pickup' && e.type !== 'near') {
+    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;
       this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));
@@ -759,6 +762,18 @@ export class Game {
         this.view.zoom.trick();
         this.hud.callout('TAILGATE BOMB!' + combo, 'trick');
         this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), 1);
+        break;
+      case 'pad':
+        this.hud.callout('BUBBLE PADS!', 'good');
+        this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), 1);
+        break;
+      case 'tuck':
+        this.hud.callout('TUCK AND ROLL!', 'good');
+        this.view.shake(0.15);
+        navigator.vibrate?.(40);
+        break;
+      case 'decoy':
+        this.hud.callout('DECOY! HEAT 35', 'good');
         break;
       case 'near':
         //a slow-mo beat on a close call (GDD: Camera)

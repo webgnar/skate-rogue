@@ -152,6 +152,20 @@ and listed it here for review. Any of these can be flipped in the morning.
   the one you dropped, no reroll) or **Remove a curse** (greyed out until curses exist). Then you skate the boon
   street after it. A green sign on the fork.
 
+- **FLOW and COOL boons (12 more cards).** Boon streets now come in POP, GRIND, FLOW or COOL. Built from the
+  GDD's tables, with these calls of mine:
+  - New Wheels +20% cruising speed and +20% banked score per stack (max 2). Bomb Hill halves how fast extra speed
+    bleeds off (stacks with Exit Wax). Butter: landings keep your air speed as flow speed. Kicker Boost: tailgate
+    kickers 30% harder (offered from floor 3, since trucks come in on 4). Slingshot: riding off a rail's end
+    launches 50% harder per stack, capped at 12 px/frame.
+  - Low Profile: Heat gains -25% per stack (3 stacks = a quarter). Bubble Pads: the first slam (two with 2 stacks)
+    each floor costs nothing. Tuck and Roll: once a floor a fall into a gap bounces you back up (about 2 tiles
+    over the street, jumps refilled) but costs a slam's Heat and your combo. Slam Stoke: a slam keeps your combo
+    and adds a quarter of the stoke meter (the GDD said +50%, which felt like it rewarded slamming). Siren Song:
+    car hops take 10 more Heat off per stack. Decoy: the first time Heat reaches 75 on a floor it drops to 35.
+    Ghost Mode: half the Heat from skating slow.
+- LUCK and STREET boons are next.
+
 - **Stance and 180s (sim side, with the models thread).** zack noted a 180 leaves you riding the other foot
   forward. In one-button play the air tap throws the next trick in a fixed roll: kickflip, heelflip, BS 180,
   shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin
