@@ -6,9 +6,9 @@
 - [x] 1.3 Shader: blob shape with ink rim, sky + neon reflection, light pools, ripples
 ## 2. Splashes and wet
 - [x] 2.1 Splash particles while rolling through, wake in the reflection, landing splash and SPLSH!
-- [ ] 2.2 Wet toon uniform: darker band, glinting top edges
+- [x] 2.2 Wet toon uniform: darker band, glinting top edges (done as a darker kit in rain: 22% darker at full rain, facades and lit materials left alone)
 - [x] 2.3 Rain intensity roll (drizzle / rain / downpour), soft lightning glow
-- [ ] 2.4 Drips off ledges and helmet splashes (deferred)
+- [x] 2.4 Drips off ledges and helmet splashes (deferred) (drips off roof and overpass corners near the view, about 6 a second in a downpour)
 ## 3. Check
 - [x] 3.1 Screenshots of a dusk downpour (floor 6, seed 5)
 - [ ] 3.2 Screenshots in all four moods on device

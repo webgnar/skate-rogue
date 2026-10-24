@@ -23,6 +23,7 @@ export class StreetView {
   readonly night = new NightCity();
   readonly gates = new GateFx();
   readonly ambience = new Ambience();
+  private wet = 0;
   private skyline: THREE.Mesh | null = null;
   private readonly hemis: THREE.HemisphereLight[] = [];
   private readonly suns: THREE.DirectionalLight[] = [];
@@ -115,6 +116,8 @@ export class StreetView {
       u.uNeon.value = m.neon;
     }
     this.rain.amount = rain;
+    this.wet = Math.min(1, rain);
+    this.wetKit();
     this.puddles.setSky(m.skyTop, m.skyBottom, m.neon);
     this.night.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
@@ -141,6 +144,7 @@ export class StreetView {
     batchStatic(this.kit);
     inkify(this.kit);
     this.kitInk();
+    this.wetKit();
     this.scene.add(this.kit);
     this.night.build(level, this.kit, seed, floor);
     this.gates.build(this.kit);
@@ -237,6 +241,19 @@ export class StreetView {
     FX.tier = tier;
     this.kitInk();
     this.night.setNight(this.mood?.neon ?? 0);
+  }
+
+  // rain darkens the street kit, the way wet concrete and brick go darker (facades keep their windows)
+  private wetKit(): void {
+    const k = 1 - 0.22 * this.wet;
+    this.kit?.traverse((o) => {
+      if (!(o instanceof THREE.Mesh) || o.userData.ink) return;
+      for (const m of [o.material].flat() as THREE.MeshToonMaterial[]) {
+        if (!(m instanceof THREE.MeshToonMaterial) || m.userData.facade) continue;
+        const dry = (m.userData.dry ??= m.color.getHex()) as number;
+        m.color.setHex(dry).multiplyScalar(k);
+      }
+    });
   }
 
   // the low tier keeps outlines on the skater, cars and pickups but drops them from the street kit
