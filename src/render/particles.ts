@@ -93,6 +93,7 @@ export interface Spray {
   fadeFrom?: number;
   ink?: boolean;
   floor?: number;
+  z?: number; // depth to spawn at (0: the skater's lane)
 }
 
 const WATER = [
@@ -303,7 +304,7 @@ export class Particles {
     for (let k = 0; k < n; k++) {
       const a = o.ring ? a0 + ((k + 0.5) / n) * (a1 - a0) : rand(a0, a1);
       const r = o.radius ?? 0;
-      const i = this.spawn(x + Math.cos(a) * r + rand(-1, 1) * (o.jitter ?? 0), y + Math.sin(a) * r * (o.flat ? 0.3 : 1) + rand(-1, 1) * (o.jitter ?? 0), rand(-0.1, 0.4), rand(...o.life), pick(o.colors), rand(...o.size), o.size1 ?? 0.03, o.alpha ?? 1, o.fadeFrom ?? 0.4, o.ink ?? false);
+      const i = this.spawn(x + Math.cos(a) * r + rand(-1, 1) * (o.jitter ?? 0), y + Math.sin(a) * r * (o.flat ? 0.3 : 1) + rand(-1, 1) * (o.jitter ?? 0), (o.z ?? 0) + rand(-0.1, 0.4), rand(...o.life), pick(o.colors), rand(...o.size), o.size1 ?? 0.03, o.alpha ?? 1, o.fadeFrom ?? 0.4, o.ink ?? false);
       const v = rand(...o.speed);
       p.vx[i] = Math.cos(a) * v;
       p.vy[i] = Math.sin(a) * v * (o.flat ? 0.3 : 1);
