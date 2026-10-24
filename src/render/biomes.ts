@@ -97,7 +97,13 @@ export interface BackdropLayer {
 const CHICAGO_SKYLINE: BackdropLayer = { file: 'chicago_skyline.png', px: [726, 400], scale: 1 / 6, z: -70, lift: 0, parallax: 0.85 };
 
 export const BACKDROPS: Record<BiomeId, BackdropLayer[]> = {
-  chicago: [CHICAGO_SKYLINE],
+  //the one city (zack, 2026-10-24: fuse every world's art): planets up in the sky, the skyline, Chicago's public art
+  //(the museum's sculptures) in front of it. Three layers, three draws: the street is already the busiest view
+  chicago: [
+    { file: 'bkgd_space_planets.png', px: [300, 26], scale: 1 / 2, z: -76, lift: 34, parallax: 0.94 },
+    CHICAGO_SKYLINE,
+    { file: 'bkgd_museum_sculptures.png', px: [1100, 400], scale: 1 / 10, z: -64, lift: -2, parallax: 0.82 },
+  ],
   clemente: [{ file: 'bkgd_clemente.png', px: [900, 158], scale: 1 / 6, z: -60, lift: 0, parallax: 0.8 }],
   greece: [],
   atlantis: [

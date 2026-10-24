@@ -14,6 +14,7 @@ import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
 import { buildForeground, buildHill } from './hillside';
 import { buildElTrack, elCuts } from './el-view';
+import { quarters, type Quarter } from './quarters';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
@@ -39,20 +40,25 @@ function slab(w: number, h: number, d: number, front: THREE.Material, top: THREE
   return new THREE.Mesh(geo, [side, side, top, side, front, side]);
 }
 
-// a floor's kit in a biome (skins.ts): Chicago's street by default; another biome's tiles come from its sheet
-export function buildKit(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null): THREE.Group {
+// a floor's kit in a biome (skins.ts): Chicago's street by default; another biome's tiles come from its sheet. The
+// one city (Chicago) mixes in the other worlds' quarters (quarters.ts) once their sheets are loaded (`worlds`).
+export function buildKit(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null, worlds: Map<BiomeId, HTMLImageElement> = new Map()): THREE.Group {
   const skin = SKINS[biome];
   const city = skin.sheet === 'chicago' || !sheet;
   useSheet(city ? null : sheet);
   try {
-    return build(level, city ? SKINS.chicago : skin, city, city ? 'chicago' : biome);
+    return build(level, city ? SKINS.chicago : skin, city, city ? 'chicago' : biome, biome === 'chicago' ? worlds : new Map());
   } finally {
     useSheet(null);
   }
 }
 
-function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.Group {
+function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: Map<BiomeId, HTMLImageElement>): THREE.Group {
   const kit = new THREE.Group();
+  //the city's quarters that lean on another world, with that world's tiles to hand
+  const quarter = (q: Quarter) => (q.world !== 'chicago' && worlds.has(q.world) ? { ...q, skin: SKINS[q.world], sheet: worlds.get(q.world)! } : null);
+  const fused = worlds.size ? quarters(level).map(quarter).filter((q) => q !== null) : [];
+  const fusedAt = (x: number) => fused.find((q) => x >= q.x0 && x < q.x1) ?? null;
   const rng = makeRng(level.layout.seed * 31 + level.layout.floor);
   const cols = level.street.length;
   const sideMat = lambert(null, skin.side);
@@ -146,9 +152,15 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
   for (const [g0, g1] of [...cuts, [cols, cols]].sort((a, b) => a[0] - b[0])) {
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
-    if (a1 > a0) {
-      const wall = slab(a1 - a0, 2, 0.5, lambert(tileTexture(wallRows.map((row) => row.slice(a0, a1)))), lambert(null, city ? 0x6b5a55 : skin.side), sideMat);
-      wall.position.set((a0 + a1) / 2, 1, STREET_BACK - 0.25);
+    //split where a quarter's own wall takes over (its block tiles)
+    const cutsAt = [a0, ...fused.flatMap((q) => [q.x0, q.x1]).filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
+    for (let k = 0; k + 1 < cutsAt.length; k++) {
+      const [b0, b1] = [cutsAt[k], cutsAt[k + 1]];
+      if (b1 <= b0) continue;
+      const q = fusedAt(b0);
+      const rows = q ? [0, 1].map((r) => Array.from({ length: b1 - b0 }, (_, i) => q.skin.block.fill[((b0 + i) * (r ? 5 : 7) + r * 3) % q.skin.block.fill.length])) : wallRows.map((row) => row.slice(b0, b1));
+      const wall = slab(b1 - b0, 2, 0.5, lambert(q ? tileTexture(rows, q.sheet) : tileTexture(rows)), lambert(null, q ? q.skin.side : city ? 0x6b5a55 : skin.side), sideMat);
+      wall.position.set((b0 + b1) / 2, 1, STREET_BACK - 0.25);
       kit.add(wall);
     }
     w0 = g1;
@@ -156,23 +168,23 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
   for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
   const props = buildProps(level, biome); // hydrants, benches, newspaper boxes... along the back of the sidewalk
   if (props) kit.add(props);
-  if (!city) {
-    const cards = scenery(skin, first, cols, rng, inGap);
-    if (cards) kit.add(cards);
-  }
+  const cards = !city ? scenery([{ skin, sheet: null, x0: first, x1: cols }], rng, inGap) : scenery(fused.map((q) => ({ skin: q.skin, sheet: q.sheet, x0: Math.max(first, q.x0), x1: Math.min(cols, q.x1) })), rng, inGap);
+  if (cards) kit.add(cards);
 
   //the world's landmark stands in for a building every few screens, the first one soon after the start
-  let mark = skin.landmark ? first + 6 + randInt(rng, 8) : Infinity;
+  //(in the one city, each quarter's own landmark, in the middle of it)
+  const marks = fused.filter((q) => q.skin.landmark).map((q) => ({ x: Math.max(q.x0, (q.x0 + q.x1) / 2 - LANDMARK_W / 2), name: q.skin.landmark! }));
+  let mark = marks.length ? marks[0].x : skin.landmark && !worlds.size ? first + 6 + randInt(rng, 8) : Infinity;
   for (let bx = level.hills ? first - 2 : -8; bx < cols + 20; ) {
     if (bx >= mark) {
-      const lm = model(skin.landmark!);
+      const lm = model(marks.length ? marks.shift()!.name : skin.landmark!);
       if (lm && !inGap(bx, bx + LANDMARK_W)) {
         lm.position.set(bx + LANDMARK_W / 2, 0, STREET_BACK - 2.6);
         lm.userData.keep = true; // several materials, some glowing: not batched
         kit.add(lm);
         bx += LANDMARK_W + 1;
       }
-      mark = bx + 26 + randInt(rng, 20);
+      mark = marks.length ? marks[0].x : worlds.size ? Infinity : bx + 26 + randInt(rng, 20);
       continue;
     }
     const w = 4 + randInt(rng, 5);
@@ -180,7 +192,10 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
     const t = CITY.facade[randInt(rng, CITY.facade.length)];
     const back = randInt(rng, 3);
     if (!inGap(bx, bx + w)) {
-      const b = slab(w, h, 4, city ? facadeMat(w, h, t, 0xd8c8e8) : blockMat(w, h, skin, 0xd8c8e8), lambert(null, 0x2b2638), sideMat);
+      //some of a quarter's buildings are its world's blocks
+      const q = fusedAt(bx);
+      const face = q && rng() < 0.5 ? blockMat(w, h, q.skin, 0xd8c8e8, q.sheet) : city ? facadeMat(w, h, t, 0xd8c8e8) : blockMat(w, h, skin, 0xd8c8e8);
+      const b = slab(w, h, 4, face, lambert(null, 0x2b2638), sideMat);
       b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - back);
       kit.add(b);
     }
@@ -489,60 +504,85 @@ function facadeMat(w: number, h: number, t: number, color = 0xffffff): THREE.Mes
 }
 
 // a biome block's front: its fill tiles, with its cap along the top when it has one
-function blockMat(w: number, h: number, skin: Skin, color = 0xffffff): THREE.MeshLambertMaterial {
+function blockMat(w: number, h: number, skin: Skin, color = 0xffffff, sheet?: HTMLImageElement): THREE.MeshLambertMaterial {
   const { fill, cap } = skin.block;
   const grid: TileCell[][] = [];
   for (let r = 0; r < h; r++) grid.push(Array.from({ length: w }, (_, c) => fill[(r * 3 + c) % fill.length]));
   if (cap) grid[0] = grid[0].map((t, i): TileCell => [t as number, i === 0 ? cap[0] : i === w - 1 ? cap[2] : cap[1]]);
-  return lambert(tileTexture(grid), color);
+  return lambert(sheet ? tileTexture(grid, sheet) : tileTexture(grid), color);
 }
 
 // The biome's scenery as flat pixel-art cards, as QFS draws it: decor (trees, temples, signs) stood on the sidewalk
-// against the wall or hung on it (paintings), and small props along the sidewalk. All in one mesh off one atlas.
-function scenery(skin: Skin, first: number, cols: number, rng: () => number, inGap: (x0: number, x1: number) => boolean): THREE.Mesh | null {
-  const stamps: { rows: TileCell[][]; x: number; y: number; z: number }[] = [];
-  const decor = skin.decor;
-  for (let x = first + 3; decor.length && x < cols - 8; x++) {
-    const d = decor[randInt(rng, decor.length)];
-    if (rng() > d.chance * 0.5) continue;
-    const w = d.rows[0].length;
-    if (inGap(x, x + w)) continue;
-    stamps.push({ rows: d.rows, x, y: d.hang ? 0.6 : 0, z: d.hang ? STREET_BACK - 0.01 : STREET_BACK + 0.08 });
-    x += w + 3;
-  }
-  for (let x = first + 2; skin.props.length && x < cols - 2; x++) {
-    if (rng() > 0.14 || inGap(x, x + 1)) continue;
-    const p = skin.props[randInt(rng, skin.props.length)];
-    stamps.push({ rows: [p].flat().map((t) => [t]), x, y: skin.sink ? -1 : 0, z: STREET_BACK + 0.55 + rng() * 0.4 });
-    x += 2;
+// against the wall or hung on it (paintings), and small props along the sidewalk. All in one mesh off one atlas, even
+// when the one city's quarters each bring their own world's (each stamp drawn from its own sheet).
+interface ScenerySpan {
+  skin: Skin;
+  sheet: HTMLImageElement | null; // null: the active sheet
+  x0: number;
+  x1: number;
+}
+
+function scenery(spans: ScenerySpan[], rng: () => number, inGap: (x0: number, x1: number) => boolean): THREE.Mesh | null {
+  const stamps: { rows: TileCell[][]; x: number; y: number; z: number; sheet: HTMLImageElement | null }[] = [];
+  for (const { skin, sheet, x0, x1 } of spans) {
+    const decor = skin.decor;
+    for (let x = x0 + 3; decor.length && x < x1 - 8; x++) {
+      const d = decor[randInt(rng, decor.length)];
+      if (rng() > d.chance * 0.5) continue;
+      const w = d.rows[0].length;
+      if (inGap(x, x + w)) continue;
+      stamps.push({ rows: d.rows, x, y: d.hang ? 0.6 : 0, z: d.hang ? STREET_BACK - 0.01 : STREET_BACK + 0.08, sheet });
+      x += w + 3;
+    }
+    for (let x = x0 + 2; skin.props.length && x < x1 - 2; x++) {
+      if (rng() > 0.14 || inGap(x, x + 1)) continue;
+      const p = skin.props[randInt(rng, skin.props.length)];
+      stamps.push({ rows: [p].flat().map((t) => [t]), x, y: skin.sink ? -1 : 0, z: STREET_BACK + 0.55 + rng() * 0.4, sheet });
+      x += 2;
+    }
   }
   if (!stamps.length) return null;
-  //one atlas: each stamp's tiles side by side
-  const width = stamps.reduce((a, s) => a + s.rows[0].length, 0);
+  //one atlas, each stamp's tiles from its own sheet, packed in shelves at most 64 tiles wide (2048 px: older
+  //phones won't take a wider texture)
+  const SHELF = 64;
   const height = Math.max(...stamps.map((s) => s.rows.length));
-  const grid: TileCell[][] = Array.from({ length: height }, () => new Array(width).fill(-1));
-  let u = 0;
+  const placed: [number, number][] = [];
+  let [cu, cv] = [0, 0];
+  for (const s of stamps) {
+    const w = s.rows[0].length;
+    if (cu + w > SHELF) [cu, cv] = [0, cv + height];
+    placed.push([cu, cv]);
+    cu += w;
+  }
+  const width = cv ? SHELF : cu;
+  const tall = cv + height;
+  const tpx = 32;
+  const atlas = document.createElement('canvas');
+  atlas.width = width * tpx;
+  atlas.height = tall * tpx;
+  const g = atlas.getContext('2d')!;
+  g.imageSmoothingEnabled = false;
   const pos: number[] = [];
   const uv: number[] = [];
   const index: number[] = [];
-  for (const s of stamps) {
+  stamps.forEach((s, k) => {
     const w = s.rows[0].length;
     const h = s.rows.length;
-    s.rows.forEach((row, r) => row.forEach((t, c) => (grid[r][u + c] = t)));
+    const [u, v] = placed[k];
+    g.drawImage(s.sheet ? tileCanvas(s.rows, s.sheet) : tileCanvas(s.rows), u * tpx, v * tpx);
     const [u0, u1] = [u / width, (u + w) / width];
-    const [v0, v1] = [1 - h / height, 1];
+    const [v0, v1] = [1 - (v + h) / tall, 1 - v / tall];
     const i = pos.length / 3;
     pos.push(s.x, s.y, s.z, s.x + w, s.y, s.z, s.x + w, s.y + h, s.z, s.x, s.y + h, s.z);
     uv.push(u0, v0, u1, v0, u1, v1, u0, v1);
     index.push(i, i + 1, i + 2, i, i + 2, i + 3);
-    u += w;
-  }
+  });
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geo.setIndex(index);
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, lambert(pixelTexture(tileCanvas(grid)), 0xffffff, true));
+  const mesh = new THREE.Mesh(geo, lambert(pixelTexture(atlas), 0xffffff, true));
   mesh.userData.keep = true; // already one mesh
   mesh.userData.inked = true; // flat cards: no outline round their quads
   return mesh;

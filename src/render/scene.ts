@@ -9,7 +9,8 @@ import { batchStatic } from './batch';
 import { GateFx } from './gate-fx';
 import { SirenFx } from './siren-fx';
 import { Ambience, BACKDROP_SPAN, BACKDROPS, type BiomeId } from './biomes';
-import { loadSheet } from './skins';
+import { loadSheet, loadWorlds } from './skins';
+import { WORLDS } from './quarters';
 import { loadImage, pixelTexture } from './textures';
 import { inkify, setInkResolution, solid } from './toon';
 import { mergeInk, splitSlabs } from './kit-merge';
@@ -25,6 +26,7 @@ export class StreetView {
   private kit: THREE.Group | null = null;
   private biome: BiomeId = 'chicago';
   private sheet: HTMLImageElement | null = null; // the biome's tile sheet (skins.ts)
+  private worlds = new Map<BiomeId, HTMLImageElement>(); // every world's sheet, for the one city's quarters
   private base = '';
   private seed = 0;
   private floor = 1;
@@ -86,6 +88,11 @@ export class StreetView {
     //the sky is a gradient drawn per mood (QFS's Chicago sky is a plain blue gradient, the afternoon mood);
     //behind the street, the district's far cards (Chicago's pink skyline)
     this.scene.background = null;
+    //the other worlds' tiles for the city's quarters: the floor is rebuilt in them once they're in
+    void loadWorlds(base, WORLDS).then((w) => {
+      this.worlds = w;
+      if (this.kit) this.setLevel(this.level, this.seed, this.floor);
+    });
     await this.buildBackdrop(this.biome);
   }
 
@@ -190,7 +197,7 @@ export class StreetView {
         }
       });
     }
-    this.kit = buildKit(level, this.biome, this.sheet);
+    this.kit = buildKit(level, this.biome, this.sheet, this.worlds);
     const slabs = splitSlabs(this.kit);
     batchStatic(this.kit);
     inkify(this.kit, { outline: (m) => !m.userData.noInk && solid(m) });

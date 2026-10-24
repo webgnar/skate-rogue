@@ -107,3 +107,16 @@ export function loadSheet(base: string, id: BiomeId): Promise<HTMLImageElement> 
   if (!p) sheets.set(name, (p = loadImage(`${base}tex/${name}_tiles.png`)));
   return p;
 }
+
+// every world's sheet, for the one city's quarters (quarters.ts); a sheet that fails to load is left out
+export async function loadWorlds(base: string, ids: BiomeId[]): Promise<Map<BiomeId, HTMLImageElement>> {
+  const out = new Map<BiomeId, HTMLImageElement>();
+  await Promise.all(
+    ids.map((id) =>
+      loadSheet(base, id)
+        .then((img) => void out.set(id, img))
+        .catch((err) => console.warn(`${id} tiles failed to load`, err)),
+    ),
+  );
+  return out;
+}
