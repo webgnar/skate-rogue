@@ -127,8 +127,12 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 **Worn gear and gravity**
 
 - [ ] With worn wheels (red on the HUD) a sketchy landing rocks Lou more, and with worn trucks a hard rail landing does too.
-- [ ] Low gravity districts (Atlantis 0.8, Outer Space 0.6) aren't wired to floors yet. When they are, an ollie should
-      go much higher and drops land softer.
+- [ ] **District gravity is wired (gameplay #79):** in Atlantis (act 3 some runs, gravity 0.8) and Outer Space (0.6)
+      ollies go higher and hang longer, and big drops land softer. Test bot stats: sketchy landings fall from 14% at normal
+      gravity to 9% in Atlantis and 6% in space.
+- [ ] **Bounces have weight:** landing on a car roof, a bus or an open door squats Lou before he pops back up.
+      Rolling up a tailgate loads his knees before it throws him. Flip onto a roof late, and the hop still saves you
+      but rocks him.
 
 **Lip pops**
 

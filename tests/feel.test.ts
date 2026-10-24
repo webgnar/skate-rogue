@@ -361,3 +361,35 @@ describe('worn gear', () => {
     expect(rockRail(0.7)).toBeGreaterThan(rockRail(1) * 1.2);
   });
 });
+
+describe('bounces', () => {
+  it('a car hop loads the knees; caught mid-flip it rocks you too', () => {
+    const street = levelOf(FLAT).streetY;
+    const hop = (midFlip: boolean) => {
+      const base = levelOf(FLAT);
+      const car = { x0: 5 * TILE, x1: 7 * TILE, roof: street - 40, bottom: street };
+      const sk = new Skater({ ...base, cars: [car] });
+      sk.step({ pressed: false, held: false });
+      sk.mode = 'air';
+      sk.x = 6 * TILE;
+      sk.y = car.roof - 5;
+      sk.vsp = 6;
+      if (midFlip) {
+        sk.trickCatch = 20;
+        sk.trickT = 10;
+      }
+      let squash = 0;
+      let rock = 0;
+      for (let f = 0; f < 20; f++) {
+        sk.step({ pressed: false, held: false });
+        squash = Math.max(squash, sk.feel.squash);
+        rock = Math.max(rock, Math.abs(sk.feel.wobble));
+      }
+      expect(sk.events.some((e) => e.type === 'hop')).toBe(true);
+      return { squash, rock };
+    };
+    expect(hop(false).squash).toBeGreaterThan(0.3);
+    expect(hop(false).rock).toBeLessThan(0.01);
+    expect(hop(true).rock).toBeGreaterThan(0.1);
+  });
+});

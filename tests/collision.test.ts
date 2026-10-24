@@ -26,11 +26,13 @@ describe('no falling through things', () => {
     { speedScale: 1.6, slingshot: 2, kickerScale: 1.6, ollieScale: 1.4, jumps: 2 },
     { ollieScale: 1.6, floatyFlip: true, lateFlip: true, jumps: 3 },
   ];
-  it('fuzzes floors 1-8 on 8 seeds with three builds', () => {
+  it('fuzzes floors 1-8 on 8 seeds with three builds, at normal, Atlantis and Outer Space gravity', () => {
     const holes: string[] = [];
     for (let seed = 1; seed <= 8; seed++) {
       for (let floor = 1; floor <= 8; floor++) {
-        const level = validatedFloor(seed * 7919, floor).level;
+        //every third seed in Atlantis, every third in space
+        const gravity = [1, 0.8, 0.6][seed % 3];
+        const level = validatedFloor(seed * 7919, floor, { gravity }).level;
         builds.forEach((b, bi) => {
           const r = rng(seed * 100 + floor * 7 + bi);
           const sim = new FloorSim(level, { ...NO_MODS, ...b });
@@ -43,6 +45,8 @@ describe('no falling through things', () => {
             const py = sk.y;
             const was = sk.mode;
             const ignore = sk.railIgnore;
+            //moving things too: traffic, buses at stops, open car doors, drones (as they stood at the start of the step)
+            const movers = sk.movers.map((c) => ({ ...c }));
             sim.step({ pressed, held: hold-- > 0 });
             if (was !== 'air' || sk.mode !== 'air' || sim.events.some((e) => e.type === 'hop' || e.type === 'tuck' || e.type === 'kicker')) continue;
             const at = `seed ${seed * 7919} floor ${floor} build ${bi} frame ${f}`;
@@ -50,7 +54,7 @@ describe('no falling through things', () => {
               const cx = crossAt(px, py, sk.x, sk.y, s.x0, s.y, surfaceSlope(s));
               if (cx !== null && cx >= s.x0 && cx <= s.x1) holes.push(`${at}: through a ${s.kind} at ${Math.round(cx)}`);
             }
-            for (const c of level.cars) {
+            for (const c of [...level.cars, ...movers]) {
               const cx = crossAt(px, py, sk.x, sk.y, 0, c.roof, 0);
               if (cx !== null && cx + PHYS.width / 2 >= c.x0 && cx - PHYS.width / 2 <= c.x1) holes.push(`${at}: through a car roof`);
             }

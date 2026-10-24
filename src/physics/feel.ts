@@ -68,6 +68,12 @@ export class Feel {
     if (quality === 'sketchy') this.rock(FEEL.wobble.sketchy * loose);
   }
 
+  // a bounce off something (a car roof, a door, a tailgate): the knees load and fire; `rock` > 0 rocks you too
+  bounce(impact: number, rock: number): void {
+    this.squashV += impact * FEEL.squash.kick;
+    if (rock > 0) this.rock(FEEL.wobble.sketchy * rock);
+  }
+
   // locking onto a rail or bar: the harder you come in across it, the more you rock
   railEntry(impact: number, material: Material, loose = 1): void {
     this.squashV += impact * FEEL.squash.kick * 0.6;

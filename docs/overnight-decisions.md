@@ -474,3 +474,14 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Manual balance: skipped.** The GDD only mentions manualing on a bus roof in passing. There's no manual mechanic
   in a one-button game yet, so it's a design question for zack, not a physics gap.
 
+## Physics feel thread, round 3 (gravity check, bounces, tuning)
+
+- **District gravity checked.** Gameplay wired it per act (#79). The collision fuzz test now runs at normal,
+  Atlantis and Outer Space gravity, with moving traffic, bus stops and car doors in it. No holes.
+- **Bounces get the body response.** Car hops (roofs, buses, doors, drones) and tailgate kickers now load Lou's
+  knees. A car hop landed mid-flip still saves you (it's a bounce, not a landing), but rocks you. I chose that over a
+  slam: hopping across traffic is the core skill moment, and a slam there would feel unfair in one-button play.
+- **Tuning pass on bot stats, no number changed.** Sketchy landings: 14% at normal gravity, 9% in Atlantis, 6% in space.
+  Slams from landings: under 1%. The sketchy rate comes from the descents' 5+ tile drops to flat, and it costs little
+  (only flow speed, which you rarely have after a drop), so I left `FEEL.huge` at 9.5 for zack to judge in play.
+
