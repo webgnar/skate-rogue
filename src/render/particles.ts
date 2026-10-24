@@ -75,6 +75,26 @@ export const TRICK_TRAIL: Record<string, number[]> = {
 
 export type GrindStyle = 'metal' | 'concrete';
 
+export interface Spray {
+  n: number;
+  colors: number[][];
+  life: [number, number]; // seconds
+  size: [number, number]; // starting size in world units
+  size1?: number; // end size
+  speed: [number, number];
+  angle?: [number, number]; // radians, 0 = forward (+x), PI / 2 = up
+  ring?: boolean; // even angles instead of random
+  radius?: number; // start this far out
+  flat?: boolean; // a ring lying on the ground rather than standing up
+  jitter?: number;
+  grav?: number;
+  drag?: number;
+  alpha?: number;
+  fadeFrom?: number;
+  ink?: boolean;
+  floor?: number;
+}
+
 const WATER = [
   [0.85, 0.92, 1],
   [0.7, 0.82, 0.98],
@@ -105,6 +125,7 @@ export class Particles {
   private trailDebt = 0;
   private splashDebt = 0;
   private flipDebt = 0;
+  private readonly streams = new Map<string, number>();
 
   constructor() {
     const geo = new THREE.BufferGeometry();
@@ -269,6 +290,39 @@ export class Particles {
       p.drag[i] = 4;
       p.grav[i] = -0.3;
     }
+  }
+
+  // a general spray for one-off looks (boons, board mods): `n` pixels from (x, y) in world units
+  spray(x: number, y: number, o: Spray): void {
+    this.emit(x, y, o, Math.max(1, Math.round(o.n * (FX.tier === 'low' ? 0.6 : 1))));
+  }
+
+  private emit(x: number, y: number, o: Spray, n: number): void {
+    const p = this.pool;
+    const [a0, a1] = o.angle ?? [0, Math.PI * 2];
+    for (let k = 0; k < n; k++) {
+      const a = o.ring ? a0 + ((k + 0.5) / n) * (a1 - a0) : rand(a0, a1);
+      const r = o.radius ?? 0;
+      const i = this.spawn(x + Math.cos(a) * r + rand(-1, 1) * (o.jitter ?? 0), y + Math.sin(a) * r * (o.flat ? 0.3 : 1) + rand(-1, 1) * (o.jitter ?? 0), rand(-0.1, 0.4), rand(...o.life), pick(o.colors), rand(...o.size), o.size1 ?? 0.03, o.alpha ?? 1, o.fadeFrom ?? 0.4, o.ink ?? false);
+      const v = rand(...o.speed);
+      p.vx[i] = Math.cos(a) * v;
+      p.vy[i] = Math.sin(a) * v * (o.flat ? 0.3 : 1);
+      p.vz[i] = o.flat ? Math.sin(a) * v * 0.6 : rand(-0.3, 0.3);
+      p.grav[i] = o.grav ?? 0;
+      p.drag[i] = o.drag ?? 1;
+      if (o.floor !== undefined) p.floor[i] = o.floor;
+    }
+  }
+
+  // a spray kept up over time: `rate` pixels a second, with its own running count per `key`
+  stream(key: string, x: number, y: number, rate: number, dt: number, o: Spray): void {
+    let debt = (this.streams.get(key) ?? 0) + rate * dt * (FX.tier === 'low' ? 0.5 : 1);
+    if (debt >= 1) {
+      const n = Math.floor(debt);
+      debt -= n;
+      this.emit(x, y, o, n);
+    }
+    this.streams.set(key, debt);
   }
 
   // a dust puff where the board touches down; size 1 for a normal landing
