@@ -44,6 +44,8 @@ import { trickName } from '../physics/tricks';
 import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
+import { FEEL } from '../physics/feel';
+import { landDust, landKick } from '../render/land-fx';
 
 export interface PickInfo {
   title: string;
@@ -102,7 +104,6 @@ const CAUGHT_BEAT_MS = 800;
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
 const SMASH_CHAIN = 4; // smashes in quick succession for a Wrecking Ball
 const SMASH_CHAIN_SECS = 1.2;
-const BIG_LANDING = 8; // px/frame of fall: a drop of about 4 tiles or more
 //slam: hit-stop, then slow motion easing back to full speed
 const SLAM_FREEZE = 0.09;
 const SLAM_SLOW = 0.3;
@@ -747,7 +748,7 @@ export class Game {
     const rate = (sk.mode === 'rail' ? SPARKS_RAIL : SPARKS_LEDGE) * Math.min(2, Math.max(0.4, speed / PHYS.baseSpeed));
     const [x, y] = this.backTruck();
     //rails are metal; ledges, roof edges and banks are concrete
-    this.particles.grind(x, y, 1, rate, dt, sk.mode === 'rail' ? 'metal' : 'concrete');
+    this.particles.grind(x, y, 1, rate, dt, sk.material);
   }
 
   // where the back truck meets the rail, from the rig's tilt
@@ -911,9 +912,19 @@ export class Game {
           this.hud.callout(`+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), 'good');
           this.hud.money(this.run.cash, this.run.stoken);
         }
-        //dust on every landing; a big drop also lands with a smaller burst
-        this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), Math.min(1.5, Math.max(0.5, this.fallSpeed / BIG_LANDING)));
-        if (this.fallSpeed >= BIG_LANDING) this.burst(0.6, 0.12);
+        //dust on every landing, scaled by how hard it came down (the sim's impact into the surface): a kiss barely
+        //puffs, a heavy one bursts and kicks the camera, a sketchy one scuffs out lopsided. Slams have their own.
+        {
+          const impact = e.impact ?? this.fallSpeed;
+          const x = toX(this.skater.x);
+          const y = toY(this.level, this.skater.y);
+          this.particles.dust(x, y, landDust(impact));
+          if (impact >= FEEL.heavy) {
+            this.burst(0.6, 0.12);
+            this.view.shake(landKick(impact));
+          }
+          if (e.quality === 'sketchy' && !this.flip) this.particles.sketchyLanding(x, y, 1);
+        }
         //a trick landed: clean if the board came round in good time, sketchy if it was caught at the last moment
         if (this.flip) {
           const x = toX(this.skater.x);
@@ -929,7 +940,7 @@ export class Game {
           const x = toX(this.skater.x);
           const y = toY(this.level, this.skater.y);
           if (this.view.puddles.at(x, y)) {
-            const big = this.fallSpeed >= BIG_LANDING;
+            const big = (e.impact ?? this.fallSpeed) >= FEEL.heavy;
             this.particles.splash(x, y, big ? 1.5 : 0.8);
             if (big) this.words.spawn(x, y, 'SPLSH!');
           }

@@ -3,6 +3,8 @@ import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
 import { Particles } from '../src/render/particles';
+import { landDust, landKick } from '../src/render/land-fx';
+import { FEEL } from '../src/physics/feel';
 import { applyParams, FX } from '../src/render/fx-settings';
 import { VisorGlint, VISOR, VISOR_TINT } from '../src/render/visor-glint';
 import { mergeInk, splitSlabs } from '../src/render/kit-merge';
@@ -349,5 +351,17 @@ describe('gear wear', () => {
     expect(calls).toHaveLength(8);
     for (let i = 0; i < 8; i += 2) expect(calls[i + 1].n).toBeGreaterThan(calls[i].n);
     expect(calls[2].y).toBeGreaterThan(calls[0].y); // shoes scuff higher than the deck
+  });
+});
+
+describe('landing by impact', () => {
+  it('a kiss puffs, heavy bursts and kicks, capped', () => {
+    expect(landDust(1)).toBeCloseTo(0.35);
+    expect(landDust(FEEL.soft)).toBeLessThan(landDust(FEEL.heavy));
+    expect(landDust(30)).toBe(1.5);
+    expect(landKick(FEEL.soft)).toBe(0);
+    expect(landKick(FEEL.heavy)).toBeGreaterThan(0);
+    expect(landKick(FEEL.huge)).toBeGreaterThan(landKick(FEEL.heavy));
+    expect(landKick(40)).toBe(0.2);
   });
 });
