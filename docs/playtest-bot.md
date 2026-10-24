@@ -12,6 +12,9 @@ npm run playtest:sim        # just the sim runs, under a minute
 npm run playtest -- --url http://localhost:5173/   # use your running `npm run dev` instead of starting one
 ```
 
+Add `--video` to record each browser run at real speed to `playtest-report/videos` (mp4 when ffmpeg is installed,
+`brew install ffmpeg` on a Mac; webm otherwise), for example `node scripts/playtest/browser.mjs --video --only escape-3`.
+
 The first time on a Mac, get the browser with `npx playwright install chromium`.
 
 When it's done, open **playtest-report/index.html**. Each finding has a link that opens that exact floor on your
