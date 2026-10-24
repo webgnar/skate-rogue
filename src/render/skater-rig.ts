@@ -6,6 +6,7 @@
 // become drivers: each frame the model's bones copy the joints, so the clips pose the skinned suit the same way.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
@@ -213,6 +214,59 @@ export class SkaterRig {
       };
       mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
     });
+    this.mergeFlat(root);
+  }
+
+  // A glTF model comes in as one mesh per material: 18 draws for Lou and his board, twice that with outlines. Parts
+  // with a plain colour (no texture, not the shiny visor) merge into one mesh per parent, coloured per vertex.
+  private mergeFlat(root: THREE.Object3D): void {
+    const groups = new Map<THREE.Object3D, THREE.Mesh[]>();
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      const mat = mesh.material as THREE.MeshToonMaterial;
+      if (!mesh.isMesh || Array.isArray(mat) || !(mat instanceof THREE.MeshToonMaterial) || mat.map || !mesh.parent) return;
+      groups.set(mesh.parent, [...(groups.get(mesh.parent) ?? []), mesh]);
+    });
+    for (const [parent, meshes] of groups) {
+      if (meshes.length < 2) continue;
+      const skinned = meshes[0] as THREE.SkinnedMesh;
+      if (meshes.some((m) => !!(m as THREE.SkinnedMesh).isSkinnedMesh !== !!skinned.isSkinnedMesh)) continue;
+      const keep = skinned.isSkinnedMesh ? ['position', 'normal', 'skinIndex', 'skinWeight'] : ['position', 'normal'];
+      const geos = meshes.map((m) => {
+        const g = m.geometry.clone();
+        if (!skinned.isSkinnedMesh) g.applyMatrix4(m.matrix); // into the parent's space
+        for (const name of Object.keys(g.attributes)) if (!keep.includes(name)) g.deleteAttribute(name);
+        const c = (m.material as THREE.MeshToonMaterial).color;
+        const n = g.attributes.position.count;
+        const col = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+        g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        return g.index ? g : g.toNonIndexed();
+      });
+      const geo = mergeGeometries(geos.every((g) => g.index) ? geos : geos.map((g) => (g.index ? g.toNonIndexed() : g)));
+      if (!geo) continue;
+      const mat = this.lambert(0xffffff);
+      mat.vertexColors = true;
+      let merged: THREE.Mesh;
+      if (skinned.isSkinnedMesh) {
+        const sm = new THREE.SkinnedMesh(geo, mat);
+        sm.bind(skinned.skeleton, skinned.bindMatrix);
+        sm.position.copy(skinned.position);
+        sm.quaternion.copy(skinned.quaternion);
+        sm.scale.copy(skinned.scale);
+        merged = sm;
+      } else {
+        merged = new THREE.Mesh(geo, mat);
+      }
+      merged.name = `${meshes[0].name}_flat`;
+      merged.frustumCulled = false;
+      for (const m of meshes) {
+        parent.remove(m);
+        const i = this.mats.indexOf(m.material as THREE.MeshToonMaterial);
+        if (i >= 0) this.mats.splice(i, 1);
+      }
+      parent.add(merged);
+    }
   }
 
   // Hide the built-in body and hang the model's bones off its joints. Both are in the bind pose here: every joint

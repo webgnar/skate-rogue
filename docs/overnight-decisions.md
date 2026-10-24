@@ -107,3 +107,9 @@ and listed it here for review. Any of these can be flipped in the morning.
   board half a turn about vertical, so a regular clip pops the leading end. Switch tricks (opposite stance, forward)
   would need mirrored clips and wait until gameplay adds them.
 - **The 360 flip is keyed from zack's slow-mo clip, mirrored** (the clip travels left; Lou rolls right).
+- **Smith fixed, old pose kept as the feeble.** A backside smith's nose dips down on the side you skated from, so in
+  our view it comes toward the camera (as in zack's photo). The old pose had it over the far side, which is a feeble.
+- **Trick roll** (in `src/physics/tricks.ts`): 16 steps that bring round every air trick, 360 flip twice, 180s 4
+  times. The GDD's QFS list (kickflip, 360 flip, hardflip) are all in it.
+- **Lou and the board draw in 6 calls, not 18** (12 with outlines, not 36). Plain-coloured parts merge into one
+  mesh with vertex colours when they load; the visor, flag patch, deck ply and wheel swirl stay separate.
