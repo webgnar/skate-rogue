@@ -165,6 +165,13 @@ and listed it here for review. Any of these can be flipped in the morning.
     off its wheel, and the guards kick running dust. Each throws 2.5x more while it surges after a slam.
   - The helicopter's light pool holds steady with reduce-flashing instead of pulsing.
 - **A claimed bounty pays out in a violet-and-gold fountain** at the gate, alongside the BOUNTY CLAIMED callout.
+- **Filmers' phones (phone-fx.ts).** The people filming you (peds.ts) hold up a phone with a small cold screen glow,
+  faint by day and clear at night. Land a big air near one and it snaps a photo: a small white flash at the phone
+  that fades in about a sixth of a second. It's a spot the size of a person's head, never the screen, and
+  reduce-flashing turns it off. Two instanced draws for everyone. I touched peds.ts only to report where the phones
+  are and when they snap.
+- **Landmarks get no extra night treatment.** I checked all seven at floor 13. They already carry their own glowing
+  materials and read fine against the night sky, so I left them alone.
 
 ## Effects thread: fx6 leftovers
 

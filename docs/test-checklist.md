@@ -286,6 +286,11 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 - [ ] With `?noflash`, the helicopter's light pool holds steady instead of pulsing.
 - [ ] Reach the gate hot on a wanted-poster floor: a violet-and-gold fountain comes with BOUNTY CLAIMED.
 
+**People on the street** (`?floor=12`)
+
+- [ ] People filming you hold up a phone with a small screen glow, easiest to see at night.
+- [ ] Land a big air near a filmer: a small white photo flash pops at their phone. With `?noflash`, there's no flash.
+
 **Weather by district**
 
 - [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
