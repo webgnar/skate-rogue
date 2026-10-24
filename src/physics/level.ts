@@ -30,6 +30,7 @@ export interface Car {
   x1: number;
   roof: number; // y of the roof
   bottom: number;
+  model?: 'cruiser' | 'bus'; // parked roadblock vehicles; plain parked cars leave it out
 }
 
 export interface Glass {
@@ -121,6 +122,16 @@ export interface ForkSite {
   low: Road;
 }
 
+// an act's escape set piece (GDD: How a run ends): which one, and where its scripted part is
+export interface EscapeSite {
+  kind: EscapeKind;
+  act: number;
+  x0: number; // the set piece starts here
+  x1: number;
+}
+
+export type EscapeKind = 'roadblock' | 'finale';
+
 export interface Level {
   layout: Layout;
   width: number;
@@ -137,6 +148,7 @@ export interface Level {
   pickups: Pickup[];
   fork: ForkSite | null;
   danger: number; // traffic 1 (light) to 3 (rush hour)
+  escape?: EscapeSite; // an escape floor
 }
 
 const CAR_W = 2 * TILE;

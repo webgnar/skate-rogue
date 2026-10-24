@@ -22,6 +22,11 @@ function danger(level: Level, x: number, hsp: number, movers: Vehicle[]): boolea
   return false;
 }
 
+// the next roof within a few tiles is above our feet
+function blocked(level: Level, x: number, y: number): boolean {
+  return level.cars.some((c) => c.x0 > x && c.x0 - x < 2.5 * TILE && c.roof < y - 4);
+}
+
 // the reference bot: ollies at canals and cars, rides rails to their ends, flips when falling short
 export function botRun(level: Level): { result: string; slams: number; maxHeat: number } {
   const sim = new FloorSim(level);
@@ -38,6 +43,8 @@ export function botRun(level: Level): { result: string; slams: number; maxHeat: 
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30) pressed = true;
     // falling with no street ahead: flip for more air
     if (sk.mode === 'air' && sk.vsp > 0.5 && sk.jumps > 0 && !isStreetAt(level, sk.x + 40)) pressed = true;
+    //a roadblock: falling toward the side of a taller vehicle ahead, flip up onto its roof
+    if (level.escape && sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked(level, sk.x, sk.y)) pressed = true;
     if (pressed && sk.grounded) hold = 30;
     sim.step({ pressed, held: hold > 0 || pressed });
     if (hold > 0) hold--;

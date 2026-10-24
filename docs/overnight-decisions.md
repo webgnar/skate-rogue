@@ -1,9 +1,9 @@
-# Overnight decisions (effects thread)
+# Overnight decisions (2026-10-24)
 
 zack asked for work to keep going overnight. Where a design question came up, I went with my recommendation
 and listed it here for review. Any of these can be flipped in the morning.
 
-## fx6 rain puddles
+## Effects thread: fx6 rain puddles
 
 - **Rain intensity:** a rainy floor is a drizzle 30% of the time, rain 45%, a downpour 25%. Drizzle has fewer
   streaks and half-size puddles; a downpour has bigger puddles and a soft lightning glow every 9 to 17 s (one
@@ -15,3 +15,20 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **SPLSH!** only on a big drop into a puddle; normal landings in water get a smaller crown of drops.
 - **Deferred:** the wet toon look (glinting ledge tops), drips off ledges and splashes on the helmet. They need a
   shader patch to every toon material. Left for after the night city work, and still listed in fx6's tasks.
+
+## Gameplay thread (acts, escapes, GDD build-out)
+
+- **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor
+  (after its boon pick) comes the act's escape, then the road picked at that floor's fork (so a shop comes after
+  the escape). The escape is not a floor: the floor number stays, the HUD says `ACT n ESCAPE`.
+- **Escape floor shape.** 5 street pieces at the act's depth with rush-hour traffic and Heat starting at 30, then
+  the set piece on flat street, then the act gate. No fork, no pickups beyond the street's own.
+- **Roadblock set piece (act 1).** Parked car, CTA bus (72 px roof: more than a plain ollie, less than an ollie
+  plus flip), a line of 3 + act cruisers bumper to bumper, then a second bus. Clear it by car-hopping the roofs
+  (every hop refills your jumps, so flip off the car to reach the bus). Every vehicle you hit is a slam (+35 Heat),
+  so hitting two or three ends the run. Acts 2-4 also use the roadblock until their own set pieces exist.
+- **Finale (act 5).** Two roadblocks back to back; its gate wins the run: `YOU ESCAPED!`, wins counted on the phone.
+- **Act clear pays** $30 + 15 x act, 3 x act Stoken and 3x the floor-clear score.
+- **Helicopter (act 2), from the card I sent:** going with my recommendation, "outrun it, hide under the L": the
+  spotlight chases you a little slower than cruising speed, rail speed and kicks pull away, slams let it catch
+  up, and the L-train tracks overhead block the light. Will switch if zack picks another option.

@@ -206,7 +206,13 @@ export function buildKit(level: Level): THREE.Group {
   //--- parked cars ----------------------------------------------------------------------------
   const paints = [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a, 0xe8e8f0, 0x2a2a34];
   level.cars.forEach((car, i) => {
-    kit.add(makeCar(toX(car.x0), toX(car.x1), toY(level, car.bottom), toY(level, car.roof), paints[(i * 7 + level.layout.floor) % paints.length]));
+    const x0 = toX(car.x0);
+    const x1 = toX(car.x1);
+    const bottom = toY(level, car.bottom);
+    const roof = toY(level, car.roof);
+    if (car.model === 'bus') kit.add(makeBus(x0, x1, bottom, roof));
+    else if (car.model === 'cruiser') kit.add(makeParkedCruiser(x0, x1, bottom, roof, i));
+    else kit.add(makeCar(x0, x1, bottom, roof, paints[(i * 7 + level.layout.floor) % paints.length]));
   });
 
   //--- broken glass ----------------------------------------------------------------------------
@@ -266,6 +272,46 @@ export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser';
 const MODEL_LEN = 2.3;
 const MODEL_ROOF = 1.25;
 
+// a CTA bus for the roadblock: white with the blue stripe, a dark window band, a route sign
+export function makeBus(x0: number, x1: number, bottom: number, roof: number): THREE.Group {
+  const bus = new THREE.Group();
+  const w = x1 - x0;
+  const h = roof - bottom;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.25, 1.9), new THREE.MeshLambertMaterial({ color: 0xeeeef2 }));
+  body.position.y = bottom + 0.25 + (h - 0.25) / 2;
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.22, 1.92), new THREE.MeshLambertMaterial({ color: 0x1f5fbf }));
+  stripe.position.y = bottom + 0.25 + h * 0.3;
+  const band = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, h * 0.3, 1.94), new THREE.MeshLambertMaterial({ color: 0x1a2230 }));
+  band.position.set(-w * 0.02, bottom + 0.25 + h * 0.62, 0);
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.2, 1.2), new THREE.MeshBasicMaterial({ color: 0xffb020 }));
+  sign.position.set(w / 2 + 0.03, roof - 0.25, 0);
+  bus.add(body, stripe, band, sign);
+  const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.24, 12).rotateX(Math.PI / 2);
+  const tire = new THREE.MeshLambertMaterial({ color: 0x111114 });
+  for (const wx of [-w / 2 + 0.7, w / 2 - 0.9]) {
+    for (const wz of [-0.85, 0.85]) {
+      const wheel = new THREE.Mesh(wheelGeo, tire);
+      wheel.position.set(wx, bottom + 0.3, wz);
+      bus.add(wheel);
+    }
+  }
+  bus.position.x = x0 + w / 2;
+  return bus;
+}
+
+// a cruiser parked across the street: the AI's black-and-white, its light bar on
+function makeParkedCruiser(x0: number, x1: number, bottom: number, roof: number, i: number): THREE.Group {
+  const car = makeCar(x0, x1, bottom, roof, 0x1c1c24, 'Cruiser');
+  const top = new THREE.Box3().setFromObject(car).max.y;
+  const flip = i % 2 === 0;
+  for (const [dz, color] of [[-0.3, flip ? 0xff2a2a : 0x2a6bff], [0.3, flip ? 0x2a6bff : 0xff2a2a]] as const) {
+    const light = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.11, 0.58), new THREE.MeshBasicMaterial({ color }));
+    light.position.set(-0.05, top + 0.055, dz);
+    car.add(light);
+  }
+  return car;
+}
+
 export function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number, kind: CarModel = 'Sedan'): THREE.Group {
   const car = new THREE.Group();
   const w = x1 - x0;
@@ -309,7 +355,7 @@ export function makeCar(x0: number, x1: number, bottom: number, roof: number, pa
   return car;
 }
 
-const ROAD_COLORS: Record<Road['kind'], string> = { boon: '#ffd23f', cash: '#5fe08a', hot: '#ff4a3a', stash: '#b98cff', shop: '#4ad8ff' };
+const ROAD_COLORS: Record<Road['kind'], string> = { boon: '#ffd23f', cash: '#5fe08a', hot: '#ff4a3a', stash: '#b98cff', shop: '#4ad8ff', escape: '#ff4a3a' };
 
 // a street sign for one road: arrow, where it leads, and its danger in car icons
 function roadSign(road: Road, high: boolean): THREE.Mesh {

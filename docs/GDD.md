@@ -179,6 +179,11 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
   rule, such as faster traffic or Heat that never fully resets).
 - The acts pick biomes from the QFS worlds, so two runs don't look the same even early on.
 
+Built Oct 24, 2026 (first version): acts of 3 floors with an escape after each act's third floor (before the road
+picked at its fork), the Roadblock set piece (car, bus, a line of cruisers, bus; car-hop the roofs), and act 5's
+double roadblock wins the run. All acts are still Chicago; acts 2-4 use the roadblock until their own set pieces
+and biomes exist. See docs/overnight-decisions.md.
+
 ### 3. Risk and reward inside a floor
 
 - **Side lines:** optional harder lines on every floor (a long rail over traffic, a roof chain) with cash or Stoken

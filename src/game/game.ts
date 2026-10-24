@@ -4,6 +4,7 @@ import { addBoon, type Boon, type Held } from '../boons/defs';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
+import { ACTS, actOf, endsAct, ESCAPE, validatedEscape } from '../gen/escape';
 import { FIRST_ROAD, floorRoad, label, rollFork, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
@@ -39,6 +40,9 @@ export interface PickInfo {
 
 export interface RunResult {
   floor: number;
+  act: number;
+  won: boolean; // escaped the city
+  wins: number;
   boons: Held[];
   caught: boolean;
   score: number;
@@ -156,6 +160,7 @@ export class Game {
   }
 
   private makeLevel(): Level {
+    if (this.road.kind === 'escape') return validatedEscape(this.seed, this.road.act);
     return validatedFloor(this.seed, this.floor, {
       fork: rollFork(this.seed, this.floor),
       danger: this.road.danger,
@@ -187,7 +192,7 @@ export class Game {
     this.warp.reset();
     this.particles.clear();
     this.input.clear();
-    this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : 0, this.board);
+    this.sim = new FloorSim(this.level, skaterMods(this.boons), this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0, this.board);
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
@@ -205,10 +210,12 @@ export class Game {
     this.hud.board(this.board);
     this.hud.money(this.run.cash, this.run.stoken);
     if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
+    if (this.road.kind === 'escape') this.hud.callout(`ESCAPE: ${label(this.road)}`, 'bad');
   }
 
   // the floor's gate: pay floor clear, then this floor's reward; the road taken is the next floor
   private finishFloor(now: number): void {
+    if (this.road.kind === 'escape') return this.clearAct(now, this.road.act);
     const pts = this.run.clearFloor(this.floor);
     const fork = this.level.fork;
     this.nextRoad = fork ? (this.sim.road === 'high' ? fork.high : fork.low) : FIRST_ROAD;
@@ -230,6 +237,18 @@ export class Game {
       this.hud.callout(`+${pay} STOKEN`, 'good');
     }
     if (road.kind !== 'cash' && road.kind !== 'stash') this.hud.callout(`FLOOR CLEAR +${pts}`, 'good');
+  }
+
+  // through an act's escape: pay out, and the last act wins the run; the road picked before it comes next
+  private clearAct(now: number, act: number): void {
+    const cash = ESCAPE.actCash(act);
+    const stoken = ESCAPE.actStoken(act);
+    this.run.cash += cash;
+    this.run.stoken += stoken;
+    this.run.score += this.run.clearFloor(this.floor) * 2;
+    if (act >= ACTS) return this.endRun(now, false, true);
+    this.advance();
+    this.hud.callout(`ACT ${act} CLEAR +$${cash} +◆${stoken}`, 'good');
   }
 
   private rerollCost(): number {
@@ -261,6 +280,13 @@ export class Game {
   }
 
   private advance(): void {
+    //an act ends with its escape, before the road picked at the third floor's fork
+    if (endsAct(this.floor) && this.road.kind !== 'escape') {
+      this.road = { kind: 'escape', act: actOf(this.floor), danger: 3 };
+      this.level = this.makeLevel();
+      this.startFloor();
+      return;
+    }
     //the shop road: shop first, then the boon street after it
     if (this.nextRoad.kind === 'shop') {
       this.openShop();
@@ -349,14 +375,17 @@ export class Game {
     this.hud.callout(boon.name.toUpperCase(), 'good');
   }
 
-  private endRun(now: number, caught: boolean): void {
+  private endRun(now: number, caught: boolean, won = false): void {
     this.openMenu('over', now);
     const save = loadSave();
     const newBest = this.run.score > save.best;
-    const next = { best: Math.max(save.best, this.run.score), stoken: save.stoken + this.run.stoken };
+    const next = { best: Math.max(save.best, this.run.score), stoken: save.stoken + this.run.stoken, wins: save.wins + (won ? 1 : 0) };
     writeSave(next);
     this.hud.over({
       floor: this.floor,
+      act: actOf(this.floor),
+      won,
+      wins: next.wins,
       boons: this.boons,
       caught,
       score: this.run.score,
