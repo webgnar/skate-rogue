@@ -9,7 +9,8 @@ import { batchStatic } from './batch';
 import { GateFx } from './gate-fx';
 import { Ambience } from './biomes';
 import { loadImage, pixelTexture } from './textures';
-import { inkify, setInkResolution } from './toon';
+import { inkify, setInkResolution, solid } from './toon';
+import { mergeInk, splitSlabs } from './kit-merge';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
 
@@ -131,7 +132,8 @@ export class StreetView {
       this.scene.remove(this.kit);
       this.kit.traverse((o) => {
         //outlines share their geometry and one material with what they outline
-        if (o instanceof THREE.Mesh && !o.userData.ink) {
+        if (o instanceof THREE.Mesh && o.userData.inkMerged) o.geometry.dispose();
+        else if (o instanceof THREE.Mesh && !o.userData.ink) {
           o.geometry.dispose();
           for (const m of [o.material].flat()) {
             (m as THREE.MeshLambertMaterial).map?.dispose();
@@ -141,8 +143,10 @@ export class StreetView {
       });
     }
     this.kit = buildKit(level);
+    const slabs = splitSlabs(this.kit);
     batchStatic(this.kit);
-    inkify(this.kit);
+    inkify(this.kit, { outline: (m) => !m.userData.noInk && solid(m) });
+    mergeInk(this.kit, slabs);
     this.kitInk();
     this.wetKit();
     this.scene.add(this.kit);
