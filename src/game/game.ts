@@ -45,7 +45,7 @@ import { trickName } from '../physics/tricks';
 import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
-import { FEEL } from '../physics/feel';
+import { BIOME_GRAVITY, FEEL } from '../physics/feel';
 import { landDust, landKick } from '../render/land-fx';
 
 export interface PickInfo {
@@ -233,6 +233,8 @@ export class Game {
       fork: rollFork(this.seed, this.floor, this.meta.library.types),
       danger: this.road.danger,
       short: this.road.kind === 'stash',
+      //the district's gravity (Atlantis floats); the floor is validated in it
+      gravity: BIOME_GRAVITY[this.biomePinned ? this.biome : actBiome(this.seed, actOf(this.floor))] ?? 1,
     }).level;
   }
 
@@ -272,6 +274,11 @@ export class Game {
   setBiome(id: BiomeId): void {
     this.biomePinned = true;
     this.goBiome(id);
+    //a district with other gravity needs the floor rebuilt (and validated) in it
+    if ((BIOME_GRAVITY[id] ?? 1) !== (this.level.gravity ?? 1) && this.road.kind !== 'escape') {
+      this.level = this.makeLevel();
+      this.startFloor();
+    }
   }
 
   private goBiome(id: BiomeId): void {
@@ -667,6 +674,7 @@ export class Game {
     //traffic, the cruiser and the warnings
     this.trafficView.sync(this.level, this.sim.traffic.vehicles);
     this.trafficView.syncCross(this.level, this.sim.traffic.cross);
+    this.trafficView.syncStreet(this.level, this.sim.traffic);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, this.skater.y);
     this.hud.heat(heat);

@@ -280,7 +280,7 @@ vehicles in the skate lane can hit you; the others are there for life and noise,
 | **Robotaxi** (same direction) | The AI's self-driving cars, slower than you. You catch them from behind. They brake hard when you get close | Ollie onto the trunk, ride the roof, hop off the hood |
 | **Oncoming car** | Comes at you in the skate lane; closing speed is very high | Time an ollie over it, or land on the roof for a car-hop |
 | **Cross traffic** | At intersections, cars pull out of the cross street and turn onto your road, your way | Read the traffic light and headlights; ollie it, or car-hop its roof as it turns or drives off |
-| **Parked car** | Static. A door can swing open as you pass | A platform; the door is a hazard and a launch |
+| **Parked car** | Static. A door can swing open as you pass (built: from floor 2, half the plain cars) | A platform; the door is a hazard and a launch |
 | **Bus** | Long and slow, with a stop where it pulls into the lane | A long roof to manual on; the roof edge is a grind |
 | **Box truck** | Dropped tailgate | The tailgate is a kicker (triggers a bomb) |
 | **Enforcer cruiser / drone** | The AI's police. Comes from behind as your Heat rises (see Getting hit) | Stay fast; a drone can be car-hopped once |
@@ -426,7 +426,7 @@ Each piece is 16 × 10 tiles of ASCII, starting and ending on street. QFS legend
 | `E` | Ground hazard spawn (parked car, cones, a door) | QFS (was an enemy) |
 | `F` | Air hazard spawn (drone or pigeon, can be car-hopped) | QFS (was an enemy) |
 | `X` | Intersection: cross traffic and a traffic light | New |
-| `B` | Bus stop: a bus pulls into the skate lane | New |
+| `B` | Bus stop: a bus pulls into the skate lane (built Oct 24, 2026: src/traffic/street.ts) | New |
 | `$` | Cash line (a row of pickups that teaches a line) | New |
 | `C` | Chest / stash (cash, Stoken, sometimes a boon) | QFS |
 | `?` | Event spot: shrine, gap challenge, NPC | New |

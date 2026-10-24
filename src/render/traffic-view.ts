@@ -2,9 +2,10 @@
 import * as THREE from 'three';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
-import type { Vehicle, VehicleKind } from '../traffic/traffic';
+import type { Traffic, Vehicle, VehicleKind } from '../traffic/traffic';
 import { TRAFFIC } from '../traffic/traffic';
 import { CROSS, type CrossCar } from '../traffic/cross';
+import { STOP, type CarDoor } from '../traffic/street';
 import { makeBus, makeCar, makeTruck, toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
@@ -22,6 +23,7 @@ const PAINTS: Record<VehicleKind, number[]> = {
   car: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a], // the cross streets' cars, the same as their own paints
 };
 const BACK_LANE_Z = -2.2;
+const DOOR_OPEN = (40 * Math.PI) / 180; // how far an open door swings
 const CRUISER_Z = -1.3; // the lane just behind the skate lane
 
 export class TrafficView {
@@ -32,6 +34,9 @@ export class TrafficView {
   private drone: THREE.Group;
   private rotors: THREE.Mesh[] = [];
   private crossings: { car: THREE.Group; post: THREE.Group; red: THREE.Mesh; green: THREE.Mesh }[] = [];
+  private stopSigns: THREE.Group[] = [];
+  private doorMeshes: { door: CarDoor; mesh: THREE.Group }[] = [];
+  private blinkers = new Map<number, THREE.Mesh>();
   private cruiserGap = 10; // tiles behind the skater
   private t = 0;
   readonly heatLights = new HeatLights();
@@ -104,6 +109,11 @@ export class TrafficView {
     this.meshes.clear();
     for (const c of this.crossings) this.group.remove(c.car, c.post);
     this.crossings = [];
+    for (const g of this.stopSigns) this.group.remove(g);
+    this.stopSigns = [];
+    for (const d of this.doorMeshes) this.group.remove(d.mesh);
+    this.doorMeshes = [];
+    this.blinkers.clear();
     this.cruiserGap = 10;
   }
 
@@ -186,6 +196,68 @@ export class TrafficView {
     post.position.set(toX(c.box.x0 + CROSS.w / 2) - CROSS.street - 0.45, street, -2.0);
     this.group.add(car, post);
     return { car, post, red, green };
+  }
+
+  // bus stops and car doors (src/traffic/street.ts): the stop signs, a bus's blinker as it pulls in, open doors
+  syncStreet(level: Level, traffic: Traffic): void {
+    if (this.stopSigns.length !== level.busStops.length) this.stopSigns = level.busStops.map((s) => this.makeStopSign(level, s.x));
+    if (this.doorMeshes.length !== traffic.doors.length) this.doorMeshes = traffic.doors.map((d) => ({ door: d, mesh: this.makeDoor(level, d) }));
+    for (const { door, mesh } of this.doorMeshes) {
+      mesh.visible = door.open > 0.05;
+      //hinged at the car's back corner, its free edge swinging out behind the car and toward the camera
+      mesh.rotation.y = -DOOR_OPEN * door.open;
+    }
+    //the blinker on a bus pulling in: amber on the back corner, toward the camera, at about 2.5 flashes a second
+    const on = Math.floor(this.t / 200) % 2 === 0;
+    const signalling = new Set(traffic.signalling.map((v) => v.id));
+    for (const v of traffic.vehicles) {
+      const bus = this.meshes.get(v.id);
+      if (!bus || v.kind !== 'bus') continue;
+      let blink = this.blinkers.get(v.id);
+      if (!blink && signalling.has(v.id)) {
+        blink = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffa020 }));
+        blink.position.set(-toX(STOP.busW) / 2 + 0.1, toY(level, v.bottom) + 0.5, 1.0);
+        bus.add(blink);
+        this.blinkers.set(v.id, blink);
+      }
+      if (blink) blink.visible = on && signalling.has(v.id);
+    }
+  }
+
+  private makeStopSign(level: Level, x: number): THREE.Group {
+    const street = toY(level, level.streetY);
+    const g = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.6, 6), new THREE.MeshLambertMaterial({ color: 0x8a8f99 }));
+    pole.position.y = 1.3;
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.05), new THREE.MeshLambertMaterial({ color: 0x1f5fbf, emissive: 0x0a1f40 }));
+    sign.position.y = 2.35;
+    //a white band across the sign, like the CTA's, so it reads at a glance
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.16, 0.06), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    band.position.y = 2.42;
+    //a bench at the back of the sidewalk
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 0.4), new THREE.MeshLambertMaterial({ color: 0x5a3a26 }));
+    bench.position.set(-1.2, 0.45, -0.1);
+    g.add(pole, sign, band, bench);
+    inkify(g);
+    //at the bus's front end, back of the sidewalk
+    g.position.set(toX(x + STOP.busW) + 0.4, street, -2.0);
+    this.group.add(g);
+    return g;
+  }
+
+  private makeDoor(level: Level, d: CarDoor): THREE.Group {
+    const g = new THREE.Group();
+    const w = 0.95;
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(w, 0.55, 0.07), new THREE.MeshLambertMaterial({ color: 0x3a4250 }));
+    panel.position.set(-w / 2, 0.55, 0);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.35, 0.06), new THREE.MeshLambertMaterial({ color: 0x9fc3d8, emissive: 0x203040 }));
+    glass.position.set(-w / 2 + 0.05, 1.0, 0);
+    g.add(panel, glass);
+    inkify(g);
+    g.position.set(toX(d.car.x0) + 0.05, toY(level, d.car.bottom), 0.9);
+    g.visible = false;
+    this.group.add(g);
+    return g;
   }
 
   // heat 0..100; hold: don't creep closer during a remount; caught: pull level with the skater

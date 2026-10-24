@@ -87,7 +87,7 @@ export class FloorSim {
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
-    this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed), level.crossings);
+    this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed), level.crossings, level.busStops ?? [], level.doors ?? []);
     this.traffic.noBrake = mods?.spoofed ?? false;
   }
 
@@ -97,7 +97,9 @@ export class FloorSim {
     this.swarm?.step(this.skater);
     this.fall = this.skater.mode === 'air' ? this.skater.vsp : 0;
     const crossing = this.traffic.crossing;
-    this.skater.movers = this.swarm || crossing.length ? [...this.traffic.inLane, ...crossing, ...(this.swarm?.boxes ?? [])] : this.traffic.inLane;
+    const doors = this.traffic.doorBoxes;
+    this.skater.movers =
+      this.swarm || crossing.length || doors.length ? [...this.traffic.inLane, ...crossing, ...doors, ...(this.swarm?.boxes ?? [])] : this.traffic.inLane;
     this.skater.step(input);
     const skaterEvents = this.skater.events.slice();
     this.skater.events.length = 0;
