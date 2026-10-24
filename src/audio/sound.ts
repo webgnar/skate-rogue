@@ -1,8 +1,8 @@
 // Plays the game's sound (cues in src/audio/cues.ts) through Web Audio: one-shot samples, the grind loop, rolling
-// wheels and a siren synthesized from noise and an oscillator, and a music loop. Browsers only start audio after a
+// wheels and a siren synthesized from noise and an oscillator, and the soundtrack (MUSIC in cues.ts). Browsers only start audio after a
 // tap, so the context is made on the first press. Any failure (no Web Audio, a sample that won't load) is silent:
 // the game never waits on sound.
-import { LOOPS, SAMPLES, rollGain, sirenGain, type Cue, type MusicId } from './cues';
+import { LOOPS, MUSIC, SAMPLES, rollGain, sirenGain, type Cue, type MusicId } from './cues';
 import { SETTINGS } from '../ui/settings';
 
 export interface SoundFrame {
@@ -24,6 +24,7 @@ export class Sound {
   private siren: { gain: GainNode; osc: OscillatorNode; lfo: OscillatorNode } | null = null;
   private music: { id: MusicId; src: AudioBufferSourceNode } | null = null;
   private want: MusicId | null = null;
+  private track: Record<MusicId, number> = { gameplay: 0, title: 0 }; // where each slot is in its list
 
   constructor(private readonly base: string) {}
 
@@ -48,7 +49,8 @@ export class Sound {
     this.applyVolumes();
     this.makeRoll();
     this.makeSiren();
-    for (const id of [...SAMPLES, 'music_gameplay', 'music_title']) void this.load(id);
+    for (const id of SAMPLES) void this.load(`sounds/${id}`);
+    for (const id of new Set(Object.values(MUSIC).flat())) void this.load(`music/${id}`);
   }
 
   applyVolumes(): void {
@@ -59,10 +61,10 @@ export class Sound {
 
   private async load(id: string): Promise<void> {
     try {
-      const res = await fetch(`${this.base}sounds/${id}.mp3`);
+      const res = await fetch(`${this.base}${id}.mp3`);
       const buf = await this.ctx!.decodeAudioData(await res.arrayBuffer());
-      this.buffers.set(id, buf);
-      if (id === this.want) this.playMusic(id as MusicId);
+      this.buffers.set(id.slice(id.indexOf('/') + 1), buf);
+      if (this.want && !this.music) this.playMusic(this.want);
     } catch {
       //no sound for this one
     }
@@ -100,7 +102,7 @@ export class Sound {
       this.siren.gain.gain.setTargetAtTime(f.skating ? sirenGain(f.heat) : 0, t, 0.3);
       this.siren.lfo.frequency.setTargetAtTime(0.5 + f.heat / 50, t, 0.3); // the wail quickens with Heat
     }
-    this.setMusic(f.over ? 'music_title' : 'music_gameplay');
+    this.setMusic(f.over ? 'title' : 'gameplay');
   }
 
   setMusic(id: MusicId): void {
@@ -109,14 +111,28 @@ export class Sound {
     this.playMusic(id);
   }
 
+  // starts the slot's current track; when it ends, the next one in the list
   private playMusic(id: MusicId): void {
     if (!this.ctx || this.music?.id === id) return;
-    const buf = this.buffers.get(id);
-    if (!buf) return;
-    this.music?.src.stop();
+    const list = MUSIC[id];
+    const old = this.music;
+    this.music = null;
+    if (old) {
+      old.src.onended = null;
+      old.src.stop();
+    }
+    if (!list.length) return;
+    const buf = this.buffers.get(list[this.track[id] % list.length]);
+    if (!buf) return; // still loading: load() starts it
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
-    src.loop = true;
+    src.loop = list.length === 1;
+    src.onended = () => {
+      if (this.music?.src !== src) return;
+      this.track[id] = (this.track[id] + 1) % list.length;
+      this.music = null;
+      this.playMusic(id);
+    };
     src.connect(this.musicBus);
     src.start();
     this.music = { id, src };

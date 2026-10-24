@@ -5,7 +5,15 @@
 import type { FloorEvent } from '../sim/floor';
 
 export type SampleId = 'ollie' | 'trick' | 'impact' | 'grind' | 'coin' | 'game_over' | 'game_start' | 'ufo_explode';
-export type MusicId = 'music_gameplay' | 'music_title';
+export type MusicId = 'gameplay' | 'title';
+
+// The soundtrack: drop mp3s in public/music/ and list their names (no .mp3) here. Each slot plays its list in
+// order and loops back to the first; a slot with one track loops it; an empty slot is silence. 'title' plays on
+// the run summary, 'gameplay' while skating.
+export const MUSIC: Record<MusicId, string[]> = {
+  gameplay: [],
+  title: [],
+};
 
 export const SAMPLES: SampleId[] = ['ollie', 'trick', 'impact', 'grind', 'coin', 'game_over', 'game_start', 'ufo_explode'];
 
