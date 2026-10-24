@@ -1,19 +1,20 @@
-// Act 3's chaser (src/sim/chaser.ts), drawn for its district: a tidal wave in Atlantis, a chariot and horses in
-// Greece, a pack of guards in the museum. The Blender models (art/chasers.py), or primitives if they fail to load,
+// Act 3's chaser (src/sim/chaser.ts): a pack of guards (chaserLook; a tidal wave and a chariot and horses are
+// built too). The Blender models (art/chasers.py), or primitives if they fail to load,
 // inked like the rest; it eases toward the sim's position so a slam reads as it surging forward, and it bobs as it
 // runs. Hidden on any other floor.
 import * as THREE from 'three';
 import type { Chaser } from '../sim/chaser';
 import type { Level } from '../physics/level';
-import type { BiomeId } from './biomes';
 import { toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 
 export type ChaserLook = 'wave' | 'chariot' | 'guards';
 
-export function chaserLook(biome: BiomeId): ChaserLook {
-  return biome === 'atlantis' ? 'wave' : biome === 'museum' ? 'guards' : 'chariot';
+// one world, one chaser (zack, Oct 24 2026: no separate biomes): the guards, the city's own security after you.
+// The wave and the chariot stay built for a later use (Endless, or a special floor).
+export function chaserLook(): ChaserLook {
+  return 'guards';
 }
 
 export const CHASER_CALLS: Record<ChaserLook, { start: string; caught: string }> = {
@@ -188,10 +189,10 @@ export class ChaserView {
   surging = false; // closing in faster than it settles
   private t = 0;
 
-  update(level: Level, chaser: Chaser | null, biome: BiomeId, dt: number): void {
+  update(level: Level, chaser: Chaser | null, dt: number): void {
     this.group.visible = chaser !== null;
     if (!chaser) return;
-    const look = chaserLook(biome);
+    const look = chaserLook();
     if (look !== this.look) {
       if (this.body) this.group.remove(this.body);
       this.body = fromModels(look) ?? (look === 'wave' ? makeWave() : look === 'chariot' ? makeChariot() : makeGuards());

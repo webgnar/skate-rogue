@@ -204,15 +204,14 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
       the near sidewalk and rooftops at street level?
 - [ ] *Phone:* frame rate on the older iPhone on a hill floor with the L in view.
 
-## One district per run
+## One world (no biomes)
 
-- [ ] A whole run stays in one district: floors 1 to 15, the escapes and the finale all keep the same look, gravity
-      and twist. A new save starts in Chicago.
-- [ ] Win a run in Chicago: the summary says NEW DISTRICT OPEN: CLEMENTE PARK, and a district button appears beside
-      UNLOCKS. Tapping it cycles the opened districts; the next run starts in the one it shows.
-- [ ] `?unlockall` opens every district on the button. The daily run hides the button and has a district of its own.
-- [ ] Art Museum with the Ghost Rail boon: the ghost rail stops short of a lower ceiling instead of running into it
-      (the playtest bot used to get stuck popping into the ceiling at a ghost rail's end).
+- [ ] No district button on the run summary and no "new district" line after a win. The world never switches
+      look between acts.
+- [ ] From floor 4, some floors have a twist: wind gusts (currents), a tunnel ceiling, conveyor rails, crumbling
+      ledges, or lots of rails. Floors 1 to 3 never do. Each should look right in the one city.
+- [ ] Act 3's escape is always the guards: "GUARDS! RUN!" at the start, "COLLARED!" if they catch you.
+- [ ] Gear wears about 10% slower than before (hill floors are longer); half-worn should still take 3 or 4 floors.
 
 ## Gnar levels (harder runs after a win)
 

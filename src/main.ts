@@ -11,8 +11,7 @@ import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
-import { BIOMES, isBiome } from './render/biomes';
-import { dailyDistrict, DISTRICT_ORDER, districtsOpen } from './run/districts';
+import { isBiome } from './render/biomes';
 import { props } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
 import { applyClipEdits } from './render/poses';
@@ -297,9 +296,6 @@ function makeHud(): Hud {
       overEl.querySelector('.best')!.textContent += result.daily
         ? ` · today's daily best ${result.daily.best.toLocaleString()}${result.daily.newBest ? ' (NEW)' : ''}`
         : '';
-      const opened = overEl.querySelector<HTMLElement>('.opened')!;
-      opened.hidden = !result.opened;
-      opened.textContent = result.opened ? `NEW DISTRICT OPEN: ${BIOMES[result.opened].name.toUpperCase()}` : '';
       overEl.querySelector('.held')!.innerHTML = result.boons.length ? result.boons.map(chip).join('') : '<span class="none">no boons</span>';
     },
   };
@@ -352,10 +348,6 @@ async function start() {
   const open = all ? MAX_GNAR : gnarOpen(save.wins, save.gnar);
   const gnar = daily || tutorial ? 0 : urlGnar !== null ? Math.min(MAX_GNAR, Math.max(0, Number(urlGnar) || 0)) : Math.min(save.gnarPick, open);
   const library = all ? FULL_LIBRARY : libraryOf(save.unlocked);
-  //the run's district, for all five acts: the save's pick among those opened (?unlockall opens them all); the
-  //daily run's comes from its seed, the tutorial is in Chicago
-  const districts = all ? districtsOpen(DISTRICT_ORDER) : districtsOpen(save.cleared);
-  const district = daily ? dailyDistrict(seed) : tutorial ? 'chicago' : districts.includes(save.district) ? save.district : 'chicago';
   //the leaderboards: every finished run posts itself (once there's a tag); a daily run also goes on today's board
   const scores = new BoardPanel(document.getElementById('scores')!, document.querySelector<HTMLElement>('#over [data-scores]')!);
   const day = daily ? dayKey() : undefined;
@@ -365,7 +357,7 @@ async function start() {
     showOver(result);
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
-  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape, district });
+  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?turbo=4 runs it 4x faster
   const bot = params.get('bot');
   if (bot !== null) {
@@ -409,19 +401,12 @@ async function start() {
     if (t?.closest('[data-open-meta]')) metaScreen.open();
     else if (t?.closest('[data-scores]')) void scores.open();
     else if (t?.closest('[data-daily]')) reloadWith('daily', !daily);
-    else if (t?.closest('[data-district]')) {
-      //the next opened district, wrapping round; the next run starts there
-      writeSave({ ...loadSave(), district: districts[(districts.indexOf(district) + 1) % districts.length] });
-      reloadWith('biome', false);
-    } else if (t?.closest('[data-gnar]')) {
+    else if (t?.closest('[data-gnar]')) {
       //the next level up, wrapping to a normal run; it starts on the next reload
       writeSave({ ...loadSave(), gnarPick: (gnar + 1) % (open + 1) });
       reloadWith('gnar', false);
     }
   });
-  const districtBtn = document.querySelector<HTMLElement>('#over [data-district]')!;
-  districtBtn.hidden = districts.length < 2 || daily;
-  districtBtn.textContent = BIOMES[district].name.toUpperCase();
   const gnarBtn = document.querySelector<HTMLElement>('#over [data-gnar]')!;
   gnarBtn.hidden = open === 0 || daily;
   gnarBtn.textContent = gnar ? `GNAR ${gnar}` : 'GNAR OFF';

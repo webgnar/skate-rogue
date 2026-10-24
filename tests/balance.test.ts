@@ -1,11 +1,9 @@
-// The balance pass: the no-boon bot skates a whole run's floors (in the districts' gravity and twists)
+// The balance pass: the no-boon bot skates a whole run's floors (with their twists, as the game builds them)
 // and its escapes, and the numbers are held to the targets. `npm run balance` prints the table.
 import { describe, expect, it } from 'vitest';
 import { botRun, validatedFloor, type BotRun } from '../src/gen/validate';
 import { validatedEscape } from '../src/gen/escape';
-import { DISTRICT_ORDER } from '../src/run/districts';
-import { BIOME_GRAVITY } from '../src/physics/feel';
-import { DISTRICT_TWIST } from '../src/gen/twists';
+import { floorTwist } from '../src/gen/twists';
 
 declare const process: { env: Record<string, string | undefined>; stderr: { write(s: string): void } };
 
@@ -16,9 +14,7 @@ const avg = (rs: BotRun[], f: (r: BotRun) => number) => rs.reduce((n, r) => n + 
 function floorRuns(floor: number): BotRun[] {
   return Array.from({ length: SEEDS }, (_, s) => {
     const seed = (s + 1) * 7919;
-    //a run stays in one district, so every district gets every depth across the seeds
-    const d = DISTRICT_ORDER[(s + floor) % DISTRICT_ORDER.length];
-    return botRun(validatedFloor(seed, floor, { gravity: BIOME_GRAVITY[d] ?? 1, twist: DISTRICT_TWIST[d], danger: 2 }).level);
+    return botRun(validatedFloor(seed, floor, { twist: floorTwist(seed, floor), hills: true, danger: 2 }).level);
   });
 }
 
