@@ -3,12 +3,12 @@
 // and catches page errors, assets that 404, models that fell back to the code-built version, feet off the board,
 // stretched legs and the skater leaving the screen. Screenshots go with each finding and each new floor.
 //
-//   node scripts/playtest/browser.mjs [--url http://localhost:5173/] [--quick] [--only floor] [--headed]
+//   node scripts/playtest/browser.mjs [--url http://localhost:5173/] [--quick] [--only floor] [--headed] [--video]
 //
 // Without --url it starts its own Vite dev server. Writes playtest-report/browser.json and playtest-report/shots/.
 import { chromium } from 'playwright';
-import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdirSync, renameSync, writeFileSync, rmSync } from 'node:fs';
 import { platform } from 'node:os';
 
 const args = process.argv.slice(2);
@@ -17,6 +17,9 @@ const opt = (name, fallback) => {
   return i < 0 ? fallback : args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true;
 };
 const QUICK = !!opt('quick', false);
+//--video records each scenario at real speed (turbo off, one page at a time) to playtest-report/videos, as mp4 when
+//ffmpeg is installed
+const VIDEO = !!opt('video', false);
 const OUT = 'playtest-report';
 const SHOTS = `${OUT}/shots`;
 
@@ -41,7 +44,7 @@ const STRETCH = 1.03;
 
 function urlFor(base, s) {
   const bot = s.bot === 'mash' ? 'bot=mash' : 'bot';
-  return `${base}?${s.q}&unlockall&skater=${s.skater ?? 'lou-gnar'}&${bot}&turbo=${s.turbo}`;
+  return `${base}?${s.q}&unlockall&skater=${s.skater ?? 'lou-gnar'}&${bot}&turbo=${VIDEO ? 1 : s.turbo}`;
 }
 
 async function startVite() {
@@ -61,7 +64,9 @@ async function startVite() {
 }
 
 async function play(browser, base, s) {
-  const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+  const size = { width: 960, height: 540 };
+  const context = await browser.newContext({ viewport: size, ...(VIDEO ? { recordVideo: { dir: `${OUT}/videos/raw`, size } } : {}) });
+  const page = await context.newPage();
   const url = urlFor(base, s);
   const findings = [];
   const shots = [];
@@ -160,12 +165,28 @@ async function play(browser, base, s) {
   if (end.missing?.files.length) await add('model-fallback', `models that didn't load: ${end.missing.files.join(', ')}`);
   if (end.missing?.parts.length) await add('model-fallback', `parts drawn with the code-built fallback: ${end.missing.parts.join(', ')}`);
   await page.close();
-  return { ...s, url, findings, shots, fps: fps.length ? { avg: Math.round(fps.reduce((a, b) => a + b) / fps.length), min: Math.min(...fps) } : null, floors: end.floors, runs: end.runs };
+  await context.close();
+  const video = VIDEO ? await saveVideo(page, s.id) : undefined;
+  return { ...s, url, video, findings, shots, fps: fps.length ? { avg: Math.round(fps.reduce((a, b) => a + b) / fps.length), min: Math.min(...fps) } : null, floors: end.floors, runs: end.runs };
+}
+
+// the recording, renamed for its scenario; mp4 (plays on a phone) when ffmpeg is there, else Chromium's webm
+async function saveVideo(page, id) {
+  const raw = await page.video()?.path();
+  if (!raw) return undefined;
+  const webm = `videos/${id}.webm`;
+  renameSync(raw, `${OUT}/${webm}`);
+  const mp4 = `videos/${id}.mp4`;
+  const ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', `${OUT}/${webm}`, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '26', '-movflags', '+faststart', `${OUT}/${mp4}`]);
+  if (ff.status !== 0) return webm;
+  rmSync(`${OUT}/${webm}`);
+  return mp4;
 }
 
 async function main() {
   rmSync(SHOTS, { recursive: true, force: true });
   mkdirSync(SHOTS, { recursive: true });
+  rmSync(`${OUT}/videos`, { recursive: true, force: true });
   let base = opt('url', null);
   const server = base ? null : await startVite();
   base = base || server.base;
@@ -178,9 +199,9 @@ async function main() {
   const browser = await chromium.launch({ headless: !opt('headed', false), args: gl });
   const t0 = Date.now();
   const results = [];
-  //two pages at a time
+  //two pages at a time (one when recording, so the video plays at full speed)
   const queue = list.slice();
-  const workers = Array.from({ length: Math.min(2, queue.length) }, async () => {
+  const workers = Array.from({ length: Math.min(VIDEO ? 1 : 2, queue.length) }, async () => {
     for (let s = queue.shift(); s; s = queue.shift()) {
       process.stdout.write(`  ${s.id}: ${s.what}…\n`);
       const r = await play(browser, base, s);
