@@ -184,6 +184,8 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
   leaderboard) and harder **Gnar levels** (like Hades' Heat or Slay the Spire's Ascension: each level adds one
   rule, such as faster traffic or Heat that never fully resets).
 - The acts pick biomes from the QFS worlds, so two runs don't look the same even early on.
+- Gnar levels, built Oct 24, 2026 (src/run/gnar.ts): five levels, each adding a rule (heavier traffic, faster Heat,
+  more Heat carried, one fewer boon card, faster gear wear) and paying +15% score and +20% Stoken.
 
 Built Oct 24, 2026 (first version): acts of 3 floors with an escape after each act's third floor (before the road
 picked at its fork), the Roadblock set piece (car, bus, a line of cruisers, bus; car-hop the roofs), and act 5's

@@ -1,7 +1,8 @@
 // Each district's twist (GDD: Biomes). Logged overnight (2026-10-24). A twist changes which street pieces come up,
 // and some add something the physics reads, so the validator's bot skates every floor with its twist:
 // - Clemente Park: ledges and long flat grinds. Rail pieces come up twice as often.
-// - Ancient Greece: columns as curved rails. Curved-rail pieces come up three times as often.
+// - Ancient Greece: columns as curved rails, and collapsing ruins. Curved-rail pieces come up three times as often,
+//   and most floating ledges are ruins that fall a moment after you land on them: keep moving.
 // - Atlantis: currents. Stretches of street where the water pushes you forward or back while you're in the air.
 // - Art Museum: indoors, low ceilings. Over the street there's a ceiling about a plain ollie above the highest thing
 //   you can land on, so flips don't go higher; rail pieces come up twice as often (all grind lines).
@@ -27,6 +28,7 @@ export const TWIST = {
   current: { push: 0.04, min: 6 * TILE, max: 10 * TILE, gap: 6 * TILE, from: 8 * TILE }, // px/frame² in the air
   ceiling: { above: PHYS.height + 62, top: 4 * TILE }, // its underside: a body and a bit more than a plain ollie (50 px) over the highest landing
   conveyor: { chance: 0.6, speed: 1.5 }, // of flat rails; px/frame added to (or taken from) the grind
+  ruin: { chance: 0.7 }, // of the floor's floating ledges
 };
 
 export interface Current {
@@ -76,6 +78,8 @@ export function applyTwist(level: Level, twist: Twist | undefined, seed: number)
       const c = ceiling.find((s) => p.x >= s.x0 && p.x < s.x1);
       if (c) p.y = Math.max(p.y, c.y + 14);
     }
+  } else if (twist === 'columns') {
+    for (const s of level.surfaces) if (s.kind === 'ledge' && rng() < TWIST.ruin.chance) s.crumble = true;
   } else if (twist === 'conveyors') {
     for (const s of level.surfaces) {
       if (s.kind !== 'rail' || s.x0 < level.finaleX || rng() >= TWIST.conveyor.chance) continue;

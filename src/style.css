@@ -708,7 +708,9 @@ html, body {
 }
 
 /* the unlock tree between runs (src/run/meta.ts) */
-#over .metarow { display: flex; gap: 10px; }
+#over .metarow { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+#over .gnarrules { font: 12px system-ui, sans-serif; color: #ff8a8a; letter-spacing: 0.04em; }
+#over .gnarrules:empty { display: none; }
 #over .metabtn, #meta button {
   all: unset;
   box-sizing: border-box;

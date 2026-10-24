@@ -47,5 +47,6 @@ export const PHYS = {
   rocketPop: 1.5, // Rocket Grind: an ollie off a fast grind pops this much harder
   skyLineDrop: 6, // Sky Line: the ghost rail sits this far under your feet
   skyLineTiles: 7, // and runs this far ahead, past where a flip comes back down
+  crumbleFrames: 24, // Greece's ruins: a ledge you're on falls this long after you land (0.4 s, about 2.6 tiles of rolling)
   bailDepth: 24, // this far below the street surface and you're in the canal
 } as const;

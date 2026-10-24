@@ -388,6 +388,15 @@ and listed it here for review. Any of these can be flipped in the morning.
     4 floors early on and 3 later, which lines up with the shop every 3 floors.
   - Heat peaks around 20 to 40 on floors and 25 to 60 on escapes for the bot, with about 1 slam a floor and no
     busts. Cash is 20 to 50 coins a floor plus act payouts, enough for 2 to 4 mods a shop. Both left as they are.
+- **Greece's collapsing ruins.** 70% of floating ledges on a Greece floor are ruins. Once you're on one it shakes
+  and falls 0.4 s later (about 2.6 tiles of rolling), and you drop with it, with the usual coyote time to ollie.
+  The bot validates floors with them; rerolls barely moved (2.3 tries).
+- **Gnar levels (the GDD's harder mode, named "Gnar levels" to keep it apart from the stoke meter's GNAR MODE).**
+  Five levels, each adding one rule to the ones before: heavier traffic, Heat rises 20% faster, three quarters of
+  Heat carries over, one fewer boon card, gear wears 50% faster. Each level pays +15% score and +20% Stoken. The
+  first win opens level 1, and winning at a level opens the next. You pick it with a GNAR button on the run summary
+  (it reloads into the new level). Daily runs never use it. Leaderboard entries don't record the level yet, so a
+  Gnar run's bigger score goes on the same board.
 
 ## Models thread: animation
 

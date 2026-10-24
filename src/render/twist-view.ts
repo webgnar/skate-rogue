@@ -3,7 +3,8 @@
 // light strip; High-Tech conveyor rails as glowing chevrons running along the bar (cyan forward, orange back).
 // Placeholders the models and effects threads can replace.
 import * as THREE from 'three';
-import type { Level } from '../physics/level';
+import type { Level, Surface } from '../physics/level';
+import type { Skater } from '../physics/skater';
 import { FX } from './fx-settings';
 import { toX, toY } from './kit';
 import { inkify } from './toon';
@@ -36,18 +37,28 @@ export class TwistView {
   readonly group = new THREE.Group();
   private movers: Mover[] = [];
   private t = 0;
+  private ruins: { s: Surface; mesh: THREE.Object3D; y: number; drop: number }[] = [];
   private readonly dummy = new THREE.Object3D();
 
   set(level: Level): void {
     this.group.clear();
     this.movers = [];
+    this.ruins = [];
+    for (const s of level.surfaces) if (s.crumble) this.addRuin(level, s);
     for (const c of level.currents ?? []) this.addCurrent(level, c.x0, c.x1, Math.sign(c.push));
     for (const c of level.ceiling ?? []) this.addCeiling(level, c.x0, c.x1, c.y);
     for (const s of level.surfaces) if (s.conveyor) this.addConveyor(toX(s.x0), toX(s.x1), toY(level, s.y), Math.sign(s.conveyor));
   }
 
-  update(dt: number): void {
+  update(dt: number, sk: Skater): void {
     this.t += dt;
+    for (const r of this.ruins) {
+      const shaking = sk.crumbling.has(r.s);
+      if (sk.gone.has(r.s)) r.drop += dt * (2 + r.drop * 6);
+      r.mesh.position.y = r.y - r.drop;
+      r.mesh.position.x = (r.mesh.userData.x as number) + (shaking ? Math.sin(this.t * 60) * 0.03 : 0);
+      r.mesh.visible = r.drop < 12;
+    }
     for (const m of this.movers) {
       const span = m.x1 - m.x0;
       m.base.forEach((b, i) => {
@@ -82,6 +93,33 @@ export class TwistView {
     const ab = Array.from({ length: arrows.count }, (_, i) => ({ x: x0 + 1 + i * 2, y: toY(level, level.streetY) + 0.02, z: 0.6 }));
     this.group.add(arrows);
     this.movers.push({ mesh: arrows, x0, x1, dir, base: ab.map((b) => ({ ...b, y: b.y + 0.15 })) });
+  }
+
+  private addRuin(level: Level, s: Surface): void {
+    const w = toX(s.x1 - s.x0);
+    const g = new THREE.Group();
+    const marble = new THREE.MeshLambertMaterial({ color: 0xe6dccb });
+    const crack = new THREE.MeshBasicMaterial({ color: 0x5a4a3a });
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 0.35, 3), marble);
+    slab.position.set(0, -0.175, 0);
+    g.add(slab);
+    //a broken column stub hanging under it, and cracks across the top
+    const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.7, 10), marble);
+    stub.position.set(-w * 0.2, -0.65, 0);
+    g.add(stub);
+    for (let i = 1; i < w; i += 1.3) {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.01, 1.6), crack);
+      c.position.set(-w / 2 + i, 0.005, 0.1);
+      c.rotation.y = 0.4;
+      g.add(c);
+    }
+    inkify(g);
+    const x = toX(s.x0) + w / 2;
+    const y = toY(level, s.y);
+    g.position.set(x, y, 0);
+    g.userData.x = x;
+    this.group.add(g);
+    this.ruins.push({ s, mesh: g, y, drop: 0 });
   }
 
   private addCeiling(level: Level, px0: number, px1: number, py: number): void {

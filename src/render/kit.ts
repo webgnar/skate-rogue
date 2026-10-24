@@ -237,6 +237,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
         railing.position.set(x, y + 0.7, -1.4);
         kit.add(railing);
       }
+    } else if (s.kind === 'ledge' && s.crumble) {
+      //Greece's ruins fall away, so they're drawn on their own (src/render/twist-view.ts)
+      continue;
     } else if (s.kind === 'ledge') {
       const row = new Array(Math.round(w)).fill(skin.ledge[1]);
       row[0] = skin.ledge[0];
