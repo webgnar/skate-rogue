@@ -336,6 +336,12 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] `?biome=greece`: a white temple front with a blue and red frieze stands behind the wall every few screens. `atlantis`: a broken arch with coral and kelp. `clemente`: a ballpark light tower. `museum`: a giant marble bust on a plinth. `hightech`: a black spire with cyan bands and a pink sign. `space`: a rocket beside a red gantry. `hive`: a black tower with a red eye and amber lights. Chicago has none.
 - [ ] *Open question:* from the street their tops go out of frame (they're best seen from the roofs). Too tall, or right?
 
+**Act 3's chasers as models (the PR after #82)**
+- [ ] Act 3 escape in Atlantis: a big blue curling wave with white foam on its lip chases you, rolling along its length.
+- [ ] In Greece: a gold chariot with spoked wheels that roll, a driver in a red cloak and crested helmet with his whip up, and two brown horses whose legs gallop.
+- [ ] In the museum: three guards in navy uniforms, peaked caps and gold badges, legs running; the front one's torch beam shines ahead.
+- [ ] *Open question:* do they read at game zoom, and is the wave big and scary enough?
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

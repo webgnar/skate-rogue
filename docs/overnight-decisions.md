@@ -408,6 +408,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   on its gantry in space, and the AI's tower with its red eye in the Hive. One stands in for a building every 26 to
   46 tiles. They are 6 to 10 tiles tall, so from the street their tops rise out of frame; from the roofs you see them
   whole. Chicago has none: its skyline is the landmark.
+- **Act 3's chasers are Blender models** (art/chasers.py), on the gameplay thread's hooks in chaser-view.ts: a
+  curling blue wave with foam on its lip and wash at its foot, a gold chariot with spoked wheels and a red-cloaked
+  driver cracking a whip behind two galloping horses, and three museum guards in navy with peaked caps and badges.
+  Legs swing from the hips, the wheels roll, the primitive versions stay as the fallback.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 
