@@ -69,6 +69,9 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 
 **Slopes and banks**
 
+- [ ] **Bug fix (PR after #69): flying into a bank.** Ollie or fall toward an up bank low, so you meet its face
+      rather than dropping onto it from above. You should land on the bank and ride up it. Before the fix you passed through
+      and fell to your death. It was broken on the old build too.
 - [ ] Rolling up a bank eats speed from rails and kickers, then you're back at cruising speed.
 - [ ] An ollie near the top of an up bank launches noticeably higher than an ollie on flat ground.
 - [ ] Rolling from a roof onto a bank, the board tips over the lip smoothly (one truck on each) instead of snapping to the angle.

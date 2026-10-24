@@ -255,3 +255,48 @@ describe('the lip', () => {
     expect(at(2 * TILE)).toBe(false);
   });
 });
+
+describe('flying into a bank', () => {
+  //a terrace with a bank climbing 3 tiles over 4 off its end, then a roof; nothing under any of it (a descent)
+  const base = levelOf(FLAT);
+  const y = base.streetY - 4 * TILE;
+  const terrace: Surface = { kind: 'roof', x0: 0, x1: 6 * TILE, y, row: -1 };
+  const bank: Surface = { kind: 'bank', x0: 6 * TILE, x1: 10 * TILE, y, y1: y - 3 * TILE, row: -1 };
+  const top: Surface = { kind: 'roof', x0: 10 * TILE, x1: 20 * TILE, y: y - 3 * TILE, row: -1 };
+  const level: Level = { ...base, street: base.street.map(() => false), surfaces: [terrace, bank, top], startX: TILE, startY: y };
+
+  const fly = (vsp: number) => {
+    const sk = new Skater(level);
+    sk.step({ pressed: false, held: false });
+    sk.mode = 'air';
+    sk.surface = null;
+    sk.x = 6 * TILE - 10;
+    sk.y = y - 6;
+    sk.hsp = 5;
+    sk.vsp = vsp;
+    for (let f = 0; f < 120 && (sk.mode as string) !== 'bail'; f++) sk.step({ pressed: false, held: false });
+    return sk;
+  };
+
+  it('rising slower than the bank climbs: you land on it, not through it', () => {
+    const sk = fly(-1.5);
+    expect(sk.mode).not.toBe('bail');
+    expect(sk.events.some((e) => e.type === 'land')).toBe(true);
+    expect(sk.x).toBeGreaterThan(10 * TILE);
+    expect(sk.y).toBeCloseTo(top.y);
+  });
+
+  it('falling into the face of the bank lands on it too', () => {
+    const sk = fly(0.5);
+    expect(sk.mode).not.toBe('bail');
+    expect(sk.y).toBeCloseTo(top.y);
+  });
+
+  it('a full ollie off the terrace edge clears the bank and lands on it, never under it', () => {
+    for (let at = 0; at < 40; at++) {
+      const sk = new Skater(level);
+      for (let f = 0; f < 200 && sk.mode !== 'bail'; f++) sk.step({ pressed: f === at, held: f >= at && f < at + 20 });
+      expect(sk.mode, `ollie on frame ${at}`).not.toBe('bail');
+    }
+  });
+});
