@@ -43,6 +43,7 @@ export interface Pose {
   footBTurn: number;
   boardX: number;
   boardY: number; // lift of the pivot point
+  boardZ: number; // sideways shift, to keep a truck on the rail when the board is turned
   boardPivot: number; // where the board pitches about, along x (tail = -BOARD.tail)
   boardPitch: number; // nose up (+)
   boardRoll: number; // long axis: kickflip (-), heelflip (+)
@@ -76,6 +77,7 @@ export const BASE: Pose = {
   footBTurn: 0,
   boardX: 0,
   boardY: 0,
+  boardZ: 0,
   boardPivot: 0,
   boardPitch: 0,
   boardRoll: 0,
@@ -99,13 +101,30 @@ const POP_Y = -(BOARD.deckTop + 0.014); // drops the tail pivot so the kicked-up
 // a pop off the tail: crouched (front foot back behind the front bolts, back foot on the tail), then the back foot
 // snaps the tail down: the board tips back over the back wheels until the tail strikes the ground (0.58 rad with
 // this deck height), and rises nose-first pivoting on the tail
-const crouch: Key = { hipY: 0.64, bend: 0.32, footFX: 0.16, armLRaise: 0.55, armRRaise: 0.55, armLElbow: 0.9, armRElbow: 0.9, footBX: TAIL_FOOT };
+const crouch: Key = {
+  hipY: 0.6, bend: 0.5, nod: -0.1, footFX: 0.12, footBX: TAIL_FOOT,
+  armLRaise: 0.3, armLFwd: 0.7, armLElbow: 0.3, armRRaise: 0.35, armRFwd: 0.55, armRElbow: 0.35,
+};
 const pop: Key = {
-  hipY: 0.9, bend: 0.15, boardPivot: TAIL, boardPitch: 0.58, boardY: POP_Y, footBX: TAIL_FOOT, footFX: 0.3,
-  armLRaise: 1.2, armRRaise: 0.9, armLElbow: 0.5, armRElbow: 0.7,
+  hipY: 0.9, bend: 0.22, boardPivot: TAIL, boardPitch: 0.58, boardY: POP_Y, footBX: TAIL_FOOT, footFX: 0.22,
+  armLRaise: 0.9, armLFwd: 0.4, armRRaise: 1.7, armRElbow: 0.4,
 };
 // both feet off, knees up, for flips and shove-its
-const G50: Key = { boardY: -0.07 }; // hangers on the rail: the wheels hang just below its top
+// hangers on the rail (their underside 0.09 below the deck), wheels hanging just below its top
+const HANGER_Y = -(BOARD.deckTop - 0.09);
+const G50: Key = { boardY: HANGER_Y };
+// back truck locked on the edge, nose dipped down past the far (heel) side
+const SMITH_YAW = 0.3;
+const SMITH: Key = {
+  boardY: HANGER_Y, boardPivot: -BOARD.bolts * Math.cos(SMITH_YAW), boardPitch: -0.5, boardYaw: SMITH_YAW,
+  boardZ: -BOARD.bolts * Math.sin(SMITH_YAW), boardRoll: -0.15,
+};
+// front truck locked, nose pressed on the rail, tail up and swung out toward the toe side
+const CROOK_YAW = 0.35;
+const CROOKED: Key = {
+  boardY: HANGER_Y, boardPivot: BOARD.bolts * Math.cos(CROOK_YAW), boardPitch: -0.4, boardYaw: CROOK_YAW,
+  boardZ: BOARD.bolts * Math.sin(CROOK_YAW), boardRoll: 0.3,
+};
 const BOARDSLIDE: Key = { yaw: 1.2, head: 0.2, boardYaw: Math.PI / 2, boardY: -(BOARD.deckTop - 0.03) };
 // side = -1 flicks off the heel side (kickflip), +1 kicks out the toe side (heelflip)
 const flick = (side: 1 | -1): Key => ({
@@ -149,18 +168,42 @@ export const CLIPS: Record<string, Clip> = {
       { t: 1.4, pose: { hipY: 0.82, bend: 0.18 } },
     ],
   },
-  // ollie: crouch, snap the tail, front foot drags up to the nose and levels the board, knees tuck, then extend to
-  // land over the bolts (Lou Gnar: 4 x 40 ms, 6 x 100 ms)
+  // Ollie, keyed from zack's ollie sequence photo (2026-10-24), shot from the toe side like our camera:
+  // 1. rolling into it in a deep crouch, torso folded forward, hands low by the knees, front foot mid-board;
+  // 2. the back leg snaps the tail down and the body springs up, the back arm starts to swing up;
+  // 3. the board stands up steeply (about 1 rad) pivoting on the tail while the front foot drags up the grip, so the
+  //    front knee comes right up to the chest while the back leg is still long; back arm straight up overhead;
+  // 4. at the top the board is level under the feet with both knees tucked high;
+  // 5. coming down the front foot pushes the nose a little low, arms out wide for balance;
+  // 6. legs reach for the ground and soak up the landing (the land clip).
   ollie: {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 0.84, footBX: TAIL_FOOT } },
-      { t: 0.08, pose: { ...crouch } },
-      { t: 0.14, pose: { ...pop } },
-      { t: 0.24, pose: { ...pop, hipY: 1.02, boardY: 0.2, boardPitch: 0.3, footFX: NOSE_FOOT - 0.04 } },
-      { t: 0.38, pose: { hipY: 1.02, bend: 0.3, boardPivot: 0, boardY: 0.4, boardPitch: 0, footFX: NOSE_FOOT, footBX: TAIL_FOOT, armLRaise: 1.3, armRRaise: 1.0 } },
-      { t: 0.58, pose: { hipY: 0.98, bend: 0.25, boardY: 0.24, boardPitch: -0.05, footFX: 0.3, footBX: -0.3, armLRaise: 1.1, armRRaise: 0.9 } },
-      { t: 0.76, pose: { hipY: 0.92, boardY: 0.06 } },
+      { t: 0.1, pose: { ...crouch } },
+      { t: 0.16, pose: { ...pop } },
+      {
+        t: 0.27,
+        pose: {
+          hipY: 1.06, bend: 0.12, lean: -0.05, nod: 0.3, boardX: 0.12, boardY: POP_Y + 0.16, boardPivot: TAIL, boardPitch: 1.0,
+          footFX: 0.3, footBX: TAIL_FOOT, armRRaise: 2.8, armRFwd: -0.1, armRElbow: 0.15, armLRaise: 1.1, armLFwd: 0.3,
+        },
+      },
+      {
+        t: 0.4,
+        pose: {
+          hipY: 1.14, bend: 0.32, nod: 0.35, boardY: 0.5, footFX: NOSE_FOOT, footBX: -0.34,
+          armRRaise: 2.3, armRElbow: 0.3, armLRaise: 1.4, armLFwd: 0.35,
+        },
+      },
+      {
+        t: 0.54,
+        pose: {
+          hipY: 1.02, bend: 0.28, boardY: 0.32, boardPitch: -0.12, footFX: 0.32, footBX: -0.3,
+          armLRaise: 1.55, armRRaise: 1.6, armLElbow: 0.3, armRElbow: 0.3,
+        },
+      },
+      { t: 0.68, pose: { hipY: 0.94, bend: 0.22, boardY: 0.08, armLRaise: 1.2, armRRaise: 1.1 } },
     ],
   },
   // Kickflip, keyed from photos of tweaked kickflips (zack, 2026-10-24). The front foot slides up and flicks off the
@@ -247,6 +290,26 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.35, pose: { hipY: 0.88 } },
     ],
   },
+  // backside smith grind (zack's photo): weight on the back leg over the locked back truck, front knee bent
+  // pressing the nose down past the far side, torso upright and a little back, back arm up high, head down
+  smith: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { ...SMITH, hipX: -0.1, hipY: 0.76, bend: 0.2, lean: -0.1, nod: 0.45, footBX: -0.3, footFX: 0.15, armRRaise: 2.6, armRElbow: 0.2, armLRaise: 0.6, armLFwd: 0.35 } },
+      { t: 0.35, pose: { ...SMITH, boardPitch: -0.55, hipX: -0.12, hipY: 0.74, bend: 0.22, lean: -0.12, nod: 0.45, footBX: -0.3, footFX: 0.15, armRRaise: 2.5, armRElbow: 0.3, armLRaise: 0.7, armLFwd: 0.3 } },
+      { t: 0.7, pose: { ...SMITH, hipX: -0.1, hipY: 0.76, bend: 0.2, lean: -0.1, nod: 0.45, footBX: -0.3, footFX: 0.15, armRRaise: 2.6, armRElbow: 0.2, armLRaise: 0.6, armLFwd: 0.35 } },
+    ],
+  },
+  // crooked grind (zack's photo): weight forward over the front truck and nose, front knee bent, back leg reaching up
+  // to the raised tail, arms out wide
+  crooked: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { ...CROOKED, hipX: 0.12, hipY: 0.88, bend: 0.2, lean: 0.1, nod: 0.3, footFX: 0.3, footBX: -0.3, armLRaise: 1.5, armRRaise: 1.55, armLElbow: 0.25, armRElbow: 0.3 } },
+      { t: 0.35, pose: { ...CROOKED, boardPitch: -0.44, hipX: 0.14, hipY: 0.86, bend: 0.22, lean: 0.12, nod: 0.3, footFX: 0.3, footBX: -0.3, armLRaise: 1.6, armRRaise: 1.45, armLElbow: 0.3, armRElbow: 0.25 } },
+      { t: 0.7, pose: { ...CROOKED, hipX: 0.12, hipY: 0.88, bend: 0.2, lean: 0.1, nod: 0.3, footFX: 0.3, footBX: -0.3, armLRaise: 1.5, armRRaise: 1.55, armLElbow: 0.25, armRElbow: 0.3 } },
+    ],
+  },
   // airborne off a drop or after a trick: standing on the board, knees soft, arms up for balance
   air: {
     loop: true,
@@ -256,14 +319,18 @@ export const CLIPS: Record<string, Clip> = {
       { t: 1.0, pose: { hipY: 0.92, bend: 0.2, armLRaise: 1.1, armRRaise: 0.95, armLElbow: 0.5, armRElbow: 0.6 } },
     ],
   },
-  // slam: the board shoots out ahead, the skater goes down and gets back on in about 0.6 s
+  // slam: a hard hit. The skater is thrown off: knees buckle, head whips back, arms fling up, the board shoots out
+  // ahead tumbling; they pitch forward onto their hands, bounce, scramble up and hop back on as the board rolls
+  // back under them (about 0.9 s)
   slam: {
     loop: false,
     keys: [
-      { t: 0, pose: { hipY: 0.84 } },
-      { t: 0.12, pose: { tumble: -0.8, hipY: 0.5, hipX: 0.2, ...feetUp(0.3), armLRaise: 2.3, armRRaise: 2.1, boardX: 0.7, boardRoll: 1.2 } },
-      { t: 0.32, pose: { tumble: -0.3, hipY: 0.48, hipX: 0.1, ...feetUp(0.15), bend: 0.4, boardX: 0.35, boardRoll: Math.PI } },
-      { t: 0.6, pose: { tumble: 0, hipY: 0.86, boardX: 0, boardRoll: TAU } },
+      { t: 0, pose: { hipY: 0.8, bend: 0.3 } },
+      { t: 0.06, pose: { tumble: -0.35, hipY: 0.45, bend: 0.75, nod: -0.5, ...feetUp(0.18, 0.05), footFX: 0.35, footBX: -0.4, armLRaise: 2.7, armRRaise: 2.5, armLElbow: 0.2, armRElbow: 0.3, boardX: 0.6, boardY: 0.28, boardRoll: 1.6, boardYaw: 0.5 } },
+      { t: 0.2, pose: { tumble: -1.25, hipX: 0.35, hipY: 0.42, bend: 0.55, nod: 0.2, ...feetUp(0.3, 0.05), footFX: 0.1, footBX: -0.55, armLRaise: 1.0, armLFwd: 1.4, armRRaise: 1.1, armRFwd: 1.3, armLElbow: 0.1, armRElbow: 0.1, boardX: 1.4, boardY: 0.15, boardRoll: Math.PI, boardYaw: 0.9 } },
+      { t: 0.36, pose: { tumble: -0.85, hipX: 0.3, hipY: 0.52, bend: 0.6, nod: 0.3, ...feetUp(0.12, 0.05), footFX: 0.2, footBX: -0.45, armLRaise: 0.9, armLFwd: 1.2, armRRaise: 1.0, armRFwd: 1.1, armLElbow: 0.3, armRElbow: 0.3, boardX: 1.1, boardY: 0, boardRoll: TAU, boardYaw: 0.4 } },
+      { t: 0.6, pose: { tumble: -0.3, hipX: 0.12, hipY: 0.66, bend: 0.5, nod: 0.3, ...feetUp(0.05), footFX: 0.3, footBX: -0.3, armLRaise: 0.9, armRRaise: 0.8, boardX: 0.3, boardRoll: TAU } },
+      { t: 0.9, pose: { tumble: 0, hipY: 0.84, bend: 0.25, boardRoll: TAU } },
     ],
   },
   // freefall: off the board, flailing (4 x 100 ms)
@@ -280,6 +347,10 @@ export const CLIPS: Record<string, Clip> = {
 export function clipLength(clip: Clip): number {
   return clip.keys[clip.keys.length - 1].t;
 }
+
+// grinds on ledges and flat bars take turns; handrails are boardslides
+export const LEDGE_GRINDS = ['grind1', 'crooked', 'smith'] as const;
+export const GRIND_NAMES: Record<string, string> = { grind1: '50-50', crooked: 'CROOKED GRIND', smith: 'BS SMITH', grind2: 'BOARDSLIDE' };
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
@@ -331,7 +402,11 @@ export function deckPoint(p: Pose, x: number): Vec {
   const ax = x * Math.cos(p.boardYaw) - p.boardPivot;
   const c = Math.cos(p.boardPitch);
   const s = Math.sin(p.boardPitch);
-  return { x: p.boardX + p.boardPivot + ax * c, y: p.boardY + BOARD.deckTop + ax * s, z: -x * Math.sin(p.boardYaw) };
+  return {
+    x: p.boardX + p.boardPivot + ax * c,
+    y: p.boardY + BOARD.deckTop + ax * s,
+    z: p.boardZ - x * Math.sin(p.boardYaw),
+  };
 }
 
 // where a foot's sole goes: on the deck, or its free target, blended by its "on" weight

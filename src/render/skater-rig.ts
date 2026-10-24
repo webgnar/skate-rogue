@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
-import { BASE, BOARD, CLIPS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
 export const TRICKS = ['kickflip', 'heelflip', 'shuv1', 'shuv2'] as const;
 export const TRICK_NAMES: Record<string, string> = {
@@ -38,7 +38,8 @@ const COLORS = {
   wheel: 0xf3e6c4,
 };
 
-const ON_GROUND = new Set(['push', 'ride', 'grind1', 'grind2']); // clips that make no sense in the air
+const GRINDS = new Set(Object.keys(GRIND_NAMES));
+const ON_GROUND = new Set(['push', 'ride', ...GRINDS]); // clips that make no sense in the air
 const DOWN = new THREE.Vector3(0, -1, 0);
 
 export class SkaterRig {
@@ -74,6 +75,7 @@ export class SkaterRig {
   private flash = 0;
   private pushes = 0;
   private rideT = 0;
+  private ledgeGrinds = 0;
 
   constructor() {
     const m = this.mesh;
@@ -225,6 +227,11 @@ export class SkaterRig {
     return this.clipName;
   }
 
+  // what the HUD calls the grind being shown
+  get grindName(): string {
+    return GRIND_NAMES[this.clipName] ?? '50-50';
+  }
+
   onEvent(e: SkaterEvent): void {
     switch (e.type) {
       case 'ollie':
@@ -237,8 +244,8 @@ export class SkaterRig {
       case 'land':
         this.play('land');
         break;
-      case 'grind': // ledges and flat bars: the HUD calls it a 50-50
-        this.play('grind1');
+      case 'grind': // ledges and flat bars: 50-50, crooked, smith in turn
+        this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
         break;
       case 'rail': // handrails: a boardslide
         this.play('grind2');
@@ -260,7 +267,7 @@ export class SkaterRig {
     const grinding = sk.mode === 'grind' || sk.mode === 'rail';
 
     if (sk.mode === 'roll') {
-      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName.startsWith('grind')) {
+      if (done || this.clipName === 'air' || this.clipName === 'freefall' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
       } else if (this.clipName === 'push') {
         // finish the stroke, with the back foot back near the board, before rolling
@@ -276,7 +283,7 @@ export class SkaterRig {
       }
     } else if (sk.mode === 'air' && (done || ON_GROUND.has(this.clipName))) {
       this.play('air', 0.15);
-    } else if (grinding && !this.clipName.startsWith('grind')) {
+    } else if (grinding && !GRINDS.has(this.clipName)) {
       this.play(sk.mode === 'rail' ? 'grind2' : 'grind1');
     }
 
@@ -302,7 +309,7 @@ export class SkaterRig {
 
   private applyPose(p: Pose): void {
     // board: lift, pitch about its pivot, then spin about its centre (roll applied after yaw)
-    this.boardRoot.position.set(p.boardX, p.boardY + BOARD.deckTop, 0);
+    this.boardRoot.position.set(p.boardX, p.boardY + BOARD.deckTop, p.boardZ);
     this.boardPivot.position.x = p.boardPivot;
     this.boardPivot.rotation.z = p.boardPitch;
     this.boardSpin.position.x = -p.boardPivot;

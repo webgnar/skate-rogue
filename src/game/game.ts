@@ -9,6 +9,7 @@ import { surfaceSlope, type Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
+import { Impacts } from '../render/impact';
 import { FloorSim } from '../sim/floor';
 import { TILE } from '../physics/constants';
 import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
@@ -32,6 +33,7 @@ type State = 'skate' | 'caught' | 'pick' | 'over';
 const CAUGHT_BEAT_MS = 800;
 
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
+const BIG_LANDING = 8; // px/frame of fall: a drop of about 4 tiles or more
 
 export class Game {
   private level: Level;
@@ -46,6 +48,8 @@ export class Game {
   private offer: Boon[] = [];
   private last = performance.now();
   private combo = 0;
+  private fallSpeed = 0; // how fast the skater was falling before this step
+  private readonly impacts: Impacts;
   private ghostMesh: THREE.Mesh;
 
   constructor(
@@ -59,6 +63,8 @@ export class Game {
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
     this.view.front.add(this.sprite.mesh);
+    this.impacts = new Impacts(() => this.view.resolution);
+    this.view.front.add(this.impacts.group);
     this.view.scene.add(this.trafficView.group);
     this.ghostMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.12, 0.14),
@@ -141,6 +147,7 @@ export class Game {
     } else {
       this.loop.advance(dt, () => {
         this.prev = { x: this.skater.x, y: this.skater.y };
+        this.fallSpeed = this.skater.mode === 'air' ? this.skater.vsp : 0;
         this.sim.step(this.input.sample());
         for (const e of this.sim.events) this.handle(e);
       });
@@ -192,10 +199,16 @@ export class Game {
           ? Math.atan(-surfaceSlope(sk.surface))
           : 0;
     this.sprite.update(dt * 1000, this.skater, angle);
+    this.impacts.update(dt);
     this.view.follow(x, y, this.skater.hsp);
     this.view.adapt(dt * 1000);
     this.view.render();
     this.hud.debug(`${Math.round(1 / Math.max(dt, 1e-3))} fps · ${this.skater.hsp.toFixed(1)} px/f · res ${this.view.resolution.toFixed(2)}`);
+  }
+
+  private burst(size: number, shake: number): void {
+    this.impacts.spawn(toX(this.skater.x), toY(this.level, this.skater.y), size);
+    this.view.shake(shake);
   }
 
   private handle(e: FloorSim['events'][number]): void {
@@ -207,7 +220,7 @@ export class Game {
         break;
       case 'grind':
         this.combo++;
-        this.hud.callout('50-50', 'trick');
+        this.hud.callout(this.sprite.grindName, 'trick');
         break;
       case 'rail':
         this.combo++;
@@ -219,10 +232,14 @@ export class Game {
         break;
       case 'land':
         this.combo = 0;
+        //a big drop lands with a smaller burst
+        if (this.fallSpeed >= BIG_LANDING) this.burst(0.6, 0.12);
         break;
       case 'slam':
         this.combo = 0;
         this.hud.callout('SLAM!', 'bad');
+        this.burst(1, 0.45);
+        navigator.vibrate?.(60);
         break;
       case 'bail':
         this.combo = 0;
