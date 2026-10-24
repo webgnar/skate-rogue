@@ -5,7 +5,7 @@
 The run now has boons and validated floors, but the only way to lose is a canal and slams just cost speed. The GDD
 makes moving traffic the main hazard and the Heat chase the tension: an enforcer cruiser you can see behind you,
 which catches you after a few slams close together. zack likes being chased, and every slam and boon pick should
-matter. (Drafted ahead of zack's pick on the "what next" card; recommended option.)
+matter. zack chose this as the next step on 2026-10-24.
 
 ## What Changes
 
