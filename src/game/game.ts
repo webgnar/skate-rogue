@@ -22,6 +22,7 @@ import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
 import { Aura, inkify } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
+import { clockFor, moodAt, rainsOn, rainy } from '../render/atmosphere';
 import { FloorSim } from '../sim/floor';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
@@ -189,6 +190,10 @@ export class Game {
     this.pickups.setLevel(this.level);
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level);
+    //the run's clock: afternoon into neon night, rain on some floors
+    const raining = rainsOn(this.seed, this.floor);
+    const mood = moodAt(clockFor(this.floor));
+    this.view.setMood(raining ? rainy(mood) : mood, raining);
     this.view.zoom.reset();
     this.view.follow(this.skater.x, this.skater.y);
     this.sprite.play('push');
