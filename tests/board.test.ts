@@ -117,7 +117,7 @@ describe('board mods', () => {
     const s = new RunScore();
     s.addStyle(BOARD.sparkStyle);
     expect(s.score).toBe(BOARD.sparkStyle);
-    s.onEvent({ type: 'trick', index: 0 }, 0);
+    s.onEvent({ type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false }, 0);
     s.addStyle(BOARD.sparkStyle);
     expect(s.comboPoints).toBe(100 + BOARD.sparkStyle);
   });

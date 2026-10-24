@@ -11,13 +11,6 @@ import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
-export const TRICKS = ['kickflip', 'heelflip', 'shuv1', 'shuv2'] as const;
-export const TRICK_NAMES: Record<string, string> = {
-  kickflip: 'KICKFLIP',
-  heelflip: 'HEELFLIP',
-  shuv1: 'SHUVIT',
-  shuv2: '360 SHUVIT',
-};
 
 const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
 const THIGH = 0.4;
@@ -356,7 +349,8 @@ export class SkaterRig {
         this.play('ollie');
         break;
       case 'trick':
-        this.play(TRICKS[e.index % TRICKS.length]);
+        //180s have no clip of their own yet: they read as an ollie until the models thread adds them
+        this.play(e.name in CLIPS ? e.name : 'ollie');
         break;
       case 'land':
         this.play('land');

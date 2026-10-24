@@ -127,7 +127,7 @@ describe('pickups', () => {
 describe('score', () => {
   it('banks a combo on landing: points x count x speed, and pays cash for long combos', () => {
     const s = new RunScore();
-    for (let i = 0; i < 5; i++) s.onEvent({ type: 'trick', index: i }, 0);
+    for (let i = 0; i < 5; i++) s.onEvent({ type: 'trick', index: i, name: 'kickflip', spin: 0, fakie: false }, 0);
     const bank = s.onEvent({ type: 'land' }, PHYS.baseSpeed * 2)!;
     expect(bank.points).toBe(5 * SCORE.trick * 5 * 2);
     expect(bank.cash).toBe(2 * SCORE.cashOutPer);
@@ -138,7 +138,7 @@ describe('score', () => {
   it('a slam loses the combo and knocks the stoke meter', () => {
     const s = new RunScore();
     s.stoke = 0.5;
-    s.onEvent({ type: 'trick', index: 0 }, 0);
+    s.onEvent({ type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false }, 0);
     s.onEvent({ type: 'slam' }, 0);
     expect(s.onEvent({ type: 'land' }, PHYS.baseSpeed)).toBeNull();
     expect(s.score).toBe(0);
@@ -147,7 +147,7 @@ describe('score', () => {
 
   it('full stoke starts the gnar state, which wears off', () => {
     const s = new RunScore();
-    for (let i = 0; i < 6; i++) s.onEvent({ type: 'trick', index: i }, 0);
+    for (let i = 0; i < 6; i++) s.onEvent({ type: 'trick', index: i, name: 'kickflip', spin: 0, fakie: false }, 0);
     s.onEvent({ type: 'land' }, PHYS.baseSpeed);
     expect(s.gnar).toBe(true);
     for (let f = 0; f < SCORE.gnarSecs * 60 + 1; f++) s.step('roll');
