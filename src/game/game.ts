@@ -90,9 +90,10 @@ const SLAM_FREEZE = 0.09;
 const SLAM_SLOW = 0.3;
 const SLAM_EASE = 0.55;
 //grind sparks per second at cruising speed
-//speed lines fade in from FLOW_FROM x cruising speed and are full FLOW_RANGE x cruising speed above that
-const FLOW_FROM = 1.3;
-const FLOW_RANGE = 0.9;
+//speed lines fade in from FLOW_FROM x cruising speed and are full FLOW_RANGE x cruising speed above that.
+//zack: only at real speed. A flat grind (5) stays clear; a steep rail run (up to 9) brings them in.
+const FLOW_FROM = 1.8;
+const FLOW_RANGE = 0.7;
 const GNAR_TRAIL = 40; // sparkles per second
 const SPARKS_RAIL = 150;
 const SPARKS_LEDGE = 70;
