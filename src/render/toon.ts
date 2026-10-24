@@ -187,7 +187,7 @@ export class Aura {
   private readonly hulls: THREE.Mesh[] = [];
   private readonly ink = new THREE.Color(INK.color);
 
-  constructor(root: THREE.Object3D, width = 7) {
+  constructor(root: THREE.Object3D, width = 2.5) {
     this.mat = new THREE.ShaderMaterial({
       vertexShader: outlineVertex,
       fragmentShader: outlineFragment,

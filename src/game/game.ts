@@ -501,12 +501,10 @@ export class Game {
     return [p.x - 0.3 * Math.cos(a), p.y - 0.3 * Math.sin(a)];
   }
 
-  //into the gnar state: a short freeze, a punch and the word in the world
+  //into the gnar state: the word in the world, no freeze or camera move (zack: the freeze was jarring)
   private gnarOn(): void {
     const x = toX(this.skater.x);
     const y = toY(this.level, this.skater.y);
-    this.warp.hit(0.05, 0.6, 0.3);
-    this.view.punch(0.5);
     this.words.spawn(x, y, 'GNAR!');
     this.impacts.spawn(x, y, 0.7);
   }

@@ -5,4 +5,4 @@
   The fragment shader tapers each streak and fades its ends; depth test off, drawn in the front pass.
 - The aura reuses the outline shader with its own uniforms (width, colour) and a small depth push so it sits behind
   the ink. Its width eases in with the gnar state and pulses; its colour cycles in HSL.
-- `TimeWarp.hit(0.05, 0.6, 0.3)` for the gnar beat: much lighter than a slam.
+- No hit-stop or camera punch on entering gnar (zack, 2026-10-24: jarring). The aura is 2.5 px wider than the ink.
