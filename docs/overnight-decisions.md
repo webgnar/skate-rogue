@@ -83,6 +83,14 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Fork signs are unchanged for now.** Lighting the chosen road's sign needs a live "high or low" signal while
   skating, and that is the gameplay thread's call.
 
+## Effects thread: fx13 biome looks
+
+- **For now a biome is a colour grade plus something in the air.** The table is in
+  `openspec/changes/fx13-biome-looks/proposal.md`. Each biome's real tileset and kit is a models and gameplay job.
+  Until those exist the grade is subtle, because the Chicago buildings fill the frame. Preview any biome with
+  `?biome=atlantis` (or clemente, greece, museum, hightech, space, hive).
+- **Gravity per biome is listed in the look table for reference only.** The sim owns gravity.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor

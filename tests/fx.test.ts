@@ -1,3 +1,4 @@
+import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
 import type { Particles } from '../src/render/particles';
 import { applyParams } from '../src/render/fx-settings';
@@ -168,5 +169,20 @@ describe('boon and board mod looks', () => {
       fx.mod(e, 0, 0);
       expect(calls.length, e).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('biome looks', () => {
+  it('Chicago is the plain time of day; others grade it', () => {
+    const m = moodAt(0.5);
+    expect(biomeMood(m, 'chicago')).toBe(m);
+    const sea = biomeMood(m, 'atlantis');
+    expect(sea.fog).not.toBe(m.fog);
+    expect(sea.fogFar).toBeLessThan(m.fogFar);
+    expect(biomeMood(m, 'space').stars).toBe(1);
+  });
+  it('every biome named in the GDD has a look', () => {
+    for (const id of ['chicago', 'clemente', 'greece', 'atlantis', 'museum', 'hightech', 'space', 'hive']) expect(isBiome(id)).toBe(true);
+    expect(isBiome('mars')).toBe(false);
   });
 });

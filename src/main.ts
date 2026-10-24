@@ -9,6 +9,7 @@ import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
+import { isBiome } from './render/biomes';
 import { SkaterRig } from './render/skater-rig';
 import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
@@ -284,6 +285,8 @@ async function start() {
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud());
   //?debug exposes the game for headless checks
   if (params.has('debug')) (window as unknown as { game: Game }).game = game;
+  const biome = params.get('biome');
+  if (isBiome(biome)) game.setBiome(biome);
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') game.choose(Number(e.code.slice(5)) - 1);
   });
