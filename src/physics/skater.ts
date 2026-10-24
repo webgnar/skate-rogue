@@ -306,7 +306,7 @@ export class Skater {
         this.vsp = slope * this.hsp;
         if (!fromRail) this.coyote = PHYS.coyoteFrames;
       }
-    } else if (this.mode === 'air' && this.vsp >= 0) {
+    } else if (this.mode === 'air') {
       this.land(px, py);
     }
 
@@ -371,8 +371,10 @@ export class Skater {
     const x = this.x;
     let bestY = Infinity;
     let best: (() => void) | null = null;
-    const consider = (y: number, act: () => void) => {
-      if (py <= y + 0.01 && this.y >= y && y < bestY) {
+    //rising, only a slope that climbs faster than you can catch you (you fly into the face of a bank)
+    const falling = this.vsp >= 0;
+    const consider = (y: number, act: () => void, crossed = falling && py <= y + 0.01 && this.y >= y) => {
+      if (crossed && y < bestY) {
         bestY = y;
         best = act;
       }
@@ -384,12 +386,18 @@ export class Skater {
       //Rail Magnet: rails reach out for you before their start
       const x0 = s.kind === 'rail' ? s.x0 - magnet : s.x0;
       if (x >= x0 && x <= s.x1) {
-        //sloped: compare against the slope's height where we were last step too
-        if (s.y1 !== undefined && py > surfaceY(s, px) + 0.01) continue;
-        consider(surfaceY(s, x), () => {
-          this.x = Math.max(this.x, s.x0);
-          this.touchDown(s);
-        });
+        //sloped: crossed if we were on or above the slope where we were last step, and are on or under it where we
+        //are now. Measured against the slope at each x, so flying into a bank that climbs faster than you lands you on
+        //it, rising or falling, instead of passing through its face
+        const crossed = s.y1 !== undefined ? py <= surfaceY(s, px) + 0.01 && this.y >= surfaceY(s, x) : undefined;
+        consider(
+          surfaceY(s, x),
+          () => {
+            this.x = Math.max(this.x, s.x0);
+            this.touchDown(s);
+          },
+          crossed,
+        );
       }
     }
     for (const car of this.cars()) {
@@ -406,7 +414,7 @@ export class Skater {
       const pry = near ? start.y : rail.yAt(px);
       if (ry === undefined) continue;
       //compare against the rail's height where we were last step too, so a sloped rail can't slip past
-      if ((pry === undefined || py <= pry + 0.01) && this.y >= ry && ry < bestY) {
+      if (falling && (pry === undefined || py <= pry + 0.01) && this.y >= ry && ry < bestY) {
         bestY = ry;
         best = () => {
           if (near) this.x = start.x;
