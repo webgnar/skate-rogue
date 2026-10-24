@@ -33,7 +33,17 @@ function blocked(cars: Car[], x: number, y: number): boolean {
 }
 
 // the reference bot: ollies at canals and cars, rides rails to their ends, flips when falling short
-export function botRun(level: Level): { result: string; slams: number; maxHeat: number; gear: Gear } {
+export interface BotRun {
+  result: string;
+  slams: number;
+  maxHeat: number;
+  gear: Gear;
+  frames: number; // how long it took
+  cash: number; // coins picked up
+  stoken: number;
+}
+
+export function botRun(level: Level): BotRun {
   const sim = new FloorSim(level);
   const sk = sim.skater;
   let hold = 0;
@@ -57,11 +67,15 @@ export function botRun(level: Level): { result: string; slams: number; maxHeat: 
     if (hold > 0) hold--;
     slams += sim.events.filter((e) => e.type === 'slam').length;
     maxHeat = Math.max(maxHeat, sim.heat.value);
-    if (sim.state === 'bail') return { result: `bail at col ${Math.floor(sk.x / TILE)}`, slams, maxHeat, gear: sim.gear };
-    if (sim.state === 'caught') return { result: `caught at col ${Math.floor(sk.x / TILE)}`, slams, maxHeat, gear: sim.gear };
-    if (sim.state === 'exit') return { result: 'exit', slams, maxHeat, gear: sim.gear };
+    const end = (result: string): BotRun => {
+      const took = (kind: string) => level.pickups.filter((p, i) => p.kind === kind && sim.taken[i]).length;
+      return { result, slams, maxHeat, gear: sim.gear, frames: f, cash: took('cash'), stoken: took('stoken') };
+    };
+    if (sim.state === 'bail') return end(`bail at col ${Math.floor(sk.x / TILE)}`);
+    if (sim.state === 'caught') return end(`caught at col ${Math.floor(sk.x / TILE)}`);
+    if (sim.state === 'exit') return end('exit');
   }
-  return { result: 'timeout', slams, maxHeat, gear: sim.gear };
+  return { result: 'timeout', slams, maxHeat, gear: sim.gear, frames: 60 * 120, cash: 0, stoken: 0 };
 }
 
 export function clearable(level: Level): boolean {

@@ -378,6 +378,16 @@ and listed it here for review. Any of these can be flipped in the morning.
   mostly forward (+1.5 px/frame) and some back. The bot validates every floor with its twist; it needs about the
   same rerolls as before (2 to 2.5 tries against 2.2). The looks (bubbles, a ceiling slab, chevrons) are
   placeholders for the models and effects threads. Chicago, Space and the Hive have no twist yet.
+- **Balance pass with bot runs (`npm run balance`, tests/balance.test.ts).** The no-boon bot skates floors 1 to 15
+  (each in its district's gravity and twist) and all five escapes on 6 seeds, and the test holds the numbers to
+  targets. What it showed:
+  - Floors take 17 to 28 s and escapes 23 to 40 s, so a winning run is about 12 minutes, not the GDD's 20. I left
+    floor length alone (it's a feel question for zack, on the test checklist).
+  - Gear wore faster than the 3-to-5-floors-to-half aim: the worst part lost 17 to 22 a floor from act 2 on. I cut
+    deck wear 1.2 to 0.9 per ollie, shoes 1.6 to 1.1 per flip and wheels 1.2 to 1.0 per fast second. Now it's about
+    4 floors early on and 3 later, which lines up with the shop every 3 floors.
+  - Heat peaks around 20 to 40 on floors and 25 to 60 on escapes for the bot, with about 1 slam a floor and no
+    busts. Cash is 20 to 50 coins a floor plus act payouts, enough for 2 to 4 mods a shop. Both left as they are.
 
 ## Models thread: animation
 
