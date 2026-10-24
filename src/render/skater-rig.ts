@@ -312,7 +312,7 @@ export class SkaterRig {
     this.pelvis.position.set(p.hipX, p.hipY, 0);
     this.pelvis.rotation.set(0, p.yaw, p.tumble, 'ZYX');
     this.spine.rotation.set(p.bend, 0, -p.lean);
-    this.head.rotation.y = p.head;
+    this.head.rotation.set(p.nod, p.head, 0, 'YXZ');
     const arms: [number, number, number][] = [
       [p.armLRaise, p.armLFwd, p.armLElbow],
       [p.armRRaise, p.armRFwd, p.armRElbow],

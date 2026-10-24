@@ -51,6 +51,12 @@ describe('rig poses', () => {
     expect(hf.footFOn + hf.footBOn).toBe(0);
     expect(CLIPS.kickflip.keys[1].pose.footFZ!).toBeLessThan(0); // flicked off the heel side
     expect(CLIPS.heelflip.keys[1].pose.footFZ!).toBeGreaterThan(0); // kicked off the toe side
+    // mid-flip the legs split wide over the board: front foot out past the nose, both feet well above the deck
+    const mid = sample(CLIPS.kickflip, 0.2);
+    expect(mid.footFX).toBeGreaterThan(BOARD.tail);
+    expect(mid.footFX - mid.footBX).toBeGreaterThan(1.0);
+    expect(Math.min(mid.footFY, mid.footBY) - (mid.boardY + BOARD.deckTop)).toBeGreaterThan(0.25);
+    expect(mid.armRRaise).toBeGreaterThan(2.3); // back arm up overhead
     // the back foot catches first
     const catchKey = CLIPS.kickflip.keys.find((k) => k.pose.footBOn === 1)!;
     expect(catchKey.pose.footFOn).toBe(0);
