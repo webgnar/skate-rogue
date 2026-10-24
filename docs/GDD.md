@@ -183,12 +183,11 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
 - Beating Act 5 wins the run. It unlocks **Endless** (QFS Survivor style: floors forever, mixed worlds, its own
   leaderboard) and harder **Gnar levels** (like Hades' Heat or Slay the Spire's Ascension: each level adds one
   rule, such as faster traffic or Heat that never fully resets).
-- **One district per run** (zack, Oct 24, 2026: "biomes should not change until the player has gotten to the end
-  of the game for that biome"). All five acts, their escapes and the finale happen in the district picked before
-  the run. A new save has Chicago only; escaping the city in a district opens the next one, in the order of the
-  Biomes table (Chicago, Clemente, Greece, Atlantis, the museum, High-Tech, Space, the Hive). The district button on
-  the run summary picks the next run's. The daily run's district comes from the day's seed. The act column in the
-  table above is the original plan, kept for the escapes' set pieces, which still go by act.
+- **One world** (zack, Oct 24, 2026: "i dont want there to be different biomes really ... i would rather fuse all the
+  art from the different biomes together to make it more visually rich"). There are no districts: every floor of
+  every act is the same fused city, with the art of all the QFS worlds mixed into one kit. The District column in
+  the table above is superseded. The worlds' mechanics live on as floor twists that can turn up on any floor from
+  act 2 (see Biomes). Act 3's chase is always the guards.
 - Gnar levels, built Oct 24, 2026 (src/run/gnar.ts): five levels, each adding a rule (heavier traffic, faster Heat,
   more Heat carried, one fewer boon card, faster gear wear) and paying +15% score and +20% Stoken.
 
@@ -486,23 +485,18 @@ have the 16-stair sets and the longest handrails. The validator still skates eve
 
 ### Biomes
 
-Biomes are QFS's worlds, one per run (unlocked in this order by winning), each with its own gravity, 3D kit, hazard
-set and a twist:
+Superseded Oct 24, 2026: one fused world, no biomes (see Run structure 2). What the worlds brought to play is kept
+as **floor twists** (src/gen/twists.ts). Act 1 has none; from floor 4 on, about half the floors roll one by seed:
 
-| # | Biome | Gravity | Twist |
-| --- | --- | --- | --- |
-| 1 | Chicago streets | 1.0 | Tutorial-friendly: kiosks, canals, flat rails |
-| 2 | Clemente Park | 1.0 | Ledges and long flat grinds; pigeons and drones to car-hop |
-| 3 | Ancient Greece | 1.0 | Columns as curved rails; collapsing ruins |
-| 4 | Atlantis | 0.8 | Floaty, slow fall; currents push you sideways |
-| 5 | Art Museum | 1.0 | Indoor, low ceilings; no high ollies, all grind lines |
-| 6 | High-Tech City | 1.0 | Security drones; conveyor rails |
-| 7 | Outer Space | 0.6 | Huge air; gaps sized for it |
-| 8+ | Mixed worlds | varies | QFS mixed skins at random, same seed = same floor |
+| Twist | From | What it does |
+| --- | --- | --- |
+| Grinds | Clemente Park | Rail pieces come up twice as often |
+| Columns | Ancient Greece | Curved rails three times as often; most floating ledges are ruins that crumble after you land |
+| Currents | Atlantis | Stretches where the wind pushes you forward or back in the air |
+| Ceiling | Art Museum | A low ceiling (a tunnel) over the street: no high flips, more grind lines |
+| Conveyors | High-Tech City | Some flat rails run forward (faster) or back (slower) while you grind |
 
-Built Oct 24, 2026 (src/gen/twists.ts): Clemente's rail weighting, Greece's curved rails, Atlantis currents (air
-only), the museum's low ceilings and High-Tech conveyor rails. Collapsing ruins and per-district hazards are still to
-come.
+District gravity (Atlantis 0.8, Space 0.6) is dropped: every floor is 1.0.
 
 ## Boons
 

@@ -1,6 +1,6 @@
 // Makes sure every floor can be cleared with no boons: a simple reference bot skates each generated layout, and
 // layouts it can't clear are re-rolled from a sub-seed, then generated one tier lower. Pure and deterministic.
-import { SCORE } from '../run/score';
+import { RunScore, SCORE } from '../run/score';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { FloorSim } from '../sim/floor';
@@ -27,16 +27,29 @@ export interface BotRun {
 }
 
 // boost: skate in the gnar state, at its cruising speed (SCORE.gnarBoost) with slams free of Heat
-export function botRun(level: Level, boost = 1): BotRun {
+// boost 'game': the gnar state comes and goes as the run's stoke meter fills and drains, as in the game
+export function botRun(level: Level, boost: number | 'game' = 1): BotRun {
   const sim = new FloorSim(level);
-  sim.skater.boost = boost;
-  sim.heat.slamFree = boost > 1; // the gnar state: slams cost no Heat either
+  const run = boost === 'game' ? new RunScore() : null;
+  const fixed = (k: number) => {
+    sim.skater.boost = k;
+    sim.heat.slamFree = k > 1; // the gnar state: slams cost no Heat either
+  };
+  fixed(run ? 1 : (boost as number));
   const sk = sim.skater;
   const pilot = new Pilot('ref');
   let slams = 0;
   let maxHeat = 0;
   for (let f = 0; f < 60 * 120; f++) {
+    if (run) {
+      fixed(run.gnar ? GNAR_BOOST : 1);
+      sim.combo = run.combo;
+    }
     sim.step(pilot.input(sim));
+    if (run) {
+      run.step(sk.mode);
+      for (const e of sim.events) run.onEvent(e, sk.hsp);
+    }
     slams += sim.events.filter((e) => e.type === 'slam').length;
     maxHeat = Math.max(maxHeat, sim.heat.value);
     const end = (result: string): BotRun => {
@@ -50,10 +63,11 @@ export function botRun(level: Level, boost = 1): BotRun {
   return { result: 'timeout', slams, maxHeat, gear: sim.gear, frames: 60 * 120, cash: 0, stoken: 0 };
 }
 
-// a floor has to be clearable at cruising speed and in the gnar state (full stoke skates 20% faster), so filling the
-// stoke meter can never make a floor impossible. Logged 2026-10-24, from the playtest bot's findings.
+// a floor has to be clearable at cruising speed, in the gnar state (full stoke skates 20% faster), and with the gnar
+// state switching on and off mid-floor as it does in the game, so filling the stoke meter can never make a floor
+// impossible. Logged 2026-10-24, from the playtest bot's findings.
 export function clearable(level: Level): boolean {
-  return botRun(level).result === 'exit' && botRun(level, GNAR_BOOST).result === 'exit';
+  return botRun(level).result === 'exit' && botRun(level, GNAR_BOOST).result === 'exit' && botRun(level, 'game').result === 'exit';
 }
 
 export interface Validated {

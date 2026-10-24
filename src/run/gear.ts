@@ -9,10 +9,10 @@ export const GEAR_PARTS: GearPart[] = ['deck', 'shoes', 'trucks', 'wheels'];
 
 export const GEAR = {
   // wear per use, out of 100
-  ollie: 0.9, // deck, per ollie (balance pass, 2026-10-24: about 4 floors to half worn for the bot)
-  flip: 1.1, // shoes, per flip trick
-  grindSec: 1.2, // trucks, per second on a rail or ledge
-  fastSec: 1.0, // wheels, per second going faster than fastOver x cruising speed
+  ollie: 0.8, // deck, per ollie (balance pass, 2026-10-24: about 4 floors to half worn for the bot; 0.9 before the longer hill floors)
+  flip: 1.0, // shoes, per flip trick
+  grindSec: 1.1, // trucks, per second on a rail or ledge
+  fastSec: 0.9, // wheels, per second going faster than fastOver x cruising speed
   fastOver: 1.25,
   wornFrom: 50, // below this a part starts to cost you
   busted: 15, // the HUD flashes it from here

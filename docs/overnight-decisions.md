@@ -443,6 +443,26 @@ and listed it here for review. Any of these can be flipped in the morning.
   One mash-bot finding is left: a fall through a moving car's roof on a Greece floor 12 (seed 47514). It's a
   physics edge I didn't chase.
 
+- **One world, no biomes (zack: "i dont want there to be different biomes really ... fuse all the art").** This
+  replaces the one-district-per-run change from a few minutes earlier: the district picker, district unlocks and
+  the save's district fields are gone, and every floor uses the Chicago hill layout. The level-design thread fuses
+  the art into one kit. What I kept from the districts is their mechanics, as floor twists (GDD: Biomes). There are
+  none in act 1, then about half the floors from floor 4 roll one of grinds, columns (crumbling ruins), currents,
+  ceiling or conveyors. District gravity is dropped (always 1.0). Act 3's chaser is always the guards; the wave and
+  chariot models stay in the code unused.
+  - Knock-on fixes the playtest bot needed:
+    - Ceilings now clear the neighbouring pieces' rails too. That fixed a Ghost Rail getting the skater stuck,
+      popping into a lower ceiling at the rail's end, and replaces the ghost-rail cut I added in PR #112.
+    - The validator also runs its bot with the gnar state coming and going mid-floor, as in the game. That closed
+      the "validated floor the bot can't clear in the real game" findings.
+    - The reference bot projects its flips, so at full speed it holds a flip that would sail over a short roof, and
+      it flips near the top of an arc when that's what lands.
+    - Gear wear is down about 10% because hill floors run longer.
+  - Still showing: about 20 "climbed far above the level" warnings, all from the Sky Line boon. That's working as
+    intended, there's just more of it now that the hill floors are lower.
+- **Next: Endless.** The GDD promises an Endless mode after a win (floors forever, its own leaderboard), and it
+  isn't built. It's the next gameplay item unless zack says otherwise.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

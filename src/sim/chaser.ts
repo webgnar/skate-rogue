@@ -1,6 +1,5 @@
-// Act 3's escape (GDD: How a run ends): the district's chaser runs you down a long street. Logged overnight
-// (2026-10-24, recommended on a card to zack): one chase with a look per district: a tidal wave in Atlantis, a
-// chariot in Greece, a pack of guards in the museum. It's always right behind you, on screen. Clean skating holds
+// Act 3's escape (GDD: How a run ends): a chaser runs you down a long street. Logged overnight (2026-10-24,
+// recommended on a card to zack); with one fused world it's always the guards (src/render/chaser-view.ts). It's always right behind you, on screen. Clean skating holds
 // it off and slowly opens the gap; every slam lets it close in. Three slams close together and it has you.
 // It tracks slams rather than speed, so a slow uphill rail or a climb never counts against you. Pure, 60 Hz.
 import { TILE } from '../physics/constants';

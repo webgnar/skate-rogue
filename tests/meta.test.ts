@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { BOONS } from '../src/boons/defs';
 import { NO_MODS } from '../src/boons/mods';
 import { offerBoons } from '../src/boons/offer';
-import { dailyDistrict, DISTRICT_ORDER, districtsOpen, nextDistrict } from '../src/run/districts';
-import { floorDistrict, floorLevel } from '../src/run/floor-level';
-import { BIOME_GRAVITY } from '../src/physics/feel';
+import { floorTwist, TWISTS } from '../src/gen/twists';
+import { floorLevel } from '../src/run/floor-level';
 import { rollFork } from '../src/gen/roads';
 import { buy, dailySeed, DECK_SLOTS, firstPick, FULL_LIBRARY, libraryOf, START_TYPES, STOCK, UNLOCKS, withLoadout } from '../src/run/meta';
 import { RunScore } from '../src/run/score';
@@ -90,20 +89,14 @@ describe('meta progression', () => {
     expect(a).toBeGreaterThan(0);
   });
 
-  it('a run stays in one district; a win there opens the next, Chicago first', () => {
-    expect(districtsOpen([])).toEqual(['chicago']);
-    expect(nextDistrict('chicago', [])).toBe('clemente');
-    expect(districtsOpen(['chicago'])).toEqual(['chicago', 'clemente']);
-    expect(nextDistrict('chicago', ['chicago'])).toBeNull(); // already open
-    expect(districtsOpen(['chicago', 'clemente', 'greece']).at(-1)).toBe('atlantis');
-    expect(nextDistrict('hive', DISTRICT_ORDER)).toBeNull(); // the last one
-    expect(districtsOpen(DISTRICT_ORDER)).toEqual(DISTRICT_ORDER);
-    for (const district of ['atlantis', 'hive'] as const) {
-      const road = { kind: 'boon', boonType: 'POP', danger: 1 } as const;
-      expect(floorDistrict({ district })).toBe(district);
-      expect(floorLevel({ seed: 5, floor: 13, road, library: FULL_LIBRARY, gnar: 0, district }).gravity ?? 1).toBe(BIOME_GRAVITY[district] ?? 1);
-    }
-    const daily = new Set(Array.from({ length: 60 }, (_, s) => dailyDistrict(s)));
-    expect(daily.size).toBeGreaterThan(5);
+  it('one world: no twist in act 1, then about half the floors roll one', () => {
+    const road = { kind: 'boon', boonType: 'POP', danger: 1 } as const;
+    for (let seed = 1; seed <= 20; seed++) for (let floor = 1; floor <= 3; floor++) expect(floorTwist(seed, floor)).toBeUndefined();
+    const later = Array.from({ length: 200 }, (_, s) => floorTwist(s, 4 + (s % 12)));
+    expect(new Set(later.filter(Boolean))).toEqual(new Set(TWISTS));
+    expect(later.filter(Boolean).length).toBeGreaterThan(60);
+    expect(later.filter(Boolean).length).toBeLessThan(140);
+    //no district gravity any more
+    expect(floorLevel({ seed: 5, floor: 13, road, library: FULL_LIBRARY, gnar: 0 }).gravity ?? 1).toBe(1);
   });
 });

@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { NO_MODS, type Mods } from '../src/boons/mods';
 import { validatedFloor } from '../src/gen/validate';
-import { DISTRICT_TWIST } from '../src/gen/twists';
+import { TWISTS } from '../src/gen/twists';
 import { PHYS } from '../src/physics/constants';
-import { BIOME_GRAVITY } from '../src/physics/feel';
-import type { BiomeId } from '../src/render/biomes';
 import { surfaceSlope, surfaceY } from '../src/physics/level';
 import { Skater } from '../src/physics/skater';
 import { FloorSim } from '../src/sim/floor';
 
-const DISTRICTS: BiomeId[] = ['chicago', 'clemente', 'greece', 'atlantis', 'museum', 'hightech', 'space'];
 
 function rng(seed: number): () => number {
   let s = seed >>> 0;
@@ -32,13 +29,12 @@ describe('no falling through things', () => {
     { speedScale: 1.6, slingshot: 2, kickerScale: 1.6, ollieScale: 1.4, jumps: 2 },
     { ollieScale: 1.6, floatyFlip: true, lateFlip: true, jumps: 3 },
   ];
-  it("fuzzes floors 1-8 on 8 seeds with three builds, in every district's gravity and twist", () => {
+  it("fuzzes floors 1-8 on 8 seeds with three builds, with every twist", () => {
     const holes: string[] = [];
     for (let seed = 1; seed <= 8; seed++) {
       for (let floor = 1; floor <= 8; floor++) {
-        //each seed in another district: its gravity and its twist (currents, ceilings, conveyors, rail-heavy pieces)
-        const district = DISTRICTS[seed % DISTRICTS.length];
-        const level = validatedFloor(seed * 7919, floor, { gravity: BIOME_GRAVITY[district], twist: DISTRICT_TWIST[district] }).level;
+        //each seed with another twist (currents, ceilings, conveyors, ruins, rail-heavy pieces) or none
+        const level = validatedFloor(seed * 7919, floor, { twist: TWISTS[seed % (TWISTS.length + 1)] }).level;
         builds.forEach((b, bi) => {
           const r = rng(seed * 100 + floor * 7 + bi);
           const sim = new FloorSim(level, { ...NO_MODS, ...b });

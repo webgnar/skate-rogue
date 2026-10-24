@@ -3,7 +3,7 @@
 // to shake out states the reference line never reaches. Pure, so the validator, the sim playtest and the game's
 // ?bot autopilot all press the same way.
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, type Car, type Level } from '../physics/level';
+import { isStreetAt, surfaceY, type Car, type Level } from '../physics/level';
 import type { Skater, StepInput } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
@@ -32,18 +32,39 @@ function blocked(cars: Car[], x: number, y: number): boolean {
   return cars.some((c) => c.x0 > x && c.x0 - x < 2.5 * TILE && c.roof < y - 4);
 }
 
-// follow the fall as it goes (no more presses): does it come down on a manual pad?
-function landsOnPad(level: Level, sk: Skater): boolean {
-  const pads = level.surfaces.filter((s) => s.manual && s.y >= sk.y);
-  let { x, y, vsp } = sk;
-  for (let f = 0; f < 120 && y < level.streetY; f++) {
+const EDGE = 6;
+
+// follow a fall (no more presses) from (x, y) at vsp: does it come down on a manual pad, or (any) on anything?
+function landsOn(level: Level, sk: Skater, x: number, y: number, vsp: number, any: boolean): boolean {
+  for (let f = 0; f < 120 && y < level.streetY + 1; f++) {
     vsp = Math.min(vsp + sk.grav, PHYS.maxFall);
     const ny = y + vsp;
     x += sk.hsp;
-    if (pads.some((s) => y <= s.y && ny >= s.y && x >= s.x0 && x <= s.x1)) return true;
+    if (any && ny >= level.streetY && isStreetAt(level, x)) return true;
+    for (const s of level.surfaces) {
+      //a few px in from the ends: the projection is a guess, and a corner isn't a landing to count on
+      if ((!any && !s.manual) || x < s.x0 + EDGE || x > s.x1 - EDGE) continue;
+      const sy = surfaceY(s, x);
+      if (y <= sy && ny >= sy) return true;
+    }
     y = ny;
   }
   return false;
+}
+
+// falling with no street ahead: flip now, or hold it while a later flip still lands where this one wouldn't (at
+// full stoke's speed a flip straight away can sail over a short roof)
+function flipNow(level: Level, sk: Skater): boolean {
+  const flip = PHYS.trick * sk.gear.trick;
+  if (landsOn(level, sk, sk.x, sk.y, flip, true)) return true;
+  let { x, y, vsp } = sk;
+  for (let k = 1; k <= 30 && y < level.streetY; k++) {
+    vsp = Math.min(vsp + sk.grav, PHYS.maxFall);
+    x += sk.hsp;
+    y += vsp;
+    if (landsOn(level, sk, x, y, flip, true)) return false;
+  }
+  return true;
 }
 
 export class Pilot {
@@ -85,7 +106,11 @@ export class Pilot {
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30) pressed = true;
     // falling with no street ahead: flip for more air
     //(unless this fall already lands on a manual pad)
-    if (sk.mode === 'air' && sk.vsp > 0.5 && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOnPad(level, sk)) pressed = true;
+    if (sk.mode === 'air' && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOn(level, sk, sk.x, sk.y, sk.vsp, false)) {
+      if (sk.vsp > 0.5 && flipNow(level, sk)) pressed = true;
+      //near the top of the arc: flip already if that lands on something and coming down as we are wouldn't
+      else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true) && !landsOn(level, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
+    }
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.y)) pressed = true;
     return pressed;

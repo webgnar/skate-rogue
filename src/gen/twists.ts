@@ -1,30 +1,32 @@
-// Each district's twist (GDD: Biomes). Logged overnight (2026-10-24). A twist changes which street pieces come up,
-// and some add something the physics reads, so the validator's bot skates every floor with its twist:
-// - Clemente Park: ledges and long flat grinds. Rail pieces come up twice as often.
-// - Ancient Greece: columns as curved rails, and collapsing ruins. Curved-rail pieces come up three times as often,
-//   and most floating ledges are ruins that fall a moment after you land on them: keep moving.
-// - Atlantis: currents. Stretches of street where the water pushes you forward or back while you're in the air.
-// - Art Museum: indoors, low ceilings. Over the street there's a ceiling about a plain ollie above the highest thing
-//   you can land on, so flips don't go higher; rail pieces come up twice as often (all grind lines).
-// - High-Tech City: conveyor rails. Some flat rails run forward (faster) or back (slower) while you grind them.
-// Chicago (the tutorial-friendly first act), Outer Space (its gravity is the twist) and the Hive have none yet.
+// Floor twists. They started as one per district (GDD: Biomes); since there's one fused world now (zack, Oct 24
+// 2026: no separate biomes), any floor from act 2 on can roll one (floorTwist). A twist changes which street pieces
+// come up, and some add something the physics reads, so the validator's bot skates every floor with its twist:
+// - grinds: ledges and long flat grinds. Rail pieces come up twice as often.
+// - columns: curved rails, and collapsing ruins. Curved-rail pieces come up three times as often, and most floating
+//   ledges are ruins that fall a moment after you land on them: keep moving.
+// - currents: stretches of street where the wind pushes you forward or back while you're in the air.
+// - ceiling: a low ceiling (a tunnel) about a plain ollie above the highest thing you can land on, so flips don't go
+//   higher; rail pieces come up twice as often (all grind lines).
+// - conveyors: some flat rails run forward (faster) or back (slower) while you grind them.
 import { PHYS, TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
-import type { BiomeId } from '../render/biomes';
 import { makeRng } from './rng';
 import type { Piece } from './pieces';
 
 export type Twist = 'grinds' | 'columns' | 'currents' | 'ceiling' | 'conveyors';
 
-export const DISTRICT_TWIST: Partial<Record<BiomeId, Twist>> = {
-  clemente: 'grinds',
-  greece: 'columns',
-  atlantis: 'currents',
-  museum: 'ceiling',
-  hightech: 'conveyors',
-};
+export const TWISTS: Twist[] = ['grinds', 'columns', 'currents', 'ceiling', 'conveyors'];
+
+// a floor's twist: none in act 1 (learning the street), then about half of the floors get one, by the seed
+export function floorTwist(seed: number, floor: number): Twist | undefined {
+  if (floor <= TWIST.plainFloors) return undefined;
+  const rng = makeRng(seed * 13 + floor * 7919);
+  return rng() < TWIST.chance ? TWISTS[Math.floor(rng() * TWISTS.length)] : undefined;
+}
 
 export const TWIST = {
+  plainFloors: 3, // act 1 has none
+  chance: 0.5, // of a later floor having one
   current: { push: 0.04, min: 6 * TILE, max: 10 * TILE, gap: 6 * TILE, from: 8 * TILE }, // px/frame² in the air
   ceiling: { above: PHYS.height + 62, top: 4 * TILE }, // its underside: a body and a bit more than a plain ollie (50 px) over the highest landing
   conveyor: { chance: 0.6, speed: 1.5 }, // of flat rails; px/frame added to (or taken from) the grind
@@ -66,10 +68,13 @@ export function applyTwist(level: Level, twist: Twist | undefined, seed: number)
     const ceiling: { x0: number; x1: number; y: number }[] = [];
     for (let x0 = level.finaleX; x0 < level.width; x0 += w) {
       const x1 = x0 + w;
+      //over its neighbours' too: a rail (or a Ghost Rail off its end) running up to the next piece mustn't go into
+      //that piece's ceiling, which had the skater popping into it and re-landing on the rail's end forever
+      const [a, b] = [x0 - w, x1 + w];
       let top = level.streetY;
-      for (const s of level.surfaces) if (s.x1 > x0 && s.x0 < x1) top = Math.min(top, s.y, s.y1 ?? s.y);
-      for (const r of level.rails) if (r.x1 > x0 && r.x0 < x1) top = Math.min(top, ...r.ys);
-      for (const car of level.cars) if (car.x1 > x0 && car.x0 < x1) top = Math.min(top, car.roof);
+      for (const s of level.surfaces) if (s.x1 > a && s.x0 < b) top = Math.min(top, s.y, s.y1 ?? s.y);
+      for (const r of level.rails) if (r.x1 > a && r.x0 < b) top = Math.min(top, ...r.ys);
+      for (const car of level.cars) if (car.x1 > a && car.x0 < b) top = Math.min(top, car.roof);
       ceiling.push({ x0, x1, y: Math.min(top - TWIST.ceiling.above, level.streetY - TWIST.ceiling.top) });
     }
     level.ceiling = ceiling;

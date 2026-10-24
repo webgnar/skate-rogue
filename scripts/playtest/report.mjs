@@ -37,12 +37,12 @@ const read = (f) => (existsSync(`${OUT}/${f}`) ? JSON.parse(readFileSync(`${OUT}
 export function collect() {
   const sim = read('sim.json');
   const browser = read('browser.json');
-  const items = []; // { kind, where, message, url, shot, district, from }
+  const items = []; // { kind, where, message, url, shot, from }
   if (sim) {
     for (const run of sim.runs) {
       for (const f of run.floors) {
-        for (const x of f.findings) items.push({ kind: x.kind, where: `${f.label} · ${f.district}`, message: `${x.message} at column ${x.col}`, url: f.url, from: `sim, ${run.pilot} bot` });
-        if (f.cause === 'game-coupling' || f.cause === 'unclearable') items.push({ kind: f.cause, where: `${f.label} · ${f.district}`, message: f.result, url: f.url, from: 'sim, ref bot' });
+        for (const x of f.findings) items.push({ kind: x.kind, where: `${f.label}${f.twist ? ` · ${f.twist}` : ''}`, message: `${x.message} at column ${x.col}`, url: f.url, from: `sim, ${run.pilot} bot` });
+        if (f.cause === 'game-coupling' || f.cause === 'unclearable') items.push({ kind: f.cause, where: `${f.label}${f.twist ? ` · ${f.twist}` : ''}`, message: f.result, url: f.url, from: 'sim, ref bot' });
       }
     }
   }
