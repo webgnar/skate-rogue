@@ -26,6 +26,7 @@ import { SpeedLines } from '../render/speed-lines';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
+import { ChopperView } from '../render/chopper-view';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
 import { toX, toY } from '../render/kit';
@@ -115,6 +116,8 @@ export class Game {
   private nextRoad: Road = FIRST_ROAD;
   private fallSpeed = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
+  private readonly chopper = new ChopperView();
+  private spotState = 'hunt';
   private readonly particles = new Particles();
   private readonly focus = new FocusLines();
   private readonly words = new SoundWords();
@@ -147,7 +150,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group);
+    this.view.scene.add(this.trafficView.group, this.chopper.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -485,6 +488,13 @@ export class Game {
           : 0;
     this.sprite.update(dt * 1000, this.skater, angle);
     this.impacts.update(dt);
+    this.chopper.update(this.level, this.sim.chopper, dt);
+    const spot = this.sim.chopper?.state ?? 'hunt';
+    if (spot !== this.spotState && this.state === 'skate') {
+      if (spot === 'lock') this.hud.callout('SPOTTED!', 'bad');
+      else if (spot === 'lost') this.hud.callout("LOST 'EM", 'good');
+    }
+    this.spotState = spot;
     this.pickups.update(dt);
     this.sparks(dt);
     this.water(dt);

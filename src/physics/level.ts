@@ -128,9 +128,11 @@ export interface EscapeSite {
   act: number;
   x0: number; // the set piece starts here
   x1: number;
+  chopperFrom?: number; // the helicopter joins the chase here
+  covers: { x0: number; x1: number; y: number }[]; // L tracks overhead: the spotlight can't see under them
 }
 
-export type EscapeKind = 'roadblock' | 'finale';
+export type EscapeKind = 'roadblock' | 'chopper' | 'finale';
 
 export interface Level {
   layout: Layout;

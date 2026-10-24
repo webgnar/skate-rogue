@@ -4,6 +4,7 @@ import type { Mods } from '../boons/mods';
 import { BOARD, fires, type EffectId, type Slots, type TriggerId } from '../board/mods';
 import { PHYS, TILE } from '../physics/constants';
 import { Heat } from '../heat/heat';
+import { Chopper, CHOPPER } from './chopper';
 import type { Level, PickupKind } from '../physics/level';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
@@ -36,6 +37,7 @@ export class FloorSim {
   state: FloorState = 'skate';
   readonly taken: boolean[]; // pickups collected
   road: 'high' | 'low' | null = null; // which road the skater left the floor on
+  readonly chopper: Chopper | null; // the helicopter escape's spotlight
   private pops: number[] = []; // frames until each Double Pop
   private wasGrinding = false;
 
@@ -48,6 +50,8 @@ export class FloorSim {
     this.skater = new Skater(level, mods);
     this.heat.value = startHeat;
     this.taken = level.pickups.map(() => false);
+    const esc = level.escape;
+    this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
     this.traffic = new Traffic(level, spawnPlan(level, level.layout.seed));
   }
@@ -63,6 +67,8 @@ export class FloorSim {
     this.runBoard(skaterEvents);
     this.collect();
     this.heat.step(this.skater, skaterEvents);
+    //in the helicopter's light, the Heat climbs
+    if (this.chopper?.step(this.skater)) this.heat.value = Math.min(100, this.heat.value + CHOPPER.heatPerSec / 60);
     if (this.skater.mode === 'bail') this.state = 'bail';
     else if (this.skater.mode === 'exit') {
       this.state = 'exit';

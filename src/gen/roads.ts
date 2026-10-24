@@ -2,6 +2,7 @@
 // reward and a danger rating. The road you skate decides what the next floor is and what it pays at its end.
 import type { BoonType } from '../boons/defs';
 import { makeRng, randInt } from './rng';
+import { ESCAPE_NAMES, escapeKind } from './escape';
 
 export type Road =
   | { kind: 'boon'; boonType: BoonType; danger: number } // a normal floor, ending in a pick of that boon type
@@ -79,6 +80,6 @@ export function label(road: Road): string {
     case 'shop':
       return 'SKATE SHOP';
     case 'escape':
-      return road.act >= 5 ? 'THE LAST ROADBLOCK' : 'ROADBLOCK';
+      return ESCAPE_NAMES[escapeKind(road.act)];
   }
 }
