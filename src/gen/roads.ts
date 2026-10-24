@@ -7,7 +7,8 @@ export type Road =
   | { kind: 'boon'; boonType: BoonType; danger: number } // a normal floor, ending in a pick of that boon type
   | { kind: 'cash'; danger: number } // a normal floor with a big cash payout
   | { kind: 'hot'; danger: number } // rush hour, Heat starts at 30; pays a pick of 4 and cash
-  | { kind: 'stash'; danger: number }; // a short floor ending in a Stoken stash
+  | { kind: 'stash'; danger: number } // a short floor ending in a Stoken stash
+  | { kind: 'shop'; boonType: BoonType; danger: number }; // the skate shop (no floor), then a boon street
 
 export interface Fork {
   high: Road;
@@ -20,7 +21,15 @@ export const ROADS = {
   hotCash: (floor: number) => 20 + 5 * floor,
   stashStoken: (floor: number) => 5 + floor,
   hotFrom: 2, // hot streets appear from this floor's fork on
+  shopFrom: 2, // the shop can turn up from this floor's fork on
+  shopEvery: 3, // and always does at the end of every third floor
+  shopChance: 0.12,
 };
+
+// the floor a road leads to: the shop has none, so its road is the boon street after it
+export function floorRoad(road: Road): Road {
+  return road.kind === 'shop' ? { kind: 'boon', boonType: road.boonType, danger: road.danger } : road;
+}
 
 // what the first floor of a run is
 export const FIRST_ROAD: Road = { kind: 'boon', boonType: 'POP', danger: 1 };
@@ -43,9 +52,16 @@ function roll(rng: () => number, floor: number, not?: Road): Road {
 // the fork at the end of `floor`, the same for a seed
 export function rollFork(seed: number, floor: number): Fork {
   const rng = makeRng(seed * 13 + floor * 6151);
+  const boonStreet = (): Road => ({ kind: 'boon', boonType: BOON_TYPES[randInt(rng, 2)], danger: 1 + randInt(rng, 2) });
+  //the shop: always every third floor, sometimes from floor 2; the other road is a boon street
+  if (floor >= ROADS.shopFrom && (floor % ROADS.shopEvery === 0 || rng() < ROADS.shopChance)) {
+    const shop: Road = { kind: 'shop', boonType: BOON_TYPES[randInt(rng, 2)], danger: 1 + randInt(rng, 2) };
+    const other = boonStreet();
+    return rng() < 0.5 ? { high: shop, low: other } : { high: other, low: shop };
+  }
   const high = roll(rng, floor);
   //at least one road is a boon street, so a run keeps building
-  const low = high.kind === 'boon' ? roll(rng, floor, high) : { kind: 'boon' as const, boonType: BOON_TYPES[randInt(rng, 2)], danger: 1 + randInt(rng, 2) };
+  const low = high.kind === 'boon' ? roll(rng, floor, high) : boonStreet();
   return { high, low };
 }
 
@@ -59,5 +75,7 @@ export function label(road: Road): string {
       return 'HOT STREET';
     case 'stash':
       return 'STOKEN STASH';
+    case 'shop':
+      return 'SKATE SHOP';
   }
 }
