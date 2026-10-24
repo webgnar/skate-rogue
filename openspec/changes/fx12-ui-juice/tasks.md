@@ -5,4 +5,4 @@
 - [x] 1.3 Gate portals that wake as the skater nears
 - [x] 1.4 Reduce motion turns screen animations off
 - [x] 1.5 Headless checks (pick classes and timing, gates on day and night floors)
-- [ ] 1.6 Fork sign juice (the signs light up as you choose a road): waits on a "which road am I on" signal from the sim
+- [x] 1.6 Fork sign juice: past the fork, the sign for your road swells and pulses and the other dims (FloorSim.roadAhead)

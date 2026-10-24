@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 function key(mesh: THREE.Mesh): string | null {
   const m = mesh.material;
-  if (Array.isArray(m) || m.userData.facade || mesh.userData.gate || mesh.userData.keep) return null;
+  if (Array.isArray(m) || m.userData.facade || mesh.userData.gate || mesh.userData.keep || mesh.userData.forkSign) return null;
   const g = mesh.geometry;
   const c = (m as THREE.MeshLambertMaterial).color;
   const flags = [m.type, (m as THREE.MeshLambertMaterial).map?.uuid ?? '-', c ? c.getHexString() : '-', (m as THREE.MeshLambertMaterial).emissive?.getHexString() ?? '-', m.transparent, m.alphaTest, m.side, m.vertexColors, m.opacity];

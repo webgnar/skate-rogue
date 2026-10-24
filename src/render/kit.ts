@@ -306,8 +306,10 @@ export function buildKit(level: Level): THREE.Group {
     post.position.set(sx - 2.1, (hy + 3.2) / 2, -1.3);
     kit.add(post);
     const top = roadSign(fork.high, true);
+    top.userData.forkSign = 'high'; // gate-fx.ts lights the road you're taking
     top.position.set(sx, hy + 2.2, -1.25);
     const bottom = roadSign(fork.low, false);
+    bottom.userData.forkSign = 'low';
     bottom.position.set(sx, hy + 0.65, -1.25);
     kit.add(top, bottom);
   }
