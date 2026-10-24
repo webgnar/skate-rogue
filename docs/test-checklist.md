@@ -47,6 +47,15 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 - [ ] *Tuning:* prices run from 15 to 60 Stoken (465 for everything). Does a good run earn enough that the first unlock comes after 2 or 3 runs?
 - [ ] Your old best score and banked Stoken carry over from before this update.
 
+## Leaderboards
+
+**Setup first (zack, once):** the boards need a Redis store. In the Vercel dashboard, open the skate-rogue project, then Storage, then connect an **Upstash Redis** database (the free plan is plenty). Connecting it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN` on the project. Then redeploy. Until a store is connected, the SCORES button stays hidden and nothing else changes.
+
+- [ ] After a run, the run-over screen shows a purple **SCORES** button. The first time, it asks for a tag (3 to 10 letters or digits) and posts that run.
+- [ ] Later runs post themselves, and the button shows your rank ("SCORES · #4").
+- [ ] Two tabs: TOP SCORES and DEEPEST RUNS (deepest floor first, then score). On a daily run there's a third: TODAY'S DAILY. Your tag is outlined in yellow.
+- [ ] Typing the tag on the phone: the keyboard comes up, Enter posts, and taps on the screen never start a run behind it.
+
 ## Boons
 
 - [ ] **FLOW** (New Wheels, Bomb Hill, Butter, Kicker Boost, Slingshot) and **COOL** (Low Profile, Bubble Pads, Tuck and Roll, Slam Stoke, Siren Song, Decoy, Ghost Mode): each card does what it says.

@@ -341,6 +341,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   the gate with Heat 50 or more and the Stoken you grabbed on that floor pays again (at least 3). It's a choice
   between this run (the cruiser is close) and the unlock tree. Not on stash floors or escapes.
 
+- **Leaderboards (GDD: Scoring and stoke).** Ported excaliburSkate's API to a Vercel function (api/leaderboard.ts)
+  over a Redis store's REST API, so there's no @vercel/kv dependency (Vercel KV is now Upstash). Three boards: top
+  score, deepest floor, and each day's daily run (kept 3 days); 100 entries each, top 10 shown. Players pick an
+  arcade tag (3 to 10 letters or digits) the first time; after that every run posts itself. No game key: a key
+  shipped in the page doesn't stop anyone, so the server only checks that entries are sane. It stays hidden
+  until zack connects an Upstash Redis store to the Vercel project (steps in docs/test-checklist.md).
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)
