@@ -318,6 +318,8 @@ export class Skater {
     //the Art Museum's low ceiling: you bump your head and come down
     const ceiling = this.mode === 'air' ? ceilingAt(this.level, this.x) : undefined;
     if (ceiling !== undefined && this.y < ceiling) {
+      //ducking under it: the knees fold up as fast as you were rising
+      this.feel.bounce(Math.max(0, -this.vsp), 0);
       this.y = ceiling;
       this.vsp = Math.max(0, this.vsp);
     }

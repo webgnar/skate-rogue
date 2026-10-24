@@ -133,6 +133,8 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 - [ ] **District gravity is wired (gameplay #79):** in Atlantis (act 3 some runs, gravity 0.8) and Outer Space (0.6)
       ollies go higher and hang longer, and big drops land softer. Test bot stats: sketchy landings fall from 14% at normal
       gravity to 9% in Atlantis and 6% in space.
+- [ ] **Museum ceilings:** ollie under the Art Museum's low ceiling and Lou ducks, knees folding, as he bumps it.
+- [ ] No falling through anything in any district: currents, ceilings and conveyor rails are all in the fall-through test now.
 - [ ] **Bounces have weight:** landing on a car roof, a bus or an open door squats Lou before he pops back up.
       Rolling up a tailgate loads his knees before it throws him. Flip onto a roof late, and the hop still saves you
       but rocks him.
