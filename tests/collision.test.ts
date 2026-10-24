@@ -5,7 +5,8 @@ import { DISTRICT_TWIST } from '../src/gen/twists';
 import { PHYS } from '../src/physics/constants';
 import { BIOME_GRAVITY } from '../src/physics/feel';
 import type { BiomeId } from '../src/render/biomes';
-import { surfaceSlope } from '../src/physics/level';
+import { surfaceSlope, surfaceY } from '../src/physics/level';
+import { Skater } from '../src/physics/skater';
 import { FloorSim } from '../src/sim/floor';
 
 const DISTRICTS: BiomeId[] = ['chicago', 'clemente', 'greece', 'atlantis', 'museum', 'hightech', 'space'];
@@ -77,3 +78,38 @@ describe('no falling through things', () => {
   }, 120000);
 });
 
+
+// zack's bug (Oct 24): flying into an up bank you went through it and fell to your death. Throw the skater at every
+// bank on a range of floors from all sorts of angles and speeds, at every district gravity: never through it.
+describe('flying into banks', () => {
+  it('lands on the bank from any approach', () => {
+    const r = rng(7);
+    const holes: string[] = [];
+    for (let seed = 1; seed <= 12; seed++) {
+      for (const gravity of [1, 0.8, 0.6]) {
+        const level = validatedFloor(seed * 7919, 1 + (seed % 8), { gravity }).level;
+        for (const bank of level.surfaces.filter((s) => s.kind === 'bank')) {
+          for (let k = 0; k < 60; k++) {
+            const sk = new Skater(level);
+            sk.step({ pressed: false, held: false });
+            const x = bank.x0 - 80 + r() * (bank.x1 - bank.x0 + 60);
+            const y = surfaceY(bank, x) - 2 - r() * 80;
+            Object.assign(sk, { mode: 'air', surface: null, rail: null, x, y, hsp: 1 + r() * 11, vsp: -10 + r() * 20, coyote: 0 });
+            for (let f = 0; f < 200; f++) {
+              const px = sk.x;
+              const py = sk.y;
+              sk.step({ pressed: false, held: false });
+              if (sk.mode !== 'air') break;
+              const over = sk.x > bank.x0 + 1 && sk.x < bank.x1 - 1;
+              if (over && sk.y > surfaceY(bank, sk.x) + 1 && py <= surfaceY(bank, px) + 1) {
+                holes.push(`seed ${seed} gravity ${gravity}: from (${x.toFixed(1)}, ${y.toFixed(1)}) through the bank at ${Math.round(sk.x)}`);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(holes.slice(0, 5)).toEqual([]);
+  }, 60000);
+});
