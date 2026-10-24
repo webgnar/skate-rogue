@@ -370,6 +370,13 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] A bus stop (floor 2 or later) has a CTA sign on a pole (blue, white band, red route plate) and a slatted bench beside it.
 - [ ] A parked car's door that swings open has a window, a mirror and a handle, and it's the same colour as its car.
 
+**Pedestrians (the PR after #85)**
+- [ ] On the street part of a floor, people stand at the back of the sidewalk every few tiles, in mixed clothes, skin and hair (short, long, cap). Some stroll back and forth.
+- [ ] As you skate up they turn to watch you; some raise a phone to film you.
+- [ ] Land a big air near them: they throw their arms up and bounce. Slam near them: they flinch.
+- [ ] Nobody stands in a cross street, at a bus stop, on a prop, or in front of the fork's doors.
+- [ ] *Open question:* too many or too few people? Should they duck when you fly over?
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
