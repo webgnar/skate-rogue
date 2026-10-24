@@ -221,6 +221,7 @@ export class Game {
     const rain = rainLevel(this.seed, this.floor);
     const mood = moodAt(clockFor(this.floor));
     this.view.setMood(rain > 0 ? rainy(mood) : mood, rain);
+    this.trafficView.beams.setNight(mood.neon);
     this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
     this.view.zoom.reset();
     this.view.follow(this.skater.x, this.skater.y);
@@ -475,7 +476,7 @@ export class Game {
     //traffic, the cruiser and the warnings
     this.trafficView.sync(this.level, this.sim.traffic.vehicles);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
-    this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000);
+    this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, this.skater.y);
     this.hud.heat(heat);
     this.heatCue.update(heat, dt);
     this.view.night.update(dt, this.skater.x / TILE, heat);

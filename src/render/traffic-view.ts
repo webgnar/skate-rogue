@@ -8,6 +8,9 @@ import { makeBus, makeCar, makeTruck, toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 import { headlights } from './night';
+import { HeatBeams } from './heat-beams';
+
+const DRONE_EYE = new THREE.Vector3(-0.4, -0.25, 0); // from the drone's centre
 import { HeatLights } from './heat-light';
 
 const PAINTS: Record<VehicleKind, number[]> = {
@@ -29,12 +32,15 @@ export class TrafficView {
   private cruiserGap = 10; // tiles behind the skater
   private t = 0;
   readonly heatLights = new HeatLights();
+  readonly beams = new HeatBeams();
+  private readonly beamFrom = new THREE.Vector3();
+  private readonly eyeAt = new THREE.Vector3();
   private readonly bar = new THREE.Vector3();
 
   constructor() {
     this.cruiser = this.makeCruiser();
     this.drone = this.makeDrone();
-    this.group.add(this.cruiser, this.drone, this.heatLights.group);
+    this.group.add(this.cruiser, this.drone, this.heatLights.group, this.beams.group);
     inkify(this.group);
   }
 
@@ -128,7 +134,8 @@ export class TrafficView {
   }
 
   // heat 0..100; hold: don't creep closer during a remount; caught: pull level with the skater
-  chase(level: Level, skaterX: number, heat: number, hold: boolean, caught: boolean, dtMs: number): void {
+  // skaterY (px) aims the searchlight; it defaults to the street
+  chase(level: Level, skaterX: number, heat: number, hold: boolean, caught: boolean, dtMs: number, skaterY = level.streetY): void {
     this.t += dtMs;
     const target = caught ? 0.2 : 9 - 8.3 * (heat / 100);
     if (!(hold && target < this.cruiserGap)) this.cruiserGap += (target - this.cruiserGap) * (caught ? 0.12 : 0.06);
@@ -151,5 +158,11 @@ export class TrafficView {
       this.drone.rotation.set(Math.sin(this.t / 330) * 0.06, 0, Math.sin(this.t / 260) * 0.05);
       this.rotors.forEach((r, i) => (r.rotation.y += (i % 3 === 0 ? 1 : -1) * dtMs * 0.06));
     }
+
+    //the pillar searchlight on the cruiser's roof hunts for the skater; the drone's scan sweeps the street below it
+    const ground = toY(level, skaterY);
+    const from = this.cruiser.visible ? this.beamFrom.set(this.cruiser.position.x + 0.5, this.cruiser.position.y + 1.4, this.cruiser.position.z + 0.35) : null;
+    this.beams.searchlight(from, toX(skaterX), ground, heat, caught, dtMs / 1000);
+    this.beams.droneScan(this.drone.visible ? this.eyeAt.copy(this.drone.position).add(DRONE_EYE) : null, toY(level, level.streetY));
   }
 }
