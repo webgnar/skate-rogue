@@ -1,12 +1,28 @@
 // Which flip trick a tap in the air throws, and the stance it leaves you in. Lives in the sim so the score, the
 // HUD and the rig all agree. A 180 turns the skater and board half a turn: ride away fakie (the other end leading)
 // until the next 180 brings you back. Shove-its spin only the board, so they don't change stance.
-export type TrickId = 'kickflip' | 'heelflip' | 'shuv1' | 'shuv2' | 'bs180' | 'fs180';
+export type TrickId =
+  | 'kickflip'
+  | 'heelflip'
+  | 'shuv1'
+  | 'shuv2'
+  | 'bs180'
+  | 'fs180'
+  | 'tre'
+  | 'hardflip'
+  | 'varial'
+  | 'varialHeel'
+  | 'fsShuv';
 
 // tricks come round in this order (deterministic, like the rest of the floor); 180s are a quarter of them
-export const TRICK_ROLL: TrickId[] = ['kickflip', 'heelflip', 'bs180', 'shuv1', 'kickflip', 'fs180', 'heelflip', 'shuv2'];
+export const TRICK_ROLL: TrickId[] = [
+  'kickflip', 'heelflip', 'bs180', 'shuv1', 'tre', 'fs180', 'varial', 'hardflip',
+  'kickflip', 'bs180', 'fsShuv', 'heelflip', 'fs180', 'shuv2', 'varialHeel', 'tre',
+];
 
-export const SPIN: Record<TrickId, 0 | 180> = { kickflip: 0, heelflip: 0, shuv1: 0, shuv2: 0, bs180: 180, fs180: 180 };
+export const SPIN: Record<TrickId, 0 | 180> = {
+  kickflip: 0, heelflip: 0, shuv1: 0, shuv2: 0, bs180: 180, fs180: 180, tre: 0, hardflip: 0, varial: 0, varialHeel: 0, fsShuv: 0,
+};
 
 const NAMES: Record<TrickId, string> = {
   kickflip: 'KICKFLIP',
@@ -15,6 +31,11 @@ const NAMES: Record<TrickId, string> = {
   shuv2: '360 SHUVIT',
   bs180: 'BS 180',
   fs180: 'FS 180',
+  tre: '360 FLIP',
+  hardflip: 'HARDFLIP',
+  varial: 'VARIAL KICKFLIP',
+  varialHeel: 'VARIAL HEELFLIP',
+  fsShuv: 'FS SHUVIT',
 };
 
 // the callout: tricks thrown riding fakie say so ("FAKIE KICKFLIP", "FAKIE FS 180" back to regular)

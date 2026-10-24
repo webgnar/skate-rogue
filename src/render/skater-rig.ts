@@ -9,7 +9,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { toon } from './toon';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
-import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
 
 const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
@@ -74,6 +74,7 @@ export class SkaterRig {
   private pushes = 0;
   private rideT = 0;
   private ledgeGrinds = 0;
+  private fakie = false; // shown riding fakie: the whole skater and board turned half round
 
   // skinned model bones and the joints they follow
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
@@ -324,6 +325,7 @@ export class SkaterRig {
   }
 
   play(name: string, fade = FADE): void {
+    this.settleSpin();
     this.from = { ...this.pose };
     this.fade = fade;
     this.fadeLen = fade;
@@ -331,6 +333,17 @@ export class SkaterRig {
     this.clip = CLIPS[name];
     this.t = 0;
     if (name === 'push') this.pushes = 0;
+  }
+
+  // Leaving a 180 (finished or cut short by the landing): the skater now rides the other way round, so turn the
+  // whole rig to fakie (or back) and take the half turn back out of the pose. It looks the same, and a cut-short spin
+  // finishes its turn in the crossfade.
+  private settleSpin(): void {
+    const spin = SPINS[this.clipName];
+    if (!spin) return;
+    this.fakie = !this.fakie;
+    this.pose = { ...this.pose, yaw: this.pose.yaw - spin, boardYaw: this.pose.boardYaw - spin };
+    this.clipName = '';
   }
 
   get current(): string {
@@ -398,6 +411,9 @@ export class SkaterRig {
       this.play(sk.mode === 'rail' ? 'grind2' : 'grind1');
     }
 
+    // the sim's stance wins, except while a 180 is turning the rig round
+    if (!SPINS[this.clipName]) this.fakie = sk.fakie;
+
     this.t += dt;
     let pose = sample(this.clip, this.t);
     if (this.fade > 0) {
@@ -406,7 +422,8 @@ export class SkaterRig {
     }
     this.pose = pose;
     this.applyPose(pose);
-    this.mesh.rotation.z = angle;
+    // turned half round about the vertical first, then tilted with the slope
+    this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, angle, 'ZYX');
 
     if (this.flash > 0) this.flash -= dt;
     const blink = this.flash > 0 && Math.floor(this.flash * 20) % 2 === 0;
