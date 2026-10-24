@@ -6,6 +6,7 @@
 // become drivers: each frame the model's bones copy the joints, so the clips pose the skinned suit the same way.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { toon } from './toon';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
@@ -48,9 +49,9 @@ const BASE_HIP_Y = 0.9; // pelvis height in the model's bind pose
 
 export class SkaterRig {
   readonly mesh = new THREE.Group();
-  private readonly mats: THREE.MeshLambertMaterial[] = [];
+  private readonly mats: THREE.MeshToonMaterial[] = [];
   private readonly lambert = (color: number) => {
-    const m = new THREE.MeshLambertMaterial({ color, flatShading: true });
+    const m = toon({ color });
     this.mats.push(m);
     return m;
   };

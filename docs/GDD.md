@@ -534,7 +534,8 @@ x and y and the z axis is only for looks.
 - **World:** each ASCII piece becomes a strip of 3D kit pieces: street, curb, kiosk, rooftop, ledge, rail, stairs,
   kicker. Depth comes from real background buildings, props and skyline instead of parallax layers.
 - **Art style:** low-poly geometry wearing Quest For Stoken's own pixel textures (see Art pipeline below), so the
-  3D world looks like the Stoken world. Light toon shading keeps it cheerful and cheap on phones.
+  3D world looks like the Stoken world. Decided Oct 24, 2026: a **comic ink** look, toon shading in flat bands
+  plus thick black outlines drawn per mesh (no full-screen pass), matching the comic slam burst and cheap on phones.
 - **Skater:** one rigged human model (Lou Gnar first) whose animations are built from Lou Gnar's sprite frames
   (see Art pipeline). Flip tricks spin the board as a separate object, so new tricks are mostly code.
 - **Traffic:** low-poly cars, buses, trucks and enforcer cruisers with working headlights, brake lights and

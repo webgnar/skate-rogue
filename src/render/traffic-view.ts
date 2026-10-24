@@ -5,6 +5,7 @@ import type { Level } from '../physics/level';
 import type { Vehicle } from '../traffic/traffic';
 import { TRAFFIC } from '../traffic/traffic';
 import { makeCar, toX, toY } from './kit';
+import { inkify } from './toon';
 
 const PAINTS = { robotaxi: [0xf2f2f6, 0xd8dce6], oncoming: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a] };
 const BACK_LANE_Z = -2.2;
@@ -23,6 +24,7 @@ export class TrafficView {
     this.cruiser = this.makeCruiser();
     this.drone = this.makeDrone();
     this.group.add(this.cruiser, this.drone);
+    inkify(this.group);
   }
 
   private makeCruiser(): THREE.Group {
@@ -73,6 +75,7 @@ export class TrafficView {
         const paints = PAINTS[v.kind];
         mesh = makeCar(0, toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[v.id % paints.length]);
         if (v.speed < 0) mesh.rotation.y = Math.PI; // oncoming: headlights toward the skater
+        inkify(mesh);
         this.meshes.set(v.id, mesh);
         this.group.add(mesh);
       }

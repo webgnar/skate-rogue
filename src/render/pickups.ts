@@ -1,5 +1,6 @@
 // Cash coins and Stoken gems floating along the floor's lines. Coins spin; collected ones pop and vanish.
 import * as THREE from 'three';
+import { inkify } from './toon';
 import type { Level } from '../physics/level';
 import { toX, toY } from './kit';
 
@@ -45,6 +46,8 @@ export class PickupView {
       const i = p.kind === 'cash' ? c++ : g++;
       this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), popT: 0, gone: false });
     }
+    inkify(this.coins);
+    inkify(this.gems);
     this.group.add(this.coins, this.gems);
     this.update(0);
   }
