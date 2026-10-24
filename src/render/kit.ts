@@ -12,6 +12,12 @@ export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
+// buildings, stairs and banks under the descent run from BLOCK_BACK to BLOCK_FRONT: the front face sits well in
+// front of the skater (z = 0.25), so they ride on the roof, not along its front edge
+const BLOCK_BACK = -3.1;
+const BLOCK_FRONT = 1.5;
+const BLOCK_DEPTH = BLOCK_FRONT - BLOCK_BACK;
+const BLOCK_Z = (BLOCK_FRONT + BLOCK_BACK) / 2;
 
 function lambert(map: THREE.Texture | null, color = 0xffffff, transparent = false): THREE.MeshLambertMaterial {
   return new THREE.MeshLambertMaterial({ map, color, transparent, alphaTest: transparent ? 0.5 : 0 });
@@ -123,13 +129,13 @@ export function buildKit(level: Level): THREE.Group {
         continue;
       }
       const t = CITY.facade[randInt(rng, CITY.facade.length)];
-      const b = slab(w, y, 3, lambert(tileTexture(facade(Math.round(w), Math.ceil(y), t))), lambert(null, 0x6a6478), sideMat);
-      b.position.set(x, y / 2, -1.6);
+      const b = slab(w, y, BLOCK_DEPTH, lambert(tileTexture(facade(Math.round(w), Math.ceil(y), t))), lambert(null, 0x6a6478), sideMat);
+      b.position.set(x, y / 2, BLOCK_Z);
       kit.add(b);
     } else if (s.kind === 'overpass') {
       //a concrete deck over the street on pillars behind the lane, with a railing at the back
-      const deck = slab(w, 0.45, 2.2, lambert(null, 0x6f6a7a), lambert(null, 0x8d889a), sideMat);
-      deck.position.set(x, y - 0.225, -0.4);
+      const deck = slab(w, 0.45, 2.9, lambert(null, 0x6f6a7a), lambert(null, 0x8d889a), sideMat);
+      deck.position.set(x, y - 0.225, 0.05);
       kit.add(deck);
       for (let px = toX(s.x0) + 1; px < toX(s.x1); px += 5) {
         const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.5, y - 0.45, 0.5), concrete);
@@ -151,8 +157,8 @@ export function buildKit(level: Level): THREE.Group {
       const steps = Math.round(w);
       for (let i = 0; i < steps; i++) {
         const top = toY(level, s.y + ((s.y1! - s.y) * (i + 1)) / steps);
-        const step = slab(1, top + 0.5, 3, concrete, stepTop, sideMat);
-        step.position.set(toX(s.x0) + i + 0.5, (top - 0.5) / 2, -1.6);
+        const step = slab(1, top + 0.5, BLOCK_DEPTH, concrete, stepTop, sideMat);
+        step.position.set(toX(s.x0) + i + 0.5, (top - 0.5) / 2, BLOCK_Z);
         kit.add(step);
       }
     } else if (s.kind === 'bank') {
@@ -164,9 +170,9 @@ export function buildKit(level: Level): THREE.Group {
       shape.lineTo(w, y1);
       shape.lineTo(0, y);
       shape.closePath();
-      const geo = new THREE.ExtrudeGeometry(shape, { depth: 3, bevelEnabled: false });
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: BLOCK_DEPTH, bevelEnabled: false });
       const bank = new THREE.Mesh(geo, concrete);
-      bank.position.set(toX(s.x0), 0, -3.1);
+      bank.position.set(toX(s.x0), 0, BLOCK_BACK);
       kit.add(bank);
     } else {
       const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.14), metal);
