@@ -105,7 +105,9 @@ export function flatGeometry(name: string): THREE.BufferGeometry | null {
     missing.add(name);
     return null;
   }
-  const geo = src.geometry.clone();
+  //never indexed: props merge these into one mesh (mergeGeometries needs all or none indexed) and hide a prop by its
+  //vertex range
+  const geo = src.geometry.index ? src.geometry.toNonIndexed() : src.geometry.clone();
   const mats = [src.material].flat() as THREE.MeshStandardMaterial[];
   const n = geo.getAttribute('position').count;
   const col = new Float32Array(n * 3);

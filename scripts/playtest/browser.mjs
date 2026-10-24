@@ -81,7 +81,8 @@ async function play(browser, base, s) {
   page.on('pageerror', (e) => findings.push({ kind: 'page-error', message: e.message.slice(0, 300), scenario: s.id }));
   page.on('console', (m) => {
     const text = m.text();
-    if (m.type() === 'error') findings.push({ kind: 'console-error', message: text.slice(0, 300), scenario: s.id });
+    //Chrome blocks vibration until the first tap; the bot never taps
+    if (m.type() === 'error' && !text.includes('navigator.vibrate')) findings.push({ kind: 'console-error', message: text.slice(0, 300), scenario: s.id });
     else if (m.type() === 'warning' && /failed to load/i.test(text)) findings.push({ kind: 'model-fallback', message: text.slice(0, 200), scenario: s.id });
   });
   page.on('response', (r) => {
