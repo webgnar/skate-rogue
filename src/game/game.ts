@@ -18,7 +18,8 @@ import { Particles } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
-import { inkify } from '../render/toon';
+import { Aura, inkify } from '../render/toon';
+import { SpeedLines } from '../render/speed-lines';
 import { FloorSim } from '../sim/floor';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig, TRICKS, TRICK_NAMES } from '../render/skater-rig';
@@ -67,6 +68,10 @@ const SLAM_FREEZE = 0.09;
 const SLAM_SLOW = 0.3;
 const SLAM_EASE = 0.55;
 //grind sparks per second at cruising speed
+//speed lines fade in from FLOW_FROM x cruising speed and are full FLOW_RANGE x cruising speed above that
+const FLOW_FROM = 1.3;
+const FLOW_RANGE = 0.9;
+const GNAR_TRAIL = 40; // sparkles per second
 const SPARKS_RAIL = 150;
 const SPARKS_LEDGE = 70;
 
@@ -93,6 +98,10 @@ export class Game {
   private readonly focus = new FocusLines();
   private readonly words = new SoundWords();
   private readonly warp = new TimeWarp();
+  private readonly speedLines = new SpeedLines();
+  private readonly aura: Aura;
+  private gnarGlow = 0; // 0..1, eases with the gnar state
+  private clock = 0;
   private ghostMesh: THREE.Mesh;
 
   constructor(
@@ -108,6 +117,8 @@ export class Game {
     this.view.front.add(this.sprite.mesh);
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
+    this.aura = new Aura(this.sprite.mesh);
+    this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group);
@@ -342,12 +353,30 @@ export class Game {
     this.particles.update(dt, this.view.pointScale);
     this.words.update(realDt);
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
+    this.flowFx(dt);
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs);
     this.view.zoom.update(dt, this.skater.mode);
     this.view.follow(x, y, dt);
     this.view.adapt(realDt * 1000);
     this.view.render();
     this.hud.debug(`${Math.round(1 / Math.max(realDt, 1e-3))} fps · ${this.skater.hsp.toFixed(1)} px/f · res ${this.view.resolution.toFixed(2)}`);
+  }
+
+  // speed lines past cruising speed, and the gnar state's glow and sparkle trail
+  private flowFx(dt: number): void {
+    const skating = this.state === 'skate';
+    const gnar = skating && this.run.gnar;
+    const sk = this.skater;
+    const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
+    const flow = skating ? Math.min(1, Math.max(0, (speed - PHYS.baseSpeed * FLOW_FROM) / (PHYS.baseSpeed * FLOW_RANGE))) : 0;
+    this.clock += dt;
+    this.speedLines.update(dt, this.view.camera, flow, gnar);
+    this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
+    this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
+    if (gnar) {
+      const p = this.sprite.mesh.position;
+      this.particles.trail(p.x - 0.2, p.y + 0.9, GNAR_TRAIL, dt, this.clock);
+    }
   }
 
   // sparks off the back truck while grinding: a rail throws more than a ledge, and more the faster you go
@@ -365,6 +394,16 @@ export class Game {
     const a = this.sprite.mesh.rotation.z;
     const p = this.sprite.mesh.position;
     return [p.x - 0.3 * Math.cos(a), p.y - 0.3 * Math.sin(a)];
+  }
+
+  //into the gnar state: a short freeze, a punch and the word in the world
+  private gnarOn(): void {
+    const x = toX(this.skater.x);
+    const y = toY(this.level, this.skater.y);
+    this.warp.hit(0.05, 0.6, 0.3);
+    this.view.punch(0.5);
+    this.words.spawn(x, y, 'GNAR!');
+    this.impacts.spawn(x, y, 0.7);
   }
 
   private slam(): void {
@@ -423,6 +462,6 @@ export class Game {
         if (e.kind === 'stoken') this.hud.callout('STOKEN!', 'good');
         break;
     }
-    if (!wasGnar && this.run.gnar) this.hud.callout('GNAR!', 'good');
+    if (!wasGnar && this.run.gnar) this.gnarOn();
   }
 }

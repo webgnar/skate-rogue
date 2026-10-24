@@ -48,6 +48,7 @@ const outlineVertex = /* glsl */ `
   attribute vec3 inkNormal;
   uniform float uWidth; // pixels
   uniform vec2 uRes; // drawing buffer size
+  uniform float uDepth; // push back in depth, so a wider glow sits behind the ink
   #include <skinning_pars_vertex>
   #include <fog_pars_vertex>
   void main() {
@@ -68,6 +69,7 @@ const outlineVertex = /* glsl */ `
     vec2 dir = (projectionMatrix * vec4(vn, 0.0)).xy;
     float len = length(dir);
     if (len > 1e-5) clip.xy += dir / len * uWidth * 2.0 / uRes * clip.w;
+    clip.z += uDepth * clip.w;
     gl_Position = clip;
     #include <fog_vertex>
   }
@@ -87,6 +89,7 @@ const inkUniforms = {
   uWidth: { value: INK.width },
   uRes: { value: new THREE.Vector2(1, 1) },
   uColor: { value: new THREE.Color(INK.color) },
+  uDepth: { value: 0 },
 };
 let inkMat: THREE.ShaderMaterial | null = null;
 
@@ -174,5 +177,63 @@ export function inkify(root: THREE.Object3D, opts: InkOptions = {}): void {
     hull.renderOrder = mesh.renderOrder;
     if (!(mesh instanceof THREE.InstancedMesh || mesh instanceof THREE.SkinnedMesh)) hull.frustumCulled = mesh.frustumCulled;
     mesh.add(hull);
+  }
+}
+
+// a glowing second outline round a model (the gnar state): wider than the ink and drawn behind it, with its own
+// colour and width. Hidden until switched on.
+export class Aura {
+  private readonly mat: THREE.ShaderMaterial;
+  private readonly hulls: THREE.Mesh[] = [];
+  private readonly ink = new THREE.Color(INK.color);
+
+  constructor(root: THREE.Object3D, width = 7) {
+    this.mat = new THREE.ShaderMaterial({
+      vertexShader: outlineVertex,
+      fragmentShader: outlineFragment,
+      uniforms: {
+        uWidth: { value: width },
+        uRes: inkUniforms.uRes, // shared, so resizes reach it
+        uColor: { value: new THREE.Color(0xffd23f) },
+        uDepth: { value: 0.002 },
+      },
+      side: THREE.BackSide,
+    });
+    this.baseWidth = width;
+    //skip the hulls the ink already added
+    const meshes: THREE.Mesh[] = [];
+    root.traverse((o) => {
+      if (o instanceof THREE.Mesh && !o.userData.ink && solid(o)) meshes.push(o);
+    });
+    for (const mesh of meshes) {
+      inkNormals(mesh.geometry);
+      let hull: THREE.Mesh;
+      if (mesh instanceof THREE.SkinnedMesh) {
+        const skinned = new THREE.SkinnedMesh(mesh.geometry, this.mat);
+        skinned.bind(mesh.skeleton, mesh.bindMatrix);
+        hull = skinned;
+      } else {
+        hull = new THREE.Mesh(mesh.geometry, this.mat);
+      }
+      hull.userData.ink = true;
+      hull.frustumCulled = false;
+      hull.visible = false;
+      hull.renderOrder = -1;
+      mesh.add(hull);
+      this.hulls.push(hull);
+    }
+  }
+
+  private baseWidth: number;
+
+  // amount 0..1 fades it in by width; t (seconds) cycles the colour gold, magenta, cyan
+  set(amount: number, t: number, pixelRatio: number): void {
+    const on = amount > 0.01;
+    for (const h of this.hulls) h.visible = on;
+    if (!on) return;
+    this.mat.uniforms.uWidth.value = (INK.width + this.baseWidth * amount * (0.85 + 0.15 * Math.sin(t * 12))) * pixelRatio;
+    const c = this.mat.uniforms.uColor.value as THREE.Color;
+    c.setHSL((0.13 + t * 0.35) % 1, 1, 0.6);
+    c.lerp(this.ink, 1 - amount);
   }
 }

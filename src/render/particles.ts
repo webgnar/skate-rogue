@@ -70,6 +70,7 @@ export class Particles {
   private readonly ink: THREE.BufferAttribute;
   private readonly mat: THREE.ShaderMaterial;
   private sparkDebt = 0;
+  private trailDebt = 0;
 
   constructor() {
     const geo = new THREE.BufferGeometry();
@@ -125,6 +126,21 @@ export class Particles {
       p.grav[i] = 16;
       p.drag[i] = 1.2;
       p.floor[i] = y - 0.05;
+    }
+  }
+
+  // the gnar state's sparkle trail: rainbow pixels shed behind the skater
+  trail(x: number, y: number, rate: number, dt: number, t: number): void {
+    this.trailDebt += rate * dt;
+    const p = this.pool;
+    const c = new THREE.Color();
+    while (this.trailDebt >= 1) {
+      this.trailDebt--;
+      c.setHSL((t * 0.35 + Math.random() * 0.15) % 1, 1, 0.65);
+      const i = this.spawn(x + rand(-0.3, 0.3), y + rand(-0.7, 0.7), rand(0, 0.4), rand(0.35, 0.6), [c.r, c.g, c.b], rand(0.1, 0.16), 0.02, 1, 0.3, false);
+      p.vx[i] = rand(-1.5, -0.3);
+      p.vy[i] = rand(-0.3, 0.6);
+      p.drag[i] = 2;
     }
   }
 
