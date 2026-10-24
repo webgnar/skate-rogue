@@ -8,6 +8,7 @@ import type { Level } from '../physics/level';
 import { toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
+import { FX } from './fx-settings';
 
 const HIGH = 5.6; // tiles over the street: in the top of the frame, over the L tracks
 
@@ -88,7 +89,8 @@ export class ChopperView {
     const [main, tail] = this.rotors;
     if (main) main.rotation.y += dt * 9;
     if (tail) tail.rotation.z += dt * 21;
-    const hot = ch.lit ? 0.5 + 0.5 * Math.sin(this.t * 18) : 0;
+    //the pool pulses when it has you; held steady with reduce-flashing
+    const hot = ch.lit ? (FX.reduceFlashing ? 0.6 : 0.5 + 0.5 * Math.sin(this.t * 18)) : 0;
     this.coneMat.opacity = 0.22 + 0.16 * (ch.lit ? 1 : 0);
     this.coneMat.color.setHex(ch.lit ? 0xfff8e0 : 0xffe9a0);
     this.poolMat.opacity = 0.5 + 0.35 * hot;

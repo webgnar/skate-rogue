@@ -158,6 +158,13 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Roadblock sirens (siren-fx.ts).** Each parked cruiser's light bar throws red and blue pools on the street. They
   swap smoothly at 0.9 per second, like the chasing cruiser, and are brighter at night. With reduce-flashing on they
   hold steady. Two instanced draws cover the whole roadblock.
+- **Escape set pieces kick up the street (escape-fx.ts).**
+  - Helicopter: its rotor wash blows grit flat out both ways under it, twice as hard while its light has you, with
+    the odd scrap of litter tumbling up. There's none under the L tracks, matching its light.
+  - Act 3 chasers: the wave throws foam off its lip and mist at its foot, the chariot kicks hoof dust with sparks
+    off its wheel, and the guards kick running dust. Each throws 2.5x more while it surges after a slam.
+  - The helicopter's light pool holds steady with reduce-flashing instead of pulsing.
+- **A claimed bounty pays out in a violet-and-gold fountain** at the gate, alongside the BOUNTY CLAIMED callout.
 
 ## Effects thread: fx6 leftovers
 

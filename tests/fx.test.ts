@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
+import { EscapeFx } from '../src/render/escape-fx';
 import { SirenFx, SIREN } from '../src/render/siren-fx';
 import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
@@ -420,5 +421,37 @@ describe('roadblock sirens', () => {
     expect((fx.group.children[0] as THREE.InstancedMesh).count).toBe(3);
     fx.build(new THREE.Group());
     expect(fx.group.children).toHaveLength(0);
+  });
+});
+
+describe('escape set pieces', () => {
+  const log: { key: string; rate: number }[] = [];
+  const fake = { stream: (key: string, _x: number, _y: number, rate: number) => log.push({ key, rate }), spray: () => log.push({ key: 'spray', rate: 0 }) } as unknown as Particles;
+  const fx = new EscapeFx(fake);
+  it('the rotor wash blows harder when the light has you, and not under the L tracks', () => {
+    log.length = 0;
+    fx.chopper(0, 0, false, false, 1 / 60);
+    const calm = log.filter((c) => c.key === 'washL')[0].rate;
+    log.length = 0;
+    fx.chopper(0, 0, true, false, 1 / 60);
+    expect(log.filter((c) => c.key === 'washL')[0].rate).toBe(calm * 2);
+    log.length = 0;
+    fx.chopper(0, 0, true, true, 1 / 60);
+    expect(log).toHaveLength(0);
+  });
+  it('each chaser throws its own spray, more when it surges', () => {
+    const keys = (look: 'wave' | 'chariot' | 'guards', surging = false) => {
+      log.length = 0;
+      fx.chaser(look, 0, 0, surging, 1 / 60);
+      return log.map((c) => c.key);
+    };
+    expect(keys('wave')).toEqual(['foam', 'mist']);
+    expect(keys('chariot')).toEqual(['hooves', 'wheel']);
+    expect(keys('guards')).toEqual(['boots']);
+    fx.chaser('guards', 0, 0, false, 1 / 60);
+    const slow = log[log.length - 1].rate;
+    log.length = 0;
+    fx.chaser('guards', 0, 0, true, 1 / 60);
+    expect(log[0].rate).toBeGreaterThan(slow);
   });
 });

@@ -38,6 +38,7 @@ import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
+import { EscapeFx } from '../render/escape-fx';
 import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
 import { CHASER } from '../sim/chaser';
@@ -171,6 +172,7 @@ export class Game {
   private spotState = 'hunt';
   private readonly particles = new Particles();
   private readonly focus = new FocusLines();
+  private readonly escapeFx = new EscapeFx(this.particles);
   private readonly words = new SoundWords();
   private readonly warp = new TimeWarp();
   private readonly speedLines = new SpeedLines();
@@ -364,6 +366,7 @@ export class Game {
       const pay = bountyPay(this.run.stoken - this.floorStoken, this.sim.heat.value);
       this.run.stoken += pay;
       this.hud.callout(pay ? `BOUNTY CLAIMED +◆${pay}` : 'BOUNTY MISSED', pay ? 'good' : 'bad');
+      if (pay) this.escapeFx.bounty(this.sprite.mesh.position.x, this.sprite.mesh.position.y);
     }
     const fork = this.level.fork;
     this.nextRoad = fork ? (this.sim.road === 'high' ? fork.high : fork.low) : FIRST_ROAD;
@@ -730,6 +733,12 @@ export class Game {
     this.chopper.update(this.level, this.sim.chopper, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, this.biome, dt);
+    if (this.state === 'skate') {
+      const street = toY(this.level, this.level.streetY);
+      const ch = this.sim.chopper;
+      if (ch) this.escapeFx.chopper(toX(ch.x), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
+      if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, street, this.chaserView.surging, dt);
+    }
     if (this.level.bounty && !this.bountySeen && this.state === 'skate' && this.skater.x >= this.level.bounty.x - 4 * TILE) {
       this.bountySeen = true;
       this.hud.callout(`WANTED: HEAT ${BOUNTY.heat}+ AT THE GATE PAYS 2× ◆`, 'trick');
