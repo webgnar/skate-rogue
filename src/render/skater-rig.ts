@@ -12,7 +12,7 @@ import { wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
-import { BASE, BOARD, CLIPS, GRIND_NAMES, LEDGE_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, LEDGE_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
 
 const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
@@ -582,6 +582,17 @@ export class SkaterRig {
     }
   }
 
+  // the animation editor: show a pose as it is, no clip logic, crossfade or slope
+  preview(p: Pose): void {
+    this.pose = p;
+    this.fade = 0;
+    this.raw?.pos.forEach((q, i) => this.bound[i].bone.position.copy(q));
+    this.raw?.rot.forEach((q, i) => this.bound[i].bone.quaternion.copy(q));
+    this.applyPose(p);
+    this.mesh.rotation.set(0, 0, 0);
+    if (this.bound.length) this.absorb(0);
+  }
+
   // hold a pose clip whatever the skater is doing ('idle' under a menu, 'busted' when caught); null lets go
   hold(name: 'idle' | 'busted' | null): void {
     this.held = name;
@@ -624,7 +635,8 @@ export class SkaterRig {
     this.t += dt;
     let pose = sample(this.clip, this.t);
     const k = this.fade > 0 ? 1 - (this.fade = Math.max(0, this.fade - dt)) / this.fadeLen : 1;
-    const baked = this.baked.get(this.clipName);
+    // a clip edited since the GLB was baked plays from its keys
+    const baked = EDITED.has(this.clipName) ? undefined : this.baked.get(this.clipName);
     if (this.bound.length) {
       // the skinned model: pose it from the Blender clip or the code clip, then crossfade bone by bone
       this.pose = pose;

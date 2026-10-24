@@ -12,7 +12,8 @@ npm test         # physics, generator and bot tests
 npm run build    # static build in dist/
 ```
 
-Add `?seed=1234` to the URL to replay a seed. Planning lives in `openspec/` (see `openspec/changes/`).
+Add `?seed=1234` to the URL to replay a seed. Open `?editor` (on `npm run dev`) to keyframe the skater's clips: see
+[the animation editor](docs/animation-editor.md). Planning lives in `openspec/` (see `openspec/changes/`).
 
 Art credits: the Chicago tileset, sky and skyline come from Quest For Stoken (webgnar/QFSHIVE); the skater sprites
 come from Lou Gnar (webgnar/excaliburSkate).

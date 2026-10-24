@@ -9,6 +9,8 @@
 // deck under it, so when the back foot snaps the tail the board pivots on the tail, and the front foot dragging up
 // the grip levels it. Flips and shove-its happen with both feet off; the feet then catch it back first.
 
+import clipEdits from './clip-edits.json';
+
 export const BOARD = {
   length: 0.95,
   bolts: 0.27, // front and back truck bolts, from the centre
@@ -521,6 +523,21 @@ export const CLIPS: Record<string, Clip> = {
     ],
   },
 };
+
+// Clips keyed in the animation editor (?editor, src/editor) win over the ones above. It saves them to
+// clip-edits.json; the code clips stay as they were, so reverting a clip there brings the code one back.
+export const CODE_CLIPS: Record<string, Clip> = { ...CLIPS };
+export const EDITED = new Set<string>(); // these play from their keys, not a Blender action baked from an older version
+
+export function applyClipEdits(edits: Record<string, Clip>): void {
+  for (const [name, clip] of Object.entries(edits)) {
+    if (!clip?.keys?.length) continue;
+    CLIPS[name] = clip;
+    EDITED.add(name);
+  }
+}
+
+applyClipEdits(clipEdits as Record<string, Clip>);
 
 export function clipLength(clip: Clip): number {
   return clip.keys[clip.keys.length - 1].t;
