@@ -7,13 +7,14 @@
 // its biggest stairway, and runs out down a last block into the street finale. Each act has a signature: act 1
 // learns the hill, act 2 is rails, act 3 is the long stairways, act 4 is bombing (crest jumps and kickers), and
 // act 5 throws everything in. Blocks get steeper and sets bigger with every floor.
-import { TILE } from '../physics/constants';
+import { PHYS, TILE } from '../physics/constants';
+import { CHUNK_W } from './layout';
 import { CurvedRail } from '../physics/level';
 import { coinArc, coinLine, DESCENT, maxSteps, PICKUPS, startHeight, stairs, terrace, yOf, type Builder } from './descent';
 import { makeRng, randInt, type Rng } from './rng';
 import { floorEdit } from './level-edits';
 
-export type Beat = 'hill' | 'railHill' | 'stairs' | 'drop' | 'gap' | 'kicker';
+export type Beat = 'hill' | 'railHill' | 'stairs' | 'drop' | 'gap' | 'kicker' | 'chase';
 
 export const HILLS = {
   grade: (floor: number) => Math.min(0.42, 0.2 + 0.018 * floor), // tiles down per tile along (SF's steepest: ~0.3)
@@ -25,37 +26,47 @@ export const HILLS = {
   finalSet: (floor: number) => Math.min(16, 6 + 2 * floor), // the most steps the last stairway can have
   lastBlock: 1.5, // tiles the last block falls into the street
   runOut: 10, // flat tiles at the bottom before the street, so the hill's speed is spent before the traffic
+  // a street chase partway down: this many street pieces with traffic, then a cable car back up the next hill
+  chasePieces: (floor: number) => Math.min(4, 2 + Math.floor(floor / 4)),
+  climbTop: (floor: number) => Math.min(22, 10 + floor), // tiles the cable car takes you up
+  climbGrade: 0.45,
+  tow: 2.2, // the cable's speed, times cruising speed
+  // power lines strung low over some blocks to grind (zack: "the player should be able to grind these at times")
+  wire: { chance: 0.45, min: 10, height: 2, sag: 0.45 }, // tiles: the wire's height over the road at its poles
 };
 
-// every floor of a Chicago run, slot by slot; each slot picks one of its beats by seed. The last slot is always a
-// stairway with a handrail (the floor's peak), then a last block runs out into the street.
+// every floor, slot by slot; each slot picks one of its beats by seed. A 'chase' slot ends a stretch of hill: the
+// floor runs out into a street chase with traffic, then a cable car takes you up the next hill and the next stretch
+// starts. Each stretch ends on a stairway with a handrail; the floor's last one is its peak, then a last block runs
+// out into the street finale.
 export const RECIPES: Beat[][][] = [
-  //act 1, learn the hill. 1: bomb a block, a small stairway, a rail down the next block, a drop, a set to finish
-  [['hill'], ['stairs'], ['railHill', 'hill'], ['drop', 'hill'], ['stairs']],
+  //act 1, learn the hill. 1: bomb a block, a small stairway, a rail down the next block, a set; the chase; then a
+  //drop and a set to finish
+  [['hill'], ['stairs'], ['railHill', 'hill'], ['stairs'], ['chase'], ['hill'], ['drop', 'hill'], ['stairs']],
   //2: the crest jump and the kicker come in, and the sets get bigger
-  [['hill'], ['stairs', 'railHill'], ['gap'], ['railHill'], ['kicker'], ['drop', 'hill'], ['stairs']],
+  [['hill'], ['stairs', 'railHill'], ['gap'], ['railHill'], ['stairs'], ['chase'], ['kicker'], ['drop', 'hill'], ['railHill'], ['stairs']],
   //3: the act's big one: a rail down the first block, a crest jump, the longest sets yet
-  [['railHill'], ['gap'], ['stairs'], ['hill', 'drop'], ['kicker', 'railHill'], ['hill'], ['stairs']],
-  //act 2, rails: handrails down most blocks
-  [['railHill'], ['stairs'], ['gap'], ['railHill'], ['drop', 'hill'], ['kicker'], ['railHill'], ['stairs']],
-  [['hill'], ['railHill'], ['stairs'], ['gap'], ['railHill', 'stairs'], ['kicker'], ['railHill'], ['stairs']],
-  [['railHill'], ['gap'], ['railHill'], ['stairs'], ['drop'], ['kicker'], ['railHill'], ['hill'], ['stairs']],
-  //act 3, the steps: stairways back to back, landing to landing
-  [['hill'], ['stairs'], ['stairs'], ['gap'], ['railHill'], ['stairs'], ['drop', 'kicker'], ['stairs']],
-  [['stairs'], ['railHill'], ['stairs'], ['stairs'], ['kicker'], ['gap'], ['stairs'], ['stairs']],
-  [['railHill'], ['stairs'], ['stairs'], ['gap'], ['stairs'], ['kicker'], ['railHill'], ['stairs'], ['stairs']],
+  [['railHill'], ['gap'], ['stairs'], ['hill', 'drop'], ['stairs'], ['chase'], ['kicker', 'railHill'], ['gap'], ['hill'], ['stairs']],
+  //act 2, rails: handrails down most blocks; floor 6 has two chases
+  [['railHill'], ['stairs'], ['gap'], ['railHill'], ['stairs'], ['chase'], ['railHill'], ['drop', 'hill'], ['kicker'], ['railHill'], ['stairs']],
+  [['hill'], ['railHill'], ['stairs'], ['gap'], ['railHill', 'stairs'], ['chase'], ['kicker'], ['railHill'], ['stairs'], ['railHill'], ['stairs']],
+  [['railHill'], ['gap'], ['railHill'], ['stairs'], ['chase'], ['drop'], ['kicker'], ['railHill'], ['stairs'], ['chase'], ['railHill'], ['hill'], ['stairs']],
+  //act 3, the steps: stairways back to back, landing to landing; three stretches of hill from here
+  [['hill'], ['stairs'], ['stairs'], ['gap'], ['stairs'], ['chase'], ['railHill'], ['stairs'], ['drop', 'kicker'], ['stairs'], ['chase'], ['stairs'], ['stairs']],
+  [['stairs'], ['railHill'], ['stairs'], ['stairs'], ['chase'], ['kicker'], ['gap'], ['stairs'], ['stairs'], ['chase'], ['railHill'], ['stairs'], ['stairs']],
+  [['railHill'], ['stairs'], ['stairs'], ['gap'], ['stairs'], ['chase'], ['kicker'], ['railHill'], ['stairs'], ['chase'], ['stairs'], ['gap'], ['stairs'], ['stairs']],
   //act 4, bombing: crest jumps and kickers into them, the steepest blocks
-  [['hill'], ['gap'], ['kicker'], ['gap'], ['railHill'], ['stairs'], ['kicker'], ['gap'], ['stairs']],
-  [['railHill'], ['gap'], ['gap'], ['stairs'], ['kicker'], ['hill'], ['gap'], ['drop', 'railHill'], ['stairs']],
-  [['hill'], ['kicker'], ['gap'], ['railHill'], ['gap'], ['stairs'], ['kicker'], ['gap'], ['hill'], ['stairs']],
+  [['hill'], ['gap'], ['kicker'], ['gap'], ['stairs'], ['chase'], ['railHill'], ['stairs'], ['kicker'], ['gap'], ['stairs'], ['chase'], ['hill'], ['gap'], ['stairs']],
+  [['railHill'], ['gap'], ['gap'], ['stairs'], ['chase'], ['kicker'], ['hill'], ['gap'], ['stairs'], ['chase'], ['drop', 'railHill'], ['gap'], ['kicker'], ['stairs']],
+  [['hill'], ['kicker'], ['gap'], ['railHill'], ['stairs'], ['chase'], ['gap'], ['stairs'], ['kicker'], ['gap'], ['stairs'], ['chase'], ['hill'], ['gap'], ['stairs']],
   //act 5, everything, the longest floors
-  [['railHill'], ['gap'], ['stairs'], ['kicker'], ['gap'], ['railHill'], ['stairs'], ['drop', 'hill'], ['gap'], ['stairs']],
-  [['hill'], ['gap'], ['railHill'], ['stairs'], ['stairs'], ['kicker'], ['gap'], ['railHill'], ['drop'], ['stairs']],
-  [['railHill'], ['gap'], ['stairs'], ['kicker'], ['gap'], ['railHill'], ['stairs'], ['gap'], ['kicker'], ['railHill'], ['stairs']],
+  [['railHill'], ['gap'], ['stairs'], ['kicker'], ['stairs'], ['chase'], ['gap'], ['railHill'], ['stairs'], ['drop', 'hill'], ['stairs'], ['chase'], ['gap'], ['kicker'], ['stairs']],
+  [['hill'], ['gap'], ['railHill'], ['stairs'], ['chase'], ['stairs'], ['kicker'], ['gap'], ['railHill'], ['stairs'], ['chase'], ['drop'], ['gap'], ['stairs']],
+  [['railHill'], ['gap'], ['stairs'], ['kicker'], ['stairs'], ['chase'], ['gap'], ['railHill'], ['stairs'], ['gap'], ['stairs'], ['chase'], ['kicker'], ['railHill'], ['gap'], ['stairs']],
 ];
 
 // how much of the floor's height each beat takes (a kicker climbs, so it's paid for by the others)
-const WEIGHT: Record<Beat, number> = { hill: 1, railHill: 1.1, stairs: 1, drop: 0.6, gap: 1.2, kicker: 0 };
+const WEIGHT: Record<Beat, number> = { hill: 1, railHill: 1.1, stairs: 1, drop: 0.6, gap: 1.2, kicker: 0, chase: 0 };
 
 const range = (rng: Rng, [lo, hi]: number[]) => lo + randInt(rng, hi - lo + 1);
 
@@ -80,6 +91,8 @@ export function hillDials(floor: number) {
     gap: e.gap ?? HILLS.gap(floor),
     midSet: e.midSet ?? HILLS.midSet(floor),
     finalSet: e.finalSet ?? HILLS.finalSet(floor),
+    climbTop: HILLS.climbTop(floor), // the cable car's climb (tiles) and the street pieces of each chase
+    chasePieces: HILLS.chasePieces(floor),
   };
 }
 
@@ -98,6 +111,21 @@ export function recipe(seed: number, floor: number): Beat[] {
   return floorRecipe(floor).map((slot) => slot[randInt(rng, slot.length)]);
 }
 
+// the floor's stretches of hill, split at its chases; a stash floor is one short stretch
+export function stretches(seed: number, floor: number, short = false): Beat[][] {
+  const out: Beat[][] = [[]];
+  for (const beat of recipe(seed, floor)) {
+    if (beat === 'chase') out.push([]);
+    else out[out.length - 1].push(beat);
+  }
+  const kept = out.filter((s) => s.length);
+  if (short) {
+    const all = kept.flat();
+    return [[all[0], ...all.slice(-2)]];
+  }
+  return kept;
+}
+
 // a block of street falling `drop` tiles over `run` tiles, its coins skimming the road (or along its handrail)
 function hill(b: Builder, streetY: number, run: number, drop: number, rail: boolean): void {
   const y = yOf(streetY, b.h);
@@ -111,6 +139,18 @@ function hill(b: Builder, streetY: number, run: number, drop: number, rail: bool
     const yEnd = y + ((end - b.x) / (x1 - b.x)) * (y1 - y);
     b.rails.push(new CurvedRail(b.x - TILE / 2, y - r, end, yEnd - r, 0, 8));
     coinLine(b, b.x + TILE, y + (TILE / (x1 - b.x)) * (y1 - y) - r - PICKUPS.ride, end - TILE, yEnd - r - PICKUPS.ride);
+  } else if (b.prng() < HILLS.wire.chance && run >= HILLS.wire.min) {
+    //a power line strung low over the block from pole to pole, sagging between: ollie and flip up to grind it
+    const w = HILLS.wire;
+    const [xa, xb] = [b.x + TILE, x1 - TILE];
+    const at = (x: number) => y + ((x - b.x) / (x1 - b.x)) * (y1 - y) - w.height * TILE;
+    const line = new CurvedRail(xa, at(xa), xb, at(xb), w.sag * TILE);
+    line.wire = true;
+    b.rails.push(line);
+    for (let d = 2 * TILE; d < line.length - TILE; d += TILE) {
+      const p = line.at(d);
+      b.pickups.push({ kind: 'cash', x: p.x, y: p.y - PICKUPS.ride });
+    }
   } else {
     coinLine(b, b.x + 2 * TILE, y + ((2 * TILE) / (x1 - b.x)) * (y1 - y) - PICKUPS.ride, x1 - 2 * TILE, y1 - ((2 * TILE) / (x1 - b.x)) * (y1 - y) - PICKUPS.ride);
   }
@@ -120,23 +160,54 @@ function hill(b: Builder, streetY: number, run: number, drop: number, rail: bool
 
 export function buildHills(seed: number, floor: number, streetY: number, short = false): Builder {
   const rng = makeRng(seed * 7 + floor * 104723);
-  const dials = hillDials(floor);
-  const grade = dials.grade;
-  const top = Math.ceil(dials.top * (short ? 0.6 : 1));
+  const top = Math.ceil(hillDials(floor).top * (short ? 0.6 : 1));
   const b: Builder = { x: 0, h: top, top, surfaces: [], rails: [], pickups: [], prng: makeRng(seed * 11 + floor * 7477) };
-  let beats = recipe(seed, floor);
-  //a stash floor keeps the opening block and the last stairway
-  if (short) beats = [beats[0], ...beats.slice(-2)];
   //the top of the hill: a flat run-up to get rolling
   terrace(b, streetY, 10, rng, false);
+  stretch(b, rng, stretches(seed, floor, short)[0], streetY, floor);
+  return b;
+}
+
+// a later stretch of hill, from the street chase before it (x = 0 at its foot): the cable car up the hill, a crest,
+// its beats down, and a run-out into the next street, padded to whole pieces
+export function buildClimb(seed: number, floor: number, streetY: number, k: number): Builder {
+  const rng = makeRng(seed * 7 + floor * 104723 + k * 7919);
+  const top = hillDials(floor).climbTop;
+  const b: Builder = { x: 0, h: 0, top, surfaces: [], rails: [], pickups: [], prng: makeRng(seed * 11 + floor * 7477 + k * 31) };
+  //a few flat tiles off the street, then the cable car's slot up the hill
+  terrace(b, streetY, 3, rng, false);
+  const run = Math.ceil(top / HILLS.climbGrade);
+  const y = yOf(streetY, 0);
+  b.surfaces.push({ kind: 'bank', x0: b.x, x1: b.x + run * TILE, y, y1: y - top * TILE, row: -1, hill: true, tow: HILLS.tow * PHYS.baseSpeed });
+  coinLine(b, b.x + 3 * TILE, y - 3 * HILLS.climbGrade * TILE - PICKUPS.ride, b.x + (run - 3) * TILE, y - (run - 3) * HILLS.climbGrade * TILE - PICKUPS.ride);
+  b.x += run * TILE;
+  b.h = top;
+  //the top: a flat intersection to set up on
+  terrace(b, streetY, 8, rng, false);
+  stretch(b, rng, stretches(seed, floor)[k] ?? ['hill', 'stairs'], streetY, floor);
+  //whole pieces: the run-out takes up the rest
+  const pieces = Math.ceil(b.x / (CHUNK_W * TILE));
+  const end = pieces * CHUNK_W * TILE;
+  if (end > b.x) {
+    b.surfaces.push({ kind: 'roof', x0: b.x, x1: end, y: streetY, row: -1 });
+    b.x = end;
+  }
+  return b;
+}
+
+// one stretch of hill from the builder's height down to the street: its beats, the last a stairway, then a last
+// block and the run-out
+function stretch(b: Builder, rng: Rng, beats: Beat[], streetY: number, floor: number): void {
+  const dials = hillDials(floor);
+  const grade = dials.grade;
   const crest = (features: boolean) => terrace(b, streetY, range(rng, dials.crest), rng, features && floor > 1);
-  //the height is planned up front: the last stairway (the floor's peak) gets its set, a short block runs out into
+  //the height is planned up front: the last stairway (the stretch's peak) gets its set, a short block runs out into
   //the street, and the beats between share the rest by weight, so no beat is left with nothing to drop
   //an edited last stairway can go past the floor's usual stair cap; the height still limits it
   const cap = floorEdit(editFloor(floor)).finalSet !== undefined ? dials.finalSet : maxSteps(floor);
-  const finalSteps = Math.min(cap, dials.finalSet, Math.floor((top - 2) * 2 * 0.45));
+  const finalSteps = Math.min(cap, dials.finalSet, Math.floor((b.h - 2) * 2 * 0.45));
   const rises = beats.map((beat) => (beat === 'kicker' ? range(rng, [1, 2]) : 0));
-  let budget = top - finalSteps / 2 - HILLS.lastBlock + rises.reduce((a, r) => a + r, 0);
+  let budget = b.h - finalSteps / 2 - HILLS.lastBlock + rises.reduce((a, r) => a + r, 0);
   let weights = beats.slice(0, -1).reduce((a, beat) => a + WEIGHT[beat], 0);
   const runFor = (drop: number) => Math.min(dials.run[1] + 4, Math.max(dials.run[0], Math.round(drop / grade)));
 
@@ -195,5 +266,4 @@ export function buildHills(seed: number, floor: number, streetY: number, short =
     hill(b, streetY, run, b.h, false);
     terrace(b, streetY, HILLS.runOut, rng, false);
   }
-  return b;
 }

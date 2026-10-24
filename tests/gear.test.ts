@@ -60,7 +60,7 @@ describe('gear wear', () => {
     expect(crossed(51, 49)).toBe('worn');
     expect(crossed(16, 14)).toBe('busted');
     expect(crossed(40, 39)).toBeNull();
-    const sim = new FloorSim(levelOf(FLAT), undefined, 0, [], { ...freshGear(), deck: GEAR.wornFrom + 0.5 });
+    const sim = new FloorSim(levelOf(FLAT), undefined, 0, [], { ...freshGear(), deck: GEAR.wornFrom + GEAR.ollie / 2 });
     sim.step({ pressed: true, held: true });
     expect(sim.events).toContainEqual({ type: 'wear', part: 'deck', level: 'worn' });
   });

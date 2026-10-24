@@ -10,10 +10,10 @@ import { bountyPlan } from '../run/bounty';
 import { TILE } from '../physics/constants';
 import { buildLevel, CurvedRail, type Level, type Pickup, type Surface } from '../physics/level';
 import type { Fork } from './roads';
-import { makeLayout } from './layout';
-import { EL_PIECE, FORK_PIECE, PIECES, type Piece } from './pieces';
+import { CHUNK_W, makeLayout, STREET_ROW } from './layout';
+import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
-import { buildHills, editFloor } from './hills';
+import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
 import { floorEdit } from './level-edits';
 import { elPlan } from '../traffic/el';
 
@@ -206,9 +206,15 @@ export function buildDescent(seed: number, floor: number, streetY: number, short
 }
 
 // the whole floor: descent, then the street finale (its start piece is the runway where the last roof meets the street)
+const STREET_Y = STREET_ROW * TILE;
+
 export function buildFloor(seed: number, floor: number, library: Piece[] = PIECES, opts: FloorOptions = {}): Level {
+  //a hill floor's later stretches of hill, each from the foot of the cable car up it (street chases come between)
+  const climbs = opts.hills && !opts.short ? stretches(seed, floor).slice(1).map((_, i) => buildClimb(seed, floor, STREET_Y, i + 1)) : [];
+  const chase = hillDials(floor).chasePieces;
+  const breaks: [number, Piece[]][] = climbs.map((c, i) => [(i + 1) * chase, [...new Array<Piece>(c.x / (CHUNK_W * TILE)).fill(HILL_PIECE), RUNWAY_PIECE]]);
   //Chicago's street opens with a block of plain street for the L over it
-  const finale = buildLevel(makeLayout(seed, floor, districtPieces(library, opts.twist), (opts.hills ? floorEdit(editFloor(floor)).street : undefined) ?? finaleCount(floor), opts.fork ? [FORK_PIECE] : [], opts.hills ? [EL_PIECE] : []));
+  const finale = buildLevel(makeLayout(seed, floor, districtPieces(library, opts.twist), ((opts.hills ? floorEdit(editFloor(floor)).street : undefined) ?? finaleCount(floor)) + climbs.length * chase, opts.fork ? [FORK_PIECE] : [], opts.hills ? [EL_PIECE] : [], breaks));
   const d = opts.hills ? buildHills(seed, floor, finale.streetY, opts.short) : buildDescent(seed, floor, finale.streetY, opts.short);
   //every floor has a Stoken somewhere: if the sections rolled none, one goes up high over the first stair set
   if (!d.pickups.some((p) => p.kind === 'stoken')) {
@@ -217,11 +223,24 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   }
   const off = Math.ceil(d.x / TILE) * TILE;
   const cols = off / TILE;
-  const shiftRail = (r: CurvedRail) => new CurvedRail(r.x0 + off, r.y0, r.x1 + off, r.y1, r.curve);
-  const rails = [...d.rails, ...finale.rails.map(shiftRail)];
+  const shiftRail = (r: CurvedRail, by = off) => Object.assign(new CurvedRail(r.x0 + by, r.y0, r.x1 + by, r.y1, r.curve), { wire: r.wire });
+  //the later stretches of hill, each over its run of hill pieces
+  const spans: [number, number][] = [[0, off]];
+  const starts = finale.layout.pieces.flatMap((p, i) => (p.name === 'hill' && finale.layout.pieces[i - 1]?.name !== 'hill' ? [i * CHUNK_W * TILE + off] : []));
+  const hillSurfaces: Surface[] = [];
+  const hillRails: CurvedRail[] = [];
+  const hillPickups: Pickup[] = [];
+  climbs.forEach((c, i) => {
+    const at = starts[i];
+    spans.push([at, at + c.x]);
+    hillSurfaces.push(...c.surfaces.map((s) => ({ ...s, x0: s.x0 + at, x1: s.x1 + at })));
+    hillRails.push(...c.rails.map((r) => shiftRail(r, at)));
+    hillPickups.push(...c.pickups.map((p) => ({ ...p, x: p.x + at })));
+  });
+  const rails = [...d.rails, ...hillRails, ...finale.rails.map((r) => shiftRail(r))];
   //coins along the street's curved rails
-  const pickups = [...d.pickups];
-  for (const r of rails.slice(d.rails.length)) {
+  const pickups = [...d.pickups, ...hillPickups];
+  for (const r of rails.slice(d.rails.length + hillRails.length)) {
     for (let dd = TILE; dd < r.length - TILE / 2; dd += TILE) {
       const p = r.at(dd);
       pickups.push({ kind: 'cash', x: p.x, y: p.y - PICKUPS.ride });
@@ -243,6 +262,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     street: [...new Array<boolean>(cols).fill(false), ...finale.street],
     surfaces: [
       ...d.surfaces,
+      ...hillSurfaces,
       ...finale.surfaces.map((s) => ({ ...s, x0: s.x0 + off, x1: s.x1 + off })),
       ...(fork ? [{ kind: 'overpass' as const, x0: fork.x0, x1: fork.x1, y: fork.y, row: -1 }] : []),
     ],
@@ -256,7 +276,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     pickups,
     fork,
     danger: opts.danger ?? 2,
-    ...(opts.hills ? { hills: true } : {}),
+    ...(opts.hills ? { hills: true, hillSpans: spans } : {}),
     ...(opts.gravity !== undefined && opts.gravity !== 1 ? { gravity: opts.gravity } : {}),
   };
   //Chicago's L over the street, before the side line so the side line stays clear of it

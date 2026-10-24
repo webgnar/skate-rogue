@@ -9,7 +9,7 @@
 //   higher; rail pieces come up twice as often (all grind lines).
 // - conveyors: some flat rails run forward (faster) or back (slower) while you grind them.
 import { PHYS, TILE } from '../physics/constants';
-import type { Level } from '../physics/level';
+import { inHill, type Level } from '../physics/level';
 import { makeRng } from './rng';
 import type { Piece } from './pieces';
 
@@ -58,6 +58,11 @@ export function applyTwist(level: Level, twist: Twist | undefined, seed: number)
     for (let x = level.finaleX + c.from; ; ) {
       const len = c.min + Math.floor(rng() * ((c.max - c.min) / TILE + 1)) * TILE;
       if (x + len > level.exitX - 4 * TILE) break;
+      //the street chases only, not the stretches of hill between them
+      if (inHill(level, x) || inHill(level, x + len)) {
+        x += 2 * TILE;
+        continue;
+      }
       currents.push({ x0: x, x1: x + len, push: rng() < 0.6 ? c.push : -c.push });
       x += len + c.gap + Math.floor(rng() * 4) * TILE;
     }
@@ -68,6 +73,7 @@ export function applyTwist(level: Level, twist: Twist | undefined, seed: number)
     const ceiling: { x0: number; x1: number; y: number }[] = [];
     for (let x0 = level.finaleX; x0 < level.width; x0 += w) {
       const x1 = x0 + w;
+      if (inHill(level, x0) || inHill(level, x1 - 1)) continue;
       //over its neighbours' too: a rail (or a Ghost Rail off its end) running up to the next piece mustn't go into
       //that piece's ceiling, which had the skater popping into it and re-landing on the rail's end forever
       const [a, b] = [x0 - w, x1 + w];
@@ -87,7 +93,7 @@ export function applyTwist(level: Level, twist: Twist | undefined, seed: number)
     for (const s of level.surfaces) if (s.kind === 'ledge' && rng() < TWIST.ruin.chance) s.crumble = true;
   } else if (twist === 'conveyors') {
     for (const s of level.surfaces) {
-      if (s.kind !== 'rail' || s.x0 < level.finaleX || rng() >= TWIST.conveyor.chance) continue;
+      if (s.kind !== 'rail' || inHill(level, s.x0) || rng() >= TWIST.conveyor.chance) continue;
       s.conveyor = rng() < 0.65 ? TWIST.conveyor.speed : -TWIST.conveyor.speed;
     }
   }

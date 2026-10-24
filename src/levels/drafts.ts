@@ -5,7 +5,7 @@ import type { FloorEdit, LevelEdits } from '../gen/level-edits';
 
 const KEY = 'gnar-run-level-drafts';
 
-export const BEATS: Beat[] = ['hill', 'railHill', 'stairs', 'drop', 'gap', 'kicker'];
+export const BEATS: Beat[] = ['hill', 'railHill', 'stairs', 'drop', 'gap', 'kicker', 'chase'];
 
 const isPair = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === 'number' && isFinite(n));
 const isNum = (v: unknown) => typeof v === 'number' && isFinite(v);

@@ -24,6 +24,7 @@ export interface Surface {
   conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
   el?: boolean; // the L's running rails (src/traffic/el.ts): drawn with the track, not as a bar on posts
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
+  tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
@@ -62,6 +63,7 @@ export class CurvedRail {
   readonly ds: number[] = [];
   readonly length: number;
   material: Material = 'metal'; // handrails and curved rails are steel
+  wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
 
   constructor(
     readonly x0: number,
@@ -182,6 +184,15 @@ export interface Level {
   ceiling?: { x0: number; x1: number; y: number }[]; // the Art Museum's low ceilings: their undersides
   el?: { x0: number; x1: number; y: number; under: number; trigger: number }[]; // the L over the street (src/traffic/el.ts)
   hills?: boolean; // the descent is a hillside you skate down (src/gen/hills.ts), not floating rooftops
+  // every stretch of hill, px: the opening descent [0, finaleX] and the later ones between the street chases
+  // (a cable car up from the street, then down again); left out = just the opening descent
+  hillSpans?: [number, number][];
+}
+
+// on a stretch of hill (or the opening descent), not the street
+export function inHill(level: Level, x: number): boolean {
+  if (x < level.finaleX) return true;
+  return (level.hillSpans ?? []).some(([a, b]) => x >= a && x < b);
 }
 
 const CAR_W = 2 * TILE;
