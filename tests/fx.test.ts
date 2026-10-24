@@ -1,3 +1,4 @@
+import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
 import type { Particles } from '../src/render/particles';
@@ -184,5 +185,44 @@ describe('biome looks', () => {
   it('every biome named in the GDD has a look', () => {
     for (const id of ['chicago', 'clemente', 'greece', 'atlantis', 'museum', 'hightech', 'space', 'hive']) expect(isBiome(id)).toBe(true);
     expect(isBiome('mars')).toBe(false);
+  });
+});
+
+describe('smashables', () => {
+  const fakeParticles = { spray: () => {}, stream: () => {} } as unknown as Particles;
+  const hit = (o: Partial<SmashHit> = {}): SmashHit => ({ prop: 'Crate', index: 3, x: 0, y: 0, how: 'roll', speed: 1, ...o });
+  it('reads what a prop is made of from its name', () => {
+    expect(stuffOf('Bottle')).toBe('glass');
+    expect(stuffOf('NewsBoxRed')).toBe('metal');
+    expect(stuffOf('Crate')).toBe('wood');
+    expect(stuffOf('Cone')).toBe('plastic');
+    expect(stuffOf('Planter')).toBe('stone');
+  });
+  it('a big smash gets a word and a kick; a cruising roll-through does not', () => {
+    const words: string[] = [];
+    let kicks = 0;
+    const fx = new SmashFx(fakeParticles, { word: (_x, _y, w) => words.push(w), shake: () => kicks++ });
+    fx.smash(hit());
+    expect(words).toEqual([]);
+    fx.smash(hit({ how: 'land' }));
+    expect(words.length).toBe(1);
+    expect(kicks).toBe(1);
+    expect(isBig(hit({ speed: 2 }))).toBe(true);
+  });
+  it('hides the prop, flings its pieces, and clears them after their life', () => {
+    const hidden: number[] = [];
+    const fx = new SmashFx(fakeParticles, { word: () => {}, shake: () => {}, hide: (i) => hidden.push(i) });
+    fx.smash(hit());
+    expect(hidden).toEqual([3]);
+    expect(fx.group.children.length).toBeGreaterThan(0);
+    for (let k = 0; k < 90; k++) fx.update(1 / 60);
+    expect(fx.group.children.length).toBe(0);
+  });
+  it('an unbreakable prop stays put', () => {
+    const hidden: number[] = [];
+    const fx = new SmashFx(fakeParticles, { word: () => {}, shake: () => {}, hide: (i) => hidden.push(i) });
+    fx.smash(hit({ prop: 'Hydrant', breakable: false }));
+    expect(hidden).toEqual([]);
+    expect(fx.group.children.length).toBe(0);
   });
 });

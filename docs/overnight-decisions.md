@@ -98,6 +98,17 @@ and listed it here for review. Any of these can be flipped in the morning.
   second; this is off with reduce flashing.
 - **Tail lights** smear a red glow behind each car from dusk.
 
+## Effects thread: fx14 smashables
+
+- **A prop's material comes from its name**, so a new prop works without any code. Bottle is glass, NewsBox is
+  metal, Crate is wood, and so on.
+- **Only big smashes get a word and a camera kick.** That means landing on a prop, a slam, a bomb, a car-hop, or a
+  roll-through at 1.5x cruising speed or faster. Rolling through a row of cones at normal speed just bursts them,
+  so the screen doesn't fill with words.
+- **Pieces live 1.1 s, with at most 24 at once** (12 on the low tier). They draw while they fly, then free up.
+- **Placement has one source: the sim's level.props.** I asked gameplay and models to agree on this, so the
+  index in a smash event hides the right prop.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor
