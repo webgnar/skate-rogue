@@ -1,7 +1,7 @@
 // Wires a run together: floors from the generator, the fixed-step skater, input, the view and the HUD.
 import * as THREE from 'three';
 import { addBoon, type Boon, type Held } from '../boons/defs';
-import { carriedHeat, dropBoon, startHeat, type UnderView } from '../run/spot';
+import { carriedHeat, cursesHeld, dropBoon, startHeat, type UnderView } from '../run/spot';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
@@ -379,7 +379,7 @@ export class Game {
     }
     if (this.nextRoad.kind === 'spot') {
       this.openMenu('under', performance.now());
-      this.hud.under({ step: 'menu', heat: this.carry, canSwap: this.boons.length > 0, curses: 0 });
+      this.hud.under({ step: 'menu', heat: this.carry, canSwap: this.boons.length > 0, curses: cursesHeld(this.boons).length });
       return;
     }
     this.floor++;
@@ -480,6 +480,15 @@ export class Game {
       this.swapping = true;
       this.hud.pick(this.offer, { title: 'SWAP: PICK ANY BOON', rerollCost: -1, canReroll: false });
       this.openMenu('pick', performance.now());
+    } else if (v === 'curse' && cursesHeld(this.boons).length) {
+      this.hud.under({ step: 'lift', boons: cursesHeld(this.boons) });
+    } else if (v.startsWith('lift:')) {
+      //a curse comes off whole
+      const id = v.slice(5) as Held['id'];
+      this.boons = this.boons.filter((b) => b.id !== id);
+      this.hud.boons(this.boons);
+      this.hud.callout('CURSE LIFTED', 'good');
+      this.leaveUnder();
     } else if (v === 'skip') {
       this.leaveUnder();
     }

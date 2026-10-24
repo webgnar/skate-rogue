@@ -43,5 +43,9 @@ export const PHYS = {
   pressureFrames: 15, // Pressure Flip kicks in after holding this long
   ghostTiles: 4, // Ghost Rail
   ghostFrames: 120,
+  wobbleOver: 1.3, // Speed Wobbles: land faster than this times cruising speed and you slam
+  rocketPop: 1.5, // Rocket Grind: an ollie off a fast grind pops this much harder
+  skyLineDrop: 6, // Sky Line: the ghost rail sits this far under your feet
+  skyLineTiles: 7, // and runs this far ahead, past where a flip comes back down
   bailDepth: 24, // this far below the street surface and you're in the canal
 } as const;

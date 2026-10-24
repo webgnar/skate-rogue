@@ -1,5 +1,5 @@
 import './style.css';
-import { BOON_COLORS, boonById, stacksOf, type Boon, type Held } from './boons/defs';
+import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
 import { modDef, type ModId } from './board/mods';
@@ -24,15 +24,16 @@ function esc(text: string): string {
 function chip(h: Held): string {
   const b = boonById(h.id);
   const n = h.stacks > 1 ? ` ×${h.stacks}` : '';
-  return `<span class="chip" style="--type:${BOON_COLORS[b.type]}">${esc(b.name)}${n}</span>`;
+  return `<span class="chip" style="--type:${boonColor(b)}">${esc(b.name)}${n}</span>`;
 }
 
 // a boon card in QFS's layout: type label, name, effect, small line, stacks
 function card(b: Boon, i: number, held: Held[]): string {
   const have = stacksOf(held, b.id);
   const pips = Array.from({ length: b.max }, (_, k) => `<i class="${k < have ? 'on' : k === have ? 'new' : ''}"></i>`).join('');
-  return `<button class="card" data-pick="${i}" style="--type:${BOON_COLORS[b.type]}">
-    <span class="type">${b.type}</span>
+  const tag = b.cursed ? 'CURSED' : b.duo ? `DUO · ${b.duo.map((id) => boonById(id).name).join(' + ')}` : b.type;
+  return `<button class="card${b.cursed ? ' cursed' : ''}" data-pick="${i}" style="--type:${boonColor(b)}">
+    <span class="type">${esc(tag)}</span>
     <b class="name">${esc(b.name)}</b>
     <span class="effect">${esc(b.effect)}</span>
     ${b.note ? `<span class="note">${esc(b.note)}</span>` : ''}
@@ -55,7 +56,13 @@ function underCards(v: UnderView): string {
   if (v.step === 'drop') {
     return v.boons.map((h) => {
       const b = boonById(h.id);
-      return choice(`drop:${h.id}`, BOON_COLORS[b.type], b.type, b.name, b.effect, h.stacks > 1 ? `drop one of ${h.stacks}` : 'drop it');
+      return choice(`drop:${h.id}`, boonColor(b), b.type, b.name, b.effect, h.stacks > 1 ? `drop one of ${h.stacks}` : 'drop it');
+    }).join('');
+  }
+  if (v.step === 'lift') {
+    return v.boons.map((h) => {
+      const b = boonById(h.id);
+      return choice(`lift:${h.id}`, CURSE_COLOR, 'CURSED', b.name, `${b.effect}, ${b.note ?? ''}`, 'lift it off');
     }).join('');
   }
   return [
@@ -223,7 +230,7 @@ function makeHud(): Hud {
     under: (v) => {
       underEl.hidden = !v;
       if (!v) return;
-      underEl.querySelector('.sub')!.textContent = v.step === 'menu' ? 'A DIY spot under the expressway. Take one.' : 'Drop which boon?';
+      underEl.querySelector('.sub')!.textContent = v.step === 'menu' ? 'A DIY spot under the expressway. Take one.' : v.step === 'lift' ? 'Lift which curse?' : 'Drop which boon?';
       underEl.querySelector('.cards')!.innerHTML = underCards(v);
     },
     pick: (offer, info) => {

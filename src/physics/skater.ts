@@ -59,6 +59,7 @@ export class Skater {
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   pads = 0; // Bubble Pads slams left this floor
   tucks = 0; // Tuck and Roll saves left this floor
+  rocket = false; // Rocket Grind: jumps come back at the top of this launch
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
 
@@ -116,6 +117,12 @@ export class Skater {
     this.leaveGround();
     this.jumps = Math.max(0, this.jumps - 1);
     this.vsp = PHYS.ollie * this.mods.ollieScale - grindSpeed * this.mods.railLaunch;
+    //Rocket Grind: off a fast grind you go straight up, and the pop is the rail's, so letting go doesn't cut it
+    if (this.mods.rocketGrind && grindSpeed >= PHYS.grindSpeed) {
+      this.vsp *= PHYS.rocketPop;
+      this.rocket = true;
+      this.kicked = true;
+    }
     this.buffer = 0;
     this.coyote = 0;
     this.flipped = false;
@@ -136,6 +143,8 @@ export class Skater {
     this.events.push({ type: 'trick', index: this.tricks++, name, spin, fakie: this.fakie });
     //a 180 lands you riding the other way round
     if (spin === 180) this.fakie = !this.fakie;
+    //Sky Line: a ghost rail under your feet to come down on
+    if (this.mods.skyLine) this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.skyLineTiles * TILE, y: this.y + PHYS.skyLineDrop, row: -1, ttl: PHYS.ghostFrames };
   }
 
   private bankSpare(): void {
@@ -150,6 +159,7 @@ export class Skater {
 
   private leaveGround(): void {
     this.kicked = false;
+    this.rocket = false;
     if (this.mode === 'grind' || this.mode === 'rail') this.carry = Math.max(this.carry, Math.abs(this.hsp));
     if (this.mode === 'grind' && this.surface) this.spawnGhost(this.surface.y);
     else if (this.mode === 'rail') this.spawnGhost(this.y);
@@ -192,6 +202,11 @@ export class Skater {
       //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
       if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - PHYS.grav));
       else this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
+      //Rocket Grind: at the top, every jump comes back
+      if (this.rocket && this.vsp >= 0) {
+        this.rocket = false;
+        this.jumps = this.maxJumps;
+      }
       //let go while rising: a short hop (QFS variable jump); Late Flip keeps flips full height
       const cut = !(this.flipped && this.mods.lateFlip) && this.gravFlipT === 0 && !this.kicked;
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, PHYS.ollie / PHYS.jumpCut);
@@ -346,11 +361,13 @@ export class Skater {
     } else {
       this.spare = 0;
       this.mode = 'roll';
+      //Speed Wobbles: come down too fast and the board shakes you off
+      const wobbly = this.mods.wobbles && Math.abs(this.hsp) > PHYS.baseSpeed * this.mods.speedScale * PHYS.wobbleOver;
       //Butter: the air speed rolls on (it bleeds off like rail speed)
       if (this.mods.butter) this.carry = Math.max(this.carry, Math.abs(this.hsp));
       this.events.push({ type: 'land' });
       //landing on the steps
-      if (s?.kind === 'stairs') this.slam();
+      if (s?.kind === 'stairs' || wobbly) this.slam();
     }
   }
 

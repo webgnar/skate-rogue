@@ -8,7 +8,9 @@ export type BoonId =
   | 'newWheels' | 'bombHill' | 'butter' | 'kickerBoost' | 'slingshot'
   | 'lowProfile' | 'bubblePads' | 'tuckAndRoll' | 'slamStoke' | 'sirenSong' | 'decoy' | 'ghostMode'
   | 'stokenMagnet' | 'doubleStoken' | 'hustler' | 'luckyReroll'
-  | 'roofRider' | 'slipstream' | 'hoodPop' | 'spoofedPlate' | 'jaywalker';
+  | 'roofRider' | 'slipstream' | 'hoodPop' | 'spoofedPlate' | 'jaywalker'
+  | 'moonShoes' | 'wanted' | 'speedWobbles'
+  | 'rocketGrind' | 'skyLine' | 'perpetualMotion';
 
 export interface Held {
   id: BoonId;
@@ -28,6 +30,17 @@ export interface Boon {
   note?: string;
   max: number;
   when?: (run: RunView) => boolean;
+  cursed?: boolean; // a strong effect with a cost (GDD: Curses), offered from floor 6
+  duo?: [BoonId, BoonId]; // fuses two held boons (GDD: Combos)
+}
+
+export const CURSE_COLOR = '#b98cff';
+export const DUO_COLOR = '#ff7ad9';
+export const CURSES_FROM = 6;
+
+// the colour a card wears: purple for a curse, pink for a duo, else its type's
+export function boonColor(b: Boon): string {
+  return b.cursed ? CURSE_COLOR : b.duo ? DUO_COLOR : BOON_COLORS[b.type];
 }
 
 export const BOON_COLORS: Record<BoonType, string> = { POP: '#ffd23f', GRIND: '#ff8c2b', FLOW: '#3ee0f0', COOL: '#5a8cff', LUCK: '#5fe08a', STREET: '#ff4a5a' };
@@ -74,6 +87,17 @@ export const BOONS: Boon[] = [
     max: 1,
   },
   { id: 'jaywalker', type: 'STREET', name: 'Jaywalker', effect: 'Close calls count from twice as far', note: 'and score double', max: 1 },
+  //curses: strong, with a cost
+  { id: 'moonShoes', type: 'POP', name: 'Moon Shoes', effect: 'Ollie 60% higher', note: 'but grind 30% slower', max: 1, cursed: true },
+  { id: 'wanted', type: 'LUCK', name: 'Wanted', effect: 'Double Stoken', note: 'but Heat rises twice as fast', max: 1, cursed: true },
+  { id: 'speedWobbles', type: 'FLOW', name: 'Speed Wobbles', effect: 'Cruise 40% faster', note: 'but land too fast and you slam', max: 1, cursed: true },
+  //duo boons: two you hold, fused
+  {
+    id: 'rocketGrind', type: 'GRIND', name: 'Rocket Grind', effect: 'Ollie off a fast grind and you launch straight up',
+    note: 'all jumps back at the top', max: 1, duo: ['railLaunch', 'bigPop'],
+  },
+  { id: 'skyLine', type: 'POP', name: 'Sky Line', effect: 'Every air trick leaves a ghost rail under you', max: 1, duo: ['ghostRail', 'tripleThreat'] },
+  { id: 'perpetualMotion', type: 'FLOW', name: 'Perpetual Motion', effect: 'Extra speed never bleeds off', max: 1, duo: ['butter', 'slingshot'] },
   { id: 'ghostMode', type: 'COOL', name: 'Ghost Mode', effect: 'Half the Heat from skating slow', note: 'the Flock cameras lose you', max: 1 },
 ];
 

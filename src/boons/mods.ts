@@ -40,6 +40,10 @@ export interface Mods {
   hopScale: number;
   spoofed: boolean; // robotaxis don't brake
   nearScale: number; // close-call window and score
+  // curses and duos
+  wobbles: boolean; // Speed Wobbles: landing this much over cruising speed slams
+  rocketGrind: boolean;
+  skyLine: boolean;
 }
 
 export const NO_MODS: Mods = {
@@ -77,30 +81,33 @@ export const NO_MODS: Mods = {
   hopScale: 1,
   spoofed: false,
   nearScale: 1,
+  wobbles: false,
+  rocketGrind: false,
+  skyLine: false,
 };
 
 export function skaterMods(boons: Held[]): Mods {
   const s = (id: Parameters<typeof stacksOf>[1]) => stacksOf(boons, id);
   return {
     jumps: s('tripleThreat'),
-    ollieScale: 1 + 0.2 * s('bigPop'),
+    ollieScale: 1 + 0.2 * s('bigPop') + 0.6 * s('moonShoes'),
     floatyFlip: s('floatyFlip') > 0,
     lateFlip: s('lateFlip') > 0,
     pressureFlip: s('pressureFlip') > 0,
     spareChange: 0.25 * s('spareChange'),
     railMagnet: 48 * s('railMagnet'),
-    grindScale: 1 + 0.25 * s('grease'),
+    grindScale: (1 + 0.25 * s('grease')) * (s('moonShoes') ? 0.7 : 1),
     grindInstant: s('grease') > 0,
     railLaunch: s('railLaunch') > 0 ? 0.4 : 0,
-    carryBleedScale: (s('exitWax') > 0 ? 0.25 : 1) * (s('bombHill') > 0 ? 0.5 : 1),
+    carryBleedScale: s('perpetualMotion') ? 0 : (s('exitWax') > 0 ? 0.25 : 1) * (s('bombHill') > 0 ? 0.5 : 1),
     feebleFrenzy: s('feebleFrenzy') > 0,
     ghostRail: s('ghostRail') > 0,
-    speedScale: 1 + 0.2 * s('newWheels'),
+    speedScale: 1 + 0.2 * s('newWheels') + 0.4 * s('speedWobbles'),
     scoreScale: 1 + 0.2 * s('newWheels'),
     butter: s('butter') > 0,
     kickerScale: s('kickerBoost') > 0 ? 1.3 : 1,
     slingshot: 1 + 0.5 * s('slingshot'),
-    heatRise: 1 - 0.25 * s('lowProfile'),
+    heatRise: (1 - 0.25 * s('lowProfile')) * (s('wanted') ? 2 : 1),
     bubblePads: s('bubblePads'),
     tuckAndRoll: s('tuckAndRoll'),
     slamStoke: s('slamStoke') > 0,
@@ -108,7 +115,7 @@ export function skaterMods(boons: Held[]): Mods {
     decoy: s('decoy') > 0,
     slowHeat: s('ghostMode') > 0 ? 0.5 : 1,
     magnet: s('stokenMagnet') > 0 ? 3 : 1,
-    stokenScale: s('doubleStoken') > 0 ? 2 : 1,
+    stokenScale: (s('doubleStoken') > 0 ? 2 : 1) * (s('wanted') ? 2 : 1),
     extraCards: s('hustler'),
     freeReroll: s('luckyReroll') > 0,
     roofRider: s('roofRider') > 0,
@@ -116,5 +123,8 @@ export function skaterMods(boons: Held[]): Mods {
     hopScale: 1 + 0.5 * s('hoodPop'),
     spoofed: s('spoofedPlate') > 0,
     nearScale: s('jaywalker') > 0 ? 2 : 1,
+    wobbles: s('speedWobbles') > 0,
+    rocketGrind: s('rocketGrind') > 0,
+    skyLine: s('skyLine') > 0,
   };
 }
