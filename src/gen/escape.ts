@@ -147,7 +147,7 @@ function withProps(level: Level): Level {
 
 // an escape the no-boon reference bot gets through: re-rolled street runs until one passes
 export function validatedEscape(seed: number, act: number): Level {
-  for (let k = 0; k < 16; k++) {
+  for (let k = 0; k < 24; k++) {
     const level = buildEscape(seed + k * 15485863, act);
     if (clearable(level)) return level;
   }
