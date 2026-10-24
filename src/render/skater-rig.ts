@@ -85,7 +85,7 @@ export class SkaterRig {
   // skinned model bones and the joints they follow
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
 
-  constructor(model?: THREE.Object3D) {
+  constructor(model?: THREE.Object3D, board?: THREE.Object3D) {
     const m = this.mesh;
     m.scale.setScalar(SCALE);
     m.position.z = 0.25;
@@ -178,17 +178,47 @@ export class SkaterRig {
     };
     this.feet = [shoe(), shoe()];
     if (model) this.bind(model);
+    if (board) this.fitBoard(board);
     this.applyPose(BASE);
   }
 
   static async create(base: string): Promise<SkaterRig> {
-    try {
-      const gltf = await new GLTFLoader().loadAsync(`${base}models/lou-gnar.glb`);
-      return new SkaterRig(gltf.scene);
-    } catch (err) {
-      console.warn('skater model failed to load, using the built-in body', err);
-      return new SkaterRig();
-    }
+    const load = (file: string) =>
+      new GLTFLoader().loadAsync(`${base}models/${file}`).then(
+        (gltf) => gltf.scene,
+        (err) => {
+          console.warn(`${file} failed to load, using the built-in one`, err);
+          return undefined;
+        },
+      );
+    const [model, board] = await Promise.all([load('lou-gnar.glb'), load('board.glb')]);
+    return new SkaterRig(model, board);
+  }
+
+  // The Blender board (art/board.py) has its origin at the middle of the deck's top, like boardSpin.
+  private fitBoard(board: THREE.Object3D): void {
+    for (const part of this.boardSpin.children) part.visible = false;
+    this.boardSpin.add(board);
+    this.toonMaterials(board);
+  }
+
+  // the model's materials as the rig's own, so they blink on slams and take the toon ramp
+  private toonMaterials(root: THREE.Object3D): void {
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.frustumCulled = false; // bind-pose bounds don't follow flips and slams
+      const swap = (src: THREE.Material) => {
+        const std = src as THREE.MeshStandardMaterial;
+        if (std.name === 'visor') {
+          return new THREE.MeshPhongMaterial({ color: COLORS.visor, shininess: 90, specular: 0x8899ff, flatShading: true });
+        }
+        const mat = this.lambert(std.color.getHex());
+        mat.map = std.map;
+        return mat;
+      };
+      mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
+    });
   }
 
   // Hide the built-in body and hang the model's bones off its joints. Both are in the bind pose here: every joint
@@ -242,20 +272,8 @@ export class SkaterRig {
         const b = toRig.clone().multiply(bone.matrixWorld);
         this.bound.push({ bone, driver, offset: d.invert().multiply(b), local: new THREE.Matrix4() });
       }
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      mesh.frustumCulled = false; // the bind-pose bounds don't follow flips and slams
-      const swap = (src: THREE.Material) => {
-        const std = src as THREE.MeshStandardMaterial;
-        if (std.name === 'visor') {
-          return new THREE.MeshPhongMaterial({ color: COLORS.visor, shininess: 90, specular: 0x8899ff, flatShading: true });
-        }
-        const mat = this.lambert(std.color.getHex());
-        mat.map = std.map;
-        return mat;
-      };
-      mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
     });
+    this.toonMaterials(model);
   }
 
   // bones copy their joints: world = joint · offset, then back into each bone's parent space
