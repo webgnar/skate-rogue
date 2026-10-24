@@ -261,6 +261,11 @@ and listed it here for review. Any of these can be flipped in the morning.
   front of Lou). Rooftops, stairs, banks, the overpass, street pads and the L-train covers already did. Vehicle
   roofs (cars, buses, trucks, roadblocks) keep their models' widths.
 
+- **Landing quality scores (physics feel thread asked).** A sketchy landing (flip caught late, or a drop too big
+  to soak up) banks half the combo, with a red "SKETCHY" callout; it doesn't lose the combo outright, a slam
+  does. A heavy landing (a big drop, landed) adds 100 "BIG DROP" style, and pays even with no tricks. An ollie
+  popped right at the lip adds 30 style and counts in the combo.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

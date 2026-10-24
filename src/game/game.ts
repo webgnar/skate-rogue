@@ -906,7 +906,8 @@ export class Game {
       case 'land':
         this.visor.ping();
         if (bank) {
-          this.hud.callout(`+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), 'good');
+          const how = bank.how === 'sketchy' ? 'SKETCHY ' : bank.how === 'big' ? 'BIG DROP ' : '';
+          this.hud.callout(`${how}+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), bank.how === 'sketchy' ? 'bad' : 'good');
           this.hud.money(this.run.cash, this.run.stoken);
         }
         //dust on every landing; a big drop also lands with a smaller burst
