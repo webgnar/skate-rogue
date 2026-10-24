@@ -3,6 +3,7 @@
 // sky and a tinted skyline (neon stays lit at night), plus one draw call of rain streaks, so it costs nothing extra
 // on older phones.
 import * as THREE from 'three';
+import { FX } from './fx-settings';
 
 export interface Mood {
   skyTop: number;
@@ -217,7 +218,7 @@ export class Rain {
     this.mesh.visible = this.amount > 0;
     if (!this.mesh.visible) return;
     //drizzle draws fewer streaks, a downpour all of them
-    const n = Math.round(RAIN_N * Math.min(1, this.amount / RAIN.downpour));
+    const n = Math.round(RAIN_N * Math.min(1, this.amount / RAIN.downpour) * (FX.tier === 'low' ? 0.5 : 1));
     this.mesh.geometry.setDrawRange(0, n * 6);
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     const cam = camera.position;

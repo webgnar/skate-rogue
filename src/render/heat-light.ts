@@ -2,6 +2,7 @@
 // takes on the siren wash, growing with Heat. The cruiser closes in as Heat climbs, so the light reaches the
 // skater on its own. Lights are created once and only change intensity, so materials never recompile.
 import * as THREE from 'three';
+import { FX } from './fx-settings';
 
 export const HEAT_LIGHT = {
   from: 25, // Heat where the light starts to show
@@ -76,7 +77,7 @@ export class HeatLights {
     for (const p of [this.point, this.frontPoint]) {
       p.position.set(bar.x, bar.y + 1.5, bar.z + 2);
       p.color.copy(color);
-      p.intensity = HEAT_LIGHT.point * k;
+      p.intensity = FX.tier === 'low' ? 0 : HEAT_LIGHT.point * k; // low tier: the wash alone
     }
     this.glow.pos.copy(bar);
     this.glow.color.copy(color);
@@ -86,12 +87,12 @@ export class HeatLights {
       w.intensity = HEAT_LIGHT.wash * k;
     }
     this.flares.forEach((f, i) => {
-      const lit = (i === 0) === flash;
+      const lit = FX.reduceFlashing || (i === 0) === flash; // reduce flashing: both glow steady
       f.visible = visible && k > 0.01;
       f.position.set(bar.x + (i === 0 ? -0.25 : 0.15), bar.y, bar.z + 0.3);
       const s = HEAT_LIGHT.flare * (0.35 + 0.65 * k) * (lit ? 1 : 0.35);
       f.scale.set(s, s, 1);
-      f.material.opacity = lit ? 1 : 0.4;
+      f.material.opacity = FX.reduceFlashing ? 0.7 : lit ? 1 : 0.4;
     });
   }
 }

@@ -1,3 +1,4 @@
+import { applyParams } from '../src/render/fx-settings';
 import { describe, expect, it } from 'vitest';
 import { TimeWarp } from '../src/game/time-warp';
 import { FixedStep } from '../src/game/loop';
@@ -123,5 +124,20 @@ describe('puddles', () => {
     for (let f = 1; f < 300; f++) levels.add(rainLevel(77, f));
     expect([...levels].sort()).toEqual([0, RAIN.drizzle, RAIN.rain, RAIN.downpour].sort());
     expect(rainLevel(77, 1)).toBe(0);
+  });
+});
+
+describe('effect settings from the URL', () => {
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false } as const;
+  const q = (s: string) => applyParams({ ...base }, new URLSearchParams(s));
+  it('calm turns on both accessibility switches, calm=0 turns them off', () => {
+    expect(q('calm')).toMatchObject({ reduceMotion: true, reduceFlashing: true });
+    expect(applyParams({ ...base, reduceMotion: true, reduceFlashing: true }, new URLSearchParams('calm=0'))).toMatchObject({ reduceMotion: false, reduceFlashing: false });
+  });
+  it('sets the tier and single switches', () => {
+    expect(q('fx=low').quality).toBe('low');
+    expect(q('fx=nonsense').quality).toBe('auto');
+    expect(q('noflash')).toMatchObject({ reduceMotion: false, reduceFlashing: true });
+    expect(q('heatcue').heatCue).toBe(true);
   });
 });

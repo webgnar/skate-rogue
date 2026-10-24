@@ -6,6 +6,7 @@ import type { Level } from '../physics/level';
 import { toX, toY } from './kit';
 import { cityTiles } from './textures';
 import { inkify, toon } from './toon';
+import { FX } from './fx-settings';
 
 export const NIGHT = {
   windowsLit: 0.42, // share of window cells lit
@@ -296,7 +297,8 @@ export class NightCity {
     for (const m of this.windowMats) m.emissiveIntensity = amount * NIGHT.windowGlow;
     for (const b of BEAMS) {
       b.uniforms.uAmt.value = amount;
-      b.visible = amount > 0.02;
+      //low tier keeps the pools on the ground and drops the big additive cones
+      b.visible = amount > 0.02 && (FX.tier === 'high' || (b !== lampCone && b !== headCone));
     }
     this.headMat.emissive.setRGB(amount, amount * 0.8, amount * 0.5);
   }
@@ -311,7 +313,8 @@ export class NightCity {
       const want = w.screen ? (near ? THREE.MathUtils.clamp(dx * 0.06, -0.55, 0.55) : 0) : near ? (dx < 0 ? Math.PI * 0.85 : Math.PI * 0.15) - Math.PI / 2 : 0;
       w.obj.rotation.y += (want - w.obj.rotation.y) * Math.min(1, dt * 4);
       if (w.screen) {
-        const k = 0.75 + 0.25 * this.amount + (heat / 100) * 0.5 * (0.8 + 0.2 * Math.sin(this.t * 10));
+        const pulse = FX.reduceFlashing ? 1 : 0.8 + 0.2 * Math.sin(this.t * 10);
+        const k = 0.75 + 0.25 * this.amount + (heat / 100) * 0.5 * pulse;
         w.screen.color.setRGB(k, k, k);
       }
     }

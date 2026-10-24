@@ -30,6 +30,26 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Car headlights** are an additive cone and pool on each car, shown from dusk. Oncoming cars light the road ahead of
   Lou, which telegraphs them at night. Brake light trails, neon signs and a visor highlight on Lou are left for later.
 
+## Effects thread: fx8 device polish
+
+- **Settings live in the URL until there is a settings menu.** `?calm` turns on reduce motion and reduce
+  flashing, `?fx=low` forces the low tier and `?heatcue` adds the Heat stripes. They are saved, so you only need to
+  set them once, and `=0` turns one off. The phone's own "reduce motion" setting turns reduce motion on. A pause
+  menu toggle belongs with the gameplay thread's UI.
+- **Reduce motion** removes the camera punch and shake, hit-stop, focus lines and speed lines. The burst, debris and
+  sound word still land, so a slam still reads.
+- **Reduce flashing** removes the focus-line flash and lightning, makes the police flares glow steady, stops the
+  billboard pulse, and holds the red edge vignette steady at high Heat.
+- **The Heat cue that isn't colour** is black and white hazard stripes on the screen edges. They thicken with Heat
+  and breathe about once a second. It is off by default, because the red edge already works for most players.
+- **The low tier comes before the resolution drops below 1.** It keeps outlines on Lou, cars and pickups and drops
+  them from the street. It also drops the lamp and headlight cones (the pools stay), halves rain and sparks, and
+  turns off the Heat point light. Auto unless forced.
+- **The street kit is batched by look.** Draw calls were the real cost on a night floor: about 280 counted over both
+  passes. Merging kit meshes that share a material took the kit from 354 meshes to 60, and the floor to about 170
+  to 200 draws. Facades stay separate because each has its own window map. Lou's rig (36 draws with outlines) is
+  the next biggest item, and belongs to the models thread.
+
 ## Gameplay thread (acts, escapes, GDD build-out)
 
 - **Acts and escapes (PR: acts, escapes and a win).** A run is 5 acts of 3 floors. After each act's third floor

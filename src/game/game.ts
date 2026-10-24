@@ -23,6 +23,8 @@ import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
 import { Aura, inkify } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
+import { FX } from '../render/fx-settings';
+import { HeatCue } from '../render/heat-cue';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
@@ -125,6 +127,10 @@ export class Game {
   private readonly words = new SoundWords();
   private readonly warp = new TimeWarp();
   private readonly speedLines = new SpeedLines();
+  private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
+  private perfT = 0;
+  private perfWorst = 0;
+  private perfText = '';
   private readonly aura: Aura;
   private gnarGlow = 0; // 0..1, eases with the gnar state
   private clock = 0;
@@ -462,6 +468,7 @@ export class Game {
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000);
     this.hud.heat(heat);
+    this.heatCue.update(heat, dt);
     this.view.night.update(dt, this.skater.x / TILE, heat);
     this.hud.warn(
       this.state === 'skate' &&
@@ -510,7 +517,20 @@ export class Game {
     this.view.follow(x, y, dt);
     this.view.adapt(realDt * 1000);
     this.view.render();
-    this.hud.debug(`${Math.round(1 / Math.max(realDt, 1e-3))} fps · ${this.skater.hsp.toFixed(1)} px/f · res ${this.view.resolution.toFixed(2)}`);
+    this.perf(realDt);
+  }
+
+  // the debug line: fps, the worst frame in the last second, draw calls, triangles, resolution and effects tier
+  private perf(realDt: number): void {
+    this.perfWorst = Math.max(this.perfWorst, realDt);
+    this.perfT += realDt;
+    if (this.perfT >= 1 || !this.perfText) {
+      const info = this.view.renderer.info.render;
+      this.perfText = `${Math.round(1 / Math.max(realDt, 1e-3))} fps · worst ${Math.round(this.perfWorst * 1000)} ms · ${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris · res ${this.view.resolution.toFixed(2)} · fx ${FX.tier}`;
+      this.perfT = 0;
+      this.perfWorst = 0;
+    }
+    this.hud.debug(`${this.perfText} · ${this.skater.hsp.toFixed(1)} px/f`);
   }
 
   // speed lines past cruising speed, and the gnar state's glow and sparkle trail
@@ -521,7 +541,7 @@ export class Game {
     const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
     const flow = skating ? Math.min(1, Math.max(0, (speed - PHYS.baseSpeed * FLOW_FROM) / (PHYS.baseSpeed * FLOW_RANGE))) : 0;
     this.clock += dt;
-    this.speedLines.update(dt, this.view.camera, flow, gnar);
+    this.speedLines.update(dt, this.view.camera, FX.reduceMotion ? 0 : flow, gnar && !FX.reduceMotion);
     this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
     if (gnar) {
@@ -570,8 +590,11 @@ export class Game {
     const y = toY(this.level, this.skater.y);
     this.burst(1, 0.45);
     this.view.punch(1);
-    this.warp.hit(SLAM_FREEZE, SLAM_SLOW, SLAM_EASE);
-    this.focus.trigger();
+    //reduce motion: no hit-stop or focus lines; the burst, debris and sound word still land
+    if (!FX.reduceMotion) {
+      this.warp.hit(SLAM_FREEZE, SLAM_SLOW, SLAM_EASE);
+      this.focus.trigger();
+    }
     this.words.spawn(x, y);
     this.particles.debris(x, y, 1);
   }

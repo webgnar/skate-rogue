@@ -2,6 +2,7 @@
 // particles (matching QFS's pixel art) drawn as THREE.Points; debris gets an ink rim like the comic burst.
 import * as THREE from 'three';
 import { ParticlePool } from './particle-pool';
+import { FX } from './fx-settings';
 
 const MAX = 256;
 
@@ -121,7 +122,7 @@ export class Particles {
 
   // a frame of grind sparks from the contact point (x, y); `rate` is sparks per second, `dir` the way they ride
   grind(x: number, y: number, dir: number, rate: number, dt: number): void {
-    this.sparkDebt += rate * dt;
+    this.sparkDebt += rate * dt * (FX.tier === 'low' ? 0.5 : 1);
     const p = this.pool;
     while (this.sparkDebt >= 1) {
       this.sparkDebt--;
@@ -137,7 +138,7 @@ export class Particles {
 
   // the gnar state's sparkle trail: rainbow pixels shed behind the skater
   trail(x: number, y: number, rate: number, dt: number, t: number): void {
-    this.trailDebt += rate * dt;
+    this.trailDebt += rate * dt * (FX.tier === 'low' ? 0.5 : 1);
     const p = this.pool;
     const c = new THREE.Color();
     while (this.trailDebt >= 1) {
