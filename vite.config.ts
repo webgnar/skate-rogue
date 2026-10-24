@@ -43,9 +43,47 @@ function clipEditor(): Plugin {
   };
 }
 
+// The level editor (?levels) saves its edits here the same way; game tabs reload to skate them.
+const LEVEL_EDITS = fileURLToPath(new URL('./src/gen/level-edits.json', import.meta.url));
+
+function levelEditor(): Plugin {
+  return {
+    name: 'level-editor',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__level-edits', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            const ok = data && typeof data === 'object' && data.floors && typeof data.floors === 'object' && !Array.isArray(data.floors);
+            if (!ok) throw new Error('not a set of level edits');
+            writeFileSync(LEVEL_EDITS, body.endsWith('\n') ? body : `${body}\n`);
+            res.end('saved');
+          } catch (err) {
+            res.statusCode = 400;
+            res.end(String(err));
+          }
+        });
+      });
+    },
+    handleHotUpdate(ctx) {
+      if (ctx.file !== LEVEL_EDITS) return;
+      ctx.server.ws.send({ type: 'custom', event: 'level-edits' });
+      return [];
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
-  plugins: [clipEditor()],
+  plugins: [clipEditor(), levelEditor()],
   build: { target: 'es2022', assetsInlineLimit: 0, chunkSizeWarningLimit: 800 },
   test: { include: ['tests/**/*.test.ts'] },
 });

@@ -11,6 +11,7 @@ import { TILE } from '../physics/constants';
 import { CurvedRail } from '../physics/level';
 import { coinArc, coinLine, DESCENT, maxSteps, PICKUPS, startHeight, stairs, terrace, yOf, type Builder } from './descent';
 import { makeRng, randInt, type Rng } from './rng';
+import { floorEdit } from './level-edits';
 
 export type Beat = 'hill' | 'railHill' | 'stairs' | 'drop' | 'gap' | 'kicker';
 
@@ -60,7 +61,31 @@ const range = (rng: Rng, [lo, hi]: number[]) => lo + randInt(rng, hi - lo + 1);
 
 // a hill floor starts higher than a rooftop one: the blocks of street need the height to be steep
 export function hillTop(floor: number): number {
-  return startHeight(floor) + HILLS.extraTop(floor);
+  return floorEdit(editFloor(floor)).top ?? startHeight(floor) + HILLS.extraTop(floor);
+}
+
+// the floor whose edits (src/gen/level-edits.ts) a floor follows: itself, or for Endless the one its recipe reuses
+export function editFloor(floor: number): number {
+  return recipeIndex(floor) + 1;
+}
+
+// a floor's dials: its edits over the code's
+export function hillDials(floor: number) {
+  const e = floorEdit(editFloor(floor));
+  return {
+    grade: e.grade ?? HILLS.grade(floor),
+    top: hillTop(floor),
+    run: e.run ?? HILLS.run,
+    crest: e.crest ?? HILLS.crest,
+    gap: e.gap ?? HILLS.gap(floor),
+    midSet: e.midSet ?? HILLS.midSet(floor),
+    finalSet: e.finalSet ?? HILLS.finalSet(floor),
+  };
+}
+
+// a floor's recipe: its edited one, or the code's
+export function floorRecipe(floor: number): Beat[][] {
+  return floorEdit(editFloor(floor)).recipe ?? RECIPES[recipeIndex(floor)];
 }
 
 // the recipe a floor follows: its own for floors 1-15; Endless cycles acts 4 and 5
@@ -70,7 +95,7 @@ export function recipeIndex(floor: number): number {
 
 export function recipe(seed: number, floor: number): Beat[] {
   const rng = makeRng(seed * 13 + floor * 2087);
-  return RECIPES[recipeIndex(floor)].map((slot) => slot[randInt(rng, slot.length)]);
+  return floorRecipe(floor).map((slot) => slot[randInt(rng, slot.length)]);
 }
 
 // a block of street falling `drop` tiles over `run` tiles, its coins skimming the road (or along its handrail)
@@ -95,22 +120,25 @@ function hill(b: Builder, streetY: number, run: number, drop: number, rail: bool
 
 export function buildHills(seed: number, floor: number, streetY: number, short = false): Builder {
   const rng = makeRng(seed * 7 + floor * 104723);
-  const grade = HILLS.grade(floor);
-  const top = Math.ceil(hillTop(floor) * (short ? 0.6 : 1));
+  const dials = hillDials(floor);
+  const grade = dials.grade;
+  const top = Math.ceil(dials.top * (short ? 0.6 : 1));
   const b: Builder = { x: 0, h: top, top, surfaces: [], rails: [], pickups: [], prng: makeRng(seed * 11 + floor * 7477) };
   let beats = recipe(seed, floor);
   //a stash floor keeps the opening block and the last stairway
   if (short) beats = [beats[0], ...beats.slice(-2)];
   //the top of the hill: a flat run-up to get rolling
   terrace(b, streetY, 10, rng, false);
-  const crest = (features: boolean) => terrace(b, streetY, range(rng, HILLS.crest), rng, features && floor > 1);
+  const crest = (features: boolean) => terrace(b, streetY, range(rng, dials.crest), rng, features && floor > 1);
   //the height is planned up front: the last stairway (the floor's peak) gets its set, a short block runs out into
   //the street, and the beats between share the rest by weight, so no beat is left with nothing to drop
-  const finalSteps = Math.min(maxSteps(floor), HILLS.finalSet(floor), Math.floor((top - 2) * 2 * 0.45));
+  //an edited last stairway can go past the floor's usual stair cap; the height still limits it
+  const cap = floorEdit(editFloor(floor)).finalSet !== undefined ? dials.finalSet : maxSteps(floor);
+  const finalSteps = Math.min(cap, dials.finalSet, Math.floor((top - 2) * 2 * 0.45));
   const rises = beats.map((beat) => (beat === 'kicker' ? range(rng, [1, 2]) : 0));
   let budget = top - finalSteps / 2 - HILLS.lastBlock + rises.reduce((a, r) => a + r, 0);
   let weights = beats.slice(0, -1).reduce((a, beat) => a + WEIGHT[beat], 0);
-  const runFor = (drop: number) => Math.min(HILLS.run[1] + 4, Math.max(HILLS.run[0], Math.round(drop / grade)));
+  const runFor = (drop: number) => Math.min(dials.run[1] + 4, Math.max(dials.run[0], Math.round(drop / grade)));
 
   beats.forEach((beat, i) => {
     const last = i === beats.length - 1;
@@ -121,7 +149,7 @@ export function buildHills(seed: number, floor: number, streetY: number, short =
       hill(b, streetY, runFor(drop), drop, beat === 'railHill');
       crest(true);
     } else if (beat === 'stairs') {
-      const [lo, hi] = HILLS.midSet(floor);
+      const [lo, hi] = dials.midSet;
       const steps = last ? finalSteps : Math.min(hi, Math.max(lo, Math.round(plan * 2)));
       //sets the base ollie and flip can't clear always get a handrail; floor 1's always do, to learn on
       const rail = steps > 8 || floor === 1 || last || rng() < 0.7;
@@ -137,7 +165,7 @@ export function buildHills(seed: number, floor: number, streetY: number, short =
     } else if (beat === 'gap') {
       //a crest jump: off the flat intersection, over the cross street, onto the next block falling away under you
       const from = { x: b.x, y: yOf(streetY, b.h) };
-      b.x += range(rng, HILLS.gap(floor)) * TILE;
+      b.x += range(rng, dials.gap) * TILE;
       b.h -= 1;
       const to = { x: b.x + TILE, y: yOf(streetY, b.h) };
       coinArc(b, from.x - TILE, from.y - PICKUPS.ride, to.x, to.y - PICKUPS.ride, PICKUPS.arc);
