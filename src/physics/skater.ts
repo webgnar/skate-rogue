@@ -68,6 +68,8 @@ export class Skater {
   readonly feel = new Feel(); // the body and board response (src/physics/feel.ts)
   trickT = 0; // frames since the last flip trick
   trickCatch = 0; // frames that flip takes to catch (0: no flip going)
+  readonly crumbling = new Map<Surface, number>(); // Greece's ruins: frames until each ledge you've stood on falls
+  readonly gone = new Set<Surface>(); // ruins that have fallen
 
   constructor(
     readonly level: Level,
@@ -113,6 +115,7 @@ export class Skater {
     if (this.floatT > 0) this.floatT--;
     if (this.gravFlipT > 0) this.gravFlipT--;
     if (this.ghost && --this.ghost.ttl <= 0 && this.surface !== this.ghost) this.ghost = null;
+    this.stepRuins();
     this.holdT = input.held && this.holdT > 0 ? this.holdT + 1 : 0;
 
     //the button: ollie from the ground (or just after leaving it), flip trick in the air
@@ -174,7 +177,7 @@ export class Skater {
     if (s && x >= s.x0 && x <= s.x1) return surfaceY(s, x);
     if (this.mode === 'grind') return null;
     for (const o of this.level.surfaces) {
-      if (o === s || o.kind === 'rail' || x < o.x0 || x > o.x1) continue;
+      if (o === s || o.kind === 'rail' || x < o.x0 || x > o.x1 || this.gone.has(o)) continue;
       const y = surfaceY(o, x);
       if (Math.abs(y - this.y) <= 8) return y;
     }
@@ -367,14 +370,28 @@ export class Skater {
 
   // the level's ledges, roofs and rails, plus a live ghost rail
   private surfaces(): Surface[] {
-    return this.ghost ? [...this.level.surfaces, this.ghost] : this.level.surfaces;
+    const all = this.gone.size ? this.level.surfaces.filter((s) => !this.gone.has(s)) : this.level.surfaces;
+    return this.ghost ? [...all, this.ghost] : all;
+  }
+
+  // a ruin starts to crumble once you're on it, and falls a moment later (you drop if you're still there)
+  private stepRuins(): void {
+    const s = this.surface;
+    if (s?.crumble && this.grounded && !this.crumbling.has(s) && !this.gone.has(s)) this.crumbling.set(s, PHYS.crumbleFrames);
+    for (const [ruin, t] of this.crumbling) {
+      if (t > 1) this.crumbling.set(ruin, t - 1);
+      else {
+        this.crumbling.delete(ruin);
+        this.gone.add(ruin);
+      }
+    }
   }
 
   // rolling off one piece of ground straight onto the next at the same height: terrace to stairs, bank to roof
   private rollOnto(): boolean {
     if (this.mode !== 'roll') return false;
     for (const s of this.level.surfaces) {
-      if (s === this.surface || s.kind === 'rail' || this.x < s.x0 || this.x > s.x1) continue;
+      if (s === this.surface || s.kind === 'rail' || this.x < s.x0 || this.x > s.x1 || this.gone.has(s)) continue;
       if (Math.abs(surfaceY(s, this.x) - this.y) > 8) continue;
       this.y = surfaceY(s, this.x);
       this.surface = s;
@@ -390,7 +407,7 @@ export class Skater {
   }
 
   private supported(): boolean {
-    if (this.surface) return this.x >= this.surface.x0 && this.x <= this.surface.x1;
+    if (this.surface) return this.x >= this.surface.x0 && this.x <= this.surface.x1 && !this.gone.has(this.surface);
     return isStreetAt(this.level, this.x);
   }
 

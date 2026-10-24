@@ -14,6 +14,7 @@ import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear'
 import { loadSave, writeSave } from '../run/save';
 import { tutorialLevel } from '../gen/tutorial';
 import { DISTRICT_TWIST } from '../gen/twists';
+import { gnarCards, gnarCarry, gnarDanger, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
 import { buzz } from '../ui/settings';
@@ -87,6 +88,7 @@ export interface RunMeta {
   library: Library;
   daily: boolean;
   tutorial?: boolean; // start on the tutorial floor (a new phone, or ?tutorial)
+  gnar?: number; // the Gnar level (src/run/gnar.ts): 0 is a normal run
 }
 
 export type ShopPick = { stock: number } | { slot: number } | null;
@@ -182,6 +184,9 @@ export class Game {
   private bountySeen = false;
   private tutorial = false; // on the tutorial floor, before the run's first floor
   private lesson = 0; // the next tutorial prompt
+  private get gnar(): number {
+    return this.meta.gnar ?? 0;
+  }
   private spotState = 'hunt';
   private readonly particles = new Particles();
   private readonly focus = new FocusLines();
@@ -258,7 +263,7 @@ export class Game {
     const district = this.biomePinned ? this.biome : actBiome(this.seed, actOf(this.floor));
     return validatedFloor(this.seed, this.floor, {
       fork: rollFork(this.seed, this.floor, this.meta.library.types),
-      danger: this.road.danger,
+      danger: gnarDanger(this.road.danger, this.gnar),
       short: this.road.kind === 'stash',
       gravity: BIOME_GRAVITY[district] ?? 1,
       twist: DISTRICT_TWIST[district],
@@ -352,7 +357,7 @@ export class Game {
     const act = this.road.kind === 'escape' ? this.road.act : actOf(this.floor);
     const district = actBiome(this.seed, act);
     if (!this.biomePinned && district !== this.biome) this.goBiome(district);
-    const mods = withLoadout(skaterMods(this.boons), this.meta.loadout);
+    const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
     this.run.scoreScale = mods.scoreScale;
@@ -391,7 +396,7 @@ export class Game {
 
   // the floor's gate: pay floor clear, then this floor's reward; the road taken is the next floor
   private finishFloor(now: number): void {
-    this.carry = carriedHeat(this.sim.heat.value);
+    this.carry = carriedHeat(this.sim.heat.value, gnarCarry(this.gnar));
     this.gear = { ...this.sim.gear };
     this.sound?.play(MOMENT.gate);
     if (this.tutorial) return this.endTutorial();
@@ -448,8 +453,8 @@ export class Game {
     const extra = skaterMods(this.boons).extraCards; // Hustler
     this.offer =
       road.kind === 'hot'
-        ? offerBoons(this.seed, run, 4 + extra, undefined, this.rerolls)
-        : offerBoons(this.seed, run, 3 + extra, road.kind === 'boon' ? road.boonType : undefined, this.rerolls);
+        ? offerBoons(this.seed, run, gnarCards(4 + extra, this.gnar), undefined, this.rerolls)
+        : offerBoons(this.seed, run, gnarCards(3 + extra, this.gnar), road.kind === 'boon' ? road.boonType : undefined, this.rerolls);
     const cost = this.rerollCost();
     this.hud.pick(this.offer, {
       title: road.kind === 'hot' ? 'HOT STREET: PICK ANY BOON' : `PICK A ${label(road)}`,
@@ -639,6 +644,7 @@ export class Game {
       best: Math.max(save.best, this.run.score),
       stoken: save.stoken + this.run.stoken,
       wins: save.wins + (won ? 1 : 0),
+      gnar: won ? Math.max(save.gnar, this.gnar) : save.gnar,
       daily: daily ? { day: today, best: daily.best } : save.daily,
     };
     writeSave(next);
@@ -788,7 +794,7 @@ export class Game {
     this.chopper.update(this.level, this.sim.chopper, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, this.biome, dt);
-    this.twistView.update(dt);
+    this.twistView.update(dt, this.skater);
     if (this.state === 'skate') {
       const street = toY(this.level, this.level.streetY);
       const ch = this.sim.chopper;

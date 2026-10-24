@@ -17,6 +17,7 @@ owns it will pick it up.
 | `?biome=greece` | Previews a district's look: `chicago`, `clemente`, `greece`, `atlantis`, `museum`, `hightech`, `space`, `hive` |
 | `?calm` | Reduce motion and flashing (no shake, no flashes) |
 | `?fx=low` | The low tier for older phones |
+| `?gnar=3` | Plays at that Gnar level without winning first (1 to 5) |
 | `?tutorial` | Starts on the tutorial floor again (a brand new phone gets it automatically) |
 | `?debug` | Shows fps, draws and speed; exposes `window.game` |
 
@@ -164,8 +165,17 @@ Each act's district now changes the street, not just the look. Quickest check: `
 - [ ] **Ancient Greece (act 3, some seeds):** curved rails (arches, downhill rails) come up a lot more.
 - [ ] **Atlantis (act 3, some seeds):** stretches of street with bubbles streaming one way and arrows on the ground. Jump in one and the water carries you further (arrows forward) or holds you back (arrows back). It only works in the air.
 - [ ] **Art Museum (act 3, some seeds):** a dark ceiling with a light strip over the street. A plain ollie fits under it; a flip bumps your head and you drop. Nothing to collect is ever above it.
+- [ ] **Greece's ruins:** most floating ledges in Greece are cracked marble slabs. Land on one and it shakes, then drops about half a second later, taking you with it if you're still on it. Ollie off in time.
 - [ ] **High-Tech City (act 4):** some flat rails have glowing chevrons. Cyan ones speed your grind up, orange ones slow it down.
 - [ ] *Feel:* are currents strong enough to notice but never unfair? Does the museum ceiling feel like a twist or just a limit?
+
+## Gnar levels (harder runs after a win)
+
+- [ ] **Locked until you win:** the run summary has no GNAR button until you've beaten act 5 once (or use `?unlockall`).
+- [ ] **Picking a level:** tap GNAR on the run summary to step through GNAR 1, 2 and so on (up to one past the highest you've won), then GNAR OFF. The page reloads and the next run is at that level. The run opens with a callout naming the new rule, and the seed line and pause card show the level and its rules.
+- [ ] **The rules stack:** 1 heavier traffic, 2 Heat rises 20% faster, 3 three quarters of your Heat carries to the next floor, 4 one fewer boon card, 5 gear wears 50% faster.
+- [ ] **The payoff:** each level adds 15% to score and 20% to Stoken. Winning at a level opens the next. Daily runs are never at a Gnar level.
+- [ ] *Feel:* is level 1 noticeably harder? Is 5 brutal but fair?
 
 ## Sound, vibration and settings
 

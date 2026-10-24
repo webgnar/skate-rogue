@@ -14,7 +14,8 @@ import { isBiome } from './render/biomes';
 import { props } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
 import { dailySeed, dayKey, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
-import { loadSave } from './run/save';
+import { loadSave, writeSave } from './run/save';
+import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
 import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
 import { loadModels } from './render/models';
@@ -316,8 +317,12 @@ async function start() {
   const input = new OneButton(document.getElementById('app')!);
   const startAt = Math.max(1, Math.floor(Number(params.get('floor')) || 1));
   //a new phone starts on the tutorial floor (?tutorial shows it again; a test URL skips it)
-  const testing = ['floor', 'seed', 'biome', 'daily'].some((k) => params.has(k));
+  const testing = ['floor', 'seed', 'biome', 'daily', 'gnar'].some((k) => params.has(k));
   const tutorial = params.has('tutorial') || (!save.tutorialDone && save.best === 0 && !testing);
+  //the Gnar level: what the save picked, up to what's been won (?gnar=3 forces one for testing); never on a daily run
+  const urlGnar = params.get('gnar');
+  const open = all ? MAX_GNAR : gnarOpen(save.wins, save.gnar);
+  const gnar = daily || tutorial ? 0 : urlGnar !== null ? Math.min(MAX_GNAR, Math.max(0, Number(urlGnar) || 0)) : Math.min(save.gnarPick, open);
   const library = all ? FULL_LIBRARY : libraryOf(save.unlocked);
   //the leaderboards: every finished run posts itself (once there's a tag); a daily run also goes on today's board
   const scores = new BoardPanel(document.getElementById('scores')!, document.querySelector<HTMLElement>('#over [data-scores]')!);
@@ -328,7 +333,7 @@ async function start() {
     showOver(result);
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}) });
   };
-  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial });
+  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar });
   //?debug exposes the game for headless checks
   if (params.has('debug')) Object.assign(window, { game, props });
   const biome = params.get('biome');
@@ -365,7 +370,19 @@ async function start() {
     if (t?.closest('[data-open-meta]')) metaScreen.open();
     else if (t?.closest('[data-scores]')) void scores.open();
     else if (t?.closest('[data-daily]')) reloadWith('daily', !daily);
+    else if (t?.closest('[data-gnar]')) {
+      //the next level up, wrapping to a normal run; it starts on the next reload
+      writeSave({ ...loadSave(), gnarPick: (gnar + 1) % (open + 1) });
+      reloadWith('gnar', false);
+    }
   });
+  const gnarBtn = document.querySelector<HTMLElement>('#over [data-gnar]')!;
+  gnarBtn.hidden = open === 0 || daily;
+  gnarBtn.textContent = gnar ? `GNAR ${gnar}` : 'GNAR OFF';
+  if (gnar) {
+    document.querySelector<HTMLElement>('#over [data-gnar-rules]')!.textContent = GNAR_RULES.slice(0, gnar).map((r) => r.name).join(' · ');
+    hud.callout(`GNAR ${gnar}: ${GNAR_RULES[gnar - 1].name}`, 'bad');
+  }
   tapOnly('resume', () => game.setPaused(false));
   tapOnly('quitrun', () => game.quitRun());
   //sound starts on the first press (browsers need a tap first); the pause card's settings change it live
@@ -390,8 +407,8 @@ async function start() {
   const resize = () => view.resize();
   window.addEventListener('resize', resize);
   resize();
-  document.getElementById('seed')!.textContent = daily ? `daily · seed ${seed}` : `seed ${seed}`;
-  document.querySelector('#paused .seed')!.textContent = `seed ${seed}`;
+  document.getElementById('seed')!.textContent = (daily ? `daily · seed ${seed}` : `seed ${seed}`) + (gnar ? ` · gnar ${gnar}` : '');
+  document.querySelector('#paused .seed')!.textContent = `seed ${seed}` + (gnar ? ` · gnar ${gnar}: ${GNAR_RULES.slice(0, gnar).map((r) => r.name).join(', ')}` : '');
   document.getElementById('app')!.classList.toggle('debug', params.has('debug'));
   document.getElementById('loading')!.remove();
 

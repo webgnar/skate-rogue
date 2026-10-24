@@ -14,8 +14,8 @@ export type UnderView =
   | { step: 'lift'; boons: Held[] }; // the cursed boons you hold
 
 // the Heat you take to the next floor: half of what you left with
-export function carriedHeat(exitHeat: number): number {
-  return Math.round(exitHeat * ROADS.heatCarry);
+export function carriedHeat(exitHeat: number, share: number = ROADS.heatCarry): number {
+  return Math.round(exitHeat * share);
 }
 
 // a floor's starting Heat: its road's own, or what you carried in, whichever is higher
