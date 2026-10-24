@@ -5,7 +5,8 @@ import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
 
-export type VehicleKind = 'robotaxi' | 'oncoming';
+// robotaxis, buses and box trucks drive your way (slower than you); oncoming cars come at you
+export type VehicleKind = 'robotaxi' | 'oncoming' | 'bus' | 'truck';
 
 export interface Vehicle extends Car {
   id: number;
@@ -25,6 +26,16 @@ export interface Spawn {
 export const TRAFFIC = {
   carW: 2 * TILE,
   carH: 40,
+  // a CTA bus: a long roof past a plain ollie (ollie and flip up the back, or hop on off a car), slow
+  busW: 6 * TILE,
+  busH: 72,
+  busSpeed: 0.3,
+  // a box truck with its tailgate down: the tailgate kicks you up onto the box
+  truckW: 4 * TILE,
+  truckH: 64,
+  tailgate: TILE,
+  bigFrom: 4, // buses and trucks join the traffic from this floor
+  bigShare: 0.3, // of the vehicles going your way
   robotaxiSpeed: [0.35, 0.5], // share of base speed
   oncomingSpeed: -4,
   brakeRange: 3 * TILE, // robotaxis brake when the skater is this close behind
@@ -47,13 +58,24 @@ export function spawnPlan(level: Level, seed: number): Spawn[] {
     if (rng() >= density) continue;
     const oncoming = (floor >= 3 || level.danger >= 3) && rng() < 0.4;
     const [lo, hi] = TRAFFIC.robotaxiSpeed;
-    plan.push({
-      at: level.finaleX + p * 16 * TILE + randInt(rng, 8) * TILE,
-      kind: oncoming ? 'oncoming' : 'robotaxi',
-      speed: oncoming ? TRAFFIC.oncomingSpeed : PHYS.baseSpeed * (lo + (hi - lo) * rng()),
-    });
+    const at = level.finaleX + p * 16 * TILE + randInt(rng, 8) * TILE;
+    if (oncoming) {
+      plan.push({ at, kind: 'oncoming', speed: TRAFFIC.oncomingSpeed });
+      continue;
+    }
+    const big = floor >= TRAFFIC.bigFrom && rng() < TRAFFIC.bigShare;
+    const kind: VehicleKind = big ? (rng() < 0.5 ? 'bus' : 'truck') : 'robotaxi';
+    const speed = kind === 'bus' ? PHYS.baseSpeed * TRAFFIC.busSpeed : PHYS.baseSpeed * (lo + (hi - lo) * rng());
+    plan.push({ at, kind, speed });
   }
   return plan;
+}
+
+// a vehicle's length and roof height, px
+export function vehicleSize(kind: VehicleKind): [number, number] {
+  if (kind === 'bus') return [TRAFFIC.busW, TRAFFIC.busH];
+  if (kind === 'truck') return [TRAFFIC.truckW, TRAFFIC.truckH];
+  return [TRAFFIC.carW, TRAFFIC.carH];
 }
 
 export class Traffic {
@@ -75,11 +97,15 @@ export class Traffic {
 
   private spawn(s: Spawn): void {
     const x0 = s.at + (s.kind === 'oncoming' ? TRAFFIC.aheadOncoming : TRAFFIC.aheadRobotaxi);
-    if (x0 + TRAFFIC.carW > this.level.exitX || this.blockedAt(x0 - TILE, x0 + TRAFFIC.carW + TILE)) return;
+    const [w, h] = vehicleSize(s.kind);
+    //a truck needs street for its tailgate behind it too
+    const back = s.kind === 'truck' ? TRAFFIC.tailgate : 0;
+    if (x0 + w > this.level.exitX || this.blockedAt(x0 - TILE - back, x0 + w + TILE)) return;
     const bottom = this.level.streetY;
     this.vehicles.push({
       id: this.ids++, kind: s.kind, speed: s.speed, cruise: s.speed, lane: 0, leaving: false,
-      x0, x1: x0 + TRAFFIC.carW, bottom, roof: bottom - TRAFFIC.carH,
+      x0, x1: x0 + w, bottom, roof: bottom - h,
+      ...(s.kind === 'truck' ? { kicker: TRAFFIC.tailgate } : {}),
     });
   }
 
@@ -87,7 +113,7 @@ export class Traffic {
     while (this.next < this.plan.length && skaterX >= this.plan[this.next].at) this.spawn(this.plan[this.next++]);
 
     for (const v of this.vehicles) {
-      if (v.kind === 'robotaxi' && !v.leaving) {
+      if (v.speed > 0 && !v.leaving) {
         //brake hard when the skater rolls up behind
         const gap = v.x0 - skaterX;
         const target = gap > 0 && gap < TRAFFIC.brakeRange ? PHYS.baseSpeed * TRAFFIC.brakeSpeed : v.cruise;

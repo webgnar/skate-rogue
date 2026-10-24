@@ -413,6 +413,7 @@ export class SkaterRig {
     switch (e.type) {
       case 'ollie':
       case 'hop':
+      case 'kicker':
         this.play('ollie');
         break;
       case 'trick':

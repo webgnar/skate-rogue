@@ -14,6 +14,7 @@ export type SkaterEvent =
   | { type: 'grind' }
   | { type: 'rail' }
   | { type: 'hop' }
+  | { type: 'kicker' } // launched off a box truck's tailgate
   | { type: 'slam' }
   | { type: 'bail' }
   | { type: 'exit' };
@@ -54,6 +55,7 @@ export class Skater {
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
   fakie = false; // riding with the other foot forward, after a 180
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
+  kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
 
   constructor(
@@ -116,6 +118,7 @@ export class Skater {
   }
 
   private trick(): void {
+    this.kicked = false;
     if (this.jumps > 0) this.jumps--;
     else this.spare -= 1;
     this.vsp = PHYS.trick;
@@ -140,6 +143,7 @@ export class Skater {
   }
 
   private leaveGround(): void {
+    this.kicked = false;
     if (this.mode === 'grind' || this.mode === 'rail') this.carry = Math.max(this.carry, Math.abs(this.hsp));
     if (this.mode === 'grind' && this.surface) this.spawnGhost(this.surface.y);
     else if (this.mode === 'rail') this.spawnGhost(this.y);
@@ -183,7 +187,7 @@ export class Skater {
       if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - PHYS.grav));
       else this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
       //let go while rising: a short hop (QFS variable jump); Late Flip keeps flips full height
-      const cut = !(this.flipped && this.mods.lateFlip) && this.gravFlipT === 0;
+      const cut = !(this.flipped && this.mods.lateFlip) && this.gravFlipT === 0 && !this.kicked;
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
     } else {
@@ -332,6 +336,7 @@ export class Skater {
   }
 
   private carHop(): void {
+    this.kicked = false;
     this.vsp = PHYS.carHop;
     this.jumps = this.maxJumps;
     this.flipped = false;
@@ -395,6 +400,12 @@ export class Skater {
     const half = PHYS.width / 2;
     for (const car of this.cars()) {
       if (this.hitCars.has(car)) continue;
+      //a dropped tailgate: roll up it and it kicks you up over the box, with a burst of speed (a bomb)
+      if (car.kicker && this.mode === 'roll' && !this.surface && this.x + half >= car.x0 - car.kicker && this.x < car.x0) {
+        this.hitCars.add(car);
+        this.kick();
+        continue;
+      }
       const overlapX = this.x + half > car.x0 && this.x - half < car.x1;
       const overlapY = this.y > car.roof + 6 && this.y - PHYS.height < car.bottom;
       if (overlapX && overlapY) {
@@ -410,6 +421,18 @@ export class Skater {
         }
       });
     }
+  }
+
+  private kick(): void {
+    this.leaveGround();
+    this.y = this.level.streetY - PHYS.tailgateLip;
+    this.vsp = PHYS.kickerPop;
+    this.kicked = true;
+    this.hsp = Math.max(this.hsp, PHYS.bombSpeed);
+    this.carry = Math.max(this.carry, PHYS.bombSpeed);
+    this.jumps = this.maxJumps;
+    this.flipped = false;
+    this.events.push({ type: 'kicker' });
   }
 
   private slam(): void {

@@ -656,7 +656,7 @@ export class Game {
   private handle(e: FloorSim['events'][number]): void {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
-    if (e.type !== 'pickup') this.sprite.onEvent(e);
+    if (e.type !== 'pickup' && e.type !== 'near') this.sprite.onEvent(e);
     const wasGnar = this.run.gnar;
     const bank = this.run.onEvent(e, this.skater.hsp);
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
@@ -676,6 +676,16 @@ export class Game {
         break;
       case 'hop':
         this.hud.callout('CAR HOP!' + combo, 'good');
+        break;
+      case 'kicker':
+        this.view.zoom.trick();
+        this.hud.callout('TAILGATE BOMB!' + combo, 'trick');
+        this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), 1);
+        break;
+      case 'near':
+        //a slow-mo beat on a close call (GDD: Camera)
+        this.warp.hit(0, 0.6, 0.35);
+        this.hud.callout('CLOSE CALL!' + combo, 'good');
         break;
       case 'land':
         if (bank) {

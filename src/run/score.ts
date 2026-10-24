@@ -17,6 +17,8 @@ export const SCORE = {
   railStart: 75,
   grindPerSec: 60,
   carHop: 150,
+  kicker: 150, // off a box truck's tailgate
+  nearMiss: 200, // a close call: over a vehicle with a few px to spare, or one passing right under you
   drone: 250, // stomping a drone out of the sky, on top of the hop
   stoken: 100,
   cashCoin: 1,
@@ -76,6 +78,12 @@ export class RunScore {
         break;
       case 'hop':
         this.add(SCORE.carHop);
+        break;
+      case 'kicker':
+        this.add(SCORE.kicker);
+        break;
+      case 'near':
+        this.add(SCORE.nearMiss);
         break;
       case 'land':
         return this.bank(hsp);

@@ -357,6 +357,54 @@ export function makeBus(x0: number, x1: number, bottom: number, roof: number): T
   return bus;
 }
 
+// a box truck driving your way with its tailgate down: the cab in front, the box behind, and the tailgate a ramp
+// from the box floor to the street behind it (it kicks you up onto the box)
+export function makeTruck(x0: number, x1: number, bottom: number, roof: number, paint: number, gate: number): THREE.Group {
+  const truck = new THREE.Group();
+  const w = x1 - x0;
+  const h = roof - bottom;
+  const floorY = bottom + 0.45;
+  const cabW = 1.1;
+  const boxW = w - cabW;
+  const boxMat = new THREE.MeshLambertMaterial({ color: paint });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(boxW, h - 0.45, 1.9), boxMat);
+  box.position.set(-w / 2 + boxW / 2, floorY + (h - 0.45) / 2, 0);
+  //the open back: dark inside, framed
+  const inside = new THREE.Mesh(new THREE.BoxGeometry(0.04, h - 0.6, 1.7), new THREE.MeshLambertMaterial({ color: 0x15151c }));
+  inside.position.set(-w / 2 - 0.01, floorY + (h - 0.45) / 2, 0);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(cabW - 0.1, h * 0.62, 1.8), new THREE.MeshLambertMaterial({ color: 0x2a3a5a }));
+  cab.position.set(w / 2 - cabW / 2 + 0.05, bottom + 0.3 + h * 0.31, 0);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.5, h * 0.2, 1.82), new THREE.MeshLambertMaterial({ color: 0x1c2333 }));
+  glass.position.set(w / 2 - 0.35, bottom + 0.3 + h * 0.5, 0);
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, 1.7), new THREE.MeshLambertMaterial({ color: 0x222228 }));
+  chassis.position.y = bottom + 0.35;
+  //the tailgate: a diamond-plate ramp down to the street, its lip a hazard-striped edge
+  const len = Math.hypot(gate, floorY - bottom);
+  const ramp = new THREE.Mesh(new THREE.BoxGeometry(len, 0.06, 1.6), new THREE.MeshLambertMaterial({ color: 0xb8bcc4 }));
+  ramp.position.set(-w / 2 - gate / 2, bottom + (floorY - bottom) / 2, 0);
+  ramp.rotation.z = Math.atan2(floorY - bottom, gate);
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.6), new THREE.MeshBasicMaterial({ color: 0xffb020 }));
+  lip.position.set(-w / 2 - gate + 0.04, bottom + 0.04, 0);
+  truck.add(box, inside, cab, glass, chassis, ramp, lip);
+  const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.24, 12).rotateX(Math.PI / 2);
+  const tire = new THREE.MeshLambertMaterial({ color: 0x111114 });
+  for (const wx of [-w / 2 + 0.6, w / 2 - 0.6]) {
+    for (const wz of [-0.85, 0.85]) {
+      const wheel = new THREE.Mesh(wheelGeo, tire);
+      wheel.position.set(wx, bottom + 0.28, wz);
+      truck.add(wheel);
+    }
+  }
+  const lamp = new THREE.MeshBasicMaterial({ color: 0xfff2b0 });
+  for (const wz of [-0.6, 0.6]) {
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.25), lamp);
+    head.position.set(w / 2 + 0.03, bottom + 0.55, wz);
+    truck.add(head);
+  }
+  truck.position.x = x0 + w / 2;
+  return truck;
+}
+
 // a cruiser parked across the street: the AI's black-and-white, its light bar on
 function makeParkedCruiser(x0: number, x1: number, bottom: number, roof: number, i: number): THREE.Group {
   const car = makeCar(x0, x1, bottom, roof, 0x1c1c24, 'Cruiser');

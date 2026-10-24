@@ -24,6 +24,11 @@ export const PHYS = {
   railMin: 1.5, // QFS "always keep rolling"
   railIgnoreFrames: 30, // QFS rail_ignore_t
   carHop: -4.2, // Lou Gnar UFO bounce ratio: -750 / -900 of an ollie
+  // kickers (a box truck's tailgate): a bigger pop than an ollie, and a bomb, QFS's dash as a burst of speed that
+  // bleeds off like rail speed
+  kickerPop: -6.6, // about 87 px of air, over a 64 px truck box
+  bombSpeed: 6.5,
+  tailgateLip: 14, // the tailgate's top edge, where you leave it
   slamSpeed: 0.5, // speed drops to half of base
   slamFrames: 36, // ~0.6 s to get back to full speed
   bufferFrames: 6, // 100 ms input buffer

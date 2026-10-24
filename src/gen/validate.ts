@@ -46,8 +46,8 @@ export function botRun(level: Level): { result: string; slams: number; maxHeat: 
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30) pressed = true;
     // falling with no street ahead: flip for more air
     if (sk.mode === 'air' && sk.vsp > 0.5 && sk.jumps > 0 && !isStreetAt(level, sk.x + 40)) pressed = true;
-    //a roadblock: falling toward the side of a taller vehicle ahead, flip up onto its roof
-    if (level.escape && sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked(drones.length ? [...level.cars, ...drones] : level.cars, sk.x, sk.y)) pressed = true;
+    //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
+    if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.y)) pressed = true;
     if (pressed && sk.grounded) hold = 30;
     sim.step({ pressed, held: hold > 0 || pressed });
     if (hold > 0) hold--;
