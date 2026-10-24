@@ -31,7 +31,7 @@ import { BoonFx } from '../render/boon-fx';
 import { SmashFx, type SmashHit } from '../render/smash';
 import { VisorGlint, VISOR_TINT } from '../render/visor-glint';
 import { propPieces } from '../render/models';
-import { hideProp } from '../render/props';
+import { hideProp, props, restyle } from '../render/props';
 import { biomeMood, type BiomeId } from '../render/biomes';
 import { clockFor, moodAt, rainLevel, rainy } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
@@ -246,7 +246,8 @@ export class Game {
 
   // a prop breaks (or rings, if it can't): the sim's smash events come through here
   smash(hit: SmashHit): void {
-    this.smashFx.smash(hit);
+    //as the world shows it: an amphora in Greece breaks like pottery, not like the barrel the sim placed
+    this.smashFx.smash({ ...hit, prop: restyle(hit.prop, props.biome) ?? hit.prop });
   }
 
   // the district's look (gameplay picks it per act; ?biome= previews one); takes effect now

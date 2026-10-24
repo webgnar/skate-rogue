@@ -335,6 +335,9 @@ and listed it here for review. Any of these can be flipped in the morning.
   tiles QFS's survivor mode already picked for it (survivor_worlds.gml), so a biome looks like that QFS world. Decor
   and props are flat pixel-art cards like QFS draws them; 3D landmarks per world are a later step. The skyline is
   still Chicago's until each world gets its backdrop. The Hive borrows High-Tech City's tiles.
+- **Each world's smashables stand in for Chicago's by size.** The sim still places cones, crates and barrels, and the
+  render shows the world's small, medium or large breakable in their place, so no gameplay code changed. The
+  AI's kiosks, bots and Flock poles stay in every world: the AI is everywhere.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

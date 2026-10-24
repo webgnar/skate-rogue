@@ -42,13 +42,13 @@ export function buildKit(level: Level, biome: BiomeId = 'chicago', sheet: HTMLIm
   const city = skin.sheet === 'chicago' || !sheet;
   useSheet(city ? null : sheet);
   try {
-    return build(level, city ? SKINS.chicago : skin, city);
+    return build(level, city ? SKINS.chicago : skin, city, city ? 'chicago' : biome);
   } finally {
     useSheet(null);
   }
 }
 
-function build(level: Level, skin: Skin, city: boolean): THREE.Group {
+function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.Group {
   const kit = new THREE.Group();
   const rng = makeRng(level.layout.seed * 31 + level.layout.floor);
   const cols = level.street.length;
@@ -146,7 +146,7 @@ function build(level: Level, skin: Skin, city: boolean): THREE.Group {
     w0 = g1;
   }
   for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
-  const props = buildProps(level); // hydrants, benches, newspaper boxes... along the back of the sidewalk
+  const props = buildProps(level, biome); // hydrants, benches, newspaper boxes... along the back of the sidewalk
   if (props) kit.add(props);
   if (!city) {
     const cards = scenery(skin, first, cols, rng, inGap);

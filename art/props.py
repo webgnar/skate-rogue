@@ -68,11 +68,42 @@ COLORS = {
     'bot': 0xE8E8EC,
     'flag': 0xFF6A1A,
     'flock': 0xF0F0F0,
+    # the other QFS worlds' smashables
+    'terracotta': 0xC8622E,
+    'blackFigure': 0x1E1612,
+    'coral': 0xFF6F86,
+    'coralDeep': 0xD8435E,
+    'rock': 0x5A6A72,
+    'shell': 0xF6D9C8,
+    'chestWood': 0x6B4426,
+    'gold': 0xE8B830,
+    'porcelain': 0xF4F4F0,
+    'cobalt': 0x2A4AB8,
+    'marble': 0xECE8E0,
+    'plinth': 0xD8D4CC,
+    'mug': 0xF0EEE8,
+    'cup': 0xD8312B,
+    'lid': 0xF4F4F4,
+    'pumpkin': 0xF07A1E,
+    'stem': 0x4A6A2A,
+    'hay': 0xD8B860,
+    'twine': 0x8A6A3A,
+    'cell': 0x1A1E28,
+    'holo': 0x3AF0FF,  # glows
+    'rack': 0x16181E,
+    'crystal': 0xB86AF0,
+    'crystalPale': 0xE0B8FF,
+    'tank': 0xEDEDED,
+    'tankBand': 0xFF8A1A,
 }
 # break pieces per prop (art/props.py fracture): more for the ones that should burst
 PIECES = {'Hydrant': 4, 'Bench': 5, 'Cone': 3, 'TrashCan': 4, 'NewsBoxRed': 4, 'NewsBoxBlue': 4, 'NewsBoxYellow': 4,
           'SignPole': 3, 'Mailbox': 4, 'Meter': 3, 'Bottle': 5, 'Crate': 6, 'Planter': 5, 'SandwichBoard': 4,
-          'Can': 3, 'Barrel': 4, 'CardboardBox': 4, 'FoodCart': 6, 'AIKiosk': 5, 'DeliveryBot': 5, 'FlockPole': 4}
+          'Can': 3, 'Barrel': 4, 'CardboardBox': 4, 'FoodCart': 6, 'AIKiosk': 5, 'DeliveryBot': 5, 'FlockPole': 4,
+          # small, medium and large smashables for each of the other worlds (src/render/props.ts WORLD_PROPS)
+          'OilJug': 4, 'Urn': 5, 'Amphora': 6, 'Shell': 3, 'Coral': 5, 'Chest': 6, 'Mug': 3, 'Vase': 5, 'Bust': 5,
+          'SodaCup': 3, 'Pumpkin': 5, 'HayBale': 6, 'Battery': 3, 'HoloCube': 4, 'ServerRack': 6, 'Crystal': 3,
+          'FuelCell': 4, 'CrystalCluster': 6}
 
 
 def vcyl(bm, r, h, z0, at=(0, 0), segs=12, r2=None):
@@ -446,6 +477,267 @@ def flock_pole(m):
     return join(parts, 'FlockPole')
 
 
+def lathe(bm, prof, segs=12, at=(0, 0, 0)):
+    """A turned shape (a pot, a vase) from (radius, height) pairs, bottom to top; capped at both ends."""
+    rings = []
+    for r, z in prof:
+        rings.append([bm.verts.new((at[0] + r * math.cos(2 * math.pi * i / segs), at[1] + r * math.sin(2 * math.pi * i / segs), at[2] + z))
+                      for i in range(segs)])
+    for a, b in zip(rings, rings[1:]):
+        for i in range(segs):
+            bm.faces.new((a[i], a[(i + 1) % segs], b[(i + 1) % segs], b[i]))
+    bm.faces.new(list(reversed(rings[0])))
+    bm.faces.new(rings[-1])
+
+
+def handles(bm, r, z0, z1, out):
+    """Two loop handles either side (along x), from the shoulder at z1 out to `out` and down to the body at z0."""
+    for s in (1, -1):
+        for a, b in (((r, z1), (out, z1)), ((out, z1), (out, z0)), ((out, z0), (r * 0.9, z0))):
+            x0, x1 = sorted((a[0] * s, b[0] * s))
+            zl, zh = sorted((a[1], b[1]))
+            box(bm, x0 - 0.012, x1 + 0.012, -0.015, 0.015, zl - 0.012, zh + 0.012)
+
+
+def pot(m, name, prof, band, body='terracotta', ring='blackFigure', handle=None, segs=12):
+    """A turned pot with a painted band (z0, z1) round it, a touch proud of the body."""
+    bm = bmesh.new()
+    lathe(bm, prof, segs)
+    if handle:
+        handles(bm, *handle)
+    parts = [link(name.lower(), bm, m[body])]
+    if band:
+        z0, z1 = band
+        r = max(rr for rr, z in prof if z0 - 0.05 <= z <= z1 + 0.05) + 0.004
+        bm = bmesh.new()
+        lathe(bm, [(r, z0), (r, z1)], segs)
+        parts.append(link(name.lower() + 'Band', bm, m[ring]))
+    return join(parts, name)
+
+
+# Greece
+def oil_jug(m):
+    return pot(m, 'OilJug', [(0.05, 0), (0.09, 0.06), (0.1, 0.14), (0.07, 0.22), (0.035, 0.26), (0.035, 0.31), (0.05, 0.33)], (0.1, 0.16))
+
+
+def urn(m):
+    """A krater: a wide bowl on a foot, black-figure band round the belly."""
+    prof = [(0.12, 0), (0.08, 0.04), (0.09, 0.1), (0.2, 0.28), (0.26, 0.48), (0.24, 0.6), (0.27, 0.68)]
+    return pot(m, 'Urn', prof, (0.34, 0.5), handle=(0.2, 0.34, 0.5, 0.31), segs=14)
+
+
+def amphora(m):
+    """Tall, on a narrow foot, with two handles from neck to shoulder."""
+    prof = [(0.07, 0), (0.05, 0.06), (0.1, 0.2), (0.22, 0.5), (0.24, 0.65), (0.18, 0.78), (0.08, 0.86), (0.07, 0.98), (0.1, 1.02)]
+    return pot(m, 'Amphora', prof, (0.52, 0.66), handle=(0.08, 0.72, 0.94, 0.17), segs=14)
+
+
+# Atlantis
+def shell(m):
+    bm = bmesh.new()
+    for z, flip in ((0.0, 1), (0.05, -1)):
+        lathe(bm, [(0.16, 0.03 * flip), (0.12, 0.08 * flip), (0.05, 0.11 * flip), (0.001, 0.12 * flip)], 10, (0, 0, z if flip > 0 else 0.1))
+    return join([link('shell', bm, m['shell'])], 'Shell')
+
+
+def coral(m):
+    """A branching coral on a lump of rock."""
+    rnd = random.Random(7)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.2)
+    bmesh.ops.scale(bm, vec=(1.3, 1, 0.5), verts=bm.verts)
+    rock = link('rock', bm, m['rock'])
+    parts = [rock]
+    for i, (dx, lean, h) in enumerate(((-0.1, -0.35, 0.55), (0.02, 0.1, 0.7), (0.12, 0.45, 0.5), (0.06, -0.1, 0.38))):
+        bm = bmesh.new()
+        vs = bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=0.05, radius2=0.025, depth=h)['verts']
+        bmesh.ops.translate(bm, verts=vs, vec=(0, 0, h / 2))
+        bmesh.ops.rotate(bm, verts=vs, cent=(0, 0, 0), matrix=Matrix.Rotation(lean, 3, 'Y') @ Matrix.Rotation(rnd.uniform(-0.3, 0.3), 3, 'X'))
+        bmesh.ops.translate(bm, verts=vs, vec=(dx, rnd.uniform(-0.04, 0.04), 0.06))
+        parts.append(link(f'coral{i}', bm, m['coral' if i % 2 == 0 else 'coralDeep']))
+    return join(parts, 'Coral')
+
+
+def chest(m):
+    """A sunken treasure chest: planked box, curved lid, gold bands and lock."""
+    parts = []
+    bm = bmesh.new()
+    box(bm, -0.38, 0.38, -0.24, 0.24, 0, 0.42)
+    lid = [(-0.38 + 0.76 * i / 6, 0.42 + 0.14 * math.sin(math.pi * i / 6)) for i in range(7)]
+    from cars import prism
+    prism(bm, [(-0.38, 0.42)] + lid[1:-1] + [(0.38, 0.42)], -0.24, 0.24)
+    parts.append(link('chestWood', bm, m['chestWood']))
+    bm = bmesh.new()
+    for x in (-0.26, 0.26):
+        box(bm, x - 0.035, x + 0.035, -0.245, 0.245, 0, 0.5)
+    box(bm, -0.05, 0.05, -0.255, -0.24, 0.3, 0.42)
+    parts.append(link('chestGold', bm, m['gold']))
+    return join(parts, 'Chest')
+
+
+# the Art Museum
+def mug(m):
+    bm = bmesh.new()
+    lathe(bm, [(0.065, 0), (0.07, 0.16)], 10)
+    for a, b in (((0.07, 0.04), (0.11, 0.04)), ((0.11, 0.04), (0.11, 0.13)), ((0.11, 0.13), (0.07, 0.13))):
+        box(bm, min(a[0], b[0]) - 0.012, max(a[0], b[0]) + 0.012, -0.012, 0.012, min(a[1], b[1]) - 0.012, max(a[1], b[1]) + 0.012)
+    return join([link('mug', bm, m['mug'])], 'Mug')
+
+
+def vase(m):
+    """Blue-and-white porcelain on a little black stand."""
+    prof = [(0.06, 0.06), (0.14, 0.22), (0.17, 0.36), (0.12, 0.52), (0.06, 0.6), (0.07, 0.68)]
+    ob = pot(m, 'Vase', prof, (0.24, 0.42), body='porcelain', ring='cobalt', segs=14)
+    bm = bmesh.new()
+    vcyl(bm, 0.12, 0.06, 0.0, segs=10)
+    stand = link('vaseStand', bm, m['iron'])
+    return join([ob, stand], 'Vase')
+
+
+def bust(m):
+    """A marble bust on a plinth."""
+    parts = []
+    bm = bmesh.new()
+    box(bm, -0.2, 0.2, -0.2, 0.2, 0, 0.62)
+    parts.append(link('plinth', bm, m['plinth']))
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=10, v_segments=7, radius=0.12)
+    bmesh.ops.scale(bm, vec=(0.85, 0.95, 1.15), verts=bm.verts)
+    bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, 0.92))
+    lathe(bm, [(0.17, 0.62), (0.16, 0.7), (0.05, 0.78), (0.045, 0.82)], 10)
+    parts.append(link('marble', bm, m['marble']))
+    return join(parts, 'Bust')
+
+
+# Clemente Park in the autumn
+def soda_cup(m):
+    bm = bmesh.new()
+    lathe(bm, [(0.05, 0), (0.07, 0.2)], 10)
+    parts = [link('cup', bm, m['cup'])]
+    bm = bmesh.new()
+    lathe(bm, [(0.074, 0.2), (0.074, 0.22)], 10)
+    box(bm, 0.0, 0.012, -0.006, 0.006, 0.22, 0.32)
+    parts.append(link('lid', bm, m['lid']))
+    return join(parts, 'SodaCup')
+
+
+def pumpkin(m):
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=8, radius=0.25)
+    for v in bm.verts:  # ribs: pinch every other column in
+        a = math.atan2(v.co.y, v.co.x)
+        k = 1 - 0.08 * (0.5 + 0.5 * math.cos(6 * a))
+        v.co.x *= k
+        v.co.y *= k
+    bmesh.ops.scale(bm, vec=(1.15, 1.15, 0.8), verts=bm.verts)
+    bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, 0.2))
+    parts = [link('pumpkin', bm, m['pumpkin'])]
+    bm = bmesh.new()
+    vcyl(bm, 0.03, 0.1, 0.38, segs=6, r2=0.02)
+    parts.append(link('stem', bm, m['stem']))
+    return join(parts, 'Pumpkin')
+
+
+def hay_bale(m):
+    parts = []
+    bm = bmesh.new()
+    box(bm, -0.45, 0.45, -0.28, 0.28, 0, 0.55)
+    parts.append(link('hay', bm, m['hay']))
+    bm = bmesh.new()
+    for x in (-0.22, 0.22):
+        box(bm, x - 0.02, x + 0.02, -0.285, 0.285, -0.005, 0.555)
+    parts.append(link('twine', bm, m['twine']))
+    return join(parts, 'HayBale')
+
+
+# High-Tech City (and the Hive)
+def battery(m):
+    bm = bmesh.new()
+    vcyl(bm, 0.06, 0.24, 0.0, segs=10)
+    parts = [link('cell', bm, m['cell'])]
+    bm = bmesh.new()
+    vcyl(bm, 0.062, 0.04, 0.16, segs=10)
+    vcyl(bm, 0.02, 0.03, 0.24, segs=6)
+    parts.append(link('holo', bm, m['holo']))
+    return join(parts, 'Battery')
+
+
+def holo_cube(m):
+    """A dark cube with glowing edges: the AI's delivery boxes."""
+    s = 0.3
+    parts = []
+    bm = bmesh.new()
+    box(bm, -s, s, -s, s, 0, 2 * s)
+    parts.append(link('cell', bm, m['cell']))
+    bm = bmesh.new()
+    e, t = s + 0.01, 0.025
+    for x in (-e, e):
+        for y in (-e, e):
+            box(bm, x - t, x + t, y - t, y + t, 0, 2 * s)
+    for z in (0, 2 * s):
+        for y in (-e, e):
+            box(bm, -e, e, y - t, y + t, z - t, z + t)
+        for x in (-e, e):
+            box(bm, x - t, x + t, -e, e, z - t, z + t)
+    parts.append(link('holo', bm, m['holo']))
+    return join(parts, 'HoloCube')
+
+
+def server_rack(m):
+    parts = []
+    bm = bmesh.new()
+    box(bm, -0.3, 0.3, -0.3, 0.3, 0, 1.05)
+    parts.append(link('rack', bm, m['rack']))
+    bm = bmesh.new()
+    for i in range(6):
+        z = 0.12 + i * 0.15
+        box(bm, -0.24, 0.1, -0.31, -0.3, z, z + 0.025)
+        box(bm, 0.16, 0.22, -0.31, -0.3, z, z + 0.04)
+    parts.append(link('holo', bm, m['holo']))
+    return join(parts, 'ServerRack')
+
+
+# Outer Space
+def spike(bm, r, h, at, lean=(0, 0)):
+    vs = bmesh.ops.create_cone(bm, cap_ends=True, segments=5, radius1=r, radius2=0.0, depth=h)['verts']
+    bmesh.ops.translate(bm, verts=vs, vec=(0, 0, h / 2))
+    bmesh.ops.rotate(bm, verts=vs, cent=(0, 0, 0), matrix=Matrix.Rotation(lean[0], 3, 'Y') @ Matrix.Rotation(lean[1], 3, 'X'))
+    bmesh.ops.translate(bm, verts=vs, vec=at)
+
+
+def crystal(m):
+    bm = bmesh.new()
+    spike(bm, 0.07, 0.34, (0, 0, 0))
+    spike(bm, 0.05, 0.2, (0.06, 0, 0), (0.5, 0))
+    return join([link('crystal', bm, m['crystal'])], 'Crystal')
+
+
+def fuel_cell(m):
+    parts = []
+    bm = bmesh.new()
+    vcyl(bm, 0.17, 0.6, 0.0, segs=12)
+    vcyl(bm, 0.06, 0.08, 0.6, segs=8)
+    parts.append(link('tank', bm, m['tank']))
+    bm = bmesh.new()
+    for z in (0.12, 0.42):
+        vcyl(bm, 0.175, 0.06, z, segs=12)
+    parts.append(link('tankBand', bm, m['tankBand']))
+    return join(parts, 'FuelCell')
+
+
+def crystal_cluster(m):
+    parts = []
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.22)
+    bmesh.ops.scale(bm, vec=(1.4, 1, 0.45), verts=bm.verts)
+    parts.append(link('rock', bm, m['rock']))
+    for i, (x, h, lean) in enumerate(((-0.14, 0.7, (-0.35, 0.1)), (0.02, 1.0, (0.05, -0.1)), (0.16, 0.6, (0.45, 0.15)), (0.06, 0.45, (0.2, -0.4)))):
+        bm = bmesh.new()
+        spike(bm, 0.09, h, (x, 0, 0.05), lean)
+        parts.append(link(f'crystal{i}', bm, m['crystal' if i % 2 else 'crystalPale']))
+    return join(parts, 'CrystalCluster')
+
+
 def fracture(ob, k, seed):
     """Break a prop into k chunks: Voronoi cells round random points, each cut out with planes and capped.
     Each chunk is its own object '<prop>_piece<i>' with its origin at its middle."""
@@ -491,7 +783,10 @@ def build():
     props = [hydrant(m), bench(m), cone(m), trash(m), newsbox(m, 'news1', 'NewsBoxRed'), newsbox(m, 'news2', 'NewsBoxBlue'),
              newsbox(m, 'news3', 'NewsBoxYellow'), sign_pole(m), mailbox(m), meter(m), bottle(m), crate(m), planter(m),
              sandwich_board(m), can(m), barrel(m), cardboard(m), food_cart(m), ai_kiosk(m), delivery_bot(m),
-             flock_pole(m)]
+             flock_pole(m),
+             oil_jug(m), urn(m), amphora(m), shell(m), coral(m), chest(m), mug(m), vase(m), bust(m),
+             soda_cup(m), pumpkin(m), hay_bale(m), battery(m), holo_cube(m), server_rack(m), crystal(m), fuel_cell(m),
+             crystal_cluster(m)]
     for i, ob in enumerate(props):  # in a row in the file; the game reads each from its origin
         ob.location.x = i * 2.5
     for i, ob in enumerate(props):  # break pieces, a row behind

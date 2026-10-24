@@ -12,6 +12,7 @@ import { flatGeometry } from './models';
 import type { Level } from '../physics/level';
 import { makeRng } from '../gen/rng';
 import { TILE } from '../physics/constants';
+import type { BiomeId } from './biomes';
 
 export interface PropPlacement {
   name: string;
@@ -34,6 +35,35 @@ interface SimProp {
 }
 
 const UNBREAKABLE = new Set(['Hydrant', 'Mailbox']);
+
+// The other worlds' smashables (art/props.py): each Chicago smashable stands in as the world's small, medium or
+// large one, about the same size, so the sim's hit boxes still fit. The AI's things stay what they are: it is
+// everywhere. Scenery (hydrants, benches, meters...) is Chicago street furniture: other worlds show their own
+// scenery as cards (kit.ts) instead.
+const SIZE_OF: Record<string, 0 | 1 | 2> = {
+  Bottle: 0, Can: 0,
+  Cone: 1, Crate: 1, CardboardBox: 1, Planter: 1, SandwichBoard: 1,
+  Barrel: 2, TrashCan: 2, NewsBoxRed: 2, NewsBoxBlue: 2, NewsBoxYellow: 2,
+};
+const SCENERY_NAMES = new Set(['Hydrant', 'Bench', 'Mailbox', 'Meter', 'SignPole']);
+export const WORLD_PROPS: Partial<Record<BiomeId, [string, string, string]>> = {
+  clemente: ['SodaCup', 'Pumpkin', 'HayBale'],
+  greece: ['OilJug', 'Urn', 'Amphora'],
+  atlantis: ['Shell', 'Coral', 'Chest'],
+  museum: ['Mug', 'Vase', 'Bust'],
+  hightech: ['Battery', 'HoloCube', 'ServerRack'],
+  space: ['Crystal', 'FuelCell', 'CrystalCluster'],
+  hive: ['Battery', 'HoloCube', 'ServerRack'],
+};
+
+// the model a placed prop shows in a world; null = nothing drawn (Chicago scenery elsewhere)
+export function restyle(name: string, biome: BiomeId): string | null {
+  const set = WORLD_PROPS[biome];
+  if (!set) return name;
+  if (SCENERY_NAMES.has(name)) return null;
+  const size = SIZE_OF[name];
+  return size === undefined ? name : set[size];
+}
 
 // scenery: name, how often it comes up, and how much sidewalk it takes (tiles)
 const SCENERY: [string, number, number][] = [
@@ -64,7 +94,7 @@ export function propSize(name: string): { w: number; h: number } {
 }
 
 // the current floor's props, for the effects
-export const props: { mesh: THREE.Mesh | null; placements: PropPlacement[] } = { mesh: null, placements: [] };
+export const props: { mesh: THREE.Mesh | null; placements: PropPlacement[]; biome: BiomeId } = { mesh: null, placements: [], biome: 'chicago' };
 
 // hide a smashed prop: its vertices drop far below the street
 export function hideProp(i: number): void {
@@ -104,9 +134,10 @@ function scenery(level: Level): { name: string; x: number; y: number; z: number 
   return out;
 }
 
-export function buildProps(level: Level): THREE.Mesh | null {
+export function buildProps(level: Level, biome: BiomeId = 'chicago'): THREE.Mesh | null {
   props.mesh = null;
   props.placements = [];
+  props.biome = biome;
   const sim = (level as Level & { props?: SimProp[] }).props;
   const spots = sim
     ? sim.map((p) => ({ name: p.name, x: p.x / TILE, y: (level.streetY - p.y) / TILE, z: p.z ?? 0 }))
@@ -115,8 +146,9 @@ export function buildProps(level: Level): THREE.Mesh | null {
   const m = new THREE.Matrix4();
   let start = 0;
   for (const s of spots) {
-    const g = flatGeometry(s.name);
-    const size = propSize(s.name);
+    const shown = restyle(s.name, biome);
+    const g = shown ? flatGeometry(shown) : null;
+    const size = propSize(shown ?? s.name);
     const count = g ? g.getAttribute('position').count : 0;
     props.placements.push({ ...s, ...size, breakable: !UNBREAKABLE.has(s.name), start, count });
     if (!g) continue; // unknown name: it keeps its index, with nothing to draw
