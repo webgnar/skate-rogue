@@ -16,6 +16,7 @@ import { model } from './models';
 import { props } from './props';
 import { toX, toY } from './kit';
 import { inkify } from './toon';
+import type { Phone } from './phone-fx';
 
 // art/pedestrians.py's joints
 const HIP_Y = 0.95;
@@ -54,6 +55,7 @@ interface Person {
   flinch: number;
   duck: number;
   delay: number; // a beat before reacting, so a crowd doesn't move as one
+  snapAt: number; // when this filmer last took a photo (phone-fx.ts flashes it)
 }
 
 const pick = <T>(rng: Rng, list: T[]): T => list[randInt(rng, list.length)];
@@ -138,6 +140,8 @@ export class PedView {
   private wasAir = 0; // seconds the skater has been in the air
   private lastMode = '';
   private t = 0;
+  private readonly phoneList: Phone[] = [];
+  private readonly hand = new THREE.Vector3();
 
   // stand people along the floor's street sidewalk: not in the cross streets, the canals, at bus stops or on props
   private populate(level: Level): void {
@@ -175,6 +179,7 @@ export class PedView {
         flinch: 0,
         duck: 0,
         delay: rng() * 0.35,
+        snapAt: -Infinity,
       };
       person.mesh.position.set(x, 0, LANE_Z + (rng() - 0.5) * 0.4);
       this.group.add(person.mesh);
@@ -197,12 +202,14 @@ export class PedView {
     if (sk.mode !== 'air') this.wasAir = 0;
     this.lastMode = sk.mode;
     const k = 1 - Math.exp(-dt * 9);
+    this.phoneList.length = 0;
     for (const p of this.people) {
       const dx = skX - p.x;
       p.mesh.visible = Math.abs(p.x - camX) < SHOW;
       if (!p.mesh.visible) continue;
       const near = high < 7 && Math.abs(dx) < 6;
       if (landed && near) p.cheer = 1.5 + p.delay;
+      if (landed && near && p.filmer) p.snapAt = this.t + p.delay * 0.5;
       if (slammed && near) p.flinch = 1.3 + p.delay;
       p.cheer = Math.max(0, p.cheer - dt);
       p.flinch = Math.max(0, p.flinch - dt);
@@ -271,6 +278,17 @@ export class PedView {
       ease(armL, lx, 0, lz, k);
       ease(armR, rx, 0, rz, k);
       ease(head, 0, headY, 0, k);
+      if (p.filmer && watching && p.flinch === 0) {
+        //the phone in the right hand (art/pedestrians.py), a touch toward the camera so the hand doesn't hide it
+        armR.updateWorldMatrix(true, false);
+        armR.localToWorld(this.hand.set(0, -0.66, 0.08));
+        this.phoneList.push({ x: this.hand.x, y: this.hand.y, z: this.hand.z + 0.12, since: this.t - p.snapAt });
+      }
     }
+  }
+
+  // the phones held up this frame, in world space
+  phones(): Phone[] {
+    return this.phoneList;
   }
 }

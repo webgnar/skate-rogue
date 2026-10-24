@@ -48,6 +48,7 @@ import { EscapeFx } from '../render/escape-fx';
 import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
 import { PedView } from '../render/peds';
+import { PhoneFx } from '../render/phone-fx';
 import { CHASER } from '../sim/chaser';
 import { TwistView } from '../render/twist-view';
 import { BountyView } from '../render/bounty-view';
@@ -178,6 +179,7 @@ export class Game {
   private readonly droneView = new DroneView();
   private readonly chaserView = new ChaserView();
   private readonly pedView = new PedView();
+  private readonly phoneFx = new PhoneFx();
   private readonly bountyView = new BountyView();
   private readonly twistView = new TwistView();
   private floorStoken = 0; // Stoken at the floor's start, for a bounty
@@ -243,7 +245,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.twistView.group);
+    this.view.scene.add(this.trafficView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -343,6 +345,7 @@ export class Game {
     this.view.ambience.set(this.biome);
     this.trafficView.beams.setNight(look.neon);
     this.visor.setNight(look.neon, VISOR_TINT[this.biome]);
+    this.phoneFx.setNight(look.neon);
     return rain;
   }
 
@@ -802,6 +805,7 @@ export class Game {
       if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, street, this.chaserView.surging, dt);
     }
     this.pedView.update(this.level, this.skater, dt, toX(this.skater.x));
+    this.phoneFx.update(this.pedView.phones());
     if (this.level.bounty && !this.bountySeen && this.state === 'skate' && this.skater.x >= this.level.bounty.x - 4 * TILE) {
       this.bountySeen = true;
       this.hud.callout(`WANTED: HEAT ${BOUNTY.heat}+ AT THE GATE PAYS 2× ◆`, 'trick');

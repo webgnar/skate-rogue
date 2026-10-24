@@ -4,6 +4,7 @@ import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
 import { EscapeFx } from '../src/render/escape-fx';
 import { SirenFx, SIREN } from '../src/render/siren-fx';
+import { PhoneFx, PHONE, flashAt } from '../src/render/phone-fx';
 import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
 import { landDust, landKick } from '../src/render/land-fx';
@@ -421,6 +422,45 @@ describe('roadblock sirens', () => {
     expect((fx.group.children[0] as THREE.InstancedMesh).count).toBe(3);
     fx.build(new THREE.Group());
     expect(fx.group.children).toHaveLength(0);
+  });
+});
+
+describe('filmers\' phones', () => {
+  it('flash briefly after a photo, and never with reduced flashing', () => {
+    expect(flashAt(0, false)).toBe(1);
+    expect(flashAt(PHONE.flashSecs / 2, false)).toBeCloseTo(0.5);
+    expect(flashAt(PHONE.flashSecs, false)).toBe(0);
+    expect(flashAt(-0.05, false)).toBe(0); // the photo is still a beat away
+    expect(flashAt(Infinity, false)).toBe(0);
+    expect(flashAt(0, true)).toBe(0);
+  });
+  it('glow every phone held up and flash only the fresh ones, in two draws', () => {
+    const fx = new PhoneFx();
+    const [glow, flash] = fx.group.children as THREE.InstancedMesh[];
+    fx.update([
+      { x: 0, y: 1, z: 0, since: Infinity },
+      { x: 2, y: 1, z: 0, since: 0.02 },
+      { x: 4, y: 1, z: 0, since: 3 },
+    ]);
+    expect(fx.group.children).toHaveLength(2);
+    expect(glow.count).toBe(3);
+    expect(flash.count).toBe(1);
+    const was = FX.reduceFlashing;
+    FX.reduceFlashing = true;
+    fx.update([{ x: 2, y: 1, z: 0, since: 0.02 }]);
+    FX.reduceFlashing = was;
+    expect(flash.count).toBe(0);
+    fx.update([]);
+    expect(glow.count).toBe(0);
+  });
+  it('glow brighter at night', () => {
+    const fx = new PhoneFx();
+    const mat = (fx.group.children[0] as THREE.InstancedMesh).material as THREE.ShaderMaterial;
+    fx.update([]);
+    const day = mat.uniforms.uAmt.value;
+    fx.setNight(1);
+    fx.update([]);
+    expect(mat.uniforms.uAmt.value).toBeGreaterThan(day * 2);
   });
 });
 
