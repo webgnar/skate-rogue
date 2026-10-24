@@ -28,6 +28,7 @@ import { FX } from '../render/fx-settings';
 import { HeatCue } from '../render/heat-cue';
 import { BoonFx } from '../render/boon-fx';
 import { SmashFx, type SmashHit } from '../render/smash';
+import { VisorGlint, VISOR_TINT } from '../render/visor-glint';
 import { propPieces } from '../render/models';
 import { hideProp } from '../render/props';
 import { biomeMood, type BiomeId } from '../render/biomes';
@@ -163,6 +164,7 @@ export class Game {
   private perfWorst = 0;
   private perfText = '';
   private readonly aura: Aura;
+  private readonly visor: VisorGlint;
   private gnarGlow = 0; // 0..1, eases with the gnar state
   private clock = 0;
   private readonly puddleRes = new THREE.Vector2();
@@ -186,6 +188,7 @@ export class Game {
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
     this.aura = new Aura(this.sprite.mesh);
+    this.visor = new VisorGlint(this.sprite.mesh);
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
@@ -250,6 +253,7 @@ export class Game {
     this.view.setMood(look, rain);
     this.view.ambience.set(this.biome);
     this.trafficView.beams.setNight(look.neon);
+    this.visor.setNight(look.neon, VISOR_TINT[this.biome]);
     return rain;
   }
 
@@ -621,6 +625,7 @@ export class Game {
     this.water(dt);
     this.particles.update(dt, this.view.pointScale);
     this.smashFx.update(dt);
+    this.visor.update(dt);
     this.words.update(realDt);
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
     this.flowFx(dt);
@@ -803,6 +808,7 @@ export class Game {
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
     switch (e.type) {
       case 'trick':
+        this.visor.ping();
         this.view.zoom.trick();
         this.flip = { rgb: TRICK_TRAIL[e.name] ?? TRICK_TRAIL.kickflip, left: FLIP_TRAIL_SECS, at: this.clock };
         this.hud.callout(trickName(e.name, e.fakie) + combo, 'trick');
@@ -841,6 +847,7 @@ export class Game {
         this.hud.callout('CLOSE CALL!' + combo, 'good');
         break;
       case 'land':
+        this.visor.ping();
         if (bank) {
           this.hud.callout(`+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), 'good');
           this.hud.money(this.run.cash, this.run.stoken);

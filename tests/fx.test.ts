@@ -3,7 +3,8 @@ import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
 import type { Particles } from '../src/render/particles';
-import { applyParams } from '../src/render/fx-settings';
+import { applyParams, FX } from '../src/render/fx-settings';
+import { VisorGlint, VISOR, VISOR_TINT } from '../src/render/visor-glint';
 import { describe, expect, it } from 'vitest';
 import { TimeWarp } from '../src/game/time-warp';
 import { FixedStep } from '../src/game/loop';
@@ -240,5 +241,48 @@ describe('smash pieces from a stray export', () => {
       expect(Math.abs(m.position.x - 5)).toBeLessThan(0.5);
       expect(m.position.z).toBeCloseTo(-3, 1);
     }
+  });
+});
+
+describe('visor glint', () => {
+  const rig = () => {
+    const root = new THREE.Group();
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 }));
+    m.name = 'VisorGlint';
+    root.add(m);
+    return { root, mat: m.material as THREE.MeshBasicMaterial };
+  };
+  it('is faint by day, brighter and tinted at night', () => {
+    const { root, mat } = rig();
+    const v = new VisorGlint(root);
+    v.setNight(0);
+    v.update(0.016);
+    expect(mat.opacity).toBeCloseTo(VISOR.day);
+    expect(mat.color.getHex()).toBe(0xffffff);
+    v.setNight(1, VISOR_TINT.hightech);
+    v.update(0.016);
+    expect(mat.opacity).toBeCloseTo(VISOR.night);
+    expect(mat.color.getHex()).not.toBe(0xffffff);
+  });
+  it('gleams on a ping and settles back; no gleam with reduced flashing', () => {
+    const { root, mat } = rig();
+    const v = new VisorGlint(root);
+    v.setNight(0);
+    v.ping();
+    v.update(0);
+    expect(mat.opacity).toBeGreaterThan(VISOR.day + 0.2);
+    v.update(1);
+    expect(mat.opacity).toBeCloseTo(VISOR.day);
+    FX.reduceFlashing = true;
+    v.ping();
+    v.update(0);
+    expect(mat.opacity).toBeCloseTo(VISOR.day);
+    FX.reduceFlashing = false;
+  });
+  it('does nothing on a rig without the strip', () => {
+    const v = new VisorGlint(new THREE.Group());
+    v.setNight(1);
+    v.ping();
+    expect(() => v.update(0.1)).not.toThrow();
   });
 });
