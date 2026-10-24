@@ -247,98 +247,6 @@ html, body {
 
 /* board strip (bottom left) and the skate shop */
 :root { --trigger: #c08cff; --effect: #4ad8ff; --modifier: #ffd84a; }
-#shop {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: rgba(18, 12, 30, 0.86);
-  text-shadow: 2px 2px 0 var(--shadow);
-  animation: fade 0.2s ease-out;
-  overflow-y: auto;
-}
-#shop .head { display: flex; gap: 18px; align-items: baseline; }
-#shop .title { font-size: clamp(18px, 4vw, 26px); letter-spacing: 3px; color: var(--effect); }
-#shop .cash { font-size: 20px; color: #7df0a0; }
-#shop .slots { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: center; }
-#shop .arrow { font-style: normal; opacity: 0.5; font-size: 18px; }
-#shop button { all: unset; box-sizing: border-box; cursor: pointer; text-align: center; }
-#shop button:disabled { opacity: 0.35; cursor: default; }
-#shop .slot {
-  width: 76px;
-  height: 52px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-  background: #241838;
-  border: 2.5px dashed rgba(255, 247, 232, 0.3);
-  text-shadow: none;
-}
-#shop .slot.trigger { border: 2.5px solid var(--trigger); color: var(--trigger); }
-#shop .slot.effect { border: 2.5px solid var(--effect); color: var(--effect); }
-#shop .slot.modifier { border: 2.5px solid var(--modifier); color: var(--modifier); }
-#shop .slot.target { box-shadow: 0 0 0 2px #fff7e8; animation: blink 0.8s steps(2) infinite; }
-#shop .slot.picked { background: #fff7e8; color: #1a1028; }
-#shop .slot.add { border: 2.5px dashed #7df0a0; color: #7df0a0; }
-#shop .slot small { font-size: 10px; opacity: 0.8; }
-#shop .slot.pop { animation: stamp 0.32s cubic-bezier(0.2, 1.6, 0.4, 1); }
-#shop .head { position: relative; }
-#shop .spent {
-  position: absolute;
-  right: -8px;
-  top: -4px;
-  color: #ff7a7a;
-  font-size: 18px;
-  animation: spent 0.9s ease-out forwards;
-  pointer-events: none;
-}
-@keyframes stamp { from { transform: scale(1.5) rotate(-8deg); opacity: 0.2; } }
-@keyframes spent { to { transform: translateY(-26px); opacity: 0; } }
-#shop .hint { font: 12px/1.3 system-ui, sans-serif; opacity: 0.8; text-align: center; text-shadow: none; }
-#shop .stock { display: flex; gap: clamp(6px, 1.5vw, 12px); width: 100%; max-width: 760px; justify-content: center; }
-#shop .mod {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 180px;
-  min-height: 96px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px 10px;
-  border-radius: 10px;
-  background: #241838;
-  border: 2.5px solid var(--c, #666);
-  box-shadow: 0 5px 0 var(--shadow);
-  text-align: left;
-}
-#shop.opening .mod { animation: deal 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
-#shop.opening .mod:nth-child(2) { animation-delay: 0.05s; }
-#shop.opening .mod:nth-child(3) { animation-delay: 0.1s; }
-#shop.opening .mod:nth-child(4) { animation-delay: 0.15s; }
-#shop .mod.trigger { --c: var(--trigger); }
-#shop .mod.effect { --c: var(--effect); }
-#shop .mod.modifier { --c: var(--modifier); }
-#shop .mod.picked { background: #3a2a5c; transform: translateY(-4px); box-shadow: 0 9px 0 var(--shadow), 0 0 0 2px #fff7e8; }
-#shop .mod.poor { opacity: 0.45; }
-#shop .mod.sold { display: flex; align-items: center; justify-content: center; opacity: 0.35; border-style: dashed; box-shadow: none; }
-#shop .mod .kind { align-self: flex-start; font-size: 9px; letter-spacing: 1.5px; padding: 1px 5px; border-radius: 3px; background: var(--c); color: #1a1028; text-shadow: none; }
-#shop .mod b { font-size: clamp(13px, 2.6vw, 16px); color: var(--c); }
-#shop .mod .text { font: 600 11px/1.3 system-ui, sans-serif; text-shadow: none; }
-#shop .mod .price { margin-top: auto; font-size: 14px; color: #7df0a0; }
-#shop .row { display: flex; gap: 12px; }
-#shop .restock, #shop .done { padding: 10px 18px; min-height: 44px; border-radius: 999px; font-size: 14px; letter-spacing: 1.5px; }
-#shop .restock { border: 2px solid #7df0a0; color: #7df0a0; }
-#shop .done { background: var(--trick); color: #1a1028; text-shadow: none; }
-
 /* reduce motion (?calm or the device setting): no screen animations */
 #app.calm *, #app.calm *::before, #app.calm *::after { animation: none !important; transition: none !important; }
 
@@ -367,34 +275,9 @@ html, body {
 
 /* gear wear (GDD: Gear and wear): the shop's gear row; the HUD's bars are in the HUD section below */
 :root { --fresh: #7df0a0; --worn: #ffd23f; --busted: #ff4a5a; }
-#shop .cond i {
-  display: block;
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--tone) var(--c), rgba(255, 247, 232, 0.18) var(--c));
-}
 .fresh { --tone: var(--fresh); }
 .worn { --tone: var(--worn); }
 .busted { --tone: var(--busted); }
-#shop .gearshop { display: flex; gap: clamp(6px, 1.5vw, 12px); width: 100%; max-width: 760px; justify-content: center; flex-wrap: wrap; }
-#shop .gearbuy {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 6px 10px 8px;
-  border-radius: 10px;
-  background: #1c142c;
-  border: 2px solid var(--tone);
-  text-align: left;
-  font-size: 12px;
-}
-#shop .gearbuy .cond { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--tone); }
-#shop .gearbuy .text { font: 11px/1.2 system-ui, sans-serif; opacity: 0.75; text-shadow: none; }
-#shop .gearbuy .price { color: #7df0a0; }
 
 /* ---- the in-run HUD (openspec/changes/ui1-hud): zack's comic ink mockup ----
    Sizes are in --u, which follows the screen's height (landscape phones are short). Panels are skewed, inked in
@@ -806,3 +689,229 @@ html, body {
 #scores [data-post] { padding: 8px 14px; font-size: 18px; color: #000; background: var(--trick); border: 2px solid #000; }
 #scores .row { display: flex; justify-content: flex-end; width: 100%; }
 #scores .done { padding: 8px 20px; min-height: 44px; font-size: 22px; color: #000; background: var(--trick); border: 2px solid #000; box-shadow: 3px 3px 0 #000; }
+
+/* ---- the skate shop as a card game (openspec/changes/ui2-card-shop) ----
+   Your setup across the top is where cards land; the stock is a fanned hand along the bottom. Drag a card onto a
+   slot or your gear to buy it (src/ui/shop-drag.ts). Sized off the screen's height like the HUD. */
+#shop {
+  --u: clamp(7px, min(2.5vh, 1.35vw), 13px);
+  --pink: #ff2fb4;
+  --cyan: #3ff0ff;
+  --yellow: #ffe23a;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--u) * 0.9);
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle, rgba(255, 47, 180, 0.14) 1px, transparent 1.4px) 0 0 / 6px 6px,
+    linear-gradient(180deg, rgba(30, 10, 48, 0.94), rgba(14, 6, 26, 0.96));
+  font-family: 'Bangers', 'Arial Black', Impact, sans-serif;
+  letter-spacing: 0.05em;
+  animation: fade 0.2s ease-out;
+  overflow: hidden;
+}
+/* :where keeps the reset at zero specificity so the card styles below win */
+:where(#shop button) { all: unset; box-sizing: border-box; cursor: pointer; text-align: center; }
+#shop button:disabled { opacity: 0.35; cursor: default; }
+.ink2, #shop .title, #shop .tag {
+  -webkit-text-stroke: 1.5px #000;
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 #000;
+}
+#shop .head { position: relative; display: flex; align-items: center; gap: calc(var(--u) * 1.2); width: 100%; max-width: 900px; }
+#shop .grow { flex: 1; }
+#shop .title { font-size: calc(var(--u) * 3); color: var(--yellow); transform: skewX(-8deg) rotate(-2deg); }
+#shop .cash { font-size: calc(var(--u) * 2.4); color: #4dff8a; -webkit-text-stroke: 1px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+#shop .restock, #shop .done {
+  min-height: 40px;
+  padding: 0 calc(var(--u) * 1.6);
+  display: flex;
+  align-items: center;
+  font-size: calc(var(--u) * 1.7);
+  border: 2px solid #000;
+  transform: skewX(-10deg);
+}
+#shop .restock { color: #4dff8a; background: #1d1030; box-shadow: 0 0 0 2px #4dff8a, 3px 4px 0 2px #000; }
+#shop .done { color: #1a1028; background: var(--yellow); box-shadow: 0 0 0 2px var(--pink), 3px 4px 0 2px #000; }
+#shop .spent {
+  position: absolute;
+  left: calc(var(--u) * 16);
+  top: 0;
+  color: #ff4a5a;
+  font-size: calc(var(--u) * 2.2);
+  -webkit-text-stroke: 1px #000;
+  paint-order: stroke fill;
+  pointer-events: none;
+  animation: spent 0.9s ease-out forwards;
+}
+@keyframes spent { to { transform: translateY(-24px); opacity: 0; } }
+
+/* your setup: the drop zones */
+#shop .setup { display: flex; gap: calc(var(--u) * 1.6); justify-content: center; align-items: stretch; width: 100%; max-width: 900px; }
+#shop .board, #shop .gearrow {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.3);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.8) calc(var(--u) * 0.7);
+  background: rgba(10, 4, 20, 0.8);
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px var(--pink), 3px 4px 0 2px #000;
+  transition: box-shadow 0.12s, transform 0.12s;
+}
+#shop .tag { font-size: calc(var(--u) * 1.5); color: var(--yellow); line-height: 1; }
+#shop .slots, #shop .parts { display: flex; align-items: center; gap: calc(var(--u) * 0.5); }
+#shop .arrow { font-style: normal; opacity: 0.5; font-size: calc(var(--u) * 1.6); color: #fff; }
+#shop .slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--u) * 6.4);
+  height: calc(var(--u) * 5);
+  min-width: 48px;
+  min-height: 40px;
+  padding: 2px;
+  font-size: calc(var(--u) * 1.3);
+  line-height: 1;
+  color: var(--k, #fff);
+  background: #1d1030;
+  border: 2.5px solid var(--k, #4a3d5a);
+  touch-action: none;
+}
+#shop .slot.empty { border-style: dashed; color: transparent; }
+#shop .slot.trigger { --k: var(--trigger); }
+#shop .slot.effect { --k: var(--effect); }
+#shop .slot.modifier { --k: var(--modifier); }
+#shop .slot.target { box-shadow: 0 0 0 2px #fff7e8; animation: blink 0.8s steps(2) infinite; }
+#shop .slot.picked { background: #fff7e8; color: #1a1028; }
+#shop .pop { animation: stamp 0.32s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes stamp { from { transform: scale(1.5) rotate(-8deg); opacity: 0.2; } }
+#shop .part {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: calc(var(--u) * 0.4);
+  align-items: center;
+  padding: calc(var(--u) * 0.3) calc(var(--u) * 0.5);
+  height: calc(var(--u) * 5);
+  min-height: 40px;
+  background: #1d1030;
+  border: 2px solid #4a3d5a;
+  color: #fff;
+}
+#shop .part .icon { grid-row: 1 / 3; }
+#shop .part svg, #shop .gearcard svg { height: calc(var(--u) * 2.6); display: block; }
+#shop .part .name { font-size: calc(var(--u) * 1.1); line-height: 1; }
+#shop .cond { display: flex; align-items: center; gap: 4px; font-size: calc(var(--u) * 1); color: var(--tone); }
+#shop .cond i {
+  display: block;
+  width: calc(var(--u) * 3.6);
+  height: 5px;
+  background: linear-gradient(90deg, var(--tone) var(--c), rgba(255, 247, 232, 0.18) var(--c));
+  border: 1px solid #000;
+}
+#shop .part.busted { border-color: var(--busted); }
+
+/* while dragging: where the card can go lights up, the spot under your thumb swells */
+#shop[data-drag='mod'] .slot,
+#shop[data-drag='slot'] .slot { box-shadow: 0 0 0 2px var(--cyan); }
+#shop[data-drag='buyslot'] .board,
+#shop[data-drag='gear'] .gearrow { box-shadow: 0 0 0 3px var(--cyan), 0 0 calc(var(--u) * 2) var(--cyan); }
+#shop .slot.over { transform: scale(1.15); box-shadow: 0 0 0 3px var(--yellow), 0 0 calc(var(--u) * 2) var(--yellow); background: #3a2060; }
+#shop .board.over, #shop .gearrow.over { transform: scale(1.04); box-shadow: 0 0 0 3px var(--yellow), 0 0 calc(var(--u) * 2.4) var(--yellow); }
+#shop[data-drag='gear'] .part { border-color: var(--cyan); }
+
+/* the hand: overlapping cards in a slight fan */
+#shop .hand {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+  max-width: 980px;
+  padding: 0 calc(var(--u) * 2) calc(var(--u) * 0.4);
+}
+.card-shop {
+  position: relative;
+  flex: 0 1 calc(var(--u) * 13);
+  min-width: 0;
+  height: min(calc(var(--u) * 17), 100%);
+  max-height: 210px;
+  margin: 0 calc(var(--u) * -0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: calc(var(--u) * 0.4);
+  padding: calc(var(--u) * 0.7) calc(var(--u) * 0.8) calc(var(--u) * 0.8);
+  text-align: left;
+  color: #fff;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1.4px) 0 0 / 5px 5px,
+    linear-gradient(180deg, #2a1648, #170b28);
+  border: 3px solid var(--c, #fff);
+  outline: 2px solid #000;
+  box-shadow: 4px 6px 0 #000;
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.12s, opacity 0.12s;
+  touch-action: none;
+  overflow: hidden;
+}
+.card-shop:nth-child(odd) { --tilt: -2.5deg; }
+.card-shop:nth-child(even) { --tilt: 2deg; }
+.card-shop:nth-child(3n) { --tilt: -1deg; }
+.card-shop.mod.trigger { --c: var(--trigger); }
+.card-shop.mod.effect { --c: var(--effect); }
+.card-shop.mod.modifier { --c: var(--modifier); }
+.card-shop.extra { --c: #4dff8a; }
+.card-shop.gearcard { --c: #ff9a3a; }
+.card-shop .kind {
+  align-self: flex-start;
+  padding: 1px 6px;
+  font-size: calc(var(--u) * 1);
+  color: #1a1028;
+  background: var(--c);
+  transform: skewX(-10deg);
+}
+.card-shop b { font-size: calc(var(--u) * 1.7); line-height: 1; color: var(--c); -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+.card-shop .text { font: 600 calc(var(--u) * 1.05)/1.25 system-ui, sans-serif; letter-spacing: 0; opacity: 0.9; }
+.card-shop .price {
+  margin-top: auto;
+  align-self: flex-start; /* left: the next card in the hand overlaps the right edge */
+  padding: 0 calc(var(--u) * 0.6);
+  font-size: calc(var(--u) * 1.9);
+  color: #4dff8a;
+  background: #000;
+  transform: skewX(-10deg);
+}
+.card-shop.sold { --c: #4a3d5a; justify-content: center; align-items: center; opacity: 0.4; border-style: dashed; box-shadow: none; }
+.card-shop.sold b { color: #8a7a9a; }
+.card-shop.poor { filter: grayscale(0.8) brightness(0.7); }
+.card-shop.poor .price { color: #ff4a5a; }
+.card-shop.picked { transform: translateY(-14px) rotate(0deg); box-shadow: 0 0 0 3px #fff7e8, 4px 8px 0 #000; z-index: 2; }
+.card-shop.lifted { opacity: 0.25; }
+.card-shop.shake { animation: shake 0.3s; }
+@keyframes shake { 25% { transform: translateX(-6px) rotate(-3deg); } 75% { transform: translateX(6px) rotate(3deg); } }
+@media (hover: hover) {
+  .card-shop:not(.sold):not(.poor):hover { transform: translateY(-10px) rotate(0deg); z-index: 2; }
+}
+#shop.opening .card-shop { animation: deal 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
+#shop.opening .card-shop:nth-child(2) { animation-delay: 0.05s; }
+#shop.opening .card-shop:nth-child(3) { animation-delay: 0.1s; }
+#shop.opening .card-shop:nth-child(4) { animation-delay: 0.15s; }
+#shop.opening .card-shop:nth-child(n + 5) { animation-delay: 0.2s; }
+/* the card under your thumb */
+#shop .ghost {
+  position: fixed;
+  margin: 0;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.92;
+  filter: none;
+  box-shadow: 8px 14px 0 rgba(0, 0, 0, 0.6), 0 0 calc(var(--u) * 2) var(--c, #fff);
+  transition: none;
+  animation: none;
+}
+#shop .hint { font: 600 calc(var(--u) * 1.1)/1.3 system-ui, sans-serif; letter-spacing: 0; opacity: 0.75; text-align: center; color: #fff; }

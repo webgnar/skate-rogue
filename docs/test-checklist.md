@@ -197,9 +197,16 @@ Each act's district now changes the street, not just the look. Quickest check: `
 
 - [ ] **Gear wear:** four bars on the HUD (bottom right) for the deck, shoes, trucks and wheels. The deck wears from ollies, the shoes from flip tricks, the trucks from grinding and the wheels from going fast. A part turns yellow below 50 and red and blinking at 15, with a callout at each.
 - [ ] **Worn gear costs you:** below half, a worn deck pops lower, worn shoes flip lower, worn trucks grind slower and worn wheels cruise slower. The most it costs is at 0.
-- [ ] **The shop sells new parts:** a gear row under the mod stock (deck $25, shoes $15, trucks $20, wheels $15). *Tuning:* does gear wear too fast or too slow? About 3 to 5 floors to half is the aim. Wear was cut by about a quarter in the balance pass (the bot now gets a part to half in 4 floors early on, 3 in acts 3 to 5).
+- [ ] **The shop sells new parts:** a NEW <PART> card in the hand for each worn part (deck $25, shoes $15, trucks $20, wheels $15). *Tuning:* does gear wear too fast or too slow? About 3 to 5 floors to half is the aim. Wear was cut by about a quarter in the balance pass (the bot now gets a part to half in 4 floors early on, 3 in acts 3 to 5).
 - [ ] **Modifiers in the shop:** gold-edged mods marked MOD: Times Two (×2, $45), Delay ($15), Combo Only (COMBO 5+, $30) and Coin Flip (50/50, $25). Each changes the next effect after it in the slots. Try `[On Ollie] [Times Two] [Speed Kick]`: two kicks per ollie. `[On Land] [Delay] [Double Pop]`: the pop comes half a second after you land.
 - [ ] **Combo Only and Coin Flip:** `[On Trick] [Combo Only] [Cash Burst]` pays nothing until your combo hits 5, then double. `[On Grind Start] [Coin Flip] [Spark Trail]` sometimes gives nothing, sometimes a big trail. *Tuning:* are the prices right?
+- [ ] **The shop is a card game (PR for ui2-card-shop):** the stock is a fanned hand of cards along the bottom (4 mods, `+1 SLOT` while the board has room, and a `NEW <PART>` card for each worn part); YOUR BOARD and YOUR GEAR sit across the top.
+- [ ] **Drag to buy:** drag a mod card onto a slot (it replaces what's there), `+1 SLOT` onto your board, a gear card onto your gear. While you drag, the places it can go glow cyan and the one under your thumb swells yellow; the drop stamps in and the price floats off your cash.
+- [ ] **Miss and too poor:** let go away from a slot and the card flies back with nothing bought. A card you can't afford is grey with a red price, and shakes instead of lifting.
+- [ ] **Rearrange:** drag one board slot onto another to swap them.
+- [ ] **Taps still work:** tap a mod card then a slot; tap the slot or gear card to buy it straight away.
+- [ ] **Thumb feel:** the card under your thumb shrinks so you can see the slot under it. Is it easy to drop where you mean on the phone? Are the cards big enough to read?
+- [ ] **No accidental ollie:** nothing you do in the shop makes Lou ollie when you skate on.
 - [ ] **Worn looks on Lou:** a chipped deck nose, a scuffed shoe and then a hole, rusty trucks, coned wheels.
 
 ## Smashables
