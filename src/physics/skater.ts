@@ -146,7 +146,7 @@ export class Skater {
     if (this.mode === 'rail') this.stepRail();
     else this.stepMove(input.held);
     this.crossSwitches(px);
-    if ((this.mode as Mode) !== 'bail') this.feel.step(this.grounded, this.groundPitch(), this.mode === 'rail' ? this.railV : this.hsp);
+    if ((this.mode as Mode) !== 'bail') this.feel.step(this.grounded, this.groundPitch(), this.mode === 'rail' ? this.railV : this.hsp, this.mode === 'air' ? this.below() : null);
 
     if (this.x >= this.level.exitX && (this.mode as Mode) !== 'bail' && !this.exited) {
       if (this.rollOn) this.exited = true;
@@ -282,6 +282,35 @@ export class Skater {
     const front = this.supportAt(this.x + half);
     if (back === null && front === null) return 0;
     return Math.atan2((back ?? front!) - (front ?? back!), FEEL.wheelbase);
+  }
+
+  // In the air: a ray straight down from the feet to the first thing it hits in your lane (a roof, bank, stair set,
+  // bar, curved rail, car roof or the street), with that ground's angle (+ nose up, as groundPitch) and how far down
+  below(): { angle: number; depth: number } | null {
+    const x = this.x;
+    let depth = Infinity;
+    let angle = 0;
+    const hit = (y: number, m: number) => {
+      const d = y - this.y;
+      if (d >= -1 && d < depth) {
+        depth = Math.max(0, d);
+        angle = Math.atan(-m);
+      }
+    };
+    for (const s of this.level.surfaces) {
+      if (x < s.x0 || x > s.x1 || this.gone.has(s) || !inLane(s, this.lane)) continue;
+      hit(surfaceY(s, x), surfaceSlope(s));
+    }
+    for (const rail of this.level.rails) {
+      if (rail === this.railIgnore || !inLane(rail, this.lane)) continue;
+      const y = rail.yAt(x);
+      const a = rail.yAt(x - 1);
+      const b = rail.yAt(x + 1);
+      if (y !== undefined) hit(y, a !== undefined && b !== undefined ? (b - a) / 2 : 0);
+    }
+    for (const car of this.cars()) if (x >= car.x0 && x <= car.x1 && inLane(car, this.lane)) hit(car.roof, 0);
+    if (isStreetAt(this.level, x)) hit(this.level.streetY, 0);
+    return depth === Infinity ? null : { angle, depth };
   }
 
   // how much of the flip in the air has been caught (1: none going, or caught)

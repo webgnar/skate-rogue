@@ -31,7 +31,10 @@ export const FEEL = {
   squash: { k: 0.12, c: 0.5, kick: 0.13 }, // kick: knee velocity per px/frame of impact; the knees bend about 0.7 x kick x impact
   lean: { k: 0.08, c: 0.45, slope: 0.35, accel: 4, max: 0.25 },
   wobble: { k: 0.09, c: 0.05, sketchy: 0.05, rail: 0.006, max: 0.3 },
-  airLevel: 0.12, // in the air the board eases back to level this share a frame
+  airLevel: 0.12, // in the air the board eases back to level this share a frame (nothing below to line up with)
+  // in the air the skater looks straight down and lines the board up with the ground below: fully within `full` px of
+  // it, fading out by `look` px, easing this share a frame, so a bank or a handrail is met at its own angle
+  air: { look: 6 * 32, full: 1.5 * 32, ease: 0.15 },
   wornRock: 2, // worn gear rocks you more: x(1 + this x what the part costs you), wheels 1.5 times that
 } as const;
 
@@ -85,8 +88,9 @@ export class Feel {
     this.side = -this.side;
   }
 
-  // one step: `pitch` is the board's target angle on the ground (null in the air), `hsp` the speed now
-  step(grounded: boolean, pitch: number | null, hsp: number): void {
+  // one step: `pitch` is the board's target angle on the ground (null in the air), `hsp` the speed now, `below` the
+  // ground under you in the air (its angle and how far down it is; null: nothing below)
+  step(grounded: boolean, pitch: number | null, hsp: number, below: { angle: number; depth: number } | null = null): void {
     //knees
     const s = FEEL.squash;
     this.squashV += -s.k * this.squash - s.c * this.squashV;
@@ -99,9 +103,13 @@ export class Feel {
       this.squashV = Math.min(0, this.squashV);
     }
 
-    //board: follows the ground under the trucks; levels out in the air
+    //board: follows the ground under the trucks; in the air lines up with the ground coming up, else levels out
     if (pitch !== null) this.pitch = pitch;
-    else this.pitch -= this.pitch * FEEL.airLevel;
+    else if (below) {
+      const a = FEEL.air;
+      const w = Math.max(0, Math.min(1, (a.look - below.depth) / (a.look - a.full)));
+      this.pitch += (below.angle * w - this.pitch) * (w > 0 ? a.ease : FEEL.airLevel);
+    } else this.pitch -= this.pitch * FEEL.airLevel;
 
     //torso: partly with the slope, forward when speeding up, back when slowing
     const l = FEEL.lean;

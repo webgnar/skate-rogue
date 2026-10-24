@@ -408,3 +408,47 @@ describe('low ceilings', () => {
     expect(squash).toBeGreaterThan(0.2);
   });
 });
+
+describe('lining up in the air', () => {
+  const street = levelOf(FLAT).streetY;
+  // off a roof 4 tiles up, over `under`: the board's angle on the last frame in the air, and the ground's
+  function comeDown(under: Surface[]): { air: number; ground: number } {
+    const y = street - 4 * TILE;
+    const sk = new Skater(withExtras([{ kind: 'roof', x0: 0, x1: 4 * TILE, y, row: -1 }, ...under], [], { x: TILE, y }));
+    let air = NaN;
+    for (let f = 0; f < 200; f++) {
+      const was = sk.mode;
+      const pitch = sk.feel.pitch;
+      sk.step({ pressed: false, held: false });
+      if (was === 'air' && sk.mode !== 'air') return { air: pitch, ground: sk.feel.pitch };
+      air = pitch;
+    }
+    return { air, ground: NaN };
+  }
+
+  it('dropping onto a bank, the board meets it at its angle', () => {
+    const down: Surface = { kind: 'bank', x0: 4 * TILE, x1: 12 * TILE, y: street - 2 * TILE, y1: street, row: -1 };
+    const { air, ground } = comeDown([down]);
+    expect(ground).toBeLessThan(-0.2); // nose down the bank
+    expect(Math.abs(air - ground)).toBeLessThan(0.05);
+  });
+
+  it('dropping toward an up bank, the nose comes up to meet it', () => {
+    const up: Surface = { kind: 'bank', x0: 4 * TILE, x1: 14 * TILE, y: street, y1: street - 3 * TILE, row: -1 };
+    const { air, ground } = comeDown([up]);
+    expect(ground).toBeGreaterThan(0.2);
+    expect(Math.abs(air - ground)).toBeLessThan(0.05);
+  });
+
+  it('dropping to flat ground, the board stays level', () => {
+    expect(Math.abs(comeDown([]).air)).toBeLessThan(0.01);
+  });
+
+  it('high over the ground, the board stays level and only lines up as the ground comes up', () => {
+    const level = withExtras([{ kind: 'bank', x0: 0, x1: 40 * TILE, y: street, y1: street - 10 * TILE, row: -1 }], [], { x: 2 * TILE, y: street - 20 * TILE });
+    const sk = new Skater(level);
+    sk.step({ pressed: false, held: false });
+    expect(sk.mode).toBe('air');
+    expect(Math.abs(sk.feel.pitch)).toBeLessThan(0.01);
+  });
+});
