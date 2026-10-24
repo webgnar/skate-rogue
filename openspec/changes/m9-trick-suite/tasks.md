@@ -8,6 +8,6 @@
 
 ## 2. Blender
 
-- [ ] 2.1 Bake every clip into Blender actions on the skinned rig with a Board bone
+- [x] 2.1 Bake every clip into Blender actions on the skinned rig with a Board bone (`art/bake_clips.cjs` → `art/anim/clips.json` → `art/lou_gnar.py`)
 - [ ] 2.2 Game plays the Blender clips, falling back to the code clips
 - [ ] 2.3 Refine key poses in Blender from the reference library

@@ -16,6 +16,9 @@ HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else bp
 ROOT = os.path.dirname(HERE)
 GLB = os.path.join(ROOT, 'public', 'models', 'lou-gnar.glb')
 BLEND = os.path.join(HERE, 'lou-gnar.blend')
+BOARD_GLB = os.path.join(ROOT, 'public', 'models', 'board.glb')
+CLIPS = os.path.join(HERE, 'anim', 'clips.json')  # baked from the game by art/bake_clips.cjs
+BOARD_TOP = 0.12  # deck top above the ground with the board flat (poses.ts BOARD.deckTop)
 
 # rig joints (skater-rig.ts) in Blender coordinates
 PELVIS = 0.9
@@ -56,6 +59,8 @@ for side, s in (('Left', 1), ('Right', -1)):
     BONES[f'{side}Leg'] = ((s * HIP_X, 0, KNEE_Z), (s * HIP_X, 0, ANKLE_Z), f'{side}UpLeg')
     BONES[f'{side}Foot'] = ((s * HIP_X, 0, ANKLE_Z), (s * HIP_X, -0.12, 0.0), f'{side}Leg')
     BONES[f'{side}ToeBase'] = ((s * HIP_X, -0.12, 0.0), (s * HIP_X, -0.2, 0.0), f'{side}Foot')
+# the board rides its own bone (a root, like Hips): origin at the middle of the deck top, along the nose
+BONES['Board'] = ((0, 0, BOARD_TOP), (0.3, 0, BOARD_TOP), None)
 
 
 def hex_rgba(h):
@@ -109,6 +114,7 @@ def armature():
         b = data.edit_bones.new(name)
         b.head, b.tail = head, tail
         b.roll = 0
+        b.use_deform = name != 'Board'  # the suit doesn't skin to the board
         if parent:
             b.parent = data.edit_bones[parent]
             b.use_connect = Vector(head) == data.edit_bones[parent].tail
@@ -283,9 +289,97 @@ def export():
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
 
+# three.js (Y up) to Blender (Z up). A baked bone matrix becomes a Blender bone matrix as A @ m: the exporter turns
+# bone axes as well as positions. The board's is an object matrix, A @ m @ A^-1.
+A = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
+
+
+def board(rig):
+    """The board from board.glb, parented to the Board bone so it follows the clips in Blender (not exported here)."""
+    if not os.path.exists(BOARD_GLB):
+        return None
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=BOARD_GLB)
+    parts = [o for o in bpy.data.objects if o not in before and o.type == 'MESH']
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    if len(parts) > 1:
+        bpy.ops.object.join()
+    ob = parts[0]
+    ob.name = 'Board'
+    for o in set(bpy.data.objects) - before - {ob}:
+        bpy.data.objects.remove(o)
+    ob.parent = None
+    ob.matrix_world = Matrix.Translation((0, 0, BOARD_TOP))
+    ob.parent = rig
+    ob.parent_type = 'BONE'
+    ob.parent_bone = 'Board'
+    bpy.context.view_layer.update()
+    ob.matrix_world = Matrix.Translation((0, 0, BOARD_TOP))
+    return ob
+
+
+def actions(rig):
+    """One action per clip baked from the game (art/anim/clips.json): keys on every frame for every bone."""
+    if not os.path.exists(CLIPS):
+        return []
+    import json
+    data = json.load(open(CLIPS))
+    bones = rig.data.bones
+    mat = lambda e: Matrix([[e[c * 4 + r] for c in range(4)] for r in range(4)])
+    scene = bpy.context.scene
+    scene.render.fps = data['fps']
+    rig.animation_data_create()
+    made = []
+    for name, clip in data['clips'].items():
+        act = bpy.data.actions.new(name)
+        act.use_fake_user = True
+        rig.animation_data.action = act
+        prev = {}
+        for f, frame in enumerate(clip['frames']):
+            posed = {}
+            for bone in bones:  # parents come before children
+                if bone.name == 'Board':
+                    m = A @ mat(frame['Board']) @ A.inverted() @ bone.matrix_local
+                else:
+                    m = A @ mat(frame[bone.name])
+                posed[bone.name] = m
+                if bone.parent:
+                    rest = bone.parent.matrix_local.inverted() @ bone.matrix_local
+                    basis = rest.inverted() @ posed[bone.parent.name].inverted() @ m
+                else:
+                    basis = bone.matrix_local.inverted() @ m
+                loc, rot, _ = basis.decompose()
+                if bone.name in prev and rot.dot(prev[bone.name]) < 0:
+                    rot.negate()  # the short way round between keys
+                prev[bone.name] = rot
+                pb = rig.pose.bones[bone.name]
+                pb.rotation_mode = 'QUATERNION'
+                pb.location, pb.rotation_quaternion = loc, rot
+                pb.keyframe_insert('location', frame=f + 1, group=bone.name)
+                pb.keyframe_insert('rotation_quaternion', frame=f + 1, group=bone.name)
+        act.use_frame_range = True
+        act.frame_range = (1, max(2, len(clip['frames'])))
+        act.use_cyclic = clip['loop']
+        track = rig.animation_data.nla_tracks.new()
+        track.name = name
+        track.strips.new(name, 1, act)
+        track.mute = True
+        made.append(act)
+    rig.animation_data.action = data['clips'].get('ride') and bpy.data.actions.get('ride')
+    return made
+
+
 if __name__ == '__main__':
     rig, suit = build()
     tris = sum(len(p.vertices) - 2 for p in suit.data.polygons)
     print(f'LouGnar: {len(suit.data.vertices)} verts, {tris} tris, {len(rig.data.bones)} bones')
     export()
     print('wrote', GLB)
+    # the Blender file also gets the board and the clips as actions, to view and edit them in Blender
+    deck = board(rig)
+    acts = actions(rig)
+    print(f'{len(acts)} actions, board {"in" if deck else "missing"}')
+    bpy.ops.wm.save_as_mainfile(filepath=BLEND)
