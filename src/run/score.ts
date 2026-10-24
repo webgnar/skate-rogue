@@ -53,6 +53,8 @@ export class RunScore {
   private idle = 0;
   scoreScale = 1; // New Wheels: banked points
   slamStoke = false; // Slam Stoke: a slam keeps the combo and adds stoke
+  stokenScale = 1; // Double Stoken
+  nearScale = 1; // Jaywalker: close calls score double
 
   get gnar(): boolean {
     return this.gnarT > 0;
@@ -87,7 +89,7 @@ export class RunScore {
         this.add(SCORE.kicker);
         break;
       case 'near':
-        this.add(SCORE.nearMiss);
+        this.add(SCORE.nearMiss * this.nearScale);
         break;
       case 'land':
         return this.bank(hsp);
@@ -104,7 +106,7 @@ export class RunScore {
       case 'pickup':
         if (e.kind === 'cash') this.cash += SCORE.cashCoin;
         else {
-          this.stoken++;
+          this.stoken += this.stokenScale;
           this.score += SCORE.stoken;
         }
         break;

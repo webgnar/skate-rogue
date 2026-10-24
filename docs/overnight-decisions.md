@@ -202,7 +202,13 @@ and listed it here for review. Any of these can be flipped in the morning.
     and adds a quarter of the stoke meter (the GDD said +50%, which felt like it rewarded slamming). Siren Song:
     car hops take 10 more Heat off per stack. Decoy: the first time Heat reaches 75 on a floor it drops to 35.
     Ghost Mode: half the Heat from skating slow.
-- LUCK and STREET boons are next.
+- **LUCK and STREET boons (9 more cards; boon streets now come in all six types).** LUCK: Stoken Magnet
+  (pickups reach 3x as far), Double Stoken (every Stoken counts twice, stash and act pay too), Hustler (+1 card on
+  every pick) and one of mine, Lucky Reroll (the first reroll on each pick is free). STREET: Roof Rider (parked car
+  and bus roofs grind like flat bars; moving cars still hop), Slipstream (half a second drafting within 4 tiles
+  behind a car going your way throws you forward at bomb speed; a third of a second with 2), Hood Pop (+50% hop
+  per stack), Spoofed Plate (robotaxis don't brake), Jaywalker (close calls from 20 px and worth double). The
+  GDD's shop-price LUCK idea is left for the shop's next pass.
 
 - **Smashables written into the GDD (zack asked).** New pillar 7, "Smash everything", and a Smashables section:
   props are juice, never hazards (they never slow or slam you); roll through, land on, grind, car-hop, slam or
@@ -229,6 +235,31 @@ and listed it here for review. Any of these can be flipped in the morning.
   shuvit, kickflip, FS 180, heelflip, 360 shuvit (a quarter are 180s). A 180 flips `Skater.fakie`; shove-its spin
   only the board so they don't. Tricks thrown fakie are called "FAKIE KICKFLIP" and score 1.5x; a 180 adds +25.
   A slam puts you back regular. The stance resets each floor. Trick events now carry `name`, `spin` and `fakie`.
+
+- **Curses and duos.** The GDD's three curses (Moon Shoes, Wanted, Speed Wobbles) and three duos (Rocket Grind,
+  Sky Line, Perpetual Motion) are in. Curses: from floor 6, one offer in three replaces its last card with one;
+  dashed purple card. Duos: once you hold both halves, half of all offers add it as an extra pink card. Choices I
+  made: Speed Wobbles slams landings above 1.3x cruising (so kicker bombs and fast rail exits slam, plain ollies
+  don't); Rocket Grind needs full grind speed and pops 1.5x; Sky Line's rail is 7 tiles long, 6 px under your feet.
+  The underground spot's "Remove a curse" lifts the curse off entirely.
+
+- **Gear and wear (zack asked).** Deck from ollies, shoes from flip tricks, trucks from grinding, wheels from
+  going fast (above 1.25x cruising). Open choices, all mine: condition 100 to 0; no cost until half worn, then a
+  straight line to −30% ollie / −30% flip pop / −30% grind speed / −20% cruising speed at 0; **nothing ever breaks
+  outright** (a run never ends because of gear); wear per use 1.2 per ollie, 1.6 per flip, 1.2 per grind second,
+  1.2 per fast second; fresh gear each run. Shop prices: deck $25, shoes $15, trucks $20, wheels $15. HUD: four
+  bars bottom left, green, yellow, red. Callouts at half and at 15. Worn looks are left for the models and effects threads.
+
+- **Cross-street cars turn onto your road (zack asked).** A cross car now pulls out of the side street to the
+  skate lane (2.5 s, light red), swings round over half a second and drives off your way at 0.45x cruising as
+  ordinary traffic, keeping its paint. It doesn't brake for you like a robotaxi. Its roof is a car hop while it
+  pulls out, turns and drives. Choices: always turns your way (not toward you); new cars stop once you're 30
+  tiles past the corner.
+
+- **Platforms toward the camera (zack: "they dont stick out enough").** Floating ledges were 2.2 deep with their
+  front edge only 0.45 in front of Lou; they now reach the same front line as rooftops, stairs and banks (1.25 in
+  front of Lou). Rooftops, stairs, banks, the overpass, street pads and the L-train covers already did. Vehicle
+  roofs (cars, buses, trucks, roadblocks) keep their models' widths.
 
 ## Models thread: animation
 

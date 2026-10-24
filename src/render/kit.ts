@@ -22,6 +22,7 @@ const BLOCK_BACK = -3.1;
 const BLOCK_FRONT = 1.5;
 const BLOCK_DEPTH = BLOCK_FRONT - BLOCK_BACK;
 const BLOCK_Z = (BLOCK_FRONT + BLOCK_BACK) / 2;
+const LEDGE_BACK = 1.5; // a floating ledge reaches this far back
 
 function lambert(map: THREE.Texture | null, color = 0xffffff, transparent = false): THREE.MeshLambertMaterial {
   return new THREE.MeshLambertMaterial({ map, color, transparent, alphaTest: transparent ? 0.5 : 0 });
@@ -170,8 +171,9 @@ export function buildKit(level: Level): THREE.Group {
       const row = new Array(Math.round(w)).fill(CITY.ledge[1]);
       row[0] = CITY.ledge[0];
       row[row.length - 1] = CITY.ledge[2];
-      const l = slab(w, 0.35, 2.2, lambert(tileTexture([row])), lambert(null, 0x8a6a50), sideMat);
-      l.position.set(x, y - 0.175, -0.4);
+      //as deep as the blocks in front of the skater (zack: platforms have to stick out toward the camera), less at the back
+      const l = slab(w, 0.35, BLOCK_FRONT + LEDGE_BACK, lambert(tileTexture([row])), lambert(null, 0x8a6a50), sideMat);
+      l.position.set(x, y - 0.175, (BLOCK_FRONT - LEDGE_BACK) / 2);
       kit.add(l);
     } else if (s.kind === 'stairs') {
       //one block per step, down to the street

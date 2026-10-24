@@ -1,7 +1,7 @@
 // Wires a run together: floors from the generator, the fixed-step skater, input, the view and the HUD.
 import * as THREE from 'three';
 import { addBoon, type Boon, type Held } from '../boons/defs';
-import { carriedHeat, dropBoon, startHeat, type UnderView } from '../run/spot';
+import { carriedHeat, cursesHeld, dropBoon, startHeat, type UnderView } from '../run/spot';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { validatedFloor } from '../gen/validate';
@@ -10,6 +10,7 @@ import { FIRST_ROAD, floorRoad, label, rollFork, ROADS, type Road } from '../gen
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { RunScore, SCORE } from '../run/score';
+import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, writeSave } from '../run/save';
 import { PickupView } from '../render/pickups';
 
@@ -72,6 +73,7 @@ export interface ShopView {
   slotPrice: number;
   restockPrice: number;
   maxSlots: number;
+  gear: Gear; // what your gear is at; the shop sells new parts
 }
 
 export interface Hud {
@@ -89,6 +91,7 @@ export interface Hud {
   fire(slot: number): void; // a board slot just fired
   shop(view: ShopView | null): void; // null hides the shop
   under(view: UnderView | null): void; // the underground spot; null hides it
+  gear(gear: Gear): void; // how worn your deck, shoes, trucks and wheels are
 }
 
 type State = 'skate' | 'caught' | 'pick' | 'shop' | 'under' | 'over';
@@ -173,6 +176,7 @@ export class Game {
   private shop: ShopState | null = null;
   private shopPick: ShopPick = null;
   private shopVisits = 0;
+  private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
 
   constructor(
     private seed: number,
@@ -219,6 +223,7 @@ export class Game {
     this.floor = 1;
     this.boons = [];
     this.board = newBoard();
+    this.gear = freshGear();
     this.shopVisits = 0;
     this.run = new RunScore();
     this.carry = 0;
@@ -266,9 +271,11 @@ export class Game {
     this.boonFx.setBoons(this.boons);
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
     const mods = skaterMods(this.boons);
-    this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board);
+    this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
     this.run.scoreScale = mods.scoreScale;
     this.run.slamStoke = mods.slamStoke;
+    this.run.stokenScale = mods.stokenScale;
+    this.run.nearScale = mods.nearScale;
     this.carry = 0;
     this.trafficView.clear();
     this.pickups.setLevel(this.level);
@@ -286,6 +293,7 @@ export class Game {
     this.hud.floor(this.floor, this.road);
     this.hud.boons(this.boons);
     this.hud.board(this.board);
+    this.hud.gear(this.gear);
     this.hud.money(this.run.cash, this.run.stoken);
     if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
     if (this.road.kind === 'escape') this.hud.callout(`ESCAPE: ${label(this.road)}`, 'bad');
@@ -294,6 +302,7 @@ export class Game {
   // the floor's gate: pay floor clear, then this floor's reward; the road taken is the next floor
   private finishFloor(now: number): void {
     this.carry = carriedHeat(this.sim.heat.value);
+    this.gear = { ...this.sim.gear };
     if (this.road.kind === 'escape') return this.clearAct(now, this.road.act);
     const pts = this.run.clearFloor(this.floor);
     const fork = this.level.fork;
@@ -310,7 +319,7 @@ export class Game {
       this.advance();
       this.hud.callout(`+${pay} CASH`, 'good');
     } else {
-      const pay = ROADS.stashStoken(this.floor);
+      const pay = ROADS.stashStoken(this.floor) * this.run.stokenScale;
       this.run.stoken += pay;
       this.advance();
       this.hud.callout(`+${pay} STOKEN`, 'good');
@@ -321,7 +330,7 @@ export class Game {
   // through an act's escape: pay out, and the last act wins the run; the road picked before it comes next
   private clearAct(now: number, act: number): void {
     const cash = ESCAPE.actCash(act);
-    const stoken = ESCAPE.actStoken(act);
+    const stoken = ESCAPE.actStoken(act) * this.run.stokenScale;
     this.run.cash += cash;
     this.run.stoken += stoken;
     this.run.score += this.run.clearFloor(this.floor) * 2;
@@ -331,16 +340,19 @@ export class Game {
   }
 
   private rerollCost(): number {
+    //Lucky Reroll: the first one on each pick is free
+    if (this.rerolls === 0 && skaterMods(this.boons).freeReroll) return 0;
     return 15 + 10 * this.rerolls;
   }
 
   private showOffer(): void {
     const road = this.road;
     const run = { floor: this.floor, boons: this.boons };
+    const extra = skaterMods(this.boons).extraCards; // Hustler
     this.offer =
       road.kind === 'hot'
-        ? offerBoons(this.seed, run, 4, undefined, this.rerolls)
-        : offerBoons(this.seed, run, 3, road.kind === 'boon' ? road.boonType : undefined, this.rerolls);
+        ? offerBoons(this.seed, run, 4 + extra, undefined, this.rerolls)
+        : offerBoons(this.seed, run, 3 + extra, road.kind === 'boon' ? road.boonType : undefined, this.rerolls);
     const cost = this.rerollCost();
     this.hud.pick(this.offer, {
       title: road.kind === 'hot' ? 'HOT STREET: PICK ANY BOON' : `PICK A ${label(road)}`,
@@ -374,7 +386,7 @@ export class Game {
     }
     if (this.nextRoad.kind === 'spot') {
       this.openMenu('under', performance.now());
-      this.hud.under({ step: 'menu', heat: this.carry, canSwap: this.boons.length > 0, curses: 0 });
+      this.hud.under({ step: 'menu', heat: this.carry, canSwap: this.boons.length > 0, curses: cursesHeld(this.boons).length });
       return;
     }
     this.floor++;
@@ -399,6 +411,7 @@ export class Game {
       slotPrice: BOARD.slotPrice,
       restockPrice: restockPrice(this.shop),
       maxSlots: BOARD.maxSlots,
+      gear: this.gear,
     });
     this.hud.money(this.shop.cash, this.run.stoken);
   }
@@ -407,7 +420,7 @@ export class Game {
   private shopTap(target: Element): void {
     const s = this.shop;
     if (!s) return;
-    const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-done]');
+    const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-gear],[data-done]');
     if (!el) return;
     const pick = this.shopPick;
     let next: ShopState | null = s;
@@ -429,6 +442,17 @@ export class Game {
       }
     } else if (el.dataset.buyslot !== undefined) {
       next = buySlot(s) ?? s;
+      this.shopPick = null;
+    } else if (el.dataset.gear !== undefined) {
+      //a new part: fresh, paid from the shop's cash
+      const part = el.dataset.gear as GearPart;
+      const got = replace(this.gear, s.cash, part);
+      if (got) {
+        this.gear = got.gear;
+        next = { ...s, cash: got.cash };
+        this.hud.gear(this.gear);
+        this.hud.callout(`NEW ${GEAR.names[part].toUpperCase()}`, 'good');
+      } else if (this.gear[part] < 100) this.hud.callout('NOT ENOUGH CASH', 'bad');
       this.shopPick = null;
     } else if (el.dataset.restock !== undefined) {
       next = restock(s, this.seed, this.shopVisits) ?? s;
@@ -475,6 +499,15 @@ export class Game {
       this.swapping = true;
       this.hud.pick(this.offer, { title: 'SWAP: PICK ANY BOON', rerollCost: -1, canReroll: false });
       this.openMenu('pick', performance.now());
+    } else if (v === 'curse' && cursesHeld(this.boons).length) {
+      this.hud.under({ step: 'lift', boons: cursesHeld(this.boons) });
+    } else if (v.startsWith('lift:')) {
+      //a curse comes off whole
+      const id = v.slice(5) as Held['id'];
+      this.boons = this.boons.filter((b) => b.id !== id);
+      this.hud.boons(this.boons);
+      this.hud.callout('CURSE LIFTED', 'good');
+      this.leaveUnder();
     } else if (v === 'skip') {
       this.leaveUnder();
     }
@@ -630,6 +663,7 @@ export class Game {
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
     this.flowFx(dt);
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs);
+    this.hud.gear(this.sim.gear);
     this.view.zoom.update(dt, this.skater.mode);
     this.view.follow(x, y, dt);
     this.view.adapt(realDt * 1000);
@@ -769,11 +803,18 @@ export class Game {
       this.run.cash += SCORE.smashCash;
       this.hud.money(this.run.cash, this.run.stoken);
     } else if (e.loot === 'stoken') {
-      this.run.stoken++;
+      this.run.stoken += this.run.stokenScale;
       this.hud.money(this.run.cash, this.run.stoken);
       this.hud.callout('GOLDEN SMASH! STOKEN', 'good');
     }
     this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), z: this.level.props[e.index]?.z, how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
+  }
+
+  // a part of your gear wore past half, or is nearly done
+  private worn(part: GearPart, level: 'worn' | 'busted'): void {
+    const name = GEAR.names[part].toUpperCase();
+    this.hud.callout(level === 'busted' ? `${name} BUSTED!` : `${name} WORN`, 'bad');
+    this.hud.gear(this.sim.gear);
   }
 
   // stomped a drone: it's worth a trick's style, and goes down with a crunch
@@ -798,7 +839,8 @@ export class Game {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type === 'smash') return this.smashed(e);
-    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy') {
+    if (e.type === 'wear') return this.worn(e.part, e.level);
+    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;
       this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));
@@ -837,6 +879,10 @@ export class Game {
         this.hud.callout('TUCK AND ROLL!', 'good');
         this.view.shake(0.15);
         navigator.vibrate?.(40);
+        break;
+      case 'slip':
+        this.hud.callout('SLIPSTREAM!', 'trick');
+        this.view.zoom.trick();
         break;
       case 'decoy':
         this.hud.callout('DECOY! HEAT 35', 'good');

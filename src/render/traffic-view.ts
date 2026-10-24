@@ -19,9 +19,9 @@ const PAINTS: Record<VehicleKind, number[]> = {
   oncoming: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a],
   bus: [0xeeeef2],
   truck: [0xf4f1ea, 0xd9e2ec, 0xffd23f],
+  car: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a], // the cross streets' cars, the same as their own paints
 };
 const BACK_LANE_Z = -2.2;
-const CROSS_GONE_Z = 2.7;
 const CRUISER_Z = -1.3; // the lane just behind the skate lane
 
 export class TrafficView {
@@ -114,7 +114,7 @@ export class TrafficView {
       let mesh = this.meshes.get(v.id);
       if (!mesh) {
         const paints = PAINTS[v.kind];
-        const [w, b, r, paint] = [toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[v.id % paints.length]];
+        const [w, b, r, paint] = [toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[(v.look ?? v.id) % paints.length]];
         mesh =
           v.kind === 'bus' ? makeBus(0, w, b, r)
           : v.kind === 'truck' ? makeTruck(0, w, b, r, paint, (v.kicker ?? 0) / TILE)
@@ -147,8 +147,9 @@ export class TrafficView {
     cross.forEach((c, i) => {
       const v = this.crossings[i];
       v.car.position.z = c.z;
-      //off the front edge of the street it's out of shot
-      v.car.visible = c.t >= 0 && c.z < CROSS_GONE_Z;
+      //swinging round onto the road, your way; then the traffic's own car takes over
+      v.car.children[0].rotation.y = -Math.PI / 2 + (Math.PI / 2) * c.turn;
+      v.car.visible = c.out;
       v.red.visible = c.red;
       v.green.visible = !c.red;
     });

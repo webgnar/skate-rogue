@@ -3,6 +3,7 @@
 import { TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
 import { FloorSim } from '../sim/floor';
+import type { Gear } from '../run/gear';
 import type { Vehicle } from '../traffic/traffic';
 import type { CrossCar } from '../traffic/cross';
 import { buildFloor, type FloorOptions } from './descent';
@@ -32,7 +33,7 @@ function blocked(cars: Car[], x: number, y: number): boolean {
 }
 
 // the reference bot: ollies at canals and cars, rides rails to their ends, flips when falling short
-export function botRun(level: Level): { result: string; slams: number; maxHeat: number } {
+export function botRun(level: Level): { result: string; slams: number; maxHeat: number; gear: Gear } {
   const sim = new FloorSim(level);
   const sk = sim.skater;
   let hold = 0;
@@ -56,11 +57,11 @@ export function botRun(level: Level): { result: string; slams: number; maxHeat: 
     if (hold > 0) hold--;
     slams += sim.events.filter((e) => e.type === 'slam').length;
     maxHeat = Math.max(maxHeat, sim.heat.value);
-    if (sim.state === 'bail') return { result: `bail at col ${Math.floor(sk.x / TILE)}`, slams, maxHeat };
-    if (sim.state === 'caught') return { result: `caught at col ${Math.floor(sk.x / TILE)}`, slams, maxHeat };
-    if (sim.state === 'exit') return { result: 'exit', slams, maxHeat };
+    if (sim.state === 'bail') return { result: `bail at col ${Math.floor(sk.x / TILE)}`, slams, maxHeat, gear: sim.gear };
+    if (sim.state === 'caught') return { result: `caught at col ${Math.floor(sk.x / TILE)}`, slams, maxHeat, gear: sim.gear };
+    if (sim.state === 'exit') return { result: 'exit', slams, maxHeat, gear: sim.gear };
   }
-  return { result: 'timeout', slams, maxHeat };
+  return { result: 'timeout', slams, maxHeat, gear: sim.gear };
 }
 
 export function clearable(level: Level): boolean {

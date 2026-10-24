@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PHYS, TILE } from '../src/physics/constants';
 import { botRun, validatedFloor } from '../src/gen/validate';
-import { ARRIVE, CROSS, crossPlan } from '../src/traffic/cross';
+import { ARRIVE, CROSS, crossPlan, TURN_AT } from '../src/traffic/cross';
 import { FloorSim } from '../src/sim/floor';
 
 const idle = { pressed: false, held: false };
@@ -19,7 +19,7 @@ describe('cross traffic', () => {
     }
   });
 
-  it('shows in the back lanes for over a second before it reaches the skate lane, then crosses it', () => {
+  it('shows in the back lanes for over a second before it reaches the skate lane, then turns onto your road', () => {
     expect(ARRIVE / 60).toBeGreaterThan(1);
     const l = floors(8).find((l) => crossPlan(l, l.layout.seed).length)!;
     const sim = new FloorSim(l);
@@ -27,13 +27,52 @@ describe('cross traffic', () => {
     c.step(c.at.trigger);
     expect(c.red).toBe(true);
     let inLane = 0;
+    sim.traffic.vehicles.length = 0;
     for (let f = 0; f < CROSS.period; f++) {
-      c.step(c.at.trigger);
+      sim.traffic.step(c.at.trigger);
       if (c.inLane) inLane++;
     }
-    //in the lane for about half a second, out of it the rest of the cycle
-    expect(inLane).toBeGreaterThan(20);
-    expect(inLane).toBeLessThan(40);
+    //in the lane as it pulls out and swings round, then it's a car on the road, driving your way
+    expect(inLane).toBeGreaterThan(30);
+    expect(inLane).toBeLessThan(60);
+    const car = sim.traffic.vehicles.find((v) => v.kind === 'car')!;
+    expect(car).toBeDefined();
+    expect(car.speed).toBeGreaterThan(0);
+    expect(car.x1 - car.x0).toBe(2 * TILE);
+    expect(car.x0).toBeGreaterThan(c.at.x - TILE);
+  });
+
+  it('a car that turned onto the road can be car-hopped', () => {
+    const l = floors(8).find((l) => crossPlan(l, l.layout.seed).length)!;
+    const sim = new FloorSim(l);
+    const c = sim.traffic.cross[0];
+    c.step(c.at.trigger);
+    while (!sim.traffic.vehicles.some((v) => v.kind === 'car')) sim.traffic.step(c.at.trigger);
+    sim.traffic.vehicles = sim.traffic.vehicles.filter((v) => v.kind === 'car');
+    const car = sim.traffic.vehicles[0];
+    Object.assign(sim.skater, { x: (car.x0 + car.x1) / 2, y: car.roof - 30, surface: null, mode: 'air', vsp: 2, hsp: PHYS.baseSpeed });
+    let hop = false;
+    for (let f = 0; f < 20; f++) {
+      sim.step(idle);
+      hop ||= sim.events.some((e) => e.type === 'hop');
+    }
+    expect(hop).toBe(true);
+  });
+
+  it('a car pulling out can be car-hopped too', () => {
+    const l = floors(8).find((l) => crossPlan(l, l.layout.seed).length)!;
+    const sim = new FloorSim(l);
+    sim.traffic.vehicles.length = 0;
+    const c = sim.traffic.cross[0];
+    c.t = Math.round(TURN_AT);
+    c.step(c.at.trigger);
+    Object.assign(sim.skater, { x: (c.box.x0 + c.box.x1) / 2, y: c.box.roof - 20, surface: null, mode: 'air', vsp: 2, hsp: 0.5 });
+    let hop = false;
+    for (let f = 0; f < 10; f++) {
+      sim.step(idle);
+      hop ||= sim.events.some((e) => e.type === 'hop');
+    }
+    expect(hop).toBe(true);
   });
 
   it('a car crossing as you roll up is a slam unless you ollie it', () => {

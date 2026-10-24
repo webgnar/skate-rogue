@@ -1,7 +1,8 @@
 import './style.css';
-import { BOON_COLORS, boonById, stacksOf, type Boon, type Held } from './boons/defs';
+import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
+import { GEAR, GEAR_PARTS, wornness, type Gear } from './run/gear';
 import { modDef, type ModId } from './board/mods';
 import { label } from './gen/roads';
 import { actOf } from './gen/escape';
@@ -24,15 +25,16 @@ function esc(text: string): string {
 function chip(h: Held): string {
   const b = boonById(h.id);
   const n = h.stacks > 1 ? ` ×${h.stacks}` : '';
-  return `<span class="chip" style="--type:${BOON_COLORS[b.type]}">${esc(b.name)}${n}</span>`;
+  return `<span class="chip" style="--type:${boonColor(b)}">${esc(b.name)}${n}</span>`;
 }
 
 // a boon card in QFS's layout: type label, name, effect, small line, stacks
 function card(b: Boon, i: number, held: Held[]): string {
   const have = stacksOf(held, b.id);
   const pips = Array.from({ length: b.max }, (_, k) => `<i class="${k < have ? 'on' : k === have ? 'new' : ''}"></i>`).join('');
-  return `<button class="card" data-pick="${i}" style="--type:${BOON_COLORS[b.type]}">
-    <span class="type">${b.type}</span>
+  const tag = b.cursed ? 'CURSED' : b.duo ? `DUO · ${b.duo.map((id) => boonById(id).name).join(' + ')}` : b.type;
+  return `<button class="card${b.cursed ? ' cursed' : ''}" data-pick="${i}" style="--type:${boonColor(b)}">
+    <span class="type">${esc(tag)}</span>
     <b class="name">${esc(b.name)}</b>
     <span class="effect">${esc(b.effect)}</span>
     ${b.note ? `<span class="note">${esc(b.note)}</span>` : ''}
@@ -55,7 +57,13 @@ function underCards(v: UnderView): string {
   if (v.step === 'drop') {
     return v.boons.map((h) => {
       const b = boonById(h.id);
-      return choice(`drop:${h.id}`, BOON_COLORS[b.type], b.type, b.name, b.effect, h.stacks > 1 ? `drop one of ${h.stacks}` : 'drop it');
+      return choice(`drop:${h.id}`, boonColor(b), b.type, b.name, b.effect, h.stacks > 1 ? `drop one of ${h.stacks}` : 'drop it');
+    }).join('');
+  }
+  if (v.step === 'lift') {
+    return v.boons.map((h) => {
+      const b = boonById(h.id);
+      return choice(`lift:${h.id}`, CURSE_COLOR, 'CURSED', b.name, `${b.effect}, ${b.note ?? ''}`, 'lift it off');
     }).join('');
   }
   return [
@@ -101,6 +109,27 @@ function shopHtml(v: ShopView): { slots: string; stock: string; hint: string } {
   return { slots, stock, hint };
 }
 
+// the gear strip and the shop's gear row: a bar per part, green to red as it wears
+function gearTone(c: number): string {
+  return c <= GEAR.busted ? 'busted' : wornness(c) > 0 ? 'worn' : 'fresh';
+}
+
+function gearStrip(g: Gear): string {
+  return GEAR_PARTS.map((p) => `<span class="part ${gearTone(g[p])}" title="${GEAR.names[p]}: worn by ${GEAR.wornBy[p]}">
+    ${GEAR.names[p].toUpperCase()}<i style="--c:${Math.round(g[p])}%"></i></span>`).join('');
+}
+
+function gearShop(g: Gear, cash: number): string {
+  return GEAR_PARTS.map((p) => {
+    const c = Math.round(g[p]);
+    const off = c >= 100 || cash < GEAR.price[p];
+    return `<button class="gearbuy ${gearTone(c)}" data-gear="${p}" ${off ? 'disabled' : ''}>
+      <b>NEW ${GEAR.names[p].toUpperCase()}</b><span class="cond"><i style="--c:${c}%"></i>${c}%</span>
+      <span class="text">worn by ${GEAR.wornBy[p]}</span><span class="price">${c >= 100 ? 'FRESH' : `$${GEAR.price[p]}`}</span>
+    </button>`;
+  }).join('');
+}
+
 function makeHud(): Hud {
   const floorEl = document.getElementById('floortext')!;
   const calloutEl = document.getElementById('callout')!;
@@ -120,6 +149,8 @@ function makeHud(): Hud {
   const boardEl = document.getElementById('board')!;
   const shopEl = document.getElementById('shop')!;
   const underEl = document.getElementById('under')!;
+  const gearEl = document.getElementById('gear')!;
+  let gearKey = '';
   let level = 0;
   let held: Held[] = [];
   let timer = 0;
@@ -210,11 +241,19 @@ function makeHud(): Hud {
       }
       shopCash = v.shop.cash;
       shopEl.querySelector('.stock')!.innerHTML = h.stock;
+      shopEl.querySelector('.gearshop')!.innerHTML = gearShop(v.gear, v.shop.cash);
       shopEl.querySelector('.hint')!.textContent = h.hint;
       shopEl.querySelector('.cash')!.textContent = `$${v.shop.cash}`;
       const re = shopEl.querySelector<HTMLButtonElement>('.restock')!;
       re.textContent = `RESTOCK $${v.restockPrice}`;
       re.disabled = v.shop.cash < v.restockPrice;
+    },
+    gear: (g) => {
+      //redrawn only when a part's whole percent changes
+      const key = GEAR_PARTS.map((p) => Math.round(g[p])).join();
+      if (key === gearKey) return;
+      gearKey = key;
+      gearEl.innerHTML = gearStrip(g);
     },
     boons: (h) => {
       held = h;
@@ -223,7 +262,7 @@ function makeHud(): Hud {
     under: (v) => {
       underEl.hidden = !v;
       if (!v) return;
-      underEl.querySelector('.sub')!.textContent = v.step === 'menu' ? 'A DIY spot under the expressway. Take one.' : 'Drop which boon?';
+      underEl.querySelector('.sub')!.textContent = v.step === 'menu' ? 'A DIY spot under the expressway. Take one.' : v.step === 'lift' ? 'Lift which curse?' : 'Drop which boon?';
       underEl.querySelector('.cards')!.innerHTML = underCards(v);
     },
     pick: (offer, info) => {
