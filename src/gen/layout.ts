@@ -23,7 +23,7 @@ export function maxTier(floor: number): number {
   return Math.min(3, 1 + Math.floor((floor - 1) / 2));
 }
 
-export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES): Layout {
+export function makeLayout(seed: number, floor: number, library: Piece[] = PIECES, count = floorLength(floor)): Layout {
   const rng = makeRng(seed + floor * 7919);
   const top = maxTier(floor);
   //pieces of the newest tier come up three times as often, so the floor feels harder
@@ -36,7 +36,7 @@ export function makeLayout(seed: number, floor: number, library: Piece[] = PIECE
 
   const pieces: Piece[] = [START_PIECE];
   let last: Piece | undefined;
-  for (let n = 0; n < floorLength(floor); n++) {
+  for (let n = 0; n < count; n++) {
     let pick = pool[randInt(rng, pool.length)];
     //no piece twice in a row
     for (let tries = 0; pick === last && tries < 10; tries++) pick = pool[randInt(rng, pool.length)];

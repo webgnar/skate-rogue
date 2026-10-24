@@ -1,7 +1,7 @@
 // The reference bot (src/gen/validate.ts) and the floor validator built on it.
 import { describe, expect, it } from 'vitest';
 import { makeLayout } from '../src/gen/layout';
-import { botRun, validatedLayout } from '../src/gen/validate';
+import { botRun, validatedFloor } from '../src/gen/validate';
 import { buildLevel } from '../src/physics/level';
 
 describe('bot', () => {
@@ -23,9 +23,9 @@ describe('floor validation', () => {
     const t0 = performance.now();
     for (let seed = 1; seed <= 50; seed++) {
       for (let floor = 1; floor <= 8; floor++) {
-        const v = validatedLayout(seed, floor);
+        const v = validatedFloor(seed, floor);
         expect(v.tierDrops, `seed ${seed} floor ${floor}`).toBeGreaterThanOrEqual(0);
-        expect(botRun(buildLevel(v.layout)).result).toBe('exit');
+        expect(botRun(v.level).result).toBe('exit');
         tries += v.tries;
         if (v.tierDrops > 0) drops++;
       }
@@ -35,6 +35,6 @@ describe('floor validation', () => {
   }, 60000);
 
   it('is deterministic', () => {
-    expect(validatedLayout(7, 5).layout.grid).toEqual(validatedLayout(7, 5).layout.grid);
+    expect(validatedFloor(7, 5).level.surfaces).toEqual(validatedFloor(7, 5).level.surfaces);
   });
 });

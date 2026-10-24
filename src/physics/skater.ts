@@ -2,7 +2,7 @@
 // player_grinding_state, player_rail_state) on Lou Gnar's one-button auto-run. Pure: no rendering, no DOM.
 import { NO_MODS, type Mods } from '../boons/mods';
 import { PHYS, TILE } from './constants';
-import { isStreetAt, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { isStreetAt, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
@@ -57,7 +57,9 @@ export class Skater {
     readonly mods: Mods = NO_MODS,
   ) {
     this.x = level.startX;
-    this.y = level.streetY;
+    this.y = level.startY;
+    //starting up on a rooftop
+    this.surface = level.surfaces.find((s) => s.kind !== 'rail' && s.x0 <= this.x && s.x1 >= this.x && s.y === this.y) ?? null;
     this.hsp = PHYS.baseSpeed; // rolling start
     this.jumps = this.maxJumps;
   }
@@ -181,10 +183,13 @@ export class Skater {
     this.y += this.vsp;
 
     if (this.mode === 'roll' || this.mode === 'grind') {
-      if (!this.supported()) {
-        //rolled off the edge: fall, keeping both jumps (QFS)
+      if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);
+      if (!this.supported() && !this.rollOnto()) {
+        //rolled off the edge: fall, keeping both jumps (QFS); a slope throws you along its angle (bank kick)
         const fromRail = this.mode === 'grind';
+        const slope = this.surface ? surfaceSlope(this.surface) : 0;
         this.leaveGround();
+        this.vsp = slope * this.hsp;
         if (!fromRail) this.coyote = PHYS.coyoteFrames;
       }
     } else if (this.mode === 'air' && this.vsp >= 0) {
@@ -215,6 +220,25 @@ export class Skater {
     return this.ghost ? [...this.level.surfaces, this.ghost] : this.level.surfaces;
   }
 
+  // rolling off one piece of ground straight onto the next at the same height: terrace to stairs, bank to roof
+  private rollOnto(): boolean {
+    if (this.mode !== 'roll') return false;
+    for (const s of this.level.surfaces) {
+      if (s === this.surface || s.kind === 'rail' || this.x < s.x0 || this.x > s.x1) continue;
+      if (Math.abs(surfaceY(s, this.x) - this.y) > 8) continue;
+      this.y = surfaceY(s, this.x);
+      this.surface = s;
+      if (s.kind === 'stairs') this.slam();
+      return true;
+    }
+    if (this.surface && isStreetAt(this.level, this.x) && Math.abs(this.level.streetY - this.y) <= 8) {
+      this.y = this.level.streetY;
+      this.surface = null;
+      return true;
+    }
+    return false;
+  }
+
   private supported(): boolean {
     if (this.surface) return this.x >= this.surface.x0 && this.x <= this.surface.x1;
     return isStreetAt(this.level, this.x);
@@ -238,7 +262,9 @@ export class Skater {
       //Rail Magnet: rails reach out for you before their start
       const x0 = s.kind === 'rail' ? s.x0 - magnet : s.x0;
       if (x >= x0 && x <= s.x1) {
-        consider(s.y, () => {
+        //sloped: compare against the slope's height where we were last step too
+        if (s.y1 !== undefined && py > surfaceY(s, px) + 0.01) continue;
+        consider(surfaceY(s, x), () => {
           this.x = Math.max(this.x, s.x0);
           this.touchDown(s);
         });
@@ -287,6 +313,8 @@ export class Skater {
       this.spare = 0;
       this.mode = 'roll';
       this.events.push({ type: 'land' });
+      //landing on the steps
+      if (s?.kind === 'stairs') this.slam();
     }
   }
 

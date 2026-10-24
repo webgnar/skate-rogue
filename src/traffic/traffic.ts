@@ -47,7 +47,7 @@ export function spawnPlan(level: Level, seed: number): Spawn[] {
     const oncoming = floor >= 3 && rng() < 0.4;
     const [lo, hi] = TRAFFIC.robotaxiSpeed;
     plan.push({
-      at: p * 16 * TILE + randInt(rng, 8) * TILE,
+      at: level.finaleX + p * 16 * TILE + randInt(rng, 8) * TILE,
       kind: oncoming ? 'oncoming' : 'robotaxi',
       speed: oncoming ? TRAFFIC.oncomingSpeed : PHYS.baseSpeed * (lo + (hi - lo) * rng()),
     });

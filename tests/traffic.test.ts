@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { HEAT, Heat } from '../src/heat/heat';
-import { buildLevel } from '../src/physics/level';
 import { PHYS, TILE } from '../src/physics/constants';
 import { Skater } from '../src/physics/skater';
-import { validatedLayout } from '../src/gen/validate';
+import { validatedFloor } from '../src/gen/validate';
 import { FloorSim } from '../src/sim/floor';
 import { spawnPlan, TRAFFIC, Traffic } from '../src/traffic/traffic';
 import { FLAT, levelOf } from './helpers';
@@ -53,14 +52,14 @@ describe('traffic', () => {
   });
 
   it('the same seed gives the same traffic', () => {
-    const level = buildLevel(validatedLayout(9, 5).layout);
+    const level = validatedFloor(9, 5).level;
     expect(spawnPlan(level, 9)).toEqual(spawnPlan(level, 9));
     expect(spawnPlan(level, 9).some((s) => s.kind === 'oncoming') || spawnPlan(level, 9).length > 0).toBe(true);
   });
 
   it('floor 1 has robotaxis only', () => {
     for (let seed = 1; seed < 30; seed++) {
-      const level = buildLevel(validatedLayout(seed, 1).layout);
+      const level = validatedFloor(seed, 1).level;
       expect(spawnPlan(level, seed).every((s) => s.kind === 'robotaxi')).toBe(true);
     }
   });

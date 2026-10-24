@@ -2,15 +2,26 @@
 import { CHUNK_W, STREET_ROW, cell, type Layout } from '../gen/layout';
 import { TILE } from './constants';
 
-export type SurfaceKind = 'roof' | 'ledge' | 'rail';
+export type SurfaceKind = 'roof' | 'ledge' | 'rail' | 'stairs' | 'bank';
 
-// a one-way surface you land on from above: x0..x1 at height y
+// a one-way surface you land on from above: x0..x1 at height y, or sloping from y to y1 (stairs, banks)
 export interface Surface {
   kind: SurfaceKind;
   x0: number;
   x1: number;
   y: number;
+  y1?: number;
   row: number;
+}
+
+export function surfaceY(s: Surface, x: number): number {
+  if (s.y1 === undefined) return s.y;
+  const t = Math.min(1, Math.max(0, (x - s.x0) / (s.x1 - s.x0)));
+  return s.y + (s.y1 - s.y) * t;
+}
+
+export function surfaceSlope(s: Surface): number {
+  return s.y1 === undefined ? 0 : (s.y1 - s.y) / (s.x1 - s.x0);
 }
 
 export interface Car {
@@ -101,6 +112,8 @@ export interface Level {
   cars: Car[];
   glass: Glass[];
   startX: number;
+  startY: number;
+  finaleX: number; // where the street begins (after a descent); 0 for a street-only floor
   exitX: number;
 }
 
@@ -174,6 +187,8 @@ export function buildLevel(layout: Layout): Level {
     cars,
     glass,
     startX: 3 * TILE,
+    startY: streetY,
+    finaleX: 0,
     exitX: (layout.cols - 6) * TILE,
   };
 }

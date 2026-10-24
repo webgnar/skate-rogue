@@ -357,6 +357,27 @@ Each piece is 16 × 10 tiles of ASCII, starting and ending on street. QFS legend
 All 20 QFS pieces port as tier 1–3 pieces on day one; new skate pieces (kicker gaps, rail gardens, stair sets)
 are added per biome.
 
+### Floor shape: downhill descent
+
+Decided Oct 24, 2026 (zack): floors are **much bigger** and built for **big stair sets and big handrails**, so each
+floor is a **downhill descent**. You start high up (rooftops, plazas, an overpass) and work down to the street through
+stair sets, handrails, drop-offs and rooftop gaps, then finish on a street stretch with traffic and the exit.
+There are **a few short uphill bits**: banks you roll up (they kick you into the air at the top) and raised ledges
+to ollie onto, about one every few sections, so it never feels like a straight slide.
+
+| Section | What it is | How you skate it |
+| --- | --- | --- |
+| Terrace | A rooftop or plaza run, 6–14 tiles, sometimes with a flat rail, ledge or kicker | Roll, grind, set up |
+| Stair set | 4–16 steps down (1 tile run, half a tile rise per step), often with a handrail | Ollie it, flip it for the bigger sets, or grind the handrail. Landing on the steps is a slam |
+| Big handrail | A long straight rail down a stair set; gravity speeds you up and launches you off the end | Ollie onto it at the top |
+| Drop-off | A ledge 2–10 tiles high onto the next terrace | Roll off, or ollie for style |
+| Rooftop gap | A 2–5 tile gap between buildings, sometimes onto a lower roof | Ollie or flip it; falling in is a bail |
+| Bank | A ramp up to a higher terrace, 1–3 tiles | Roll up; it launches you at the top |
+| Street finale | 2–4 QFS street pieces at street level: canals, curved rails, parked cars, traffic | The traffic and chase section, then the exit gate |
+
+Floor 1 is about 150 tiles long and starts about 14 tiles up; each floor adds length and height, so later floors
+have the 16-stair sets and the longest handrails. The validator still skates every floor with base physics.
+
 ### Floor recipe
 
 1. Seed the RNG with `runSeed + floor × 7919` (as QFS does). Daily runs use the date as `runSeed`.

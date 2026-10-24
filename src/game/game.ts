@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import { addBoon, type Boon, type Held } from '../boons/defs';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
-import { validatedLayout } from '../gen/validate';
+import { validatedFloor } from '../gen/validate';
 
-import { buildLevel, type Level } from '../physics/level';
+import type { Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
@@ -70,7 +70,7 @@ export class Game {
   }
 
   private makeLevel(): Level {
-    return buildLevel(validatedLayout(this.seed, this.floor).layout);
+    return validatedFloor(this.seed, this.floor).level;
   }
 
   private newRun(): void {
