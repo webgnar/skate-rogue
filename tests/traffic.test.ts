@@ -29,6 +29,22 @@ describe('traffic', () => {
     expect(slammed).toBe(true);
   });
 
+  it('a car stays solid until it is half out of the lane, so a roof does not vanish under a skater landing on it', () => {
+    const level = levelOf(FLAT);
+    const traffic = new Traffic(level, [{ at: 0, kind: 'robotaxi', speed: PHYS.baseSpeed * 0.45 }]);
+    traffic.step(0);
+    const v = traffic.vehicles[0];
+    v.leaving = true;
+    const frames: boolean[] = [];
+    for (let f = 0; f < TRAFFIC.laneFrames; f++) {
+      traffic.step(0);
+      frames.push(traffic.inLane.includes(v));
+    }
+    //solid while it's still mostly in the skate lane, gone once it's mostly in the back lane
+    expect(frames.slice(0, TRAFFIC.laneFrames / 2 - 1).every(Boolean)).toBe(true);
+    expect(frames.at(-1)).toBe(false);
+  });
+
   it('an oncoming car is on its way for at least 45 frames before it can reach the skater', () => {
     const closing = PHYS.baseSpeed - TRAFFIC.oncomingSpeed;
     // spawned this far ahead; the screen shows about 18 tiles ahead of the skater

@@ -608,3 +608,12 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **My feel backlog is otherwise done.** What's left needs zack: whether ledges become concrete grinds, a manual
   mechanic, and the tuning questions in the checklist (sketchy rate, heavy speed loss, handrail ollies).
 
+
+## Physics feel thread, round 5 (playtest bot findings)
+
+- **Moving roofs land from where they were.** A drone bobbing up into your feet, or a bus lifting, could cross you
+  between two frames and skip the landing. The skater now remembers each roof's height from the step before.
+- **A car pulling out of the lane stays solid until it's half out.** It used to go ghost the frame it decided to
+  leave, while it was still drawn in your lane, so you could drop straight through a robotaxi's roof. Now it's the
+  same rule as a bus pulling in. That also means a leaving car can still hit you for about 10 frames, which matches
+  what's on screen. The bot's 30-seed sweep finds no fall-throughs and its clear rate is unchanged (85% / 49%).

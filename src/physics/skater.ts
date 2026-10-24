@@ -66,6 +66,7 @@ export class Skater {
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
   readonly feel = new Feel(); // the body and board response (src/physics/feel.ts)
+  private roofs = new WeakMap<Car, number>(); // each vehicle's roof as of the last step
   trickT = 0; // frames since the last flip trick
   trickCatch = 0; // frames that flip takes to catch (0: no flip going)
   readonly crumbling = new Map<Surface, number>(); // Greece's ruins: frames until each ledge you've stood on falls
@@ -109,6 +110,12 @@ export class Skater {
 
   step(input: StepInput): void {
     if (this.mode === 'bail' || this.mode === 'exit') return;
+    this.advance(input);
+    //where each roof was this step, so a landing next step sees one that has since moved (see land())
+    for (const car of this.cars()) this.roofs.set(car, car.roof);
+  }
+
+  private advance(input: StepInput): void {
     if (input.pressed) this.buffer = PHYS.bufferFrames;
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
@@ -425,16 +432,17 @@ export class Skater {
     //Where the feet's path this step goes from on or above the line through (x0, y0) with slope m to on or under it
     //(null if it doesn't). Swept, so nothing slips through between two frames: not the face of a bank that climbs
     //faster than you're rising, not the corner of a roof you drop past at speed.
-    const crossAt = (x0: number, y0: number, m: number): number | null => {
-      const f0 = py - (y0 + m * (px - x0));
+    //`was` is where the line was at the start of the step, for roofs that move (a bobbing drone, a lifting bus)
+    const crossAt = (x0: number, y0: number, m: number, was = y0): number | null => {
+      const f0 = py - (was + m * (px - x0));
       const f1 = this.y - (y0 + m * (x - x0));
       if (f0 > 0.01 || f1 < 0) return null;
       const t = f1 - f0 > 1e-9 ? Math.min(1, Math.max(0, -f0 / (f1 - f0))) : 0;
       return px + t * (x - px);
     };
     //...over [a, b], where it crossed or (as before) where the feet ended up, so clipping a near corner still lands
-    const hits = (x0: number, y0: number, m: number, a: number, b: number): boolean => {
-      const cx = crossAt(x0, y0, m);
+    const hits = (x0: number, y0: number, m: number, a: number, b: number, was = y0): boolean => {
+      const cx = crossAt(x0, y0, m, was);
       return cx !== null && ((cx >= a && cx <= b) || (x >= a && x <= b));
     };
 
@@ -453,7 +461,7 @@ export class Skater {
     }
     const half = PHYS.width / 2;
     for (const car of this.cars()) {
-      if (!hits(0, car.roof, 0, car.x0 - half, car.x1 + half)) continue;
+      if (!hits(0, car.roof, 0, car.x0 - half, car.x1 + half, this.roofs.get(car) ?? car.roof)) continue;
       //Roof Rider: a parked roof is a ledge to grind
       const parked = this.mods.roofRider && this.level.cars.includes(car);
       consider(car.roof, parked ? () => this.touchDown(roofLedge(car)) : () => this.carHop());

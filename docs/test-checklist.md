@@ -135,6 +135,8 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 - [ ] Clip the near corner of a roof, ledge, bar or car roof as you come down: you land on it rather than slipping
       past. Drop off the far end of something at speed with your feet still over it: you land on the edge, then roll off.
 - [ ] With fast builds (New Wheels, Slingshot, Kicker Boost) you never fall through a roof, bar, bank or car roof.
+- [ ] Drop onto a robotaxi's roof just as it starts pulling out of the lane (it slides to the back). You land on it
+      and ride or hop off; you never fall through it. Same for a drone bobbing up under you on the act 4 escape.
 
 **Worn gear and gravity**
 
