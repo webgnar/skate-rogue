@@ -58,6 +58,9 @@ export class SoundWords {
   private words: Word[] = [];
 
   spawn(x: number, y: number, word = SLAM_WORDS[Math.floor(Math.random() * SLAM_WORDS.length)]): void {
+    //one word at a time: a new hit replaces the last
+    for (const w of this.words) w.age = LIFE;
+    this.update(0);
     const { tex, aspect } = wordTexture(word);
     const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true });
     mat.rotation = (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.12);

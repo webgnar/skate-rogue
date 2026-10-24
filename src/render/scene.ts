@@ -1,6 +1,7 @@
-// The 2.5D view: renderer, camera rig that leads the skater (further at speed), lights, sky and skyline.
+// The 2.5D view: renderer, Lou Gnar's camera (see camera.ts), lights, sky and skyline.
 import * as THREE from 'three';
 import type { Level } from '../physics/level';
+import { LouZoom, viewHeight } from './camera';
 import { buildKit, toX, toY } from './kit';
 import { loadImage, pixelTexture } from './textures';
 
@@ -12,9 +13,11 @@ export class StreetView {
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
   private skyline: THREE.Mesh | null = null;
+  readonly zoom = new LouZoom();
   private camX = 0;
   private camY = 2;
-  private lead = 4;
+  private dist = 22;
+  private baseH = 16;
   private pixelRatio: number;
   private slowMs = 0;
   private shakeAmt = 0;
@@ -75,30 +78,23 @@ export class StreetView {
     this.scene.add(this.kit);
   }
 
-  // place the camera for the skater at (px, py) moving at hsp px/frame
-  follow(px: number, py: number, hsp: number, snap = false): void {
-    const x = toX(px);
-    const y = toY(this.level, py);
-    const targetLead = 3 + Math.max(0, hsp) * 0.9;
-    this.lead += (targetLead - this.lead) * (snap ? 1 : 0.05);
-    const tx = x + this.lead;
-    //on the street small hops barely move the camera; up on the roofs it follows the skater's height
-    const ty = y > 4 ? y - 0.5 : Math.max(1.6, y * 0.6 + 1.6);
-    //catch up faster on big drops
-    const k = ty < this.camY - 2 ? 0.2 : 0.08;
-    this.camX = snap ? tx : this.camX + (tx - this.camX) * 0.2;
-    this.camY = snap ? ty : this.camY + (ty - this.camY) * k;
-    //pull back a little at speed
-    //a slam punches the camera in and rolls it, settling over about half a second
-    const dist = 19 + Math.max(0, hsp - 3.5) * 0.8 - this.punchAmt * 6;
+  // lock the camera on the skater's feet at (px, py), zoomed for what they're doing; dt in seconds
+  follow(px: number, py: number, dt = 0): void {
+    this.camX = toX(px);
+    this.camY = toY(this.level, py);
+    //a slam punches the camera in and rolls it, settling over about half a second (held through the hit-stop)
+    const zoom = this.zoom.zoom * (1 + this.punchAmt * 0.35);
+    this.camera.fov = (2 * Math.atan(this.baseH / (2 * zoom * this.dist)) * 180) / Math.PI;
+    this.camera.updateProjectionMatrix();
     //a slam shakes the camera, dying off fast
     const sx = (Math.random() - 0.5) * this.shakeAmt;
     const sy = (Math.random() - 0.5) * this.shakeAmt;
-    this.shakeAmt *= 0.86;
-    this.camera.position.set(this.camX + sx, this.camY + 4 + sy, dist);
-    this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0);
+    this.shakeAmt *= Math.pow(0.86, dt * 60);
+    //a little above the skater looking down at them, so the street reads in depth; the feet stay centred
+    this.camera.position.set(this.camX + sx, this.camY + this.dist * 0.18 + sy, this.dist);
+    this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0.25);
     this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
-    this.punchAmt *= 0.91;
+    this.punchAmt *= Math.pow(0.91, dt * 60);
     if (this.skyline) this.skyline.position.x = this.camX * 0.85; // far away: barely moves
   }
 
@@ -122,8 +118,12 @@ export class StreetView {
     const h = this.canvas.clientHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    //keep about 18 tiles of street visible across on narrow screens
-    this.camera.fov = w / h < 1.4 ? 50 : 34;
+    //Lou Gnar's 800 x 600 box: full height on wide screens, full width on narrow ones; back off rather than go fish-eye
+    this.baseH = viewHeight(w / h);
+    this.dist = Math.max(22, this.baseH / (2 * Math.tan((32 * Math.PI) / 180)));
+    //a slam punches the camera in and rolls it, settling over about half a second (held through the hit-stop)
+    const zoom = this.zoom.zoom * (1 + this.punchAmt * 0.35);
+    this.camera.fov = (2 * Math.atan(this.baseH / (2 * zoom * this.dist)) * 180) / Math.PI;
     this.camera.updateProjectionMatrix();
   }
 
