@@ -19,6 +19,8 @@ import type { Level } from '../physics/level';
 import { botRun } from '../gen/validate';
 import { floorDistrict, floorLevel } from '../run/floor-level';
 import { FloorChecks, CHECKS, type Finding } from './checks';
+import { DISTRICT_ORDER } from '../run/districts';
+import type { BiomeId } from '../render/biomes';
 import { Pilot, type PilotStyle } from './pilot';
 import { reproQuery, type Repro } from './repro';
 
@@ -45,10 +47,11 @@ export interface FloorPlay {
   boons: Held[];
   gnar: number;
   pilot: PilotStyle;
+  district?: BiomeId; // the run's (Chicago if left out)
 }
 
 export function playFloor(p: FloorPlay): FloorReport & { fork: 'high' | 'low' | null; nextHigh?: Road; nextLow?: Road } {
-  const level = floorLevel({ seed: p.seed, floor: p.floor, road: p.road, library: FULL_LIBRARY, gnar: p.gnar });
+  const level = floorLevel({ seed: p.seed, floor: p.floor, road: p.road, library: FULL_LIBRARY, gnar: p.gnar, district: p.district });
   const rep = skate(level, p);
   if (p.pilot === 'ref' && rep.result !== 'exit') {
     //take things away until it clears: no boons, then no Gnar rules, then the validator's own run
@@ -90,12 +93,12 @@ function skate(level: Level, p: FloorPlay): FloorReport & { fork: 'high' | 'low'
   const col = Math.floor(sim.skater.x / TILE);
   const result = sim.state === 'exit' ? 'exit' : sim.state === 'skate' ? 'timeout' : `${sim.state} at col ${col}`;
   const escape = p.road.kind === 'escape' ? p.road.act : undefined;
-  const repro: Repro = { seed: p.seed, floor: p.floor, boons: p.boons, danger: p.road.danger, escape, gnar: p.gnar, bot: p.pilot };
+  const repro: Repro = { seed: p.seed, floor: p.floor, boons: p.boons, danger: p.road.danger, escape, gnar: p.gnar, bot: p.pilot, ...(p.district && p.district !== 'chicago' ? { biome: p.district } : {}) };
   return {
     label: escape ? `escape ${escape}` : `floor ${p.floor}`,
     url: reproQuery(repro),
     repro,
-    district: floorDistrict({ seed: p.seed, floor: p.floor, road: p.road }),
+    district: floorDistrict(p),
     result,
     seconds: Math.round((f / 60) * 10) / 10,
     slams,
@@ -113,6 +116,7 @@ export interface RunPlay {
   gnar?: number;
   floors?: number; // stop after this floor (15 is the whole run)
   keepGoing?: boolean; // skate the next floor after a bail, to cover the whole run anyway
+  district?: BiomeId; // left out, the seed picks one, so a batch of runs covers every district
 }
 
 // a run: floors with their escapes, a boon picked after each floor from the cards the game would offer
@@ -121,9 +125,10 @@ export function playRun(r: RunPlay): FloorReport[] {
   const out: FloorReport[] = [];
   let boons: Held[] = [];
   let road: Road = FIRST_ROAD;
+  const district = r.district ?? DISTRICT_ORDER[r.seed % DISTRICT_ORDER.length];
   const last = r.floors ?? ACTS * 3;
   for (let floor = 1; floor <= last; floor++) {
-    const rep = playFloor({ seed: r.seed, floor, road, boons, gnar: r.gnar ?? 0, pilot: r.pilot });
+    const rep = playFloor({ seed: r.seed, floor, road, boons, gnar: r.gnar ?? 0, pilot: r.pilot, district });
     out.push(rep);
     if (rep.result !== 'exit' && !r.keepGoing) break;
     //the road taken, and the boon street's pick (shops and spots lead to a boon street too)
@@ -133,7 +138,7 @@ export function playRun(r: RunPlay): FloorReport[] {
     if (offer.length) boons = addBoon(boons, offer[Math.floor(rng() * offer.length)].id);
     if (endsAct(floor)) {
       const act = floor / 3;
-      const esc = playFloor({ seed: r.seed, floor, road: { kind: 'escape', act, danger: 3 }, boons, gnar: r.gnar ?? 0, pilot: r.pilot });
+      const esc = playFloor({ seed: r.seed, floor, road: { kind: 'escape', act, danger: 3 }, boons, gnar: r.gnar ?? 0, pilot: r.pilot, district });
       out.push(esc);
       if (esc.result !== 'exit' && !r.keepGoing) break;
     }

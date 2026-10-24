@@ -5,7 +5,8 @@ import { carriedHeat, cursesHeld, dropBoon, startHeat, type UnderView } from '..
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { floorLevel } from '../run/floor-level';
-import { ACTS, actBiome, actOf, endsAct, ESCAPE } from '../gen/escape';
+import { ACTS, actOf, endsAct, ESCAPE } from '../gen/escape';
+import { nextDistrict } from '../run/districts';
 import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
@@ -83,6 +84,7 @@ export interface RunResult {
   stoken: number; // earned this run
   bank: number; // Stoken kept across runs
   daily: { best: number; newBest: boolean } | null; // on a daily run
+  opened?: BiomeId; // the district this win opened
 }
 
 // what the meta tree sets for a run: the skater and deck, the boon library, and whether it's the daily run
@@ -96,6 +98,7 @@ export interface RunMeta {
   boons?: Held[];
   danger?: number;
   escape?: number;
+  district?: BiomeId; // the run's district, every act of it (src/run/districts.ts); Chicago if left out
 }
 
 // what the playtest bot reads off the game (?bot&debug): where it is, what it found, how its runs ended
@@ -229,6 +232,10 @@ export class Game {
     hide: (index) => hideProp(index),
   });
   private biome: BiomeId = 'chicago';
+  // the run's district: every floor and escape of the run is skated there
+  private get district(): BiomeId {
+    return this.meta.district ?? 'chicago';
+  }
   private biomePinned = false;
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
   private perfT = 0;
@@ -356,7 +363,7 @@ export class Game {
       library: this.meta.library,
       gnar: this.gnar,
       tutorial: this.tutorial,
-      district: this.biomePinned ? this.biome : undefined,
+      district: this.biomePinned ? this.biome : this.district,
     });
   }
 
@@ -408,7 +415,7 @@ export class Game {
     this.smashFx.smash({ ...hit, prop: restyle(hit.prop, props.biome) ?? hit.prop });
   }
 
-  // the district's look: ?biome= pins one for a preview, otherwise each act picks its own (actBiome)
+  // the district's look: ?biome= pins one for a preview, otherwise the whole run is in its district
   setBiome(id: BiomeId): void {
     this.biomePinned = true;
     this.goBiome(id);
@@ -446,9 +453,7 @@ export class Game {
     this.input.clear();
     this.boonFx.setBoons(this.boons);
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
-    const act = this.road.kind === 'escape' ? this.road.act : actOf(this.floor);
-    const district = actBiome(this.seed, act);
-    if (!this.biomePinned && district !== this.biome) this.goBiome(district);
+    if (!this.biomePinned && this.district !== this.biome) this.goBiome(this.district);
     const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
@@ -751,12 +756,15 @@ export class Game {
     const today = dayKey();
     const dailyBest = save.daily.day === today ? save.daily.best : 0;
     const daily = this.meta.daily ? { best: Math.max(dailyBest, this.run.score), newBest: this.run.score > dailyBest } : null;
+    const opened = won && !this.meta.daily ? nextDistrict(this.district, save.cleared) : null;
     const next = {
       ...save,
       best: Math.max(save.best, this.run.score),
       stoken: save.stoken + this.run.stoken,
       wins: save.wins + (won ? 1 : 0),
       gnar: won ? Math.max(save.gnar, this.gnar) : save.gnar,
+      //a win opens the next district (not the daily's, which can be one you haven't reached)
+      cleared: won && !this.meta.daily && !save.cleared.includes(this.district) ? [...save.cleared, this.district] : save.cleared,
       daily: daily ? { day: today, best: daily.best } : save.daily,
     };
     writeSave(next);
@@ -773,6 +781,7 @@ export class Game {
       stoken: this.run.stoken,
       bank: next.stoken,
       daily,
+      ...(opened ? { opened } : {}),
     });
   }
 

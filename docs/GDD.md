@@ -183,7 +183,12 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
 - Beating Act 5 wins the run. It unlocks **Endless** (QFS Survivor style: floors forever, mixed worlds, its own
   leaderboard) and harder **Gnar levels** (like Hades' Heat or Slay the Spire's Ascension: each level adds one
   rule, such as faster traffic or Heat that never fully resets).
-- The acts pick biomes from the QFS worlds, so two runs don't look the same even early on.
+- **One district per run** (zack, Oct 24, 2026: "biomes should not change until the player has gotten to the end
+  of the game for that biome"). All five acts, their escapes and the finale happen in the district picked before
+  the run. A new save has Chicago only; escaping the city in a district opens the next one, in the order of the
+  Biomes table (Chicago, Clemente, Greece, Atlantis, the museum, High-Tech, Space, the Hive). The district button on
+  the run summary picks the next run's. The daily run's district comes from the day's seed. The act column in the
+  table above is the original plan, kept for the escapes' set pieces, which still go by act.
 - Gnar levels, built Oct 24, 2026 (src/run/gnar.ts): five levels, each adding a rule (heavier traffic, faster Heat,
   more Heat carried, one fewer boon card, faster gear wear) and paying +15% score and +20% Stoken.
 
@@ -481,7 +486,8 @@ have the 16-stair sets and the longest handrails. The validator still skates eve
 
 ### Biomes
 
-Biomes are QFS's worlds, a new one every 3 floors, each with its own gravity, 3D kit, hazard set and a twist:
+Biomes are QFS's worlds, one per run (unlocked in this order by winning), each with its own gravity, 3D kit, hazard
+set and a twist:
 
 | # | Biome | Gravity | Twist |
 | --- | --- | --- | --- |
