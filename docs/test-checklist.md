@@ -342,6 +342,10 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] In the museum: three guards in navy uniforms, peaked caps and gold badges, legs running; the front one's torch beam shines ahead.
 - [ ] *Open question:* do they read at game zoom, and is the wave big and scary enough?
 
+**Bus stops and car doors as models (the PR after #84)**
+- [ ] A bus stop (floor 2 or later) has a CTA sign on a pole (blue, white band, red route plate) and a slatted bench beside it.
+- [ ] A parked car's door that swings open has a window, a mirror and a handle, and it's the same colour as its car.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

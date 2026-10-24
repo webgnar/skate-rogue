@@ -276,7 +276,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
   }
 
   //--- parked cars ----------------------------------------------------------------------------
-  const paints = [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a, 0xe8e8f0, 0x2a2a34];
   level.cars.forEach((car, i) => {
     const x0 = toX(car.x0);
     const x1 = toX(car.x1);
@@ -284,7 +283,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId): THREE.G
     const roof = toY(level, car.roof);
     if (car.model === 'bus') kit.add(makeBus(x0, x1, bottom, roof));
     else if (car.model === 'cruiser') kit.add(makeParkedCruiser(x0, x1, bottom, roof, i));
-    else kit.add(makeCar(x0, x1, bottom, roof, paints[(i * 7 + level.layout.floor) % paints.length]));
+    else kit.add(makeCar(x0, x1, bottom, roof, parkedPaint(level, i)));
   });
 
   //--- broken glass ----------------------------------------------------------------------------
@@ -493,6 +492,12 @@ function facade(w: number, h: number, t: number): TileCell[][] {
   for (let r = 0; r < h; r++) grid.push(new Array(w).fill(t));
   grid[0] = grid[0].map((_, i) => [t, i === 0 ? CITY.cap[0] : i === w - 1 ? CITY.cap[2] : CITY.cap[1]]);
   return grid;
+}
+
+// the paint of the level's parked car i (its open door is painted to match)
+const PARKED_PAINTS = [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a, 0xe8e8f0, 0x2a2a34];
+export function parkedPaint(level: Level, i: number): number {
+  return PARKED_PAINTS[(i * 7 + level.layout.floor) % PARKED_PAINTS.length];
 }
 
 // the Blender hatchbacks (art/cars.py) are 2.3 long and 1.25 to the roof, for a 2 tile hitbox, and are stretched to

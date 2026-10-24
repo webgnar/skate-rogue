@@ -412,6 +412,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   curling blue wave with foam on its lip and wash at its foot, a gold chariot with spoked wheels and a red-cloaked
   driver cracking a whip behind two galloping horses, and three museum guards in navy with peaked caps and badges.
   Legs swing from the hips, the wheels roll, the primitive versions stay as the fallback.
+- **Bus stops and car doors are Blender models** (art/cars.py `BusStop`, `CarDoor`): a CTA sign (blue, the white
+  band, a red route plate) beside the street bench from props.glb, and a driver's door with its window, mirror,
+  handle and inside trim, painted the same colour as its parked car (kit.ts `parkedPaint`). The gameplay thread's
+  placement and swing are unchanged.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 
