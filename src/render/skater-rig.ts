@@ -14,7 +14,8 @@ import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, LEDGE_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
-
+// the leg bones the playtest bot measures for stretch, hip to toe
+const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
 const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
 const THIGH = 0.4;
 const SHIN = 0.4;
@@ -378,6 +379,9 @@ export class SkaterRig {
     this.mesh.updateMatrixWorld(true);
     const toRig = this.mesh.matrixWorld.clone().invert();
     model.traverse((o) => {
+      if ((o as THREE.Bone).isBone) this.bindPos.set(o.name, new THREE.Vector3().setFromMatrixPosition(o.matrixWorld));
+    });
+    model.traverse((o) => {
       const bone = o as THREE.Bone;
       if (bone.isBone && drivers[bone.name]) {
         const driver = drivers[bone.name];
@@ -392,6 +396,44 @@ export class SkaterRig {
     if (this.boardBone) this.boardRest.copy(this.inRig(this.boardBone)).invert();
     this.toonMaterials(model);
   }
+
+  // For the playtest bot: each foot's ball (the ToeBase bone) in the deck's own space (x along the deck, y up off
+  // its top, z across it, in rig units), and how far each leg bone has stretched from its bind length (1 = not at
+  // all). Lou's feet should sit on the deck while riding, and bones never stretch. Skinned model only.
+  footCheck(): { clip: string; fading: boolean; feet: { side: string; along: number; up: number; across: number }[]; stretch: number } | null {
+    if (!this.bound.length) return null;
+    this.mesh.updateMatrixWorld(true);
+    const bones = new Map(this.bound.map((b) => [b.bone.name, b.bone]));
+    const pos = (name: string) => {
+      const b = bones.get(name);
+      return b ? new THREE.Vector3().setFromMatrixPosition(b.matrixWorld) : null;
+    };
+    if (!this.legBind) {
+      this.legBind = new Map();
+      for (const [a, b] of LEG_BONES) {
+        const pa = this.bindPos.get(a);
+        const pb = this.bindPos.get(b);
+        if (pa && pb) this.legBind.set(`${a}>${b}`, pa.distanceTo(pb));
+      }
+    }
+    let stretch = 1;
+    for (const [a, b] of LEG_BONES) {
+      const pa = pos(a);
+      const pb = pos(b);
+      const rest = this.legBind.get(`${a}>${b}`);
+      if (pa && pb && rest) stretch = Math.max(stretch, pa.distanceTo(pb) / rest);
+    }
+    const deck = this.boardSpin.matrixWorld.clone().invert();
+    const feet = (['Left', 'Right'] as const).flatMap((side) => {
+      const p = pos(`${side}ToeBase`) ?? pos(`${side}Foot`);
+      if (!p) return [];
+      p.applyMatrix4(deck);
+      return [{ side, along: p.x, up: p.y, across: p.z }];
+    });
+    return { clip: this.clipName, fading: this.fade > 0, feet, stretch };
+  }
+  private legBind: Map<string, number> | null = null;
+  private readonly bindPos = new Map<string, THREE.Vector3>(); // bone positions in world units at bind
 
   // an object's transform in the rig's own space (this.mesh), from the local transforms up the tree
   private inRig(o: THREE.Object3D): THREE.Matrix4 {

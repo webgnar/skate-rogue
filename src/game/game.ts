@@ -4,17 +4,15 @@ import { addBoon, type Boon, type Held } from '../boons/defs';
 import { carriedHeat, cursesHeld, dropBoon, startHeat, type UnderView } from '../run/spot';
 import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
-import { validatedFloor } from '../gen/validate';
-import { ACTS, actBiome, actOf, endsAct, ESCAPE, validatedEscape } from '../gen/escape';
-import { FIRST_ROAD, floorRoad, label, rollFork, ROADS, type Road } from '../gen/roads';
+import { floorLevel } from '../run/floor-level';
+import { ACTS, actBiome, actOf, endsAct, ESCAPE } from '../gen/escape';
+import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, writeSave } from '../run/save';
-import { tutorialLevel } from '../gen/tutorial';
-import { DISTRICT_TWIST } from '../gen/twists';
-import { gnarCards, gnarCarry, gnarDanger, withGnar } from '../run/gnar';
+import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
 import { buzz } from '../ui/settings';
@@ -59,7 +57,11 @@ import { trickName } from '../physics/tricks';
 import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
-import { BIOME_GRAVITY, FEEL } from '../physics/feel';
+import { FEEL } from '../physics/feel';
+import { Pilot, type PilotStyle } from '../bot/pilot';
+import { FloorChecks, type Finding } from '../bot/checks';
+import { reproQuery } from '../bot/repro';
+import { makeRng } from '../gen/rng';
 import { landDust, landKick } from '../render/land-fx';
 
 export interface PickInfo {
@@ -90,6 +92,29 @@ export interface RunMeta {
   daily: boolean;
   tutorial?: boolean; // start on the tutorial floor (a new phone, or ?tutorial)
   gnar?: number; // the Gnar level (src/run/gnar.ts): 0 is a normal run
+  // test URLs (src/bot/repro.ts): boons held from the start, the first road's traffic, or start on an act's escape
+  boons?: Held[];
+  danger?: number;
+  escape?: number;
+}
+
+// what the playtest bot reads off the game (?bot&debug): where it is, what it found, how its runs ended
+export interface PlaytestState {
+  seed: number;
+  floor: number;
+  label: string; // "floor 4", "escape 2" or "tutorial"
+  district: BiomeId;
+  state: string;
+  sim: string;
+  x: number;
+  y: number;
+  mode: string;
+  speed: number;
+  clip: string;
+  boons: Held[];
+  findings: (Finding & { label: string; url: string })[];
+  floors: { label: string; url: string; result: string; seconds: number }[];
+  runs: { floor: number; won: boolean; caught: boolean; score: number }[];
 }
 
 export type ShopPick = { stock: number } | { slot: number } | null;
@@ -220,6 +245,13 @@ export class Game {
   private shopPick: ShopPick = null;
   private shopVisits = 0;
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
+  // the playtest bot (?bot): it skates and picks in place of the button, checking every step as it goes
+  private autopilot: Pilot | null = null;
+  private checks: FloorChecks | null = null;
+  private botRng = makeRng(1);
+  private floorFrames = 0;
+  timeScale = 1; // ?bot&turbo=N runs the game N times faster
+  readonly playtest: PlaytestState;
 
   constructor(
     private seed: number,
@@ -232,6 +264,7 @@ export class Game {
     private readonly meta: RunMeta = { loadout: STOCK, library: FULL_LIBRARY, daily: false },
   ) {
     this.floor = startAt;
+    this.boons = meta.boons ?? [];
     this.tutorial = meta.tutorial ?? false;
     this.road = this.firstRoad();
     this.board = newBoard(DECK_SLOTS[meta.loadout.deck]);
@@ -255,27 +288,82 @@ export class Game {
     this.ghostMesh.visible = false;
     this.view.scene.add(this.ghostMesh);
     this.view.scene.add(this.smashFx.group);
+    this.playtest = { seed, floor: 0, label: '', district: this.biome, state: '', sim: '', x: 0, y: 0, mode: '', speed: 0, clip: '', boons: [], findings: [], floors: [], runs: [] };
     this.startFloor();
   }
 
+  // hand the button to the playtest bot: 'ref' skates the validator's line, 'mash' presses at random
+  setAutopilot(style: PilotStyle): void {
+    this.autopilot = new Pilot(style, this.seed);
+    this.botRng = makeRng(this.seed * 5 + 3);
+    this.checks = new FloorChecks(this.sim);
+  }
+
+  // this floor's test URL query, as the bot would replay it
+  private repro(): string {
+    const escape = this.road.kind === 'escape' ? this.road.act : undefined;
+    return reproQuery({ seed: this.seed, floor: this.floor, boons: this.boons, danger: this.road.danger, escape, gnar: this.gnar, bot: this.autopilot?.style });
+  }
+
+  private get floorLabel(): string {
+    return this.tutorial ? 'tutorial' : this.road.kind === 'escape' ? `escape ${this.road.act}` : `floor ${this.floor}`;
+  }
+
+  // the floor's end, for the bot's report
+  private logFloor(result: string): void {
+    if (!this.autopilot) return;
+    this.playtest.floors.push({ label: this.floorLabel, url: this.repro(), result, seconds: Math.round(this.floorFrames / 6) / 10 });
+  }
+
+  private updatePlaytest(): void {
+    const t = this.playtest;
+    const sk = this.skater;
+    Object.assign(t, {
+      seed: this.seed,
+      floor: this.floor,
+      label: this.floorLabel,
+      district: this.biome,
+      state: this.state,
+      sim: this.sim.state,
+      x: sk.x,
+      y: sk.y,
+      mode: sk.mode,
+      speed: sk.hsp,
+      clip: this.sprite.current,
+      boons: this.boons,
+    });
+    if (this.checks && this.checks.findings.length > this.reported) {
+      for (const f of this.checks.findings.slice(this.reported)) t.findings.push({ ...f, label: this.floorLabel, url: this.repro() });
+      this.reported = this.checks.findings.length;
+    }
+  }
+  private reported = 0;
+
+  // the bot at a menu: a random boon card, lay low at the spot, walk out of the shop; a new run after a beat
+  private botMenu(now: number): void {
+    if (now - this.menuAt < MENU_LOCK_MS * 2) return;
+    if (this.state === 'pick') this.choose(Math.floor(this.botRng() * this.offer.length));
+    else if (this.state === 'under') this.underChoose('low');
+    else if (this.state === 'shop') this.leaveShop();
+    else if (this.state === 'over' && now - this.menuAt > 3000) this.newRun();
+  }
+
   private makeLevel(): Level {
-    if (this.tutorial) return tutorialLevel(this.seed);
-    if (this.road.kind === 'escape') return validatedEscape(this.seed, this.road.act);
-    //the district's gravity (Atlantis floats) and twist; the floor is validated in both
-    const district = this.biomePinned ? this.biome : actBiome(this.seed, actOf(this.floor));
-    return validatedFloor(this.seed, this.floor, {
-      fork: rollFork(this.seed, this.floor, this.meta.library.types),
-      danger: gnarDanger(this.road.danger, this.gnar),
-      short: this.road.kind === 'stash',
-      gravity: BIOME_GRAVITY[district] ?? 1,
-      twist: DISTRICT_TWIST[district],
-    }).level;
+    return floorLevel({
+      seed: this.seed,
+      floor: this.floor,
+      road: this.road,
+      library: this.meta.library,
+      gnar: this.gnar,
+      tutorial: this.tutorial,
+      district: this.biomePinned ? this.biome : undefined,
+    });
   }
 
   private newRun(): void {
     if (!this.fixedSeed) this.seed = Math.floor(Math.random() * 1e6);
     this.floor = this.startAt;
-    this.boons = [];
+    this.boons = this.meta.boons ?? [];
     this.board = newBoard(DECK_SLOTS[this.meta.loadout.deck]);
     this.gear = freshGear();
     this.shopVisits = 0;
@@ -304,7 +392,8 @@ export class Game {
 
   // the first floor is a boon street of your skater's type (GDD: Meta progression)
   private firstRoad(): Road {
-    return { ...FIRST_ROAD, boonType: firstPick(this.meta.loadout, this.meta.library) } as Road;
+    if (this.meta.escape) return { kind: 'escape', act: this.meta.escape, danger: 3 };
+    return { ...FIRST_ROAD, boonType: firstPick(this.meta.loadout, this.meta.library), danger: this.meta.danger ?? FIRST_ROAD.danger } as Road;
   }
 
   private openMenu(state: State, now: number): void {
@@ -363,6 +452,11 @@ export class Game {
     const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
+    if (this.autopilot) {
+      this.checks = new FloorChecks(this.sim);
+      this.reported = 0;
+    }
+    this.floorFrames = 0;
     this.run.scoreScale = mods.scoreScale;
     this.run.slamStoke = mods.slamStoke;
     this.run.stokenScale = mods.stokenScale;
@@ -595,8 +689,10 @@ export class Game {
   // a tap at the underground spot
   private underTap(target: Element): void {
     const el = target.closest<HTMLElement>('[data-under]');
-    if (!el) return;
-    const v = el.dataset.under!;
+    if (el) this.underChoose(el.dataset.under!);
+  }
+
+  private underChoose(v: string): void {
     if (v === 'low') {
       this.carry = 0;
       this.hud.callout('LAYING LOW: HEAT 0', 'good');
@@ -648,6 +744,7 @@ export class Game {
   }
 
   private endRun(now: number, caught: boolean, won = false): void {
+    if (this.autopilot) this.playtest.runs.push({ floor: this.floor, won, caught, score: this.run.score });
     this.openMenu('over', now);
     const save = loadSave();
     const newBest = this.run.score > save.best;
@@ -716,8 +813,9 @@ export class Game {
       return;
     }
     //game time: frozen on a slam's hit-stop, then slow motion
-    const dt = realDt * this.warp.scale;
-    this.warp.update(realDt);
+    const dt = realDt * this.warp.scale * this.timeScale;
+    this.warp.update(realDt * this.timeScale);
+    if (this.autopilot && this.state !== 'skate' && this.state !== 'caught') this.botMenu(now);
 
     if (this.state === 'pick') {
       const press = this.input.takePress();
@@ -743,12 +841,19 @@ export class Game {
         this.skater.boost = this.run.gnar ? SCORE.gnarBoost : 1;
         this.sim.heat.slamFree = this.run.gnar;
         this.sim.combo = this.run.combo;
-        this.sim.step(this.input.sample());
+        this.floorFrames++;
+        if (this.autopilot) {
+          this.input.clear();
+          this.checks?.before();
+          this.sim.step(this.autopilot.input(this.sim));
+          this.checks?.after();
+        } else this.sim.step(this.input.sample());
         this.run.step(this.skater.mode);
         for (const e of this.sim.events) this.handle(e);
-      });
+      }, 5 * this.timeScale);
     }
 
+    if (this.state === 'skate' && this.sim.state !== 'skate') this.logFloor(this.sim.state === 'exit' ? 'exit' : `${this.sim.state} at col ${Math.floor(this.skater.x / TILE)}`);
     if (this.state === 'skate' && this.sim.state === 'exit') {
       this.finishFloor(now);
     } else if (this.state === 'skate' && this.sim.state === 'bail') {
@@ -850,6 +955,7 @@ export class Game {
     this.view.adapt(realDt * 1000);
     this.view.render();
     this.perf(realDt);
+    this.updatePlaytest();
   }
 
   // the debug line: fps, the worst frame in the last second, draw calls, triangles, resolution and effects tier

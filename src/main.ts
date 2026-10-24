@@ -21,7 +21,9 @@ import { loadSave, writeSave } from './run/save';
 import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
 import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
-import { loadModels } from './render/models';
+import { loadModels, missingModels } from './render/models';
+import { parseBoons } from './bot/repro';
+import { ACTS, FLOORS_PER_ACT } from './gen/escape';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
 import { buzz, loadSettings } from './ui/settings';
@@ -334,9 +336,12 @@ async function start() {
   const deck = owns(save.deck) ? save.deck : 'popsicle';
   const sprite = await SkaterRig.create(base, skater);
   const input = new OneButton(document.getElementById('app')!);
-  const startAt = Math.max(1, Math.floor(Number(params.get('floor')) || 1));
+  //test URLs (src/bot/repro.ts): ?escape=2 starts on act 2's escape, ?boons=bigPop,grease holds those, ?danger=3 is rush-hour traffic
+  const escape = Math.min(ACTS, Math.max(0, Math.floor(Number(params.get('escape')) || 0)));
+  const startAt = escape ? escape * FLOORS_PER_ACT : Math.max(1, Math.floor(Number(params.get('floor')) || 1));
+  const danger = Math.min(3, Math.max(1, Math.floor(Number(params.get('danger')) || 1)));
   //a new phone starts on the tutorial floor (?tutorial shows it again; a test URL skips it)
-  const testing = ['floor', 'seed', 'biome', 'daily', 'gnar'].some((k) => params.has(k));
+  const testing = ['floor', 'seed', 'biome', 'daily', 'gnar', 'escape', 'boons', 'bot'].some((k) => params.has(k));
   const tutorial = params.has('tutorial') || (!save.tutorialDone && save.best === 0 && !testing);
   //the Gnar level: what the save picked, up to what's been won (?gnar=3 forces one for testing); never on a daily run
   const urlGnar = params.get('gnar');
@@ -352,9 +357,15 @@ async function start() {
     showOver(result);
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
-  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar });
-  //?debug exposes the game for headless checks
-  if (params.has('debug')) Object.assign(window, { game, props });
+  const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
+  //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?turbo=4 runs it 4x faster
+  const bot = params.get('bot');
+  if (bot !== null) {
+    game.setAutopilot(bot === 'mash' ? 'mash' : 'ref');
+    game.timeScale = Math.min(8, Math.max(1, Number(params.get('turbo')) || 1));
+  }
+  //?debug (and ?bot) expose the game for headless checks: the playtest runner reads game.playtest and window.rig
+  if (params.has('debug') || bot !== null) Object.assign(window, { game, props, rig: sprite, missingModels });
   const biome = params.get('biome');
   if (isBiome(biome)) game.setBiome(biome);
   //pause: the button, Esc or P, and whenever the page is hidden. The buttons stop their press reaching the one

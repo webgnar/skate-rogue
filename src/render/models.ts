@@ -5,16 +5,26 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const parts = new Map<string, THREE.Mesh>();
+// parts asked for that no model had: drawn as the code-built fallback (or not at all); the playtest bot reports them
+const missing = new Set<string>();
+const loaded: string[] = [];
+
+export function missingModels(): { files: string[]; parts: string[] } {
+  return { files: FILES.filter((f) => !loaded.includes(f)), parts: [...missing] };
+}
+
+const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb'];
 // materials that glow instead of taking light
 const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen']); // the sheriff gold is reflective livery
 
 export async function loadModels(base: string): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
-    ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb'].map(async (file) => {
+    FILES.map(async (file) => {
       try {
         const gltf = await loader.loadAsync(`${base}models/${file}`);
         gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));
+        loaded.push(file);
       } catch (err) {
         console.warn(`${file} failed to load, using the built-in version`, err);
       }
@@ -63,7 +73,10 @@ const shared = new Map<string, THREE.Material>();
 // a copy of a model with the game's materials: Lambert (inkify turns it toon), glowing lamps, and `paint` recoloured
 export function model(name: string, paint?: number): THREE.Mesh | null {
   const src = parts.get(name);
-  if (!src) return null;
+  if (!src) {
+    missing.add(name);
+    return null;
+  }
   const mats = [src.material].flat().map((m) => {
     const std = m as THREE.MeshStandardMaterial;
     if (std.name === 'paint' && paint !== undefined) return new THREE.MeshLambertMaterial({ color: paint });
@@ -88,8 +101,13 @@ export function flatGeometry(name: string): THREE.BufferGeometry | null {
   const cached = flat.get(name);
   if (cached) return cached;
   const src = parts.get(name);
-  if (!src) return null;
-  const geo = src.geometry.clone();
+  if (!src) {
+    missing.add(name);
+    return null;
+  }
+  //never indexed: props merge these into one mesh (mergeGeometries needs all or none indexed) and hide a prop by its
+  //vertex range
+  const geo = src.geometry.index ? src.geometry.toNonIndexed() : src.geometry.clone();
   const mats = [src.material].flat() as THREE.MeshStandardMaterial[];
   const n = geo.getAttribute('position').count;
   const col = new Float32Array(n * 3);

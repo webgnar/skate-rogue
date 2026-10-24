@@ -1,0 +1,32 @@
+# The playtest bot (docs/playtest-bot.md): a quick pass on pull requests, the full pass on main and on demand.
+# It reports and doesn't block: the report is the job summary and the playtest-report artifact.
+name: Playtest bot
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Play
+        run: npm run playtest -- ${{ github.event_name == 'pull_request' && '--quick' || '' }}
+      - name: Summary
+        if: always()
+        run: cat playtest-report/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playtest-report
+          path: playtest-report
