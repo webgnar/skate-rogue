@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buzzFor, cueFor, MOMENT, rollGain, SAMPLES, sirenGain } from '../src/audio/cues';
+import { buzzFor, cueFor, MOMENT, MUSIC, rollGain, SAMPLES, sirenGain } from '../src/audio/cues';
 
 describe('sound cues', () => {
   it('every sample the cues use ships in public/sounds', async () => {
     const fsId = 'node:fs';
     const { existsSync } = (await import(/* @vite-ignore */ fsId)) as { existsSync(p: string): boolean };
-    for (const id of [...SAMPLES, 'music_gameplay', 'music_title']) expect(existsSync(`public/sounds/${id}.mp3`)).toBe(true);
+    for (const id of SAMPLES) expect(existsSync(`public/sounds/${id}.mp3`)).toBe(true);
+    for (const id of Object.values(MUSIC).flat()) expect(existsSync(`public/music/${id}.mp3`)).toBe(true);
     for (const c of Object.values(MOMENT)) expect(SAMPLES).toContain(c.sample);
   });
 
