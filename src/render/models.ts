@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const parts = new Map<string, THREE.Mesh>();
 // materials that glow instead of taking light
-const LIT = new Set(['lamp', 'tail', 'accent']);
+const LIT = new Set(['lamp', 'tail', 'accent', 'badge']); // the sheriff gold is reflective livery
 
 export async function loadModels(base: string): Promise<void> {
   try {

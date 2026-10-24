@@ -39,9 +39,11 @@ export class TrafficView {
       door.position.set(0, 0.15 + h * 0.3, 0);
       car.add(door);
     }
-    for (const [dx, color] of [[-0.2, 0xff2a2a], [0.2, 0x2a6bff]] as const) {
-      const light = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.5), new THREE.MeshBasicMaterial({ color }));
-      light.position.set(dx - 0.05, h + 0.2, 0);
+    //a light bar across the roof: red on the driver's side (away from the camera), blue on the passenger side
+    const roof = new THREE.Box3().setFromObject(car).max.y;
+    for (const [dz, color] of [[-0.3, 0xff2a2a], [0.3, 0x2a6bff]] as const) {
+      const light = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.11, 0.58), new THREE.MeshBasicMaterial({ color }));
+      light.position.set(-0.05, roof + 0.055, dz);
       this.lights.push(light);
       car.add(light);
     }
