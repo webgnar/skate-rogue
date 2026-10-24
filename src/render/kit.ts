@@ -175,7 +175,7 @@ function facade(w: number, h: number, t: number): TileCell[][] {
   return grid;
 }
 
-function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number): THREE.Group {
+export function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number): THREE.Group {
   const car = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;

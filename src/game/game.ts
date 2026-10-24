@@ -6,8 +6,11 @@ import { offerBoons } from '../boons/offer';
 import { validatedLayout } from '../gen/validate';
 
 import { buildLevel, type Level } from '../physics/level';
-import { Skater } from '../physics/skater';
+import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
+import { TrafficView } from '../render/traffic-view';
+import { FloorSim } from '../sim/floor';
+import { TILE } from '../physics/constants';
 import { SkaterSprite, TRICKS, TRICK_NAMES } from '../render/skater-sprite';
 import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
@@ -19,16 +22,21 @@ export interface Hud {
   debug(text: string): void;
   boons(held: Held[]): void;
   pick(offer: Boon[] | null): void; // null hides the cards
-  over(result: { floor: number; boons: Held[] } | null): void;
+  over(result: { floor: number; boons: Held[]; caught: boolean } | null): void;
+  heat(value: number): void;
+  warn(show: boolean): void; // an oncoming car is on its way
 }
 
-type State = 'skate' | 'pick' | 'over';
+type State = 'skate' | 'caught' | 'pick' | 'over';
+
+const CAUGHT_BEAT_MS = 800;
 
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
 
 export class Game {
   private level: Level;
-  private skater: Skater;
+  private sim: FloorSim;
+  private trafficView = new TrafficView();
   private prev = { x: 0, y: 0 };
   private loop = new FixedStep();
   private floor = 1;
@@ -49,8 +57,9 @@ export class Game {
     private readonly hud: Hud,
   ) {
     this.level = this.makeLevel();
-    this.skater = new Skater(this.level);
+    this.sim = new FloorSim(this.level);
     this.view.scene.add(this.sprite.mesh);
+    this.view.scene.add(this.trafficView.group);
     this.ghostMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.12, 0.14),
       new THREE.MeshBasicMaterial({ color: 0x9ff3ff, transparent: true, opacity: 0.6 }),
@@ -82,7 +91,8 @@ export class Game {
   private startFloor(): void {
     this.state = 'skate';
     this.input.clear();
-    this.skater = new Skater(this.level, skaterMods(this.boons));
+    this.sim = new FloorSim(this.level, skaterMods(this.boons));
+    this.trafficView.clear();
     this.prev = { x: this.skater.x, y: this.skater.y };
     this.view.setLevel(this.level);
     this.view.follow(this.skater.x, this.skater.y, this.skater.hsp, true);
@@ -103,6 +113,10 @@ export class Game {
     this.hud.callout(boon.name.toUpperCase(), 'good');
   }
 
+  private get skater(): Skater {
+    return this.sim.skater;
+  }
+
   // a tap on a boon card, or keys 1-3
   choose(i: number): void {
     if (this.state === 'pick' && performance.now() - this.menuAt >= MENU_LOCK_MS) this.pickBoon(i);
@@ -118,23 +132,43 @@ export class Game {
       if (card) this.choose(Number(card.dataset.pick));
     } else if (this.state === 'over') {
       if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.newRun();
+    } else if (this.state === 'caught') {
+      //the cruiser cuts in, then the summary
+      if (now - this.menuAt >= CAUGHT_BEAT_MS) {
+        this.openMenu('over', now);
+        this.hud.over({ floor: this.floor, boons: this.boons, caught: true });
+      }
     } else {
       this.loop.advance(dt, () => {
         this.prev = { x: this.skater.x, y: this.skater.y };
-        this.skater.step(this.input.sample());
-        for (const e of this.skater.events) this.handle(e);
-        this.skater.events.length = 0;
+        this.sim.step(this.input.sample());
+        for (const e of this.sim.events) this.handle(e);
       });
     }
 
-    if (this.state === 'skate' && this.skater.mode === 'exit') {
+    if (this.state === 'skate' && this.sim.state === 'exit') {
       this.offer = offerBoons(this.seed, { floor: this.floor, boons: this.boons });
       this.openMenu('pick', now);
       this.hud.pick(this.offer);
-    } else if (this.state === 'skate' && this.skater.mode === 'bail') {
+    } else if (this.state === 'skate' && this.sim.state === 'bail') {
       this.openMenu('over', now);
-      this.hud.over({ floor: this.floor, boons: this.boons });
+      this.hud.over({ floor: this.floor, boons: this.boons, caught: false });
+    } else if (this.state === 'skate' && this.sim.state === 'caught') {
+      this.state = 'caught';
+      this.menuAt = now;
+      this.hud.callout('BUSTED!', 'bad');
+      navigator.vibrate?.(200);
     }
+
+    //traffic, the cruiser and the warnings
+    this.trafficView.sync(this.level, this.sim.traffic.vehicles);
+    const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
+    this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000);
+    this.hud.heat(heat);
+    this.hud.warn(
+      this.state === 'skate' &&
+        this.sim.traffic.inLane.some((v) => v.speed < 0 && v.x0 - this.skater.x > 17 * TILE),
+    );
 
     const ghost = this.skater.ghost;
     this.ghostMesh.visible = ghost !== null;
@@ -158,7 +192,7 @@ export class Game {
     this.hud.debug(`${Math.round(1 / Math.max(dt, 1e-3))} fps · ${this.skater.hsp.toFixed(1)} px/f · res ${this.view.resolution.toFixed(2)}`);
   }
 
-  private handle(e: (typeof this.skater.events)[number]): void {
+  private handle(e: FloorSim['events'][number]): void {
     this.sprite.onEvent(e);
     switch (e.type) {
       case 'trick':

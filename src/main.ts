@@ -41,6 +41,9 @@ function makeHud(): Hud {
   const boonsEl = document.getElementById('boons')!;
   const pickEl = document.getElementById('pick')!;
   const overEl = document.getElementById('over')!;
+  const appEl = document.getElementById('app')!;
+  const warnEl = document.getElementById('warn')!;
+  let level = 0;
   let held: Held[] = [];
   let timer = 0;
   return {
@@ -52,6 +55,15 @@ function makeHud(): Hud {
       timer = window.setTimeout(() => (calloutEl.className = ''), 900);
     },
     debug: (text) => (debugEl.textContent = text),
+    heat: (value) => {
+      //escalation steps: 50 lights, 75 drone, 90 the screen edge pulses and the phone buzzes once
+      const next = value >= 90 ? 3 : value >= 75 ? 2 : value >= 50 ? 1 : 0;
+      if (next === level) return;
+      if (next === 3) navigator.vibrate?.([60, 60, 60]);
+      appEl.dataset.heat = String(next);
+      level = next;
+    },
+    warn: (show) => (warnEl.hidden = !show),
     boons: (h) => {
       held = h;
       boonsEl.innerHTML = h.map(chip).join('');
@@ -63,6 +75,7 @@ function makeHud(): Hud {
     over: (result) => {
       overEl.hidden = !result;
       if (!result) return;
+      overEl.querySelector('b')!.textContent = result.caught ? 'BUSTED' : 'BAILED';
       overEl.querySelector('.reached')!.textContent = `You made it to floor ${result.floor}`;
       overEl.querySelector('.held')!.innerHTML = result.boons.length ? result.boons.map(chip).join('') : '<span class="none">no boons</span>';
     },
