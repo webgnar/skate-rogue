@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
@@ -224,5 +225,20 @@ describe('smashables', () => {
     fx.smash(hit({ prop: 'Hydrant', breakable: false }));
     expect(hidden).toEqual([]);
     expect(fx.group.children.length).toBe(0);
+  });
+});
+
+describe('smash pieces from a stray export', () => {
+  it('pulls pieces back over the prop when the file left them offset', () => {
+    const fx = new SmashFx({ spray: () => {} } as unknown as Particles, {
+      word: () => {},
+      shake: () => {},
+      pieces: () => [0, 1].map((k) => ({ geometry: new THREE.BoxGeometry(0.1, 0.1, 0.1), offset: new THREE.Vector3(27.5 + k * 0.2, 0.3, 0) })),
+    });
+    fx.smash({ prop: 'Crate', index: 0, x: 5, y: 0, z: -3, how: 'roll', speed: 1 });
+    for (const m of fx.group.children) {
+      expect(Math.abs(m.position.x - 5)).toBeLessThan(0.5);
+      expect(m.position.z).toBeCloseTo(-3, 1);
+    }
   });
 });

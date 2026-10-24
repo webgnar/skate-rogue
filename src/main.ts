@@ -10,6 +10,7 @@ import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { isBiome } from './render/biomes';
+import { props } from './render/props';
 import { SkaterRig } from './render/skater-rig';
 import { loadModels } from './render/models';
 import { loadCityTiles } from './render/textures';
@@ -284,7 +285,7 @@ async function start() {
   const input = new OneButton(document.getElementById('app')!);
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, makeHud());
   //?debug exposes the game for headless checks
-  if (params.has('debug')) (window as unknown as { game: Game }).game = game;
+  if (params.has('debug')) Object.assign(window, { game, props });
   const biome = params.get('biome');
   if (isBiome(biome)) game.setBiome(biome);
   window.addEventListener('keydown', (e) => {

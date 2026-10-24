@@ -14,6 +14,7 @@ export interface SmashHit {
   index: number; // which prop on the floor, for hiding it
   x: number; // world units, the prop's base
   y: number;
+  z?: number; // depth (street props sit back at the wall); 0 by default
   how: SmashHow;
   speed: number; // the skater's speed over cruising (1 = cruising)
   breakable?: boolean; // false: it rings and sparks but stays
@@ -96,20 +97,20 @@ export class SmashFx {
     const k = Math.min(2, Math.max(0.6, hit.speed));
     if (hit.breakable === false) {
       //it holds: a ring of sparks or chips off the surface, and a little word if it was hit hard
-      p.spray(hit.x, hit.y + 0.5, { n: 10, colors: look.sparks ? [hex(0xffffff), hex(0xffe08a)] : look.chips, life: [0.2, 0.35], size: [0.1, 0.14], speed: [2, 4], angle: [Math.PI * 0.1, Math.PI * 0.9], grav: 14, drag: 1 });
+      p.spray(hit.x, hit.y + 0.5, { z: hit.z, n: 10, colors: look.sparks ? [hex(0xffffff), hex(0xffe08a)] : look.chips, life: [0.2, 0.35], size: [0.1, 0.14], speed: [2, 4], angle: [Math.PI * 0.1, Math.PI * 0.9], grav: 14, drag: 1 });
       if (big) this.fx.word(hit.x, hit.y + 1, look.sparks ? 'TONK!' : 'BONK!');
       return;
     }
     this.fx.hide?.(hit.index);
     //the pieces: the model's own, or stand-in chunks in the stuff's colour
-    const pieces = this.fx.pieces?.(hit.prop) ?? [];
+    const pieces = recentre(this.fx.pieces?.(hit.prop) ?? []);
     const list: Piece[] = pieces.length ? pieces : stand.map((g, i) => ({ geometry: g, offset: new THREE.Vector3((i - 1.5) * 0.12, 0.2 + i * 0.12, 0) }));
     for (const piece of list) this.fling(piece, hit, look.piece, dir, k);
     //chips, dust, sparks
-    p.spray(hit.x, hit.y + 0.4, { n: Math.round(12 * k), colors: look.chips, life: [0.4, 0.8], size: [0.08, 0.14], speed: [2, 5 * k], angle: dir ? [0.1, Math.PI * 0.75] : [Math.PI * 0.1, Math.PI * 0.9], grav: 16, drag: 0.8, ink: stuff !== 'glass', floor: hit.y });
-    if (stuff === 'glass') p.spray(hit.x, hit.y + 0.4, { n: 10, colors: look.chips, life: [0.25, 0.45], size: [0.06, 0.09], speed: [3, 6], grav: 10, drag: 1.5, alpha: 0.9 });
-    if (look.dust) p.spray(hit.x, hit.y + 0.15, { n: 8, colors: look.dust, life: [0.5, 0.8], size: [0.18, 0.26], size1: 0.5, speed: [0.6, 1.8], angle: [0, Math.PI], drag: 3, grav: -0.3, alpha: 0.7, fadeFrom: 0 } as Spray);
-    if (look.sparks) p.spray(hit.x, hit.y + 0.4, { n: 10, colors: [hex(0xffffff), hex(0xffe08a), hex(0xffb040)], life: [0.2, 0.4], size: [0.1, 0.15], speed: [3, 6], angle: [0.2, Math.PI - 0.2], grav: 14 });
+    p.spray(hit.x, hit.y + 0.4, { z: hit.z, n: Math.round(12 * k), colors: look.chips, life: [0.4, 0.8], size: [0.08, 0.14], speed: [2, 5 * k], angle: dir ? [0.1, Math.PI * 0.75] : [Math.PI * 0.1, Math.PI * 0.9], grav: 16, drag: 0.8, ink: stuff !== 'glass', floor: hit.y });
+    if (stuff === 'glass') p.spray(hit.x, hit.y + 0.4, { z: hit.z, n: 10, colors: look.chips, life: [0.25, 0.45], size: [0.06, 0.09], speed: [3, 6], grav: 10, drag: 1.5, alpha: 0.9 });
+    if (look.dust) p.spray(hit.x, hit.y + 0.15, { z: hit.z, n: 8, colors: look.dust, life: [0.5, 0.8], size: [0.18, 0.26], size1: 0.5, speed: [0.6, 1.8], angle: [0, Math.PI], drag: 3, grav: -0.3, alpha: 0.7, fadeFrom: 0 } as Spray);
+    if (look.sparks) p.spray(hit.x, hit.y + 0.4, { z: hit.z, n: 10, colors: [hex(0xffffff), hex(0xffe08a), hex(0xffb040)], life: [0.2, 0.4], size: [0.1, 0.15], speed: [3, 6], angle: [0.2, Math.PI - 0.2], grav: 14 });
     if (big) {
       this.fx.word(hit.x, hit.y + 1.1, look.words[Math.floor(Math.random() * look.words.length)]);
       this.fx.shake(SMASH.kick * k);
@@ -121,7 +122,7 @@ export class SmashFx {
     const mesh = this.free.pop() ?? new THREE.Mesh();
     mesh.geometry = piece.geometry;
     mesh.material = this.material(piece.geometry.getAttribute('color') ? -1 : color);
-    mesh.position.set(hit.x + piece.offset.x, hit.y + piece.offset.y, piece.offset.z);
+    mesh.position.set(hit.x + piece.offset.x, hit.y + piece.offset.y, (hit.z ?? 0) + piece.offset.z);
     mesh.rotation.set(0, 0, 0);
     mesh.scale.setScalar(1);
     mesh.visible = true;
@@ -130,7 +131,7 @@ export class SmashFx {
     const v = new THREE.Vector3(
       dir ? THREE.MathUtils.randFloat(1, 4) * k : out * THREE.MathUtils.randFloat(0.5, 2.5),
       THREE.MathUtils.randFloat(2.5, 5) * Math.min(1.5, k),
-      THREE.MathUtils.randFloat(-0.5, 2),
+      THREE.MathUtils.randFloat(0.5, 2.5), // out toward the street
     );
     const spin = new THREE.Vector3(THREE.MathUtils.randFloatSpread(14), THREE.MathUtils.randFloatSpread(14), THREE.MathUtils.randFloatSpread(14));
     this.live.push({ mesh, v, spin, age: 0, floor: hit.y });
@@ -180,4 +181,15 @@ export class SmashFx {
   clear(): void {
     for (const l of [...this.live]) this.retire(l);
   }
+}
+
+// pieces sit round the prop's own middle across the ground: if an export left them offset (where the prop stood in
+// the Blender file), pull them back over the base
+function recentre(pieces: Piece[]): Piece[] {
+  if (!pieces.length) return pieces;
+  const mid = new THREE.Vector3();
+  for (const p of pieces) mid.add(p.offset);
+  mid.divideScalar(pieces.length);
+  if (Math.abs(mid.x) < 0.5 && Math.abs(mid.z) < 0.5) return pieces;
+  return pieces.map((p) => ({ geometry: p.geometry, offset: p.offset.clone().sub(new THREE.Vector3(mid.x, 0, mid.z)) }));
 }
