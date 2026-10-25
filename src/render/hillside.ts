@@ -33,7 +33,8 @@ export const HILLSIDE = {
   backRow: [-3.6, -8.6], // houses behind the back sidewalk
   upRow: [-10.5, -15.5, 2.6], // a second row further up the hill, standing this much higher
   crossW: 3.2, // a cross street's width
-  crossFar: -28, // how far back it runs
+  crossFar: -28, // how far back it runs, to the back street it meets in a T
+  tee: { arm: 8, walk: 0.7, depth: 5 }, // the back street: tiles each way past the cross street, its sidewalk, the houses facing down it
   stepGrade: 0.3, // a block this steep has steps for its back sidewalk
   pole: { z: -3.25, height: 7.5, every: [9, 13], wire: 0.07 }, // power poles along the back sidewalk, tiles
 };
@@ -748,12 +749,28 @@ export function buildHill(level: Level, group: THREE.Group): void {
       crossings.push([cx - HILLSIDE.crossW / 2, cx + HILLSIDE.crossW / 2, g.t0]);
     }
   });
+  //where each cross street ends it meets a back street in a T (zack, 2026-10-25: "cross traffic streets, should form
+  //T's in the background to suggest a continuation of where they go"): the back street running off both ways behind
+  //the rows, its far sidewalk, and a row of houses along it facing down the cross street
+  const rngT = makeRng(level.layout.seed * 61 + level.layout.floor * 13);
+  const tee = (x0: number, x1: number, t: number) => {
+    const T = HILLSIDE.tee;
+    const [a, b] = [x0 - T.arm, x1 + T.arm];
+    const z1 = HILLSIDE.crossFar;
+    const z0 = z1 - HILLSIDE.crossW;
+    m.box(a, b, B, t, t, z0, z1, { top: ['road', (p) => [p[0] / 4, (p[2] - z0) / (z1 - z0)]], left: ['concrete', cs], right: ['concrete', cs] });
+    //its near sidewalk, broken by the cross street's mouth, and the far one
+    for (const [w0, w1] of [[a, x0 - 0.7], [x1 + 0.7, b]]) m.box(w0, w1, B, t + c, t + c, z1, z1 + T.walk, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+    m.box(a, b, B, t + c, t + c, z0 - T.walk, z0, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf] });
+    houseRow(m, rngT, a, b, z0 - T.walk - T.depth, z0 - T.walk, () => t + c, () => t - 0.5, () => false, { bay: 0.7, chimney: 0.3, hip: true, shrub: 0.4 });
+  };
   //the cross streets: flat roads back into the city with their kerbs, and crosswalk lines over the hill's road
   const paint = rectUv(SWATCH.trim);
   for (const [x0, x1, t] of crossings) {
     m.box(x0, x1, B, t, t, HILLSIDE.crossFar, back, { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]], left: ['concrete', cs], right: ['concrete', cs] });
     for (const [a, b] of [[x0 - 0.7, x0], [x1, x1 + 0.7]]) m.box(a, b, B, t + c, t + c, HILLSIDE.crossFar, back, { top: ['walk', UV.top(1, 1)] });
     for (const lx of [x0 - 0.75, x0 - 0.05, x1 + 0.05, x1 + 0.75]) m.quad('house', [lx - 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz0], [lx - 0.06, t + 0.01, rz0], paint);
+    tee(x0, x1, t);
   }
   //the cable car's slot up each climb, between its two running rails (cable-view.ts runs the car on it)
   const steel = rectUv(SWATCH.grey);
@@ -791,6 +808,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
   for (const [x0, x1, t] of holes) {
     const low = t - 3.5;
     m.box(x0, x1, B, low, low, HILLSIDE.crossFar, HILLSIDE.rowB[1], { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]] });
+    tee(x0, x1, low);
   }
   const cut = (xa: number, xb: number) => [...crossings, ...holes].some(([a, b]) => xb > a - 0.1 && xa < b + 0.1);
   //row houses stepping down the hill behind the back sidewalk, and a row further up it
