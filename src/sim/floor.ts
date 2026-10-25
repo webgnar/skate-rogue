@@ -305,9 +305,11 @@ export class FloorSim {
       if (e.type === 'ollie') use.deck += GEAR.ollie;
       else if (e.type === 'trick') use.shoes += GEAR.flip;
     }
-    if (isGrind(sk.mode)) use.trucks += GEAR.grindSec / 60;
+    //(the top route's power line is a long, smooth grind: it wears your trucks and wheels a lot less)
+    const soft = sk.rail?.top ? TOP.wear : 1;
+    if (isGrind(sk.mode)) use.trucks += (GEAR.grindSec / 60) * soft;
     const speed = Math.abs(sk.mode === 'rail' ? sk.railV : sk.hsp);
-    if (speed > PHYS.baseSpeed * sk.mods.speedScale * GEAR.fastOver) use.wheels += GEAR.fastSec / 60;
+    if (speed > PHYS.baseSpeed * sk.mods.speedScale * GEAR.fastOver) use.wheels += (GEAR.fastSec / 60) * soft;
     let changed = false;
     for (const part of GEAR_PARTS) {
       if (!use[part]) continue;

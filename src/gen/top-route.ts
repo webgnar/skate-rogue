@@ -19,6 +19,7 @@ export const TOP = {
   gap: [2, 3], // tiles between them, to ollie
   clear: 1.5 * TILE, // keep this far off anything else up there
   stoken: 0.25, // chance of a Stoken over a gap between rooftops
+  wear: 0.3, // share of the usual truck and wheel wear grinding the power line costs
   heatPerSec: 9, // the helicopter's Heat while you're up there: more than clean skating and grinding cool (src/heat/heat.ts)
 };
 
