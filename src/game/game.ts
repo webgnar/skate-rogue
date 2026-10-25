@@ -576,6 +576,7 @@ export class Game {
       .filter((e) => e.y > 0.5);
     if (!from) {
       this.view.zoom.reset();
+      this.view.drift.reset();
       this.view.follow(this.skater.x, this.skater.y);
       this.sprite.play('push');
     }
@@ -1258,6 +1259,8 @@ export class Game {
       if (this.skater.mode === 'air') this.particles.flipTrail(p.x, p.y + 0.08, this.flip.rgb, dt);
     }
     this.speedLines.update(dt, this.view.camera, FX.reduceMotion ? 0 : flow, gnar && !FX.reduceMotion);
+    //the camera backs off in big air and at speed (reduce motion keeps the frame still)
+    this.view.drift.update(dt, FX.reduceMotion ? 'roll' : sk.mode, FX.reduceMotion ? 0 : flow);
     this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
     if (gnar) {
@@ -1506,6 +1509,8 @@ export class Game {
           const x = toX(this.skater.x);
           const y = toY(this.level, this.skater.y);
           this.particles.dust(x, y, landDust(impact));
+          //every landing kicks the camera in a touch, a heavy one hard
+          if (!FX.reduceMotion) this.view.drift.land(Math.min(1, 0.25 + impact / (FEEL.heavy * 1.4)));
           if (impact >= FEEL.heavy) {
             this.burst(0.6, 0.12);
             this.view.shake(landKick(impact));

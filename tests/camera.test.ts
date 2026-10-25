@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LOU_CAM, LouZoom, viewHeight } from '../src/render/camera';
+import { CamDrift, LOU_CAM, LouZoom, PHONE_CAM, framing, viewHeight } from '../src/render/camera';
 
 const run = (z: LouZoom, secs: number, mode: 'roll' | 'grind' | 'air' = 'roll') => {
   for (let i = 0; i < Math.round(secs * 60); i++) z.update(1 / 60, mode);
@@ -52,5 +52,34 @@ describe("Lou Gnar's camera", () => {
     expect(viewHeight(16 / 9)).toBe(LOU_CAM.viewH); // wide: full height, more street to the sides
     expect(viewHeight(4 / 3)).toBe(LOU_CAM.viewH);
     expect(viewHeight(1) * 1).toBeCloseTo(LOU_CAM.viewH * LOU_CAM.viewAspect); // narrow: full width
+  });
+});
+
+describe('phone framing', () => {
+  it('frames phones much tighter than desktop, both ways round', () => {
+    expect(framing(1280, 720).viewH).toBe(LOU_CAM.viewH);
+    expect(framing(812, 375).viewH).toBe(PHONE_CAM.landscapeH);
+    const up = framing(375, 812);
+    expect(up.viewH * (375 / 812)).toBeCloseTo(PHONE_CAM.portraitW); // shows portraitW tiles across
+    expect(up.viewH).toBeLessThan(viewHeight(375 / 812) * 0.6); // the old frame showed ~46 tiles of height
+    expect(up.fov).toBeGreaterThan(framing(1280, 720).fov); // and a wider lens
+  });
+
+  it('backs off in big air and at speed, and comes back in on the ground', () => {
+    const d = new CamDrift();
+    for (let i = 0; i < 90; i++) d.update(1 / 60, 'air', 0);
+    expect(d.pull).toBeLessThan(0.95);
+    for (let i = 0; i < 180; i++) d.update(1 / 60, 'roll', 0);
+    expect(d.pull).toBeGreaterThan(0.99);
+    for (let i = 0; i < 180; i++) d.update(1 / 60, 'roll', 1);
+    expect(d.pull).toBeLessThan(0.9);
+    expect(d.fovAdd).toBeGreaterThan(5);
+  });
+
+  it('a landing kick dies off in well under a second', () => {
+    const d = new CamDrift();
+    d.land(1);
+    for (let i = 0; i < 30; i++) d.update(1 / 60, 'roll', 0);
+    expect(d.kick).toBeLessThan(0.02);
   });
 });
