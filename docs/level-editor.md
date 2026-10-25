@@ -18,7 +18,7 @@ as text instead of writing the file (see Saving).
   A floor with chases reads HILL, CHASE, HILL 2, and so on along the bottom: each chase is flat street, then a cable car
   (the purple dashed slope) tows you up the next hill. Power lines over a block are thin dashed wires; the L's kicker
   ramp is orange. The top route is sky blue: its power line down each hill, the rooftops over the streets after it, and
-  the pigeons sitting on them; the overpass gate at the end stands at the rooftops' height.
+  the pigeons sitting on them, and the launch ramps (`launch ↗ top`) that get you up there; the overpass gate at the end stands at the rooftops' height.
 - **The bot's line**: the floor validator's reference bot (no boons) skating it. White is rolling, yellow is in the
   air, green is grinding, a red ✕ is a slam. Under the view: how long it took, and whether it reaches the gate at
   cruising speed and at gnar speed. A floor has to pass both to ship. If the first roll fails, the game rerolls it,
@@ -43,8 +43,8 @@ one before the last. The last slot is the peak: the floor's biggest stairway.
 
 **Dials.** Start height, steepness, block length, the flat at the top of each block, crest jump width, stairway
 steps, the last stairway's size, how long each chase is (street pieces), how high each cable car climbs, and how many
-street pieces come after the last hill before the fork. For the top route: how far down each hill its power line
-starts, the gaps between rooftops, and the chance of pigeons. Each shows the code's value; an
+street pieces come after the last hill before the fork. For the top route: how far down each hill its launch ramp
+sits (the power line starts just past it), the gaps between rooftops, and the chance of pigeons. Each shows the code's value; an
 edited dial gets a yellow edge and a reset link. The hill's height is shared out between the beats, so a taller
 start makes every block and stairway bigger.
 
