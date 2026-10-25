@@ -260,6 +260,45 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.68, pose: { hipY: 0.94, bend: 0.22, boardY: 0.08, armLRaise: 1.2, armRRaise: 1.1 } },
     ],
   },
+  // Boneless, for car hops (zack, 2026-10-25; a rough first pass for zack to tune in ?editor): crouched on the roof,
+  // the back hand grabs the toe edge of the deck by the front bolts, the front foot steps off and plants on the
+  // roof behind the board (heel side) and kicks off it while the back foot and hand lift the board up with the body;
+  // the front foot comes back on top at the peak, the hand lets go and the arms go out for the way down.
+  boneless: {
+    loop: false,
+    keys: [
+      {
+        t: 0,
+        pose: {
+          yaw: -0.4, hipY: 0.42, bend: 1.1, nod: -0.1, footBX: TAIL_FOOT, footFOn: 0, footFX: 0.2, footFY: 0.02, footFZ: -0.22, footFTurn: 0.5,
+          armLRaise: 0.9, armLFwd: 0.3, armLElbow: 0.4, armRRaise: -0.26, armRFwd: 0.71, armRElbow: 0,
+        },
+      },
+      {
+        t: 0.12,
+        pose: {
+          yaw: -0.4, hipY: 0.72, bend: 1.15, nod: 0, footBX: TAIL_FOOT, footFOn: 0, footFX: 0.18, footFY: -0.12, footFZ: -0.22, footFTurn: 0.5,
+          footFPitch: 0.5, boardY: 0.3, boardPitch: 0.2, armLRaise: 1.5, armLFwd: 0.2, armLElbow: 0.3, armRRaise: -0.26, armRFwd: 0.71, armRElbow: 0,
+        },
+      },
+      {
+        t: 0.24,
+        pose: {
+          yaw: -0.4, hipY: 0.96, bend: 1.2, nod: 0.1, footBX: -0.32, footFOn: 0, footFX: 0.3, footFY: 0.78, footFZ: -0.1, footFTurn: 0.3,
+          boardY: 0.58, boardPitch: 0.15, armLRaise: 1.7, armLFwd: 0.1, armLElbow: 0.3, armRRaise: -0.26, armRFwd: 0.71, armRElbow: 0,
+        },
+      },
+      {
+        t: 0.36,
+        pose: {
+          yaw: -0.4, hipY: 0.96, bend: 1.2, nod: 0.1, boardY: 0.57, footFX: 0.3, footBX: -0.3,
+          armLRaise: 1.6, armLFwd: 0.2, armLElbow: 0.3, armRRaise: -0.26, armRFwd: 0.71, armRElbow: 0,
+        },
+      },
+      { t: 0.48, pose: { hipY: 1.0, bend: 0.3, boardY: 0.3, footFX: 0.3, footBX: -0.3, armLRaise: 1.4, armRRaise: 1.3, armLElbow: 0.3, armRElbow: 0.35 } },
+      { t: 0.62, pose: { hipY: 0.94, bend: 0.22, boardY: 0.08, armLRaise: 1.2, armRRaise: 1.1 } },
+    ],
+  },
   // Kickflip, keyed from photos of tweaked kickflips (zack, 2026-10-24). The front foot slides up and flicks off the
   // heel-side corner of the nose; the board rolls toe edge up (heel edge down) while the body keeps rising away
   // from it. At the height of the flip the legs split wide over the board: front leg kicked out past the nose and

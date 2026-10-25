@@ -485,6 +485,8 @@ Test on the iPhone in landscape, both ways round (notch on the left, then on the
 Quickest way in for most of these: `?debug&seed=7` and play floor 1 (it starts up on the roofs, so stairs, rails,
 banks and drops come fast). Add `?skater=roxy` to see any item on another skater.
 
+- [ ] Hop off a car roof: Lou does a boneless (front foot steps down onto the roof, back hand grabs the deck, the foot comes back on at the top). Riding fakie it's the mirrored switch boneless. Tune it in ?editor as `boneless (car hop)`.
+
 **Animation editor** (`npm run dev`, then http://localhost:5173/?editor)
 - [ ] Pick a clip, press space: it plays on Lou at half speed. Scrub the timeline and step frames with the arrow keys.
 - [ ] Click the yellow hips dot and drag it down: the knees bend and the feet stay on the board. Drag the cyan front foot along the board, then set its "on board" to 0 and lift it off.

@@ -491,6 +491,10 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- **Car hops play a Boneless (2026-10-25, zack).** `boneless` in poses.ts is a rough first pass for zack to tune
+  in ?editor: the back hand grabs the toe edge of the deck while the front foot plants on the roof heel side, then
+  steps back on at the peak. Lou's arms are short, so the grab needs a deep fold (bend 1.1 to 1.2) and the board
+  lifted up to the hand. Every 'hop' event plays it (car roofs, train roofs and drones); fakie gets switchBoneless.
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)
   live in the project's shared files under `reference/`. `art/reference/README.md` describes each move and links
   to them by name.

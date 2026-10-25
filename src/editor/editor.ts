@@ -119,6 +119,7 @@ const HANDLES: { id: Handle; color: number; label: string }[] = [
 // what the less obvious clips are for, in the clip menu
 const NOTES: Record<string, string> = {
   air: 'falling after a trick or off a drop',
+  boneless: 'car hop',
   freefall: 'bailed, off the board',
   ride: 'rolling, no push',
   land: 'landing squash',

@@ -137,6 +137,13 @@ describe('rig poses', () => {
     expect(p.head).toBeGreaterThan(0.5); // looking back down the rail
   });
 
+  it('boneless (car hops): front foot steps off the board onto the roof, then back on, with a switch twin', () => {
+    expect(CLIPS.boneless.loop).toBe(false);
+    expect(sample(CLIPS.boneless, 0.12).footFOn).toBe(0);
+    expect(sample(CLIPS.boneless, 0.36).footFOn).toBe(1);
+    expect(CLIPS.switchBoneless).toBeTruthy();
+  });
+
   it('switch twins: every clip but the held poses has one, mirrored along the board', () => {
     for (const name of ['push', 'ride', 'ollie', 'kickflip', 'grind1', 'grind2', 'fiveO', 'manual', 'land', 'bs180']) {
       expect(CLIPS[switchName(name)], name).toBeTruthy();
