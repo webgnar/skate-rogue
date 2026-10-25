@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
-import { BASE, BOARD, CLIPS, CODE_CLIPS, clipLength, footTarget, sample, type Clip, type Pose } from '../render/poses';
+import { BASE, BOARD, CLIPS, CODE_CLIPS, clipLength, feetYaw, footTarget, sample, type Clip, type Pose } from '../render/poses';
 import savedEdits from '../render/clip-edits.json';
 import { SkaterRig, isSkater } from '../render/skater-rig';
 import { inkify, setInkResolution } from '../render/toon';
@@ -68,7 +68,7 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
       { f: 'footFOn', label: 'on board', min: 0, max: 1 },
       { f: 'footFX', label: 'along', min: -1, max: 1 },
       { f: 'footFY', label: 'height (off)', min: -0.2, max: 1.2 },
-      { f: 'footFZ', label: 'toe/heel (off)', min: -0.6, max: 0.6 },
+      { f: 'footFZ', label: 'toe/heel', min: -0.6, max: 0.6 },
       { f: 'footFTurn', label: 'turn', min: -1.6, max: 1.6, angle: true },
       { f: 'footFPitch', label: 'heel lift', min: -0.8, max: 1.4, angle: true },
       { f: 'footFToe', label: 'toes up', min: -0.8, max: 1.4, angle: true },
@@ -81,7 +81,7 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
       { f: 'footBOn', label: 'on board', min: 0, max: 1 },
       { f: 'footBX', label: 'along', min: -1, max: 1 },
       { f: 'footBY', label: 'height (off)', min: -0.2, max: 1.2 },
-      { f: 'footBZ', label: 'toe/heel (off)', min: -0.6, max: 0.6 },
+      { f: 'footBZ', label: 'toe/heel', min: -0.6, max: 0.6 },
       { f: 'footBTurn', label: 'turn', min: -1.6, max: 1.6, angle: true },
       { f: 'footBPitch', label: 'heel lift', min: -0.8, max: 1.4, angle: true },
       { f: 'footBToe', label: 'toes up', min: -0.8, max: 1.4, angle: true },
@@ -114,7 +114,7 @@ const HANDLES: { id: Handle; color: number; label: string }[] = [
   { id: 'handL', color: 0x7df0a0, label: 'front hand' },
   { id: 'handR', color: 0xb98cff, label: 'back hand' },
 ];
-const OFF_DECK = 0.05; // drag a foot this far off the deck and it steps off the board
+const OFF_DECK = 0.1; // lift a foot this far up off the deck and it steps off the board
 const ARM_FIELDS = [
   ['armLRaise', 'armLFwd', 'armLElbow'],
   ['armRRaise', 'armRFwd', 'armRElbow'],
@@ -344,11 +344,15 @@ export async function startEditor(base: string): Promise<void> {
       const front = active === 'footF';
       const on = front ? pose.footFOn : pose.footBOn;
       const fx = front ? 'footFX' : 'footBX';
-      // a foot on the board slides along the deck; dragged off it, or already off, it goes anywhere
+      // A foot on the board slides along the deck (X) and across it toward the toe or heel edge (Z); lifted well
+      // up off it, it steps off. A foot already off goes anywhere.
       const dx = nearestDeckX(pose, p);
-      const deck = footTarget({ ...pose, [front ? 'footFOn' : 'footBOn']: 1, [fx]: dx }, front);
-      const off = Math.hypot(deck.x - p.x, deck.y - p.y, deck.z - p.z) > OFF_DECK;
-      if (on >= 0.5 && !off) edit(`drag:${active}`, { [fx]: dx });
+      const fz = front ? 'footFZ' : 'footBZ';
+      const deck = footTarget({ ...pose, [front ? 'footFOn' : 'footBOn']: 1, [fx]: dx, [fz]: 0 }, front);
+      const yaw = feetYaw(pose);
+      const across = (p.x - deck.x) * Math.sin(yaw) + (p.z - deck.z) * Math.cos(yaw);
+      const off = p.y - deck.y > OFF_DECK;
+      if (on >= 0.5 && !off) edit(`drag:${active}`, { [fx]: dx, [fz]: Math.max(-0.3, Math.min(0.3, across)) });
       else if (on >= 0.5) edit(`drag:${active}`, front ? { footFOn: 0, footFX: p.x, footFY: p.y, footFZ: p.z } : { footBOn: 0, footBX: p.x, footBY: p.y, footBZ: p.z });
       else edit(`drag:${active}`, front ? { footFX: p.x, footFY: p.y, footFZ: p.z } : { footBX: p.x, footBY: p.y, footBZ: p.z });
     }
@@ -601,7 +605,7 @@ export async function startEditor(base: string): Promise<void> {
   function updateHint(): void {
     const h = HANDLES.find((x) => x.id === active);
     hint.innerHTML = h
-      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along the deck; pull it off the deck and it steps off, "on board" puts it back)' : h.id.startsWith('hand') ? ' (the shoulder and elbow follow)' : ''} · esc to let go`
+      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along and across the deck; lift it up off the deck and it steps off, "on board" puts it back)' : h.id.startsWith('hand') ? ' (the shoulder and elbow follow)' : ''} · esc to let go`
       : `click a dot to move it: ${HANDLES.map((x) => `<b style="color:#${x.color.toString(16).padStart(6, '0')}">${x.label}</b>`).join(' ')} · drag to orbit, scroll to zoom, h hides the dots`;
   }
   updateHint();
