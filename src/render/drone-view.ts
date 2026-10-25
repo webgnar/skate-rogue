@@ -2,6 +2,7 @@
 // skate lane and hovering with its red eye on the skater; stomped ones tumble away spinning. Hovering drones hang a
 // faint red scan line under them so a head-high one reads at a glance.
 import * as THREE from 'three';
+import { at } from '../game/interp';
 import { DRONE, type Swarm } from '../sim/drones';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
@@ -76,8 +77,8 @@ export class DroneView {
       v.scan.visible = d.state === 'hover';
       if (!visible) return;
       //the box's middle, in front of the skate lane
-      const x = toX(d.x) + W / 2;
-      const y = toY(level, d.roof) - H / 2;
+      const x = toX(at(d, 'x')) + W / 2;
+      const y = toY(level, at(d, 'roof')) - H / 2;
       v.group.position.set(x, y, 0.2);
       if (d.state === 'dive') v.group.rotation.set(0, 0, 0.5 * (1 - d.t / DRONE.diveFrames)); // nose down in the swoop
       else if (d.state === 'down') v.group.rotation.set(d.t * 0.05, 0, d.t * 0.18);

@@ -2,6 +2,7 @@
 // over the street and its spotlight, a cone of light down to a pool on the asphalt. The light warms to white-hot and
 // the pool pulses when it has the skater; it can't reach under the L tracks, so the pool vanishes there.
 import * as THREE from 'three';
+import { at } from '../game/interp';
 import { CHOPPER, type Chopper } from '../sim/chopper';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
@@ -101,7 +102,8 @@ export class ChopperView {
     this.group.visible = ch !== null;
     if (!ch) return;
     this.t += dt;
-    const x = was ? smooth(this.group.position.x, toX(ch.x), this.vx, FOLLOW.x, dt) : toX(ch.x);
+    const cx = toX(at(ch, 'x')); // between the sim's steps (src/game/interp.ts)
+    const x = was ? smooth(this.group.position.x, cx, this.vx, FOLLOW.x, dt) : cx;
     //it hovers over the skater (or the street), and never lower than the hill under it; it drops in out of the sky
     //and, over the top route once you're down, climbs back up into it (zack: "it should come from the sky, not
     //from ground level, which makes it clip through the side of the hill")

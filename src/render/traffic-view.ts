@@ -12,6 +12,7 @@ import { inkify } from './toon';
 import { headlights } from './night';
 import { HeatBeams } from './heat-beams';
 import { STAGE_MODEL, damagedLook } from './car-damage';
+import { at } from '../game/interp';
 import { CruiserPath, TUNNEL, groundAt, turnAt, turnOff } from '../traffic/tunnel';
 import type { Stage } from '../traffic/damage';
 
@@ -174,11 +175,12 @@ export class TrafficView {
         this.meshes.set(v.id, mesh);
         this.group.add(mesh);
       }
-      mesh.position.x = toX((v.x0 + v.x1) / 2);
-      mesh.position.z = v.lane * BACK_LANE_Z;
+      //(drawn between the sim's steps, like the skater: src/game/interp.ts)
+      mesh.position.x = toX((at(v, 'x0') + at(v, 'x1')) / 2);
+      mesh.position.z = at(v, 'lane') * BACK_LANE_Z;
       //turning into a tunnel at the foot of a hill
       if (v.tunnel !== undefined) {
-        const t = turnAt(v.tunnel);
+        const t = turnAt(at(v, 'tunnel'));
         mesh.position.z = t.z;
         mesh.rotation.y = v.cruise < 0 ? Math.PI - (t.turn * Math.PI) / 2 : (t.turn * Math.PI) / 2;
       }
@@ -226,9 +228,9 @@ export class TrafficView {
     }
     cross.forEach((c, i) => {
       const v = this.crossings[i];
-      v.car.position.z = c.z;
+      v.car.position.z = at(c, 'z');
       //swinging round onto the road, your way; then the traffic's own car takes over
-      v.car.children[0].rotation.y = -Math.PI / 2 + (Math.PI / 2) * c.turn;
+      v.car.children[0].rotation.y = -Math.PI / 2 + (Math.PI / 2) * at(c, 'turn');
       v.car.visible = c.out;
       v.red.visible = c.red;
       v.green.visible = !c.red;
@@ -281,9 +283,10 @@ export class TrafficView {
     if (this.stopSigns.length !== level.busStops.length) this.stopSigns = level.busStops.map((s) => this.makeStopSign(level, s.x));
     if (this.doorMeshes.length !== traffic.doors.length) this.doorMeshes = traffic.doors.map((d) => ({ door: d, mesh: this.makeDoor(level, d) }));
     for (const { door, mesh } of this.doorMeshes) {
-      mesh.visible = door.open > 0.05;
+      const open = at(door, 'open');
+      mesh.visible = open > 0.05;
       //hinged at the car's back corner, its free edge swinging out behind the car and toward the camera
-      mesh.rotation.y = -DOOR_OPEN * door.open;
+      mesh.rotation.y = -DOOR_OPEN * open;
     }
     //the blinker on a bus pulling in: amber on the back corner, toward the camera, at about 2.5 flashes a second
     const on = Math.floor(this.t / 200) % 2 === 0;

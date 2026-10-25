@@ -2,6 +2,7 @@
 // its data (src/physics/level.ts, src/physics/skater.ts), never the render meshes. A 2D canvas over the game, every
 // point projected through the game camera from the skate lane (z = 0). Made on first use, so off it costs nothing.
 import * as THREE from 'three';
+import { at } from '../game/interp';
 import { PHYS, TILE } from '../physics/constants';
 import { FEEL } from '../physics/feel';
 import { isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
@@ -118,7 +119,8 @@ export class CollisionDebug {
   }
 
   // `perf`: the game's fps line (fps, worst frame, draws, triangles, resolution, effects tier)
-  draw(level: Level, sk: Skater, camera: THREE.Camera, dt: number, perf = ''): void {
+  // drawn: where the skater is drawn this frame (between the sim's steps); left out, where the sim has it
+  draw(level: Level, sk: Skater, camera: THREE.Camera, dt: number, perf = '', drawn?: { x: number; y: number }): void {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = Math.round(rect.width * dpr);
@@ -276,20 +278,23 @@ export class CollisionDebug {
     const cars = sk.movers.length ? [...level.cars, ...sk.movers] : level.cars;
     for (const car of cars) {
       if (!seen(car.x0 - half, car.x1 + half)) continue;
+      //a moving car is drawn where it is on screen, between the sim's steps (src/game/interp.ts)
+      const dx = at(car, 'x0') - car.x0;
+      const Pc = (px: number, py: number) => P(px + dx, py);
       const wrecked = sk.wrecked.has(car);
-      const tl = P(car.x0, car.roof);
-      const br = P(car.x1, car.bottom);
+      const tl = Pc(car.x0, car.roof);
+      const br = Pc(car.x1, car.bottom);
       if (car.ledge) {
         line([tl, [br[0], tl[1]], br, [tl[0], br[1]], tl], '#888', 1, [4, 4]);
         const l = car.ledge;
         if (l !== current && seen(l.x0, l.x1)) {
-          const a = P(l.x0, l.y);
-          const b = P(l.x1, l.y);
+          const a = Pc(l.x0, l.y);
+          const b = Pc(l.x1, l.y);
           line([a, b], COLLIDER.rail, 3);
           ticks(a, b, COLLIDER.rail);
         } else if (l === current) {
-          line([P(l.x0, l.y), P(l.x1, l.y)], '#fff', 8);
-          line([P(l.x0, l.y), P(l.x1, l.y)], COLLIDER.rail, 3);
+          line([Pc(l.x0, l.y), Pc(l.x1, l.y)], '#fff', 8);
+          line([Pc(l.x0, l.y), Pc(l.x1, l.y)], COLLIDER.rail, 3);
         }
         label('train roof (grind, pass-through)', [tl[0] + 2, tl[1] - 5], COLLIDER.rail);
         continue;
@@ -299,18 +304,18 @@ export class CollisionDebug {
         continue;
       }
       //the side box: overlap it below roof + 6 and you slam
-      const side = P(car.x0, car.roof + 6);
+      const side = Pc(car.x0, car.roof + 6);
       ctx.fillStyle = sk.hitCars.has(car) ? 'rgba(255,59,59,0.35)' : 'rgba(255,59,59,0.12)';
       ctx.fillRect(side[0], side[1], br[0] - side[0], br[1] - side[1]);
       line([side, [br[0], side[1]], br, [side[0], br[1]], side], COLLIDER.carSide, 1.5);
       //the hop line
-      const hop = [P(car.x0 - half, car.roof), P(car.x1 + half, car.roof)];
+      const hop = [Pc(car.x0 - half, car.roof), Pc(car.x1 + half, car.roof)];
       if (car === sk.hopped) line(hop, '#fff', 7);
       line(hop, COLLIDER.carRoof, 3);
       ticks(hop[0], hop[1], COLLIDER.carRoof);
       if (car.kicker) {
-        const k0 = P(car.x0 - car.kicker, level.streetY);
-        line([k0, P(car.x0, level.streetY - PHYS.tailgateLip)], COLLIDER.kicker, 3);
+        const k0 = Pc(car.x0 - car.kicker, level.streetY);
+        line([k0, Pc(car.x0, level.streetY - PHYS.tailgateLip)], COLLIDER.kicker, 3);
         label('tailgate', [k0[0], k0[1] - 5], COLLIDER.kicker);
       }
       label(`${car.model ?? (level.cars.includes(car) ? 'parked' : 'traffic')}${sk.mods.roofRider && level.cars.includes(car) ? ' roof grind' : ' hop'}`, [hop[0][0] + 2, hop[0][1] - 5], COLLIDER.carRoof);
@@ -362,30 +367,32 @@ export class CollisionDebug {
 
     //the skater: the body box cars hit, the feet (the one point that lands), the trucks, the speed, and in the air
     //the ray straight down the landing pose reads
-    const feet = P(sk.x, sk.y);
-    const head = P(sk.x - half, sk.y - PHYS.height);
-    const toe = P(sk.x + half, sk.y);
+    //(where it's drawn on screen, between the sim's steps, so the shapes sit on the skater)
+    const me = drawn ?? sk;
+    const feet = P(me.x, me.y);
+    const head = P(me.x - half, me.y - PHYS.height);
+    const toe = P(me.x + half, me.y);
     line([head, [toe[0], head[1]], toe, [head[0], toe[1]], head], COLLIDER.body, 2);
     const pitch = sk.feel.pitch;
     const wb = FEEL.wheelbase / 2;
-    const back = P(sk.x - wb * Math.cos(pitch), sk.y + wb * Math.sin(pitch));
-    const front = P(sk.x + wb * Math.cos(pitch), sk.y - wb * Math.sin(pitch));
+    const back = P(me.x - wb * Math.cos(pitch), me.y + wb * Math.sin(pitch));
+    const front = P(me.x + wb * Math.cos(pitch), me.y - wb * Math.sin(pitch));
     line([back, front], '#fff', 3);
     for (const t of [back, front]) ring(t, 3, sk.grounded ? MODE_COLOR[sk.mode] : '#fff', 1.5);
     ring(feet, 4, MODE_COLOR[sk.mode], 2.5);
     //the lip probe: an ollie this close to the edge pops off the lip
     if (sk.mode === 'roll') {
-      const lip = P(sk.x + FEEL.lipPx, sk.y);
+      const lip = P(me.x + FEEL.lipPx, me.y);
       line([[lip[0], lip[1] - 5], [lip[0], lip[1] + 5]], '#fff', 1);
     }
     //speed: 8 frames of it
     const vx = sk.mode === 'rail' && sk.rail ? sk.rail.at(sk.railD).tx * sk.railV : sk.hsp;
     const vy = sk.mode === 'rail' && sk.rail ? sk.rail.at(sk.railD).ty * sk.railV : sk.vsp;
-    arrow(P(sk.x, sk.y - PHYS.height / 2), P(sk.x + vx * 8, sk.y - PHYS.height / 2 + vy * 8), COLLIDER.speed, 2);
+    arrow(P(me.x, me.y - PHYS.height / 2), P(me.x + vx * 8, me.y - PHYS.height / 2 + vy * 8), COLLIDER.speed, 2);
     const below = sk.mode === 'air' ? sk.below() : null;
     if (sk.mode === 'air') {
       if (below) {
-        const hit = P(sk.x, sk.y + below.depth);
+        const hit = P(me.x, me.y + below.depth);
         line([feet, hit], COLLIDER.ray, 1.5, [4, 3]);
         //the ground's angle where the ray hits
         const r = 14;
