@@ -504,6 +504,9 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- **Fixed the jittery 180s (2026-10-25, zack).** The PR #156 re-bake recorded every other frame of fs180/bs180 from
+  the switch twin: replaying a 180 each frame settled its spin and flipped the rig to fakie. bake_clips.cjs now resets
+  the rig to regular stance before every frame; re-baked lou-gnar.glb.
 - **Car hops play a Boneless (2026-10-25, zack).** `boneless` in poses.ts is a rough first pass for zack to tune
   in ?editor: the back hand grabs the toe edge of the deck while the front foot plants on the roof heel side, then
   steps back on at the peak. Lou's arms are short, so the grab needs a deep fold (bend 1.1 to 1.2) and the board
