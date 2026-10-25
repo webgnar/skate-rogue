@@ -449,6 +449,23 @@ async function start() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) game.setPaused(true);
   });
+  //the collision debug overlay (src/render/collision-debug.ts): ?debug=collision (or ?collision) starts with it on,
+  //C flips it, [ and ] step the slow motion, . freezes and then steps one frame. With ?debug a COL button does it on a phone.
+  if (params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
+  if (params.has('debug') || params.has('collision')) {
+    const colBtn = document.createElement('button');
+    colBtn.id = 'colbtn';
+    colBtn.textContent = 'COL';
+    document.getElementById('app')!.append(colBtn);
+    tapOnly('colbtn', () => game.toggleCollision());
+  }
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyC') game.toggleCollision();
+    const col = game.collision;
+    if (col && e.code === 'BracketLeft') col.slower(1);
+    if (col && e.code === 'BracketRight') col.slower(-1);
+    if (col && e.code === 'Period') col.step();
+  });
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape' || e.code === 'KeyP') game.setPaused(!game.paused);
     if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') game.choose(Number(e.code.slice(5)) - 1);
