@@ -933,14 +933,14 @@ html, body {
   border-radius: 4px;
 }
 .coldebug-panel i { font-style: normal; margin-left: 6px; }
-.coldebug-buttons {
+.devbar {
   position: absolute;
   right: max(8px, env(safe-area-inset-right));
   bottom: calc(max(12px, env(safe-area-inset-bottom)) + 34px);
   display: flex;
   gap: 6px;
 }
-.coldebug-buttons button, #colbtn {
+.devbar button, #colbtn {
   font: bold 12px ui-monospace, monospace;
   padding: 8px 10px;
   color: #fff;
@@ -949,5 +949,13 @@ html, body {
   border-radius: 6px;
 }
 #colbtn { position: absolute; left: max(8px, env(safe-area-inset-left)); bottom: max(8px, env(safe-area-inset-bottom)); padding: 4px 8px; }
-.coldebug[hidden], .coldebug-panel[hidden], .coldebug-buttons[hidden] { display: none; }
+.coldebug[hidden], .coldebug-panel[hidden], .devbar[hidden] { display: none; }
+/* the pause card's dev tools (src/ui/dev-panel.ts) */
+#devhead { all: unset; cursor: pointer; padding: 4px 14px; font: 13px ui-monospace, monospace; color: #fff; opacity: 0.75; border: 2px dashed rgba(255, 255, 255, 0.5); }
+#paused .settings.dev[hidden] { display: none; }
+#paused .settings.dev .row { font-family: ui-monospace, monospace; font-size: 14px; }
+#paused .settings.dev .jump { cursor: default; }
+#paused .settings.dev .jump b { flex: 1; white-space: nowrap; }
+#paused .settings.dev .jump button { all: unset; cursor: pointer; padding: 2px 8px; background: #3a3050; border: 2px solid #000; color: #fff; }
+#paused .settings.dev .jump [data-dev='go'] { background: var(--trick); color: #1a1028; }
 @media (max-height: 500px) { .coldebug-panel { font-size: 9px; padding: 4px 6px; } }

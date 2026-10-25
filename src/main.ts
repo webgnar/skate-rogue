@@ -27,6 +27,8 @@ import { BoardPanel } from './ui/board-panel';
 import { loadLater, loadModels, missingModels } from './render/models';
 import { parseBoons } from './bot/repro';
 import { ACTS, FLOORS_PER_ACT } from './gen/escape';
+import { DEV, loadDev, saveDev, slower, stepFrame } from './ui/dev';
+import { DevPanel } from './ui/dev-panel';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
 import { buzz, loadSettings } from './ui/settings';
@@ -325,6 +327,8 @@ async function start() {
   }
   // clips saved from the editor: reload to play them; ?drafts plays the editor's unsaved ones
   import.meta.hot?.on('clip-edits', () => location.reload());
+  //the dev tools' saved switches (src/ui/dev.ts); a URL flag still wins
+  loadDev();
   //momentum on slopes, being explored: ?momentum=real|soften|transfer|both (src/physics/feel.ts)
   const momentum = params.get('momentum');
   if (MOMENTUM_MODES.includes(momentum as MomentumMode)) MOMENTUM.mode = momentum as MomentumMode;
@@ -446,25 +450,62 @@ async function start() {
     look,
     pixel: () => view.setPixel(),
   });
+  //the one button blocks touchstart on the whole game (src/game/input.ts), which on a phone also kills the taps' clicks
+  //and the scrolling on the pause card: let the card have its touches back
+  document.getElementById('paused')!.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) game.setPaused(true);
   });
-  //the collision debug overlay (src/render/collision-debug.ts): ?debug=collision (or ?collision) starts with it on,
-  //C flips it, [ and ] step the slow motion, . freezes and then steps one frame. With ?debug a COL button does it on a phone.
-  if (params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
+  //dev tools (src/ui/dev-panel.ts) on the pause card. The collision overlay (src/render/collision-debug.ts): ?debug=collision
+  //(or ?collision) or the saved switch starts with it on, C flips it, [ and ] step the slow motion, . freezes and then
+  //steps one frame. With ?debug a COL button flips it too.
+  const app = document.getElementById('app')!;
+  const showFps = (on: boolean) => app.classList.toggle('debug', on || params.has('debug'));
+  const targets = [
+    ...Array.from({ length: ACTS * FLOORS_PER_ACT }, (_, i) => `floor ${i + 1}`),
+    ...Array.from({ length: ACTS }, (_, i) => `escape ${i + 1}`),
+  ];
+  const dev = new DevPanel(document.getElementById('devhead')!, {
+    collision: (on) => game.toggleCollision(on),
+    fps: showFps,
+    pilot: () => game.pilot,
+    setPilot: (style) => game.setAutopilot(style),
+    targets,
+    start: escape ? ACTS * FLOORS_PER_ACT + escape - 1 : startAt - 1,
+    jump: (i) => {
+      const q = new URLSearchParams(location.search);
+      q.delete('floor');
+      q.delete('escape');
+      q.delete('tutorial');
+      const [kind, n] = targets[i].split(' ');
+      q.set(kind, n);
+      location.search = q.toString();
+    },
+    unlockAll: all,
+    setUnlockAll: (on) => reloadWith('unlockall', on),
+  });
+  if (DEV.collision || params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
+  showFps(DEV.fps);
   if (params.has('debug') || params.has('collision')) {
     const colBtn = document.createElement('button');
     colBtn.id = 'colbtn';
     colBtn.textContent = 'COL';
-    document.getElementById('app')!.append(colBtn);
-    tapOnly('colbtn', () => game.toggleCollision());
+    app.append(colBtn);
+    tapOnly('colbtn', () => {
+      game.toggleCollision();
+      saveDev();
+      dev.render();
+    });
   }
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyC') game.toggleCollision();
-    const col = game.collision;
-    if (col && e.code === 'BracketLeft') col.slower(1);
-    if (col && e.code === 'BracketRight') col.slower(-1);
-    if (col && e.code === 'Period') col.step();
+    if (e.code === 'KeyC') {
+      game.toggleCollision();
+      saveDev();
+    } else if (e.code === 'BracketLeft') slower(1);
+    else if (e.code === 'BracketRight') slower(-1);
+    else if (e.code === 'Period') stepFrame();
+    else return;
+    dev.render();
   });
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape' || e.code === 'KeyP') game.setPaused(!game.paused);
@@ -476,7 +517,6 @@ async function start() {
   resize();
   document.getElementById('seed')!.textContent = (daily ? `daily · seed ${seed}` : `seed ${seed}`) + (gnar ? ` · gnar ${gnar}` : '');
   document.querySelector('#paused .seed')!.textContent = `seed ${seed}` + (gnar ? ` · gnar ${gnar}: ${GNAR_RULES.slice(0, gnar).map((r) => r.name).join(', ')}` : '');
-  document.getElementById('app')!.classList.toggle('debug', params.has('debug'));
   document.getElementById('loading')!.remove();
 
   const tick = (now: number) => {
