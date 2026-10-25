@@ -70,22 +70,20 @@ describe('the top route', () => {
     expect(sim.skater.mode).not.toBe('bail');
   });
 
-  it('the bots clear top-route floors, and the high bot spends a good part of them up top (the wire starts halfway down each hill)', () => {
-    let up = 0;
-    let frames = 0;
+  it("the bots clear top-route floors, and nothing lifts them onto the high power line (there's no way up yet)", () => {
     for (let s = 1; s <= 4; s++) {
       const seed = s * 7919;
       const level = validatedFloor(seed, 4, { twist: floorTwist(seed, 4), hills: true, danger: 2 }).level;
       const sim = new FloorSim(level);
       const pilot = new Pilot('high');
+      let wire = 0;
       for (let f = 0; f < 7200 && sim.state === 'skate'; f++) {
         sim.step(pilot.input(sim));
-        frames++;
-        if (sim.up) up++;
+        if (sim.skater.rail?.top) wire++;
       }
       expect(['exit', 'bail']).toContain(sim.state);
+      expect(wire).toBe(0);
     }
-    expect(up / frames).toBeGreaterThan(0.15);
   }, 60000);
 });
 

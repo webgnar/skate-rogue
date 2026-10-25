@@ -569,10 +569,12 @@ export class Skater {
       const start = rail.at(0);
       const near = magnet > 0 && x < start.x && x >= start.x - magnet;
       const ry = near ? start.y : rail.yAt(x);
-      const pry = near ? start.y : rail.yAt(px);
+      //last step's x before its start: its start's height (coming in under the start isn't landing on it: that
+      //snapped a skater well below a high power line up onto it, zack 2026-10-25)
+      const pry = near ? start.y : (rail.yAt(px) ?? start.y);
       if (ry === undefined) continue;
       //compare against the rail's height where we were last step too, so a sloped rail can't slip past (rising or falling)
-      if ((pry === undefined || py <= pry + 0.01) && this.y >= ry && ry < bestY) {
+      if (py <= pry + 0.01 && this.y >= ry && ry < bestY) {
         bestY = ry;
         best = () => {
           if (near) this.x = start.x;

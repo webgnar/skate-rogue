@@ -209,6 +209,27 @@ describe('rails', () => {
     expect(concrete).toBeGreaterThan(steel);
   });
 
+  it("passing under a rail's start doesn't lift you onto it; coming down onto it past the start does", () => {
+    const street = levelOf(FLAT).streetY;
+    //a high power line: you ollie in under its start, well below it
+    const rail = new CurvedRail(6 * TILE, street - 160, 30 * TILE, street - 160, 0);
+    const under = new Skater(withExtras([], [rail], { x: 6 * TILE - 8, y: street - 50 }));
+    under.mode = 'air';
+    under.vsp = -2;
+    let snapped = false;
+    for (let f = 0; f < 40; f++) {
+      under.step({ pressed: false, held: false });
+      if ((under.mode as string) === 'rail' || under.y < street - 100) snapped = true;
+    }
+    expect(snapped).toBe(false);
+    //and from just over it, at its start, you land on it
+    const over = new Skater(withExtras([], [rail], { x: 6 * TILE - 2, y: street - 170 }));
+    over.mode = 'air';
+    over.vsp = 1;
+    run(over, 20);
+    expect(over.mode).toBe('rail');
+  });
+
   it('coming down hard onto a rail rocks you more than kissing onto it', () => {
     const street = levelOf(FLAT).streetY;
     const rock = (vsp: number) => {
