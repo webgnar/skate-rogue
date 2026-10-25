@@ -62,9 +62,11 @@ function flatten(group: THREE.Object3D): { unlit: THREE.BufferGeometry[]; lit: T
     if (!(o instanceof THREE.Mesh)) return;
     const src = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry;
     const mats = [o.material].flat() as THREE.MeshBasicMaterial[];
-    const groups = src.groups.length ? src.groups : [{ start: 0, count: src.getAttribute('position').count, materialIndex: 0 }];
+    //one material for the whole mesh covers all its groups (a BoxGeometry has a group per face: the cruiser's light bar)
+    const groups = src.groups.length && mats.length > 1 ? src.groups : [{ start: 0, count: src.getAttribute('position').count, materialIndex: 0 }];
     for (const g of groups) {
-      const mat = mats[g.materialIndex ?? 0];
+      const mat = mats[g.materialIndex ?? 0] ?? mats[0];
+      if (!mat?.color) continue;
       const pos = src.getAttribute('position');
       const nor = src.getAttribute('normal');
       const geo = new THREE.BufferGeometry();
