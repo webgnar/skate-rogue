@@ -411,6 +411,13 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 - [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
 
+**Rail steel**
+
+- [ ] Every rail you can grind looks like polished chrome, with a bright top, a white line through the middle, a
+      dark underside and a few dents. That covers flat rails, curved handrails and the L's tracks. The shine slides
+      along the rail as you move.
+- [ ] At night (`?floor=13`) the rails go a dimmer violet instead of glaring white.
+
 **Chunky pixel look**
 
 - [ ] Pause and drag PIXELS from SHARP to 4X: the game goes blocky and hard-edged straight away, and the HUD stays

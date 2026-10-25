@@ -5,6 +5,7 @@ import { LouZoom, viewHeight } from './camera';
 import { buildKit, toX, toY } from './kit';
 import { NightCity } from './night';
 import { FX } from './fx-settings';
+import { railTint } from './rail-metal';
 import { batchStatic } from './batch';
 import { GateFx } from './gate-fx';
 import { SirenFx } from './siren-fx';
@@ -73,6 +74,7 @@ function disposeKit(kit: THREE.Object3D): void {
     else if (!o.userData.ink) o.geometry.dispose();
     for (const m of [o.material].flat()) {
       if (o.userData.ink && !m.userData.clipCopy) continue;
+      if (m.name === 'railMetal' && !m.userData.clipCopy) continue; // shared by every floor (rail-metal.ts)
       if (!o.userData.ink) (m as THREE.MeshLambertMaterial).map?.dispose();
       m.dispose();
     }
@@ -539,12 +541,14 @@ export class StreetView {
     return out.filter((k): k is THREE.Group => k !== null);
   }
 
-  // rain darkens the street kit, the way wet concrete and brick go darker (facades keep their windows)
+  // rain darkens the street kit, the way wet concrete and brick go darker (facades keep their windows); the rail
+  // steel takes the mood's tint here too, since each kit's clipped copy of it has its own colour (clipKit)
   private wetKit(kit: THREE.Group): void {
     const k = 1 - 0.22 * this.wet;
     kit.traverse((o) => {
       if (!(o instanceof THREE.Mesh) || o.userData.ink) return;
       for (const m of [o.material].flat() as THREE.MeshToonMaterial[]) {
+        if (m.name === 'railMetal') railTint(this.mood?.neon ?? 0, (m as THREE.Material as THREE.MeshMatcapMaterial).color);
         if (!(m instanceof THREE.MeshToonMaterial) || m.userData.facade) continue;
         const dry = (m.userData.dry ??= m.color.getHex()) as number;
         m.color.setHex(dry).multiplyScalar(k);

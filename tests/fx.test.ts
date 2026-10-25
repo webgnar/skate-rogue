@@ -6,6 +6,7 @@ import { EscapeFx } from '../src/render/escape-fx';
 import { SirenFx, SIREN } from '../src/render/siren-fx';
 import { PhoneFx, PHONE, flashAt } from '../src/render/phone-fx';
 import { GateFx, GATE_FX } from '../src/render/gate-fx';
+import { chrome, railHeights, railTint, railUv, RAIL_METAL } from '../src/render/rail-metal';
 import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
 import { landDust, landKick } from '../src/render/land-fx';
@@ -503,6 +504,38 @@ describe('bounty gate', () => {
     for (let i = 0; i < 20; i++) fx.update(0.1, 0);
     fx.build(kit());
     expect(fx.bounty).toBe(0);
+  });
+});
+
+describe('rail steel', () => {
+  it('reflects a bright sky above a dark street, in a few hard bands', () => {
+    const up = chrome(0, 0.6, 0.8); // faces up and toward the camera: sees the sky
+    const down = chrome(0, -0.6, 0.8); // faces down: sees the street
+    expect(up[2]).toBeGreaterThan(down[2] + 0.3);
+    const levels = new Set<number>();
+    for (let y = -1; y <= 1; y += 0.05) for (let x = -1; x <= 1; x += 0.05) {
+      const z = Math.sqrt(Math.max(0, 1 - x * x - y * y));
+      levels.add(chrome(x, y, z)[0]);
+    }
+    expect(levels.size).toBeLessThanOrEqual(7); // stepped like the toon shading, not a smooth gradient
+  });
+  it('has a polished flat along the top where boards grind', () => {
+    const W = 64, H = 16;
+    const h = railHeights(W, H);
+    const mid = Math.floor(H / 2);
+    for (let x = 0; x < W; x++) expect(h[mid * W + x]).toBe(h[mid * W]);
+  });
+  it('repeats the normal map along the rail instead of stretching it', () => {
+    const geo = railUv(new THREE.BoxGeometry(4, 0.1, 0.1), 4);
+    const uv = geo.getAttribute('uv');
+    let max = 0;
+    for (let i = 8; i < uv.count; i++) max = Math.max(max, uv.getX(i));
+    expect(max).toBeCloseTo(4 / RAIL_METAL.repeat);
+    for (let i = 0; i < 8; i++) expect(uv.getX(i)).toBeLessThanOrEqual(1); // the end caps are left alone
+  });
+  it('dims toward the night tint with the neon', () => {
+    expect(railTint(0).getHex()).toBe(0xffffff);
+    expect(railTint(1).getHex()).toBe(RAIL_METAL.night);
   });
 });
 
