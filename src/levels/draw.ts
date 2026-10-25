@@ -30,6 +30,7 @@ const C = {
   cable: '#c8a2ff',
   kicker: '#ff9a3d',
   wire: '#d8d2e6',
+  sky: '#7af0c8', // the sky beats over the power line
   up: '#5fa8ff', // the top route (sky blue: the side line has pink)
 };
 
@@ -141,7 +142,11 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
   for (const s of L.surfaces) {
     const fin = !inHill(L, s.x0);
     if (s.el) continue;
-    if (s.kind === 'bank' && s.kicker) {
+    if (s.sky) {
+      //a sky beat: a deck (or a billboard's rail) over the power line, labelled with what it is
+      g.push(`<rect x="${f(X(s.x0))}" y="${f(Y(s.y))}" width="${f((s.x1 - s.x0) * scale)}" height="${f(Math.max(2, (s.kind === 'rail' ? 4 : 10) * scale))}" fill="${C.sky}"/>`);
+      text(X(s.x0), Y(s.y) - 4, s.sky, C.sky);
+    } else if (s.kind === 'bank' && s.kicker) {
       //the L's kicker: a steel ramp up off the street
       const y1 = s.y1 ?? s.y;
       g.push(`<polygon points="${f(X(s.x0))},${f(Y(s.y))} ${f(X(s.x1))},${f(Y(y1))} ${f(X(s.x1))},${f(Y(s.y))}" fill="${C.kicker}"/>`);
@@ -159,7 +164,9 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
     for (let i = 0; i < r.xs.length; i += 2) pts += `${f(X(r.xs[i]))},${f(Y(r.ys[i]))} `;
     pts += `${f(X(r.xs[r.xs.length - 1]))},${f(Y(r.ys[r.ys.length - 1]))}`;
     //a power line strung over the hill is a thin wire; the rest are tubes
-    g.push(r.top
+    g.push(r.sky
+      ? `<polyline points="${pts}" fill="none" stroke="${C.sky}" stroke-width="2.4"/>`
+      : r.top
       ? `<polyline points="${pts}" fill="none" stroke="${C.up}" stroke-width="1.8" stroke-dasharray="6 3"/>`
       : r.wire
       ? `<polyline points="${pts}" fill="none" stroke="${C.wire}" stroke-width="1.2" stroke-dasharray="4 2"/>`

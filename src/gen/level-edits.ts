@@ -3,6 +3,7 @@
 // file only ever holds what zack changed. Floors past 15 (Endless) follow the floor whose recipe they reuse.
 import saved from './level-edits.json';
 import type { Beat } from './hills';
+import type { SkyBeat } from './sky-beats';
 
 export interface FloorEdit {
   recipe?: Beat[][]; // slots, each a set of beats the seed picks from; the last slot is the floor's peak
@@ -19,6 +20,9 @@ export interface FloorEdit {
   topStart?: number; // top route: how far down each stretch of hill (0-1) its power line starts
   roofGap?: [number, number]; // top route: tiles between rooftops
   flocks?: number; // top route: chance of pigeons on a wire or a long rooftop
+  sky?: SkyBeat[][]; // the sky beats over each stretch of hill (src/gen/sky-beats.ts), slots as the hill recipe's
+  skyHeight?: number; // tiles the sky beats stand over the ground behind
+  skyStart?: number; // how far down each stretch of hill (0-1) they start
 }
 
 export interface LevelEdits {

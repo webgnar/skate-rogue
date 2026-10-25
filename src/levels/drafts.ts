@@ -2,10 +2,13 @@
 // (?leveldrafts) before they're saved to the repo. Small on purpose: the game imports it without the editor.
 import type { Beat } from '../gen/hills';
 import type { FloorEdit, LevelEdits } from '../gen/level-edits';
+import type { SkyBeat } from '../gen/sky-beats';
 
 const KEY = 'gnar-run-level-drafts';
 
 export const BEATS: Beat[] = ['hill', 'railHill', 'stairs', 'drop', 'gap', 'kicker', 'chase'];
+
+export const SKY_BEAT_LIST: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap'];
 
 const isPair = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === 'number' && isFinite(n));
 const isNum = (v: unknown) => typeof v === 'number' && isFinite(v);
@@ -18,7 +21,12 @@ export function isFloorEdit(e: unknown): e is FloorEdit {
       f.recipe.every((slot) => Array.isArray(slot) && slot.length > 0 && slot.every((b) => BEATS.includes(b as Beat)));
     if (!ok) return false;
   }
-  for (const k of ['top', 'grade', 'finalSet', 'street', 'climbTop', 'chasePieces', 'topStart', 'flocks']) if (f[k] !== undefined && !isNum(f[k])) return false;
+  //the sky recipe may be empty (no sky beats on the floor)
+  if (f.sky !== undefined) {
+    const ok = Array.isArray(f.sky) && f.sky.every((slot) => Array.isArray(slot) && slot.length > 0 && slot.every((b) => SKY_BEAT_LIST.includes(b as SkyBeat)));
+    if (!ok) return false;
+  }
+  for (const k of ['top', 'grade', 'finalSet', 'street', 'climbTop', 'chasePieces', 'topStart', 'flocks', 'skyHeight', 'skyStart']) if (f[k] !== undefined && !isNum(f[k])) return false;
   for (const k of ['run', 'crest', 'gap', 'midSet', 'roofGap']) if (f[k] !== undefined && !isPair(f[k])) return false;
   return true;
 }

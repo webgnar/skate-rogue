@@ -14,6 +14,7 @@ import { CHUNK_W, makeLayout, STREET_ROW } from './layout';
 import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
+import { addSkyBeats } from './sky-beats';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
 import { floorEdit } from './level-edits';
 import { elPlan } from '../traffic/el';
@@ -284,7 +285,10 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   //Chicago's L over the street, before the side line so the side line stays clear of it
   if (opts.hills) level.el = elPlan(level, level.layout.seed);
   addSideLine(level, level.layout.seed);
-  if (opts.hills && !opts.short) addTopRoute(level, level.layout.seed);
+  if (opts.hills && !opts.short) {
+    addTopRoute(level, level.layout.seed);
+    addSkyBeats(level, level.layout.seed);
+  }
   applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);

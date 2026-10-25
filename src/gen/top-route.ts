@@ -38,7 +38,7 @@ export function topDials(floor: number) {
 const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo + 1));
 
 // the hill's ground at x (px, y down): the highest of its surfaces there, or the street; undefined over a gap
-function groundAt(level: Level, x: number): number | undefined {
+export function groundAt(level: Level, x: number): number | undefined {
   let y: number | undefined = isStreetAt(level, x) ? level.streetY : undefined;
   for (const s of level.surfaces) {
     if (s.side || s.el || s.top || s.kicker || s.kind === 'overpass' || s.kind === 'rail' || s.kind === 'ledge') continue;
@@ -100,7 +100,7 @@ function wire(level: Level, a: number, b: number, from = TOP.start): CurvedRail 
 }
 
 // is anything else up near y over [x0, x1]? (the L, a finale piece's roofs, rails)
-function busy(level: Level, x0: number, x1: number, y: number): boolean {
+export function busy(level: Level, x0: number, x1: number, y: number): boolean {
   const near = (sy: number) => Math.abs(sy - y) < TOP.clear;
   for (const s of level.surfaces) if (s.x1 > x0 && s.x0 < x1 && s.kind !== 'overpass' && near(Math.min(s.y, s.y1 ?? s.y))) return true;
   for (const r of level.rails) if (r.x1 > x0 && r.x0 < x1 && r.ys.some(near)) return true;
