@@ -16,7 +16,14 @@ npm run dev
   - yellow: the hips (the legs follow with IK);
   - cyan: the front (left) foot; pink: the back (right) foot. A foot standing on the board slides along the deck.
     Set its **on board** to 0 to take it off, and it goes anywhere (flips, the push foot, slams);
-  - orange: the board's position. Its pitch, flip, spin and pivot are on the right.
+  - orange: the board's position. Its pitch, flip, spin and pivot are on the right;
+  - green: the front (left) hand; purple: the back (right) hand. Arm IK: the shoulder and elbow follow the hand (the
+    clip still stores the arm angles, so the sliders keep working).
+  A foot on the board slides along the deck; drag it more than 5 cm off the deck and it steps off the board.
+  `h` hides the dots so you can see the pose under them.
+- **Feet:** each foot has **heel lift** (about the ball of the foot), **toes up** (the toes bend at the ball) and
+  **roll on edge** (tips the shoe onto its outside edge, pivoting on that edge of the sole, for scraping the grip
+  on a flick). The hips also move toward or away from the camera (**hips toe/heel**).
 - **Every value is on the right**, in degrees for angles. Double-click a name to put it back to the standing pose.
 - **Auto-key:** changing anything between keys adds a key at the playhead. `k` adds one, delete removes one (the
   first key stays at 0). Drag a key's diamond to retime it, or type a new **length** to stretch the whole clip.

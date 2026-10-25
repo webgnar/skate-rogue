@@ -42,6 +42,11 @@ const COLORS = {
 const GRINDS = new Set(Object.keys(GRIND_NAMES));
 const ON_GROUND = new Set(['push', 'ride', ...GRINDS]); // clips that make no sense in the air
 const DOWN = new THREE.Vector3(0, -1, 0);
+const ONE = new THREE.Vector3(1, 1, 1);
+const FWD = new THREE.Vector3(0, 0, 1); // a foot's long axis, heel to toes
+const SIDE = new THREE.Vector3(1, 0, 0);
+const SOLE_HALF = 0.0575; // half the sole's width
+const HAND = new THREE.Vector3(0, -0.26, 0); // the palm, in the elbow joint's space
 // the sim's body response (the physics feel thread's src/physics/feel.ts), when it has one
 interface Feel {
   squash?: number;
@@ -75,6 +80,7 @@ export class SkaterRig {
   private readonly thighs: [THREE.Group, THREE.Group];
   private readonly shins: [THREE.Group, THREE.Group];
   private readonly feet: [THREE.Group, THREE.Group];
+  private readonly toes: [THREE.Group, THREE.Group]; // at the ball of each foot, driving the ToeBase bone
   private readonly boardRoot = new THREE.Group();
   private readonly boardPivot = new THREE.Group();
   private readonly boardSpin = new THREE.Group();
@@ -201,6 +207,8 @@ export class SkaterRig {
       return g;
     };
     this.feet = [shoe(), shoe()];
+    this.toes = [new THREE.Group(), new THREE.Group()];
+    this.feet.forEach((f, i) => f.add(this.toes[i]));
     if (model) this.bind(model);
     if (board) this.fitBoard(board);
     if (model) this.loadBaked(clips);
@@ -352,7 +360,8 @@ export class SkaterRig {
       drivers[`${side}ForeArm`] = drivers[`${side}Hand`] = this.elbows[i];
       drivers[`${side}UpLeg`] = this.thighs[i];
       drivers[`${side}Leg`] = this.shins[i];
-      drivers[`${side}Foot`] = drivers[`${side}ToeBase`] = this.feet[i];
+      drivers[`${side}Foot`] = this.feet[i];
+      drivers[`${side}ToeBase`] = this.toes[i];
     });
     for (const child of this.mesh.children) {
       if (child === this.boardRoot) continue;
@@ -376,6 +385,7 @@ export class SkaterRig {
       this.shins[i].quaternion.identity();
       this.feet[i].position.set(hip.x, hip.y - THIGH - SHIN - ANKLE, 0.05);
       this.feet[i].rotation.set(0, 0, 0);
+      this.toes[i].rotation.set(0, 0, 0);
     }
     this.mesh.add(model);
     this.mesh.updateMatrixWorld(true);
@@ -383,6 +393,12 @@ export class SkaterRig {
     model.traverse((o) => {
       if ((o as THREE.Bone).isBone) this.bindPos.set(o.name, new THREE.Vector3().setFromMatrixPosition(o.matrixWorld));
     });
+    // the toes bend, and the heel lifts, about the ball of the foot: the ToeBase bone's head
+    (['Left', 'Right'] as const).forEach((side, i) => {
+      const ball = this.bindPos.get(`${side}ToeBase`);
+      if (ball) this.toes[i].position.copy(ball.clone().applyMatrix4(toRig).sub(this.feet[i].position));
+    });
+    this.mesh.updateMatrixWorld(true);
     model.traverse((o) => {
       const bone = o as THREE.Bone;
       if (bone.isBone && drivers[bone.name]) {
@@ -638,6 +654,20 @@ export class SkaterRig {
     if (this.bound.length) this.absorb(0);
   }
 
+  // the animation editor's arm IK: where a hand ends up for a pose (rig space), without posing the rig
+  handFor(p: Pose, arm: 0 | 1): THREE.Vector3 {
+    const m = (pos: THREE.Vector3, e: THREE.Euler) => new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromEuler(e), ONE);
+    const raise = arm === 0 ? p.armLRaise : -p.armRRaise;
+    const fwd = arm === 0 ? p.armLFwd : p.armRFwd;
+    const elbow = arm === 0 ? p.armLElbow : p.armRElbow;
+    return HAND.clone().applyMatrix4(
+      m(new THREE.Vector3(p.hipX, p.hipY, p.hipZ), new THREE.Euler(0, p.yaw, p.tumble, 'ZYX'))
+        .multiply(m(this.spine.position, new THREE.Euler(p.bend, 0, -p.lean)))
+        .multiply(m(this.shoulders[arm].position, new THREE.Euler(-fwd, 0, raise, 'XYZ')))
+        .multiply(m(this.elbows[arm].position, new THREE.Euler(-elbow, 0, 0))),
+    );
+  }
+
   // hold a pose clip whatever the skater is doing ('idle' under a menu, 'busted' when caught); null lets go
   hold(name: 'idle' | 'busted' | null): void {
     this.held = name;
@@ -812,7 +842,7 @@ export class SkaterRig {
     this.boardSpin.rotation.set(p.boardRoll, p.boardYaw, 0, 'YXZ');
 
     // body
-    this.pelvis.position.set(p.hipX, p.hipY, 0);
+    this.pelvis.position.set(p.hipX, p.hipY, p.hipZ);
     this.pelvis.rotation.set(0, p.yaw, p.tumble, 'ZYX');
     this.spine.rotation.set(p.bend, 0, -p.lean);
     this.head.rotation.set(p.nod, p.head, 0, 'YXZ');
@@ -834,8 +864,21 @@ export class SkaterRig {
       const pitch = (front ? p.footFOn : p.footBOn) * p.boardPitch;
       const foot = this.feet[i];
       foot.position.set(sole.x, sole.y, sole.z);
-      foot.rotation.set(0, yaw, pitch);
-      const ankle = new THREE.Vector3(0, ANKLE, -0.05).applyEuler(foot.rotation).add(foot.position);
+      // the heel lifts about the ball of the foot (where the toes bend), and the shoe rolls onto its outside edge
+      // (toward the nose for the front foot, the tail for the back one) about that edge of the sole, so the ball
+      // and the edge stay on the grip
+      const ball = this.toes[i].position;
+      const edge = new THREE.Vector3(front ? SOLE_HALF : -SOLE_HALF, 0, ball.z);
+      const q0 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, pitch, 'ZYX'));
+      const lift = new THREE.Quaternion().setFromAxisAngle(SIDE, front ? p.footFPitch : p.footBPitch);
+      const roll = new THREE.Quaternion().setFromAxisAngle(FWD, front ? -p.footFRoll : p.footBRoll);
+      const q1 = q0.clone().multiply(lift);
+      foot.quaternion.copy(q1).multiply(roll);
+      foot.position
+        .add(ball.clone().sub(ball.clone().applyQuaternion(lift)).applyQuaternion(q0))
+        .add(edge.clone().sub(edge.clone().applyQuaternion(roll)).applyQuaternion(q1));
+      this.toes[i].rotation.x = -(front ? p.footFToe : p.footBToe);
+      const ankle = new THREE.Vector3(0, ANKLE, -0.05).applyQuaternion(foot.quaternion).add(foot.position);
       const hip = this.hips[i].position.clone().applyMatrix4(this.pelvis.matrix);
       const knee = kneePoint(hip, ankle, THIGH, SHIN, kneePole(front, p.yaw - BASE.yaw));
       const k = new THREE.Vector3(knee.x, knee.y, knee.z);
