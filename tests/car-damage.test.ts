@@ -82,3 +82,16 @@ describe('car-hop damage', () => {
     expect(SCORE.wreck).toBeGreaterThan(0);
   });
 });
+
+describe('parked cars in the kit', () => {
+  it('merge a roadblock escape (cruisers with code-built light bars) without crashing', async () => {
+    const { buildParkedCars } = await import('../src/render/car-damage');
+    const { validatedEscape } = await import('../src/gen/escape');
+    const level = validatedEscape(911, 1);
+    expect(level.cars.some((c) => c.model === 'cruiser')).toBe(true);
+    const root = buildParkedCars(level);
+    const state = root.userData.parked as { ranges: { unlit: { count: number } }[] };
+    expect(state.ranges.length).toBe(level.cars.length);
+    expect(state.ranges.every((r) => r.unlit.count > 0)).toBe(true);
+  });
+});
