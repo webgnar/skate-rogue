@@ -16,9 +16,14 @@ import bpy  # first: the bpy module provides bmesh and mathutils
 import bmesh
 from mathutils import Matrix
 
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import car_damage  # noqa: E402  the dented, busted and wrecked copies
+
 HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else bpy.path.abspath('//')
 ROOT = os.path.dirname(HERE)
 GLB = os.path.join(ROOT, 'public', 'models', 'cars.glb')
+DAMAGE_GLB = os.path.join(ROOT, 'public', 'models', 'cars-damage.glb')  # loaded after the game starts
 BLEND = os.path.join(HERE, 'cars.blend')
 
 # Prius-style hatchback: long raked windscreen into a roof that peaks over the front seats, a long slope down to the
@@ -509,6 +514,20 @@ def build():
     mats = {k: material(k, v) for k, v in COLORS.items()}
     cars = [car('Sedan', mats, 'sedan'), car('Robotaxi', mats, 'robotaxi'), car('Cruiser', mats, 'cruiser'),
             bus(mats), box_truck(mats), car_door(mats), bus_stop(mats)]
+    # car-hop damage (art/car_damage.py): each hoppable vehicle's dented, busted and wrecked copies
+    dmg = car_damage.extra_materials(material)
+    belt = min(z for _, z in PRIUS['cabin'])
+    sedan = {'len': PRIUS['len'], 'wide': PRIUS['wide'], 'roof': 1.25, 'belt': belt, 'roof_x': -0.2, 'axle': PRIUS['wheel_x'], 'wheel_r': PRIUS['wheel_r']}
+    specs = {
+        'Sedan': {**sedan, 'seed': 1},
+        'Robotaxi': {**sedan, 'seed': 2},
+        'Cruiser': {'len': SUV['len'], 'wide': SUV['wide'], 'roof': 1.62, 'belt': 0.99, 'roof_x': -0.5, 'axle': SUV['wheel_x'], 'wheel_r': SUV['wheel_r'], 'seed': 3},
+        'Bus': {'len': BUS['len'], 'wide': BUS['wide'], 'roof': BUS['roof'], 'belt': 1.0, 'roof_x': 0.0, 'axle': BUS['axles'][0], 'wheel_r': BUS['wheel_r'], 'seed': 4},
+        'BoxTruck': {'len': TRUCK['len'], 'wide': TRUCK['wide'], 'roof': TRUCK['roof'], 'belt': 0.9, 'roof_x': -0.6, 'axle': TRUCK['axles'][0], 'wheel_r': TRUCK['wheel_r'], 'seed': 5},
+    }
+    by_name = {ob.name: ob for ob in cars}
+    for name, spec in specs.items():
+        cars += car_damage.variants(by_name[name], dmg, spec)
     for i, ob in enumerate(cars):  # side by side in the file; the game reads each from its origin
         ob.location.y = i * 2.5
     return cars
@@ -520,8 +539,12 @@ def export():
     for ob in bpy.data.objects:  # export at the origin
         locs[ob.name] = ob.location.copy()
         ob.location = (0, 0, 0)
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', use_selection=True, export_yup=True, export_apply=True)
+    # the clean cars, and their car-hop damage in a file of its own (the game loads it once it's running)
+    for path, damaged in ((GLB, False), (DAMAGE_GLB, True)):
+        bpy.ops.object.select_all(action='DESELECT')
+        for ob in bpy.data.objects:
+            ob.select_set(ob.name.endswith(('_dent', '_bust', '_wreck')) == damaged)
+        bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_yup=True, export_apply=True)
     for ob in bpy.data.objects:
         ob.location = locs[ob.name]
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
@@ -532,4 +555,4 @@ if __name__ == '__main__':
         tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
         print(f'{ob.name}: {tris} tris')
     export()
-    print('wrote', GLB)
+    print('wrote', GLB, DAMAGE_GLB)

@@ -2,7 +2,8 @@
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
 import { BOON_COLORS } from '../boons/defs';
-import { model } from './models';
+import { hasModel, model } from './models';
+import { buildParkedCars } from './car-damage';
 import { buildProps } from './props';
 import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
@@ -349,15 +350,8 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   }
 
   //--- parked cars ----------------------------------------------------------------------------
-  level.cars.forEach((car, i) => {
-    const x0 = toX(car.x0);
-    const x1 = toX(car.x1);
-    const bottom = toY(level, car.bottom);
-    const roof = toY(level, car.roof);
-    if (car.model === 'bus') kit.add(makeBus(x0, x1, bottom, roof));
-    else if (car.model === 'cruiser') kit.add(makeParkedCruiser(x0, x1, bottom, roof, i));
-    else kit.add(makeCar(x0, x1, bottom, roof, parkedPaint(level, i)));
-  });
+  //merged into one mesh (two with the lit lamps), so a car hop can swap one for its dented model (car-damage.ts)
+  kit.add(buildParkedCars(level));
 
   //--- broken glass ----------------------------------------------------------------------------
   const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe8ff, emissive: 0x204050 });
@@ -632,11 +626,16 @@ const MODEL_LEN = 2.3;
 const MODEL_ROOF = 1.25;
 
 // a CTA bus for the roadblock: white with the blue stripe, a dark window band, a route sign
-export function makeBus(x0: number, x1: number, bottom: number, roof: number): THREE.Group {
+// a model, or its car-hop damage stage ('_dent', '_bust', '_wreck', art/car_damage.py) when it has one
+function bodyModel(name: string, variant: string, paint?: number): THREE.Mesh | null {
+  return (variant && hasModel(name + variant) ? model(name + variant, paint) : null) ?? model(name, paint);
+}
+
+export function makeBus(x0: number, x1: number, bottom: number, roof: number, variant = ''): THREE.Group {
   const bus = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;
-  const body3d = model('Bus'); // art/cars.py: 6 long, roof 2.25 up
+  const body3d = bodyModel('Bus', variant); // art/cars.py: 6 long, roof 2.25 up
   if (body3d) {
     body3d.scale.set(w / 6, h / 2.25, 1);
     body3d.position.y = bottom;
@@ -668,7 +667,7 @@ export function makeBus(x0: number, x1: number, bottom: number, roof: number): T
 
 // a box truck driving your way with its tailgate down: the cab in front, the box behind, and the tailgate a ramp
 // from the box floor to the street behind it (it kicks you up onto the box)
-export function makeTruck(x0: number, x1: number, bottom: number, roof: number, paint: number, gate: number): THREE.Group {
+export function makeTruck(x0: number, x1: number, bottom: number, roof: number, paint: number, gate: number, variant = ''): THREE.Group {
   const truck = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;
@@ -683,7 +682,7 @@ export function makeTruck(x0: number, x1: number, bottom: number, roof: number, 
   const lip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.6), new THREE.MeshBasicMaterial({ color: 0xffb020 }));
   lip.position.set(-w / 2 - gate + 0.04, bottom + 0.04, 0);
   truck.add(ramp, lip);
-  const body3d = model('BoxTruck', paint); // art/cars.py: 4 long, box floor 0.45 and roof 2 up
+  const body3d = bodyModel('BoxTruck', variant, paint); // art/cars.py: 4 long, box floor 0.45 and roof 2 up
   if (body3d) {
     body3d.scale.set(w / 4, h / 2, 1);
     body3d.position.y = bottom;
@@ -724,8 +723,8 @@ export function makeTruck(x0: number, x1: number, bottom: number, roof: number, 
 }
 
 // a cruiser parked across the street: the AI's black-and-white, its light bar on
-function makeParkedCruiser(x0: number, x1: number, bottom: number, roof: number, i: number): THREE.Group {
-  const car = makeCar(x0, x1, bottom, roof, 0x1c1c24, 'Cruiser');
+export function makeParkedCruiser(x0: number, x1: number, bottom: number, roof: number, i: number, variant = ''): THREE.Group {
+  const car = makeCar(x0, x1, bottom, roof, 0x1c1c24, 'Cruiser', variant);
   const top = new THREE.Box3().setFromObject(car).max.y;
   const flip = i % 2 === 0;
   const sirens: { x: number; y: number; z: number; color: 'red' | 'blue' }[] = [];
@@ -740,11 +739,11 @@ function makeParkedCruiser(x0: number, x1: number, bottom: number, roof: number,
   return car;
 }
 
-export function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number, kind: CarModel = 'Sedan'): THREE.Group {
+export function makeCar(x0: number, x1: number, bottom: number, roof: number, paint: number, kind: CarModel = 'Sedan', variant = ''): THREE.Group {
   const car = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;
-  const body3d = model(kind, paint);
+  const body3d = bodyModel(kind, variant, paint);
   if (body3d) {
     if (kind !== 'Cruiser') body3d.scale.set((w + 0.3) / MODEL_LEN, h / MODEL_ROOF, 1);
     body3d.position.y = bottom;

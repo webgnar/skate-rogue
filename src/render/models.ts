@@ -10,23 +10,33 @@ const missing = new Set<string>();
 const loaded: string[] = [];
 
 export function missingModels(): { files: string[]; parts: string[] } {
-  return { files: FILES.filter((f) => !loaded.includes(f)), parts: [...missing] };
+  return { files: [...FILES.filter((f) => !loaded.includes(f)), ...failed.filter((f) => LATER.includes(f))], parts: [...missing] };
+}
+
+export function loadLater(base: string): Promise<void> {
+  return loadModels(base, LATER);
 }
 
 const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb'];
 // materials that glow instead of taking light
 const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen', 'elCarSign', 'elCarLamp']); // the sheriff gold is reflective livery
 
-export async function loadModels(base: string): Promise<void> {
+// models the game can start without, loaded once it's running: car-hop damage (art/car_damage.py). Until they're
+// in, a dented car just shows its clean model
+const LATER = ['cars-damage.glb'];
+const failed: string[] = [];
+
+export async function loadModels(base: string, files = FILES): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
-    FILES.map(async (file) => {
+    files.map(async (file) => {
       try {
         const gltf = await loader.loadAsync(`${base}models/${file}`);
         gltf.scene.children.forEach((o) => parts.set(o.name, asMesh(o)));
         loaded.push(file);
       } catch (err) {
         console.warn(`${file} failed to load, using the built-in version`, err);
+        failed.push(file);
       }
     }),
   );

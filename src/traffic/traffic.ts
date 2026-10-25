@@ -19,6 +19,7 @@ export interface Vehicle extends Car {
   lane: number; // 0 = the skate lane, 1 = pulled out to the back lane (no contact)
   leaving: boolean;
   look?: number; // which paint, for a car that came from a cross street (it keeps its colour)
+  wrecked?: boolean; // car-hopped to scrap (src/traffic/damage.ts): rolling to a stop out of the lane
   stop?: { x: number; t: number }; // a bus pulling in at a bus stop: where its back stops, frames since it started
 }
 
@@ -141,7 +142,9 @@ export class Traffic {
         this.atStop(v, v.stop);
         continue;
       }
-      if (v.kind === 'car') v.speed += (v.cruise - v.speed) * 0.04; // pulling away from the corner
+      if (v.wrecked) {
+        //rolling to a stop (the floor sim slows it) as it drifts out of the lane
+      } else if (v.kind === 'car') v.speed += (v.cruise - v.speed) * 0.04; // pulling away from the corner
       else if (v.speed > 0 && !v.leaving && !(this.noBrake && v.kind === 'robotaxi')) {
         //brake hard when the skater rolls up behind
         const gap = v.x0 - skaterX;

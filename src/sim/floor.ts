@@ -12,7 +12,8 @@ import type { Car, Level, PickupKind } from '../physics/level';
 import { PROP_SIZE } from '../gen/props';
 import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
-import { spawnPlan, Traffic } from '../traffic/traffic';
+import { spawnPlan, Traffic, type Vehicle } from '../traffic/traffic';
+import { CAR_HEALTH, DAMAGE, parkedKind, stageOf, type CarRef, type DamageKind, type Stage } from '../traffic/damage';
 import { ElTrain } from '../traffic/el';
 import { Sky, SKY } from './sky';
 import { crossed, freshGear, GEAR, GEAR_PARTS, gearScale, type Gear, type GearPart } from '../run/gear';
@@ -29,7 +30,9 @@ export type FloorEvent =
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
-  | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' };
+  | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' }
+  // a car hop dented a car (src/traffic/damage.ts): x is its middle and y its roof, px; stage 3 is wrecked
+  | { type: 'dent'; car: CarRef; kind: DamageKind; hits: number; health: number; stage: Stage; x: number; y: number };
 
 // how a prop got smashed (GDD: Smashables), for the effects to tell apart
 export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb';
@@ -81,6 +84,7 @@ export class FloorSim {
   private fall = 0; // how fast we were falling before this step
   readonly gear: Gear; // worn down as you skate; the run takes it to the next floor
   private near = new Map<Car, { gap: number; touched: boolean }>(); // vehicles we're over: the closest pass, and any contact
+  private readonly hits = new Map<Car, number>(); // car hops each car has taken
 
   constructor(
     readonly level: Level,
@@ -136,6 +140,7 @@ export class FloorSim {
     if (this.swarm?.stomp(this.skater, skaterEvents)) {
       for (const e of this.swarm.events) if (e.type === 'down') this.events.push({ type: 'drone', index: e.index });
     }
+    this.dent(skaterEvents);
     this.runBoard(skaterEvents);
     this.collect();
     this.closeCalls(skaterEvents);
@@ -234,6 +239,40 @@ export class FloorSim {
     }
   }
 
+  // car hops dent the car they came off, and enough of them total it: it stops being solid and rolls out of the lane
+  private dent(events: readonly SkaterEvent[]): void {
+    const sk = this.skater;
+    for (const v of this.traffic.vehicles) if (v.wrecked) v.speed *= DAMAGE.wreckDrift;
+    if (!sk.hopped || !events.some((e) => e.type === 'hop')) return;
+    const car = sk.hopped;
+    sk.hopped = null;
+    //an open door is its parked car's
+    const parked = this.traffic.doors.find((d) => d.box === car)?.car ?? car;
+    const p = this.level.cars.indexOf(parked);
+    const v: Vehicle | undefined = p < 0 ? this.traffic.vehicles.find((t) => t === car) : undefined;
+    //cross cars mid-turn, the L's trains and the swarm's drones take hops but no damage
+    if (p < 0 && !v) return;
+    const kind = v ? v.kind : parkedKind(parked);
+    const health = CAR_HEALTH[kind];
+    const hits = (this.hits.get(parked) ?? 0) + 1;
+    this.hits.set(parked, hits);
+    const stage = stageOf(hits, health);
+    if (stage === 3) {
+      sk.wrecked.add(parked);
+      for (const d of this.traffic.doors) if (d.car === parked) sk.wrecked.add(d.box);
+      if (v) {
+        v.wrecked = true;
+        v.leaving = true;
+        v.stop = undefined;
+        v.cruise = 0;
+      }
+      //wrecking the AI's robotaxi cools you off, like smashing its stuff
+      if (kind === 'robotaxi') this.heat.add(-SMASH.aiCool);
+    }
+    const ref: CarRef = v ? { vehicle: v.id } : { parked: p };
+    this.events.push({ type: 'dent', car: ref, kind, hits, health, stage, x: (parked.x0 + parked.x1) / 2, y: parked.roof });
+  }
+
   // close calls: over a vehicle (or it under you) the whole way in the air, the wheels within a few px of its roof
   private closeCalls(events: readonly SkaterEvent[]): void {
     const sk = this.skater;
@@ -241,6 +280,7 @@ export class FloorSim {
     const contact = sk.mode !== 'air' || events.some((e) => e.type === 'hop' || e.type === 'slam' || e.type === 'kicker');
     const cars = sk.movers.length ? [...this.level.cars, ...sk.movers] : this.level.cars;
     for (const c of cars) {
+      if (sk.wrecked.has(c)) continue;
       const over = sk.x + half > c.x0 && sk.x - half < c.x1;
       const n = this.near.get(c);
       if (over) {

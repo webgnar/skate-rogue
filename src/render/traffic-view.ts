@@ -11,6 +11,8 @@ import { model } from './models';
 import { inkify } from './toon';
 import { headlights } from './night';
 import { HeatBeams } from './heat-beams';
+import { STAGE_MODEL, damagedLook } from './car-damage';
+import type { Stage } from '../traffic/damage';
 
 const DRONE_EYE = new THREE.Vector3(-0.4, -0.25, 0); // from the drone's centre
 import { HeatLights } from './heat-light';
@@ -37,6 +39,7 @@ export class TrafficView {
   private stopSigns: THREE.Group[] = [];
   private doorMeshes: { door: CarDoor; mesh: THREE.Group }[] = [];
   private blinkers = new Map<number, THREE.Mesh>();
+  private stages = new Map<number, Stage>(); // car-hop damage by vehicle id (car-damage.ts)
   private cruiserGap = 10; // tiles behind the skater
   private t = 0;
   readonly heatLights = new HeatLights();
@@ -114,6 +117,7 @@ export class TrafficView {
     for (const d of this.doorMeshes) this.group.remove(d.mesh);
     this.doorMeshes = [];
     this.blinkers.clear();
+    this.stages.clear();
     this.cruiserGap = 10;
   }
 
@@ -122,18 +126,31 @@ export class TrafficView {
     for (const v of vehicles) {
       live.add(v.id);
       let mesh = this.meshes.get(v.id);
+      const stage = this.stages.get(v.id) ?? 0;
+      //hopped into its next stage of damage: built again as that model
+      if (mesh && mesh.userData.stage !== stage) {
+        this.group.remove(mesh);
+        this.blinkers.delete(v.id);
+        mesh = undefined;
+      }
       if (!mesh) {
-        const paints = PAINTS[v.kind];
-        const [w, b, r, paint] = [toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), paints[(v.look ?? v.id) % paints.length]];
+        const paint = this.paintOf(v);
+        const [w, b, r, look] = [toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), STAGE_MODEL[stage]];
+        const name = v.kind === 'bus' ? 'Bus' : v.kind === 'truck' ? 'BoxTruck' : v.kind === 'robotaxi' ? 'Robotaxi' : 'Sedan';
         mesh =
-          v.kind === 'bus' ? makeBus(0, w, b, r)
-          : v.kind === 'truck' ? makeTruck(0, w, b, r, paint, (v.kicker ?? 0) / TILE)
-          : makeCar(0, w, b, r, paint, v.kind === 'robotaxi' ? 'Robotaxi' : 'Sedan');
+          v.kind === 'bus' ? makeBus(0, w, b, r, look)
+          : v.kind === 'truck' ? makeTruck(0, w, b, r, paint, (v.kicker ?? 0) / TILE, look)
+          : makeCar(0, w, b, r, paint, name as 'Robotaxi' | 'Sedan', look);
         if (v.speed < 0) mesh.rotation.y = Math.PI; // oncoming: headlights toward the skater
+        if (stage) damagedLook(mesh, name, stage, v.id);
         inkify(mesh);
-        const beams = headlights(toX(v.x1 - v.x0));
-        beams.position.y = toY(level, v.bottom);
-        mesh.add(beams);
+        //a wreck's lights are out
+        if (stage < 3) {
+          const beams = headlights(toX(v.x1 - v.x0));
+          beams.position.y = toY(level, v.bottom);
+          mesh.add(beams);
+        }
+        mesh.userData.stage = stage;
         this.meshes.set(v.id, mesh);
         this.group.add(mesh);
       }
@@ -144,8 +161,35 @@ export class TrafficView {
       if (!live.has(id)) {
         this.group.remove(mesh);
         this.meshes.delete(id);
+        this.stages.delete(id);
       }
     }
+  }
+
+  // a vehicle took a car hop: it's drawn at its new stage of damage from the next sync
+  damage(id: number, stage: Stage): void {
+    this.stages.set(id, stage);
+  }
+
+  // vehicle id's mesh (null before its first sync)
+  meshOf(id: number): THREE.Group | null {
+    return this.meshes.get(id) ?? null;
+  }
+
+  // the dented vehicles on screen, for their smoke
+  damaged(): { key: string; mesh: THREE.Group; stage: Stage }[] {
+    const out: { key: string; mesh: THREE.Group; stage: Stage }[] = [];
+    for (const [id, stage] of this.stages) {
+      const mesh = this.meshes.get(id);
+      if (mesh && stage >= 2) out.push({ key: `v${id}`, mesh, stage });
+    }
+    return out;
+  }
+
+  // a vehicle's paint (its pieces fly off in it)
+  paintOf(v: Vehicle): number {
+    const paints = PAINTS[v.kind];
+    return paints[(v.look ?? v.id) % paints.length];
   }
 
   // cross traffic: each intersection's car, coming nose-first out of the back lanes and across, and its light
