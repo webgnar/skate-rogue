@@ -624,9 +624,11 @@ export class SkaterRig {
   onEvent(e: SkaterEvent): void {
     switch (e.type) {
       case 'ollie':
-      case 'hop':
       case 'kicker':
         this.play('ollie');
+        break;
+      case 'hop': // off a car roof (or a train's, or a drone)
+        this.play('boneless');
         break;
       case 'trick':
         //180s have no clip of their own yet: they read as an ollie until the models thread adds them
