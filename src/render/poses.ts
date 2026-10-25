@@ -652,12 +652,17 @@ export function feetYaw(p: Pose): number {
   return body + wrap(p.boardYaw - body, Math.PI);
 }
 
-// where a foot's sole goes: on the deck, or its free target, blended by its "on" weight
+// where a foot's sole goes: on the deck, or its free target, blended by its "on" weight. The toe/heel value (Z)
+// counts in both: on the deck it's across the board
 export function footTarget(p: Pose, front: boolean): Vec {
   const on = front ? p.footFOn : p.footBOn;
   const fx = front ? p.footFX : p.footBX;
   const free = { x: fx, y: front ? p.footFY : p.footBY, z: front ? p.footFZ : p.footBZ };
-  const deck = deckPoint({ ...p, boardYaw: feetYaw(p) }, fx);
+  // on the deck the toe/heel value shifts the foot across the board (feet hang off the toe or heel edge)
+  const yaw = feetYaw(p);
+  const deck = deckPoint({ ...p, boardYaw: yaw }, fx);
+  deck.x += free.z * Math.sin(yaw);
+  deck.z += free.z * Math.cos(yaw);
   return { x: free.x + (deck.x - free.x) * on, y: free.y + (deck.y - free.y) * on, z: free.z + (deck.z - free.z) * on };
 }
 

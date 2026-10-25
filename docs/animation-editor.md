@@ -19,7 +19,8 @@ npm run dev
   - orange: the board's position. Its pitch, flip, spin and pivot are on the right;
   - green: the front (left) hand; purple: the back (right) hand. Arm IK: the shoulder and elbow follow the hand (the
     clip still stores the arm angles, so the sliders keep working).
-  A foot on the board slides along the deck; drag it more than 5 cm off the deck and it steps off the board.
+  A foot on the board slides along the deck (X) and across it toward the toe or heel edge (Z, the "toe/heel" value);
+  lift it more than 10 cm up off the deck and it steps off the board.
   `h` hides the dots so you can see the pose under them.
 - **Feet:** each foot has **heel lift** (about the ball of the foot), **toes up** (the toes bend at the ball) and
   **roll on edge** (tips the shoe onto its outside edge, pivoting on that edge of the sole, for scraping the grip
