@@ -3,6 +3,7 @@
 // ElSpan/ElColumn kit (art/street.py) laid span by span, bent by turning each span to the next point on the bend.
 // Trains use the ElCar model when it's there, otherwise a code-built CTA car (stainless, blue and red band).
 import * as THREE from 'three';
+import { surface } from './surfaces';
 import { EL, pathAt, pathLength, type ElTrain, type ElStretch } from '../traffic/el';
 import type { Level } from '../physics/level';
 import { TILE } from '../physics/constants';
@@ -52,10 +53,10 @@ function piece(name: string): THREE.Group {
 
 export function buildElTrack(level: Level, kit: THREE.Group): void {
   const built = hasModel('ElSpan') && hasModel('ElColumn') && hasModel('ElColumnCap');
-  const steel = new THREE.MeshLambertMaterial({ color: 0x2f3a33 });
-  const tie = new THREE.MeshLambertMaterial({ color: 0x3a2a20 });
+  const steel = surface('steel', 0x2f3a33);
+  const tie = surface('planks', 0x3a2a20);
   const railMat = new THREE.MeshLambertMaterial({ color: 0x8a8e92 });
-  const lot = new THREE.MeshLambertMaterial({ color: 0x34313a });
+  const lot = surface('asphalt', 0x34313a);
   for (const s of level.el ?? []) {
     const under = toY(level, s.under);
     const marks = stations(s);

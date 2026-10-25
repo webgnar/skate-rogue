@@ -3,6 +3,7 @@
 // girders and a sodium lamp; crumbling ledges as old-town marble; conveyor rails as glowing chevrons running along
 // the bar (cyan forward, orange back). Placeholders the models and effects threads can replace.
 import * as THREE from 'three';
+import { projectSurfaces, surface } from './surfaces';
 import type { Level, Surface } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { FX } from './fx-settings';
@@ -100,7 +101,7 @@ export class TwistView {
   private addRuin(level: Level, s: Surface): void {
     const w = toX(s.x1 - s.x0);
     const g = new THREE.Group();
-    const marble = new THREE.MeshLambertMaterial({ color: 0xe6dccb });
+    const marble = surface('marble', 0xe6dccb);
     const crack = new THREE.MeshBasicMaterial({ color: 0x5a4a3a });
     const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 0.35, 3), marble);
     slab.position.set(0, -0.175, 0);
@@ -115,6 +116,7 @@ export class TwistView {
       c.rotation.y = 0.4;
       g.add(c);
     }
+    projectSurfaces(g);
     inkify(g);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
@@ -128,8 +130,9 @@ export class TwistView {
     const w = toX(px1 - px0);
     const y = toY(level, py);
     //the overpass deck: concrete, deep enough to reach past the lane both ways
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.6, 7), new THREE.MeshLambertMaterial({ color: 0x8d889a }));
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.6, 7), surface('concrete', 0x8d889a));
     slab.position.set(toX(px0) + w / 2, y + 0.3, -1.5);
+    projectSurfaces(slab);
     inkify(slab);
     this.group.add(slab);
     //a sodium lamp strip and the steel girders across its underside (one instanced mesh)

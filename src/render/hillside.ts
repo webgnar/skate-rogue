@@ -16,6 +16,7 @@ import { TILE } from '../physics/constants';
 import { inHill, type Level, type Surface } from '../physics/level';
 import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
+import { surfaceTexture } from './surfaces';
 
 const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
 
@@ -375,30 +376,12 @@ function materials(): NonNullable<typeof mats> {
     g.fillRect(0, 1, W, 1);
     g.fillRect(0, H - 2, W, 1);
   });
-  const walk = tiling(1, 1, (g, W, H) => {
-    g.fillStyle = '#a9a4b2';
-    g.fillRect(0, 0, W, H);
-    g.fillStyle = '#8e8998';
-    g.fillRect(0, 0, W, 1);
-    g.fillRect(0, 0, 1, H);
-    g.fillStyle = '#b4afbd';
-    g.fillRect(5, 6, 2, 1);
-    g.fillRect(10, 11, 1, 1);
-  });
-  //board-formed concrete: retaining walls, stairways, foundations; 2 x 2 tiles
-  const concrete = tiling(2, 2, (g, W, H) => {
-    g.fillStyle = '#8c8794';
-    g.fillRect(0, 0, W, H);
-    g.fillStyle = '#7c7784';
-    for (let y = 0; y < H; y += 6) g.fillRect(0, y, W, 1);
-    g.fillStyle = '#6a6574';
-    g.fillRect(W / 2, 0, 1, H);
-    g.fillRect(0, 0, 1, H);
-  });
   mats = {
     road: new THREE.MeshLambertMaterial({ map: road }),
-    walk: new THREE.MeshLambertMaterial({ map: walk }),
-    concrete: new THREE.MeshLambertMaterial({ map: concrete }),
+    //sidewalk slabs, 1 x 1 tile, and board-formed concrete (retaining walls, stairways, foundations), 2 x 2 tiles:
+    //the kit's shared surface textures (surfaces.ts), so the street's stairs and the hill's look the same
+    walk: new THREE.MeshLambertMaterial({ map: surfaceTexture('pavers'), color: 0xa9a4b2 }),
+    concrete: new THREE.MeshLambertMaterial({ map: surfaceTexture('concrete'), color: 0x8c8794 }),
     house: new THREE.MeshLambertMaterial({ map: houseAtlas() }),
     //the power lines: flat ink, no outline of their own
     wire: new THREE.MeshBasicMaterial({ color: 0x1a1424 }),
