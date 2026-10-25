@@ -20,7 +20,7 @@ import { buzz } from '../ui/settings';
 import { cashScale, dayKey, DECK_SLOTS, FULL_LIBRARY, firstPick, STOCK, withLoadout, type Library, type Loadout } from '../run/meta';
 import { PickupView } from '../render/pickups';
 
-import { inHill, type Level } from '../physics/level';
+import type { Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
@@ -57,7 +57,7 @@ import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig } from '../render/skater-rig';
 import { trickName } from '../physics/tricks';
-import { LANE_B_Z, toX, toY } from '../render/kit';
+import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
 import { FEEL } from '../physics/feel';
@@ -488,7 +488,6 @@ export class Game {
       this.reported = 0;
     }
     this.floorFrames = 0;
-    if (!from) this.sprite.mesh.position.z = 0; // every floor starts in lane A (rolling on, it eases there)
     this.run.scoreScale = mods.scoreScale;
     this.run.slamStoke = mods.slamStoke;
     this.run.stokenScale = mods.stokenScale;
@@ -498,7 +497,6 @@ export class Game {
     this.elView.clear();
     this.cableView.set(this.level);
     this.pickups.setLevel(this.level);
-    this.pickups.lane = 0;
     this.bountyView.set(this.level);
     this.twistView.set(this.level);
     this.floorStoken = this.run.stoken;
@@ -506,7 +504,6 @@ export class Game {
     this.lesson = 0;
     this.prev = from ? { x: this.prev.x + from.dx, y: this.prev.y + from.dy } : { x: this.skater.x, y: this.skater.y };
     if (!from) this.view.setLevel(this.level, this.seed, this.floor);
-    this.view.showLane(0); // every floor starts in lane A
     const rain = this.applyMood(!!from);
     this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
     this.dripEdges = this.level.surfaces
@@ -1026,15 +1023,6 @@ export class Game {
     this.sprite.mesh.position.x = toX(x);
     this.sprite.mesh.position.y = toY(this.level, y);
     const sk = this.skater;
-    //weaving between the streets of lanes A and B (src/gen/lanes.ts): ease over to the lane's street, like a car
-    //changing lanes, and the camera with you. A stretch of hill between is one street wide: on it, lane B rides
-    //the front (no lane-only things are on a hill)
-    const sw = this.level.fork?.switches;
-    const twin = !!sw?.length && sk.x > sw[0].x - 12 * TILE && sk.x < this.level.exitX && !inHill(this.level, sk.x);
-    this.view.laneView = twin ? 1 : 0;
-    const laneTo = sk.lane === 1 && twin ? LANE_B_Z : 0;
-    this.sprite.mesh.position.z += (laneTo - this.sprite.mesh.position.z) * Math.min(1, dt * 6);
-    this.view.laneZ = this.sprite.mesh.position.z;
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
     this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
     this.sprite.setGear(this.sim.gear);
@@ -1287,15 +1275,6 @@ export class Game {
       case 'hop':
         this.hud.callout('CAR HOP!' + combo, 'good');
         break;
-      case 'lane': {
-        //which road the lane leads to, from the fork's signs
-        const fork = this.level.fork;
-        const to = fork ? label(e.lane === 1 ? fork.high : fork.low) : '';
-        this.view.showLane(e.lane);
-        this.pickups.lane = e.lane;
-        this.hud.callout(`LANE ${e.lane === 1 ? 'B' : 'A'}${to ? ` · ${to}` : ''}`, 'good');
-        break;
-      }
       case 'kicker':
         this.view.zoom.trick();
         this.hud.callout('TAILGATE BOMB!' + combo, 'trick');

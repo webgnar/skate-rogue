@@ -66,7 +66,7 @@ export function doorPlan(level: Level, seed: number): number[] {
   const floor = level.layout.floor;
   if (floor < DOOR.from || level.escape) return [];
   const rng = makeRng(seed * 29 + floor * 2203);
-  return level.cars.flatMap((c, i) => (!c.model && c.track === undefined && rng() < DOOR.chance ? [i] : []));
+  return level.cars.flatMap((c, i) => (!c.model && rng() < DOOR.chance ? [i] : []));
 }
 
 export class CarDoor {

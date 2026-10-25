@@ -163,25 +163,6 @@ that boon street. The underground spot comes with carried-over Heat. Built overn
 carries into the next floor at half, and the spot can turn up from the floor 3 fork (lay low, swap a boon, or
 remove a curse once curses exist), then you skate the boon street after it.
 
-**Lane switches, Oct 24, 2026** (zack: the fork should come "much earlier so the player can be accidently or unknowingly
-choose one path or the other ... weaving in space", and "certain spots will force you into either lane a or b").
-The overpass is gone. From a quarter of the way down the street it runs as two depth lanes: lane A in front (the
-low road) and lane B at the back (the high road). The lane you're in at the gate picks the road. Along the way
-come three or four switches (src/gen/lanes.ts):
-
-**Twin streets, Oct 25, 2026** (zack: "it almost has to be a whole streets wide path not just a lane in the single
-road"; picked on a card from a mock-up). Lane B is drawn as a second street behind the first, past a planted median
-that opens at every switch. The camera rises over the two streets and slides with the skater to whichever one they're
-on, and the other street's own obstacles fade. The physics is unchanged: the lanes were already separate.
-
-- **Hop switch** (yellow chevrons): in the air as you cross it, you hop over to the other lane; rolling, you stay.
-  Placed just past a gap where possible, so it comes down to how you jumped. The first and last switches are hops.
-- **Forced switch** (striped barriers closing one lane): everyone goes into the open lane.
-
-Each lane gets its own rails, ledges, parked cars and glass past the first switch; the street, gaps and cross
-traffic are shared, and moving traffic keeps to lane A (so lane B has more of its own obstacles). The signs for both
-roads stand before the first switch, and a callout names the lane and its road whenever you change lanes.
-
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
 

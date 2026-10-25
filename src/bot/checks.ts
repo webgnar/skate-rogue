@@ -2,7 +2,7 @@
 // solid, dropping through the street, rolling off the line of what you're on, NaN, getting stuck, leaving the world.
 // Each is a finding with where and when it happened, so the report can point at the exact spot.
 import { PHYS, TILE } from '../physics/constants';
-import { inLane, isStreetAt, surfaceSlope, surfaceY, type Car, type CurvedRail } from '../physics/level';
+import { isStreetAt, surfaceSlope, surfaceY, type Car, type CurvedRail } from '../physics/level';
 import type { Mode } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 
@@ -78,26 +78,24 @@ export class FloorChecks {
       this.add('through-street', `dropped through the street (mode ${this.mode} to ${sk.mode})`);
     }
     //through the top of something solid, in the air from the start of the step to its end
-    //(not across a lane switch: what's solid changed mid-step)
-    const air = this.mode === 'air' && sk.mode === 'air' && !sim.events.some((e) => e.type === 'hop' || e.type === 'tuck' || e.type === 'kicker' || e.type === 'lane');
+    const air = this.mode === 'air' && sk.mode === 'air' && !sim.events.some((e) => e.type === 'hop' || e.type === 'tuck' || e.type === 'kicker');
     if (air) {
       for (const s of level.surfaces) {
-        if (sk.gone.has(s) || !inLane(s, sk.lane)) continue; // Greece's ruins fall away; the other lane's things
+        if (sk.gone.has(s)) continue; // Greece's ruins fall away
         const cx = crossAt(this.px, this.py, sk.x, sk.y, s.x0, s.y, surfaceSlope(s));
         if (cx !== null && cx >= s.x0 && cx <= s.x1) this.add('fell-through', `fell through a ${s.kind} (${s.kind === 'bank' || s.kind === 'stairs' ? 'sloped' : 'flat'})`, s.kind);
       }
       for (const c of level.cars) {
-        if (!inLane(c, sk.lane)) continue;
         const cx = crossAt(this.px, this.py, sk.x, sk.y, 0, c.roof, 0);
         if (cx !== null && cx + PHYS.width / 2 >= c.x0 && cx - PHYS.width / 2 <= c.x1) this.add('fell-through', `fell through a parked ${c.model ?? 'car'}'s roof`, 'car');
       }
       //moving things (traffic, buses, doors, drones) can slide out from under you in a step: only through the middle
-      for (const c of sk.lane === 0 ? this.movers : []) {
+      for (const c of this.movers) {
         const cx = crossAt(this.px, this.py, sk.x, sk.y, 0, c.roof, 0);
         if (cx !== null && cx >= c.x0 && cx <= c.x1) this.add('fell-through', `fell through the top of a moving ${c.model ?? 'car or drone'}`, 'mover');
       }
       for (const rail of level.rails) {
-        if (rail === this.ignore || rail === sk.railIgnore || !inLane(rail, sk.lane)) continue;
+        if (rail === this.ignore || rail === sk.railIgnore) continue;
         const a = rail.yAt(this.px);
         const b = rail.yAt(sk.x);
         if (a !== undefined && b !== undefined && this.py <= a + 0.01 && sk.y > b + 0.5) this.add('fell-through', 'fell through a curved rail', 'rail');

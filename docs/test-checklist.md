@@ -246,22 +246,6 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
       underside with girders and an amber lamp.
 - [ ] *Phone:* the street with a quarter and the L in view stays smooth on the older iPhone.
 
-## Lane switches (the fork, early and by luck)
-
-- [ ] From about a quarter of the way down a floor that ends in a fork, a dashed line splits the street into lane A
-      (front) and lane B (back). The signs for both roads stand just before it.
-- [ ] Hop switches (yellow chevrons and a round yellow sign): cross one in the air and Lou slides back to lane B (or
-      forward to A), with a LANE B · <road> callout. Cross rolling and nothing changes.
-- [ ] Forced switches (orange-and-white barriers in one lane): Lou is moved into the open lane either way.
-- [ ] Lane B has its own rails, ledges and parked cars drawn behind the front ones, and only lane B's are solid while
-      you're in it. Moving traffic only hits you in lane A.
-- [ ] The gate: lane A leaves on the low road, lane B on the high road (the yellow gate at the back). Check the next
-      floor is the road whose sign you'd expect.
-- [ ] Twin streets (Oct 25): lane B is a whole second street behind a planted median. As the lanes start the camera
-      rises to show both streets; switch and the camera slides with Lou so his street stays put on screen. The
-      median is open (asphalt across) at every switch. The other street's own things fade out; what's in both lanes
-      (and pickups) shows on both. On a stretch of hill between, Lou rides the one street and the camera drops back.
-
 ## One world (no biomes)
 
 - [ ] No district button on the run summary and no "new district" line after a win. The world never switches

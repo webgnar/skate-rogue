@@ -468,22 +468,7 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Next: Endless.** The GDD promises an Endless mode after a win (floors forever, its own leaderboard), and it
   isn't built. It's the next gameplay item unless zack says otherwise.
 
-- **The fork as lane switches (zack: the fork should come much earlier, chosen by luck, weaving in depth; then
-  "certain spots will force you into either lane a or b").** I put three options on a card. zack's follow-up
-  matched the first, and I built it (src/gen/lanes.ts).
-  - Two depth lanes run from a quarter of the way down the street, and the lane at the gate is the road (B high,
-    A low). The overpass is gone.
-  - There are three or four switches. Hops change your lane if you're in the air as you cross. Forced ones close a
-    lane with barriers. The first and last are always hops, so the road is never decided by the level alone.
-  - Each lane gets its own rails, ledges, cars and glass. Moving traffic keeps to lane A, so lane B gets more of its
-    own obstacles to make up for it.
-  - The validator clears each floor taking lane A at every hop, and again taking lane B, at both speeds.
-  - It's a prototype. The depth shift is 2 tiles, which reads subtly from the side camera, and the markers are
-    simple shapes for the level-design thread to dress.
-  - One playtest finding is left: a moving car pulled out of the lane while the bot was over it (floor 7, seed
-    15838). That's the existing pull-out-for-a-gap behaviour, not the lanes.
-
-- **Lanes readable as twin streets (Oct 25).** zack found the lane screenshots messed up. I sent a video, then a mock-up, and zack picked "Twin streets, camera follows" on a card. Lane B is now a second street 7.5 units back behind a median, with gaps at the switches. The camera rises 0.32 of its distance over the lanes and follows the skater's depth, and the lane you're not in fades. Shared things are drawn on both streets. Rendering only: batches and outlines are split per lane so the fade works.
+- **Lanes rolled back (Oct 25).** zack: "the twin street thing might have been a mistake... remove it and polish what we have", and "we have to do this vertically not horizontally". I reverted #122, #123, #126 and #127, so the fork is the overpass at the end of the floor again. Next is a vertical high/low route through the whole floor, shown to zack as a sketch before building.
 
 ## Models thread: animation
 

@@ -5,7 +5,7 @@ import { NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
-import { ceilingAt, inLane, type Lane, currentAt, isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { ceilingAt, currentAt, isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
@@ -21,7 +21,6 @@ export type SkaterEvent =
   | { type: 'tuck' } // Tuck and Roll: fell in a gap and bounced back out
   | { type: 'slam' }
   | { type: 'bail' }
-  | { type: 'lane'; lane: Lane } // moved to the other depth lane at a lane switch (src/gen/lanes.ts)
   | { type: 'exit' };
 
 export interface StepInput {
@@ -66,8 +65,6 @@ export class Skater {
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
-  lane: Lane = 0; // the depth lane past a fork's split: 0 front, 1 back (src/gen/lanes.ts)
-  laneLock: Lane | null = null; // the validator's bot: take this lane at every hop switch, whatever happens
   readonly feel = new Feel(); // the body and board response (src/physics/feel.ts)
   private roofs = new WeakMap<Car, number>(); // each vehicle's roof as of the last step
   trickT = 0; // frames since the last flip trick
@@ -142,10 +139,8 @@ export class Skater {
       if (this.buffer > 0) this.buffer--;
     }
 
-    const px = this.x;
     if (this.mode === 'rail') this.stepRail();
     else this.stepMove(input.held);
-    this.crossSwitches(px);
     if ((this.mode as Mode) !== 'bail') this.feel.step(this.grounded, this.groundPitch(), this.mode === 'rail' ? this.railV : this.hsp, this.mode === 'air' ? this.below() : null);
 
     if (this.x >= this.level.exitX && (this.mode as Mode) !== 'bail' && !this.exited) {
@@ -203,21 +198,6 @@ export class Skater {
     }
   }
 
-  // a lane switch: a forced one puts you in its lane; at a hop switch, in the air you hop over to the other lane,
-  // rolling (or grinding) you stay in yours
-  private crossSwitches(px: number): void {
-    const switches = this.level.fork?.switches;
-    if (!switches) return;
-    for (const sw of switches) {
-      if (px >= sw.x || this.x < sw.x) continue;
-      const hop = this.laneLock ?? (this.mode === 'air' ? ((1 - this.lane) as Lane) : this.lane);
-      const lane: Lane = sw.to ?? hop;
-      if (lane === this.lane) continue;
-      this.lane = lane;
-      this.events.push({ type: 'lane', lane });
-    }
-  }
-
   private ollie(): void {
     //Rail Launch: grind speed adds to the pop
     const grindSpeed = this.mode === 'grind' ? Math.abs(this.hsp) : this.mode === 'rail' ? this.railV : 0;
@@ -260,7 +240,7 @@ export class Skater {
     if (s && x >= s.x0 && x <= s.x1) return surfaceY(s, x);
     if (this.mode === 'grind') return null;
     for (const o of this.level.surfaces) {
-      if (o === s || o.kind === 'rail' || x < o.x0 || x > o.x1 || this.gone.has(o) || !inLane(o, this.lane)) continue;
+      if (o === s || o.kind === 'rail' || x < o.x0 || x > o.x1 || this.gone.has(o)) continue;
       const y = surfaceY(o, x);
       if (Math.abs(y - this.y) <= 8) return y;
     }
@@ -298,17 +278,17 @@ export class Skater {
       }
     };
     for (const s of this.level.surfaces) {
-      if (x < s.x0 || x > s.x1 || this.gone.has(s) || !inLane(s, this.lane)) continue;
+      if (x < s.x0 || x > s.x1 || this.gone.has(s)) continue;
       hit(surfaceY(s, x), surfaceSlope(s));
     }
     for (const rail of this.level.rails) {
-      if (rail === this.railIgnore || !inLane(rail, this.lane)) continue;
+      if (rail === this.railIgnore) continue;
       const y = rail.yAt(x);
       const a = rail.yAt(x - 1);
       const b = rail.yAt(x + 1);
       if (y !== undefined) hit(y, a !== undefined && b !== undefined ? (b - a) / 2 : 0);
     }
-    for (const car of this.cars()) if (x >= car.x0 && x <= car.x1 && inLane(car, this.lane)) hit(car.roof, 0);
+    for (const car of this.cars()) if (x >= car.x0 && x <= car.x1) hit(car.roof, 0);
     if (isStreetAt(this.level, x)) hit(this.level.streetY, 0);
     return depth === Infinity ? null : { angle, depth };
   }
@@ -480,14 +460,12 @@ export class Skater {
 
   // parked cars plus moving traffic
   private cars(): Car[] {
-    //moving traffic is in the front lane; the back lane has its own parked cars
-    const parked = this.level.fork?.switches ? this.level.cars.filter((c) => inLane(c, this.lane)) : this.level.cars;
-    return this.movers.length && this.lane === 0 ? [...parked, ...this.movers] : parked;
+    return this.movers.length ? [...this.level.cars, ...this.movers] : this.level.cars;
   }
 
   // the level's ledges, roofs and rails, plus a live ghost rail
   private surfaces(): Surface[] {
-    const all = this.gone.size || this.level.fork?.switches ? this.level.surfaces.filter((s) => !this.gone.has(s) && inLane(s, this.lane)) : this.level.surfaces;
+    const all = this.gone.size ? this.level.surfaces.filter((s) => !this.gone.has(s)) : this.level.surfaces;
     return this.ghost ? [...all, this.ghost] : all;
   }
 
@@ -508,7 +486,7 @@ export class Skater {
   private rollOnto(): boolean {
     if (this.mode !== 'roll') return false;
     for (const s of this.level.surfaces) {
-      if (s === this.surface || s.kind === 'rail' || this.x < s.x0 || this.x > s.x1 || this.gone.has(s) || !inLane(s, this.lane)) continue;
+      if (s === this.surface || s.kind === 'rail' || this.x < s.x0 || this.x > s.x1 || this.gone.has(s)) continue;
       if (Math.abs(surfaceY(s, this.x) - this.y) > 8) continue;
       this.y = surfaceY(s, this.x);
       this.surface = s;
@@ -577,7 +555,7 @@ export class Skater {
       consider(car.roof, parked ? () => this.touchDown(roofLedge(car)) : () => this.carHop());
     }
     for (const rail of this.level.rails) {
-      if (rail === this.railIgnore || !inLane(rail, this.lane)) continue;
+      if (rail === this.railIgnore) continue;
       const start = rail.at(0);
       const near = magnet > 0 && x < start.x && x >= start.x - magnet;
       const ry = near ? start.y : rail.yAt(x);
@@ -734,7 +712,7 @@ export class Skater {
     }
     if (this.mode === 'roll' && !this.surface) {
       this.level.glass.forEach((g, i) => {
-        if (!this.hitGlass.has(i) && this.x >= g.x0 && this.x <= g.x1 && inLane(g, this.lane)) {
+        if (!this.hitGlass.has(i) && this.x >= g.x0 && this.x <= g.x1) {
           this.hitGlass.add(i);
           this.slam();
         }
