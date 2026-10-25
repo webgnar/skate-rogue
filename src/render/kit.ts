@@ -12,7 +12,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
-import { buildForeground, buildHill, buildMedian } from './hillside';
+import { buildForeground, buildHill } from './hillside';
 import { buildElTrack, elCuts } from './el-view';
 import { quarters, type Quarter } from './quarters';
 
@@ -504,7 +504,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     const kerb = lambert(null, 0x9a96a0);
     const top = lambert(null, 0x7d8a6a); // a planted strip
     const asphalt = lambert(null, 0x3e3a46);
-    const planted: [number, number][] = [];
     for (const [a, b] of twin) {
       for (let x = a; x < b; ) {
         const street = isStreetAtTile(level, x);
@@ -515,12 +514,10 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
           const m = gap ? slab(e - x, 3, medianD, sideMat, asphalt, sideMat) : slab(e - x, 3.3, medianD, kerb, top, kerb);
           m.position.set((x + e) / 2, gap ? -1.5 : -1.35, dividerZ);
           kit.add(m);
-          if (!gap) planted.push([x, e]);
         }
         x = e;
       }
     }
-    buildMedian(planted, dividerZ - medianD / 2, dividerZ + medianD / 2, 0.3, kit);
     //city road works: painted lane-change arrows, a yellow diamond warning sign and flexi posts at a hop switch;
     //a Chicago Type III barricade with its amber lamp and a taper of cones closing the lane at a forced one
     const paint = lambert(laneShiftPaint(), 0xffffff, true);
