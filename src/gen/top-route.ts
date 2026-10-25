@@ -1,8 +1,8 @@
 // The top route (zack, 2026-10-25: get the player on a "top" or "bottom" route through the whole level, "vertically
 // not horizontally"; "the upper power lines that are just there for decoration, could be a new layer of stuff as a
-// top route"). Over each stretch of hill a power line runs pole to pole from the crest down, falling slower than the
-// hill does, so it soon hangs high over the street: you get on where it dips close over a crest (an ollie reaches),
-// stay on by grinding pole to pole, and once you're off you're on the street. Over the street chases and the run to
+// top route"). Over each stretch of hill, from partway down, a power line hangs high, out of
+// an ollie's reach, falling slower than the hill does: a launch ramp on the road under its start gets you up there if
+// you pop off its lip; stay on by grinding pole to pole, and once you're off you're on the street. Over the street chases and the run to
 // the gate, a row of rooftop ledges carries it on at a height only the top route (or a bus roof, the L's trains and
 // a flip) reaches, with pigeons in the way (src/sim/sky.ts); the overpass gate at the end stands at the same height, so the height you reach the gate at is
 // your road. Up there there's no traffic, but the helicopter sees you (src/sim/floor.ts).
@@ -16,8 +16,10 @@ import { floorEdit } from './level-edits';
 
 export const TOP = {
   height: 5 * TILE, // the rooftops' and the gate's height over the street: over an L train's roof, past a flip
-  entry: 1.4 * TILE, // the wire's lowest over the ground: where it dips this close, an ollie gets you on
-  start: 0.45, // how far down a stretch of hill (from its top) the wire starts
+  high: 5 * TILE, // the wire's lowest over the ground behind it: out of an ollie and a flip's reach, in a pop off a ramp's
+  behind: 8, // tiles of ground behind that counts (so a terrace's edge doesn't bring it in reach)
+  start: 0.45, // how far down a stretch of hill (from its top) its launch ramp stands
+  ramp: { len: 2, rise: 1.5, lead: 3 }, // tiles: a launch ramp's run and lip height; a street one ends this far before its rooftop
   pole: 7, // tiles between the poles it hangs from
   roof: [9, 12], // tiles of rooftop ledge: off the end of one at the speed off a wire, an ollie lands on the next
   gap: [2, 3], // tiles between them, to ollie
@@ -40,7 +42,7 @@ const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo
 function groundAt(level: Level, x: number): number | undefined {
   let y: number | undefined = isStreetAt(level, x) ? level.streetY : undefined;
   for (const s of level.surfaces) {
-    if (s.side || s.el || s.top || s.kind === 'overpass' || s.kind === 'rail' || s.kind === 'ledge') continue;
+    if (s.side || s.el || s.top || s.kicker || s.kind === 'overpass' || s.kind === 'rail' || s.kind === 'ledge') continue;
     if (x < s.x0 || x > s.x1) continue;
     const sy = surfaceY(s, x);
     if (y === undefined || sy < y) y = sy;
@@ -48,10 +50,16 @@ function groundAt(level: Level, x: number): number | undefined {
   return y;
 }
 
-// one stretch of hill [a, b]: from its peak down, a line no lower than `entry` over the ground, falling straight to
-// the rooftops' height at the foot, and never rising (a grind doesn't climb); smoothed, it's one long grind (the
-// poles it hangs from are scenery: a wire per span between them kicked you off at every pole)
-function wire(level: Level, a: number, b: number, start = TOP.start): CurvedRail | null {
+// a launch ramp up to the top route, rising from y over [x0, x0 + its run]
+function ramp(x0: number, y: number): Surface {
+  return { kind: 'bank', x0, x1: x0 + TOP.ramp.len * TILE, y, y1: y - TOP.ramp.rise * TILE, row: -1, kicker: true, launch: true };
+}
+
+// one stretch of hill [a, b]: partway down, a launch ramp on the road, and from just past its lip a power line high
+// over the ground (never lower than `high` under the highest ground behind it), falling straight to the rooftops'
+// height at the foot, and never rising (a grind doesn't climb); smoothed, it's one long grind (the poles it hangs
+// from are scenery: a wire per span between them kicked you off at every pole)
+function wire(level: Level, a: number, b: number, from = TOP.start): { rail: CurvedRail; ramp: Surface } | null {
   const xs: number[] = [];
   const gs: number[] = [];
   for (let x = a; x <= b; x += TILE / 2) {
@@ -64,37 +72,53 @@ function wire(level: Level, a: number, b: number, start = TOP.start): CurvedRail
   //from the peak (the top of the cable car's climb, or the hill's top)
   let p = 0;
   for (let i = 1; i < gs.length; i++) if (gs[i] < gs[p]) p = i;
-  //it starts partway down, not at the crest (zack, 2026-10-25: "it should start higher than the street and the
-  //beginning of where you can get to the high part can start like halfway down the hill"): over the first edge
-  //past that, where the street falls away, ollie off it to catch the wire (roll off and you're on the street below)
-  const half = xs[p] + start * (b - xs[p]);
-  let q = xs.findIndex((x) => x >= half);
-  if (q < 0) return null;
-  const edge = (i: number) => gs.slice(i + 1, i + 5).some((g) => g >= gs[i] + TILE / 2);
-  let e = q;
-  while (e < gs.length - 8 && !edge(e)) e++;
-  if (e < gs.length - 8) q = e;
-  p = q;
-  const x0 = Math.max(xs[0], xs[q] - TILE);
-  const y0 = gs[p] - TOP.entry;
+  //the ramp stands on the hill's road partway down (zack, 2026-10-25: "it should start higher than the street and
+  //the beginning of where you can get to the high part can start like halfway down the hill"; "dont have the upper
+  //levels power lines reach down low. there should be certain ramps that can get you air to get up to them")
+  const half = xs[p] + from * (b - xs[p]);
+  const run = TOP.ramp.len * TILE;
+  const road = level.surfaces.find((s) => s.hill && s.kind === 'bank' && s.x1 - Math.max(s.x0, half) >= run + TILE && s.x1 > half && s.x0 < b);
+  if (!road) return null;
+  const rx = Math.max(road.x0, half);
+  const r = ramp(rx, surfaceY(road, rx));
+  //the wire, from a tile past the lip: under it, the highest ground (or the lip) of the last few tiles
+  const start = r.x1 + TILE;
+  const env = xs.map((x, i) => {
+    let g = gs[i];
+    for (let j = i; j >= 0 && xs[j] > x - TOP.behind * TILE; j--) g = Math.min(g, gs[j]);
+    return x - r.x1 < TOP.behind * TILE ? Math.min(g, r.y1!) : g;
+  });
+  const k0 = xs.findIndex((x) => x >= start);
+  if (k0 < 0 || xs.length - k0 < 6) return null;
+  const x0 = xs[k0];
+  const y0 = env[k0] - TOP.high;
   const yEnd = level.streetY - TOP.height;
   const line = (x: number) => y0 + ((x - x0) / (b - x0)) * (yEnd - y0);
-  const k0 = xs.findIndex((x) => x >= x0);
   const px = xs.slice(k0);
-  const ys = px.map((x, i) => Math.min(line(x), gs[k0 + i] - TOP.entry));
-  //smooth it (a kink is a jolt), then from the end back never higher further on, and never into the ground
+  const ys = px.map((x, i) => Math.min(line(x), env[k0 + i] - TOP.high));
+  //smooth it (a kink is a jolt), then from the end back never higher further on, and never closer to the ground
   const smooth = ys.map((_, i) => {
     const w = ys.slice(Math.max(0, i - 4), i + 5);
     return w.reduce((t, v) => t + v, 0) / w.length;
   });
-  for (let i = smooth.length - 2; i >= 0; i--) smooth[i] = Math.min(smooth[i], smooth[i + 1]);
-  const pts = px.map((x, i): [number, number] => [x, Math.min(smooth[i], gs[k0 + i] - TOP.entry)]);
+  const pts = px.map((x, i): [number, number] => [x, Math.min(smooth[i], env[k0 + i] - TOP.high)]);
   for (let i = pts.length - 2; i >= 0; i--) pts[i][1] = Math.min(pts[i][1], pts[i + 1][1]);
   if (pts.length < 4) return null;
   const w = polyRail(pts);
   w.wire = true;
   w.top = true;
-  return w;
+  return { rail: w, ramp: r };
+}
+
+// a launch ramp on the street before the rooftop at x (the way back up after a fall), where the street's clear
+function streetRamp(level: Level, x: number): Surface | null {
+  const x1 = x - TOP.ramp.lead * TILE;
+  const x0 = x1 - TOP.ramp.len * TILE;
+  for (let c = x0 - TILE; c <= x1 + TILE; c += TILE / 2) if (!isStreetAt(level, c)) return null;
+  if (level.cars.some((c) => c.x1 > x0 - TILE && c.x0 < x1 + TILE)) return null;
+  if (level.crossings.some((c) => c.x + 4 * TILE > x0 && c.x - TILE < x1)) return null;
+  if (level.surfaces.some((s) => s.x1 > x0 - TILE && s.x0 < x1 + TILE && Math.max(s.y, s.y1 ?? s.y) > level.streetY - 2 * TILE)) return null;
+  return ramp(x0, level.streetY);
 }
 
 // is anything else up near y over [x0, x1]? (the L, a finale piece's roofs, rails)
@@ -136,9 +160,11 @@ export function addTopRoute(level: Level, seed: number): void {
   const surfaces: Surface[] = [];
   const flocks: FlockSite[] = [];
   spans.forEach(([a, b], i) => {
-    const w = wire(level, a, b, t.topStart);
-    if (w) {
+    const hill = wire(level, a, b, t.topStart);
+    const w = hill?.rail;
+    if (hill && w) {
       rails.push(w);
+      surfaces.push(hill.ramp);
       //pigeons sitting on the wire, halfway down
       if (birds() < t.flocks) {
         const m = w.at(w.length / 2);
@@ -155,6 +181,11 @@ export function addTopRoute(level: Level, seed: number): void {
     //and on the far end of a long rooftop, past where an ollie onto it lands
     for (const r of rs) if (r.x1 - r.x0 >= 10 * TILE && birds() < t.flocks) flocks.push({ x: r.x1 - 2.5 * TILE, y: r.y - SKY.perch });
     surfaces.push(...rs);
+    //a way back up for whoever fell off: a launch ramp before a rooftop further along
+    for (const r of rs.slice(1, 2)) {
+      const up = streetRamp(level, r.x0);
+      if (up) surfaces.push(up);
+    }
   });
   level.rails.push(...rails);
   level.surfaces.push(...surfaces);

@@ -298,9 +298,10 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       }
     } else if (s.kind === 'bank' && s.kicker) {
       //the L's kicker: a skatepark launch ramp out on the street, plywood sides and a steel face
+      //(a top route launch ramp on a hill: its foot sinks into the road falling away under it)
       const shape = new THREE.Shape();
-      shape.moveTo(0, 0);
-      shape.lineTo(w, 0);
+      shape.moveTo(0, y);
+      shape.lineTo(w, s.y === level.streetY ? y : y - 2.5);
       shape.lineTo(w, toY(level, s.y1!));
       shape.closePath();
       const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.6, bevelEnabled: false });

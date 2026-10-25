@@ -62,6 +62,19 @@ function landsOn(level: Level, sk: Skater, x: number, y: number, vsp: number, an
   return false;
 }
 
+// follow a fall from (x, y) at vsp: does it come down on the top route (a power line or a rooftop)?
+function landsTop(level: Level, sk: Skater, x: number, y: number, vsp: number): boolean {
+  for (let f = 0; f < 120 && y < level.streetY; f++) {
+    vsp = Math.min(vsp + sk.grav, PHYS.maxFall);
+    const ny = y + vsp;
+    x += sk.hsp;
+    if (level.surfaces.some((s) => s.top && x >= s.x0 + EDGE && x <= s.x1 - EDGE && y <= s.y && ny >= s.y)) return true;
+    if (level.rails.some((r) => r.top && (r.yAt(x) ?? -1e9) >= y && (r.yAt(x) ?? 1e9) <= ny)) return true;
+    y = ny;
+  }
+  return false;
+}
+
 // falling with no street ahead: flip now, or hold it while a later flip still lands where this one wouldn't (at
 // full stoke's speed a flip straight away can sail over a short roof)
 function flipNow(level: Level, sk: Skater): boolean {
@@ -116,6 +129,9 @@ export class Pilot {
     //(not where another rail picks up right where this one ends: the top route's wires, pole to pole)
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) pressed = true;
     if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
+    //pop off a launch ramp's lip, and flip near the top of the arc if that's what reaches the top route
+    if (this.style === 'high' && sk.mode === 'roll' && sk.surface?.launch && sk.x > sk.surface.x1 - 8) pressed = true;
+    if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, sk, sk.x, sk.y, sk.vsp) && landsTop(level, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick)) pressed = true;
     //pigeons sitting on the top route ahead: ollie over them
     if ((onSurface || sk.mode === 'rail') && sim.sky.flocks.some((f) => f.state === 'perch' && f.x - sk.x > 0 && f.x - sk.x < 8 * Math.max(sk.hsp, sk.railV) && Math.abs(f.y - sk.y) < 20)) pressed = true;
     // falling with no street ahead: flip for more air
