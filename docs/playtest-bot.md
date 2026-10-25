@@ -6,9 +6,9 @@ into the deck, models that didn't load, floors nobody can clear) turn up before 
 ## Running it
 
 ```sh
-npm run playtest            # everything, about 10 minutes
+npm run playtest            # everything, about 10 minutes on 4 cores
 npm run playtest:quick      # fewer seeds, four short browser runs, about 3 minutes
-npm run playtest:sim        # just the sim runs, under a minute
+npm run playtest:sim        # just the sim runs, a few minutes (one process per core)
 npm run playtest -- --url http://localhost:5173/   # use your running `npm run dev` instead of starting one
 ```
 
@@ -34,7 +34,7 @@ times faster.
 
 ## What it does
 
-**Sim runs** (`src/bot/run-sim.ts`, `tests/playtest.test.ts`): whole runs, floors 1 to 15 with all five escapes, on 30
+**Sim runs** (`src/bot/run-sim.ts`, `tests/playtest.test.ts`): whole runs, floors 1 to 15 with all five escapes, on 20
 seeds, each skated by the reference bot (the floor validator's line) and by a button-masher, and at Gnar 3 every
 fifth seed. After each floor it picks a boon from the cards the game would offer and takes the road it skated to.
 The game's own per-step rules run alongside (score, combo, the gnar state's speed boost), which the floor validator

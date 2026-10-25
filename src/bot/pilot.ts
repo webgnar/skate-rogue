@@ -3,7 +3,7 @@
 // to shake out states the reference line never reaches. Pure, so the validator, the sim playtest and the game's
 // ?bot autopilot all press the same way.
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, surfaceY, type Car, type CurvedRail, type Level } from '../physics/level';
+import { isStreetAt, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
 import type { Skater, StepInput } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
@@ -42,9 +42,35 @@ function continues(level: Level, rail: CurvedRail): boolean {
   return level.surfaces.some((s) => Math.abs(s.x0 - x) < 4 && Math.abs(s.y - y) < 8);
 }
 
+// the surfaces and rails a look-ahead from here could reach: every fall below runs at most 150 steps of hsp from the
+// skater, so the forecasts loop over these few instead of the whole floor's (the same answers, much faster)
+interface Near {
+  surfaces: Surface[];
+  rails: CurvedRail[];
+}
+
+const NONE: Near = { surfaces: [], rails: [] };
+const REACH = 152; // steps of hsp: flipNow's 30 and a fall's 120, and a little over
+
+const spans = new WeakMap<CurvedRail, [number, number]>();
+function spanOf(r: CurvedRail): [number, number] {
+  let span = spans.get(r);
+  if (!span) spans.set(r, (span = [Math.min(...r.xs), Math.max(...r.xs)]));
+  return span;
+}
+
+function nearby(level: Level, sk: Skater): Near {
+  const lo = Math.min(sk.x, sk.x + REACH * sk.hsp);
+  const hi = Math.max(sk.x, sk.x + REACH * sk.hsp);
+  return {
+    surfaces: level.surfaces.filter((s) => s.x1 >= lo && s.x0 <= hi),
+    rails: level.rails.filter((r) => spanOf(r)[1] >= lo && spanOf(r)[0] <= hi),
+  };
+}
+
 // follow a fall (no more presses) from the feet at (x, y) at vsp: does the board come down on a manual pad, or (any)
 // on anything? `flip`: vsp is a flip thrown now, which lifts the board its own way (src/physics/tuck.ts)
-function landsOn(level: Level, sk: Skater, x: number, y: number, vsp: number, any: boolean, flip = false): boolean {
+function landsOn(level: Level, near: Near, sk: Skater, x: number, y: number, vsp: number, any: boolean, flip = false): boolean {
   const tuck = sk.tuck.ahead(flip);
   let by = y - sk.tuck.lift;
   for (let f = 0; f < 120 && by < level.streetY + 1; f++) {
@@ -54,21 +80,21 @@ function landsOn(level: Level, sk: Skater, x: number, y: number, vsp: number, an
     const ny = y - tuck.lift;
     x += sk.hsp;
     if (any && ny >= level.streetY && isStreetAt(level, x)) return true;
-    for (const s of level.surfaces) {
+    for (const s of near.surfaces) {
       //a few px in from the ends: the projection is a guess, and a corner isn't a landing to count on
       if ((!any && !s.manual) || x < s.x0 + EDGE || x > s.x1 - EDGE) continue;
       const sy = surfaceY(s, x);
       if (by <= sy && ny >= sy) return true;
     }
     //and rails: the top route's next wire
-    if (any && level.rails.some((r) => r !== sk.railIgnore && (r.yAt(x) ?? -1e9) >= by && (r.yAt(x) ?? 1e9) <= ny)) return true;
+    if (any && near.rails.some((r) => r !== sk.railIgnore && (r.yAt(x) ?? -1e9) >= by && (r.yAt(x) ?? 1e9) <= ny)) return true;
     by = ny;
   }
   return false;
 }
 
 // follow a fall from the feet at (x, y) at vsp: does the board come down on the top route (a power line or a rooftop)?
-function landsTop(level: Level, sk: Skater, x: number, y: number, vsp: number, flip = false): boolean {
+function landsTop(level: Level, near: Near, sk: Skater, x: number, y: number, vsp: number, flip = false): boolean {
   const tuck = sk.tuck.ahead(flip);
   let by = y - sk.tuck.lift;
   for (let f = 0; f < 120 && by < level.streetY; f++) {
@@ -77,8 +103,8 @@ function landsTop(level: Level, sk: Skater, x: number, y: number, vsp: number, f
     tuck.step(true);
     const ny = y - tuck.lift;
     x += sk.hsp;
-    if (level.surfaces.some((s) => s.top && x >= s.x0 + EDGE && x <= s.x1 - EDGE && by <= s.y && ny >= s.y)) return true;
-    if (level.rails.some((r) => r.top && (r.yAt(x) ?? -1e9) >= by && (r.yAt(x) ?? 1e9) <= ny)) return true;
+    if (near.surfaces.some((s) => s.top && x >= s.x0 + EDGE && x <= s.x1 - EDGE && by <= s.y && ny >= s.y)) return true;
+    if (near.rails.some((r) => r.top && (r.yAt(x) ?? -1e9) >= by && (r.yAt(x) ?? 1e9) <= ny)) return true;
     by = ny;
   }
   return false;
@@ -86,16 +112,16 @@ function landsTop(level: Level, sk: Skater, x: number, y: number, vsp: number, f
 
 // falling with no street ahead: flip now, or hold it while a later flip still lands where this one wouldn't (at
 // full stoke's speed a flip straight away can sail over a short roof)
-function flipNow(level: Level, sk: Skater): boolean {
+function flipNow(level: Level, near: Near, sk: Skater): boolean {
   const flip = PHYS.trick * sk.gear.trick;
-  if (landsOn(level, sk, sk.x, sk.y, flip, true, true)) return true;
+  if (landsOn(level, near, sk, sk.x, sk.y, flip, true, true)) return true;
   let { x, vsp } = sk;
   let y = sk.y;
   for (let k = 1; k <= 30 && y < level.streetY; k++) {
     vsp = Math.min(vsp + sk.grav, PHYS.maxFall);
     x += sk.hsp;
     y += vsp;
-    if (landsOn(level, sk, x, y, flip, true, true)) return false;
+    if (landsOn(level, near, sk, x, y, flip, true, true)) return false;
   }
   return true;
 }
@@ -130,6 +156,7 @@ export class Pilot {
   private ref(sim: FloorSim): boolean {
     const level = sim.level;
     const sk = sim.skater;
+    const near = sk.mode === 'air' ? nearby(level, sk) : NONE; // the look-aheads all run in the air
     const movers = sim.traffic.inLane;
     //the drone swarm: drones on their way down count as already there
     const drones = sim.swarm ? sim.swarm.drones.filter((d) => d.state === 'dive' || d.state === 'hover').map((d) => d.box) : [];
@@ -141,15 +168,15 @@ export class Pilot {
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) pressed = true;
     if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
     //flip near the top of an arc if that's what reaches the top route
-    if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, sk, sk.x, sk.y, sk.vsp) && landsTop(level, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true)) pressed = true;
+    if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, near, sk, sk.x, sk.y, sk.vsp) && landsTop(level, near, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true)) pressed = true;
     //pigeons sitting on the top route ahead: ollie over them
     if ((onSurface || sk.mode === 'rail') && sim.sky.flocks.some((f) => f.state === 'perch' && f.x - sk.x > 0 && f.x - sk.x < 8 * Math.max(sk.hsp, sk.railV) && Math.abs(f.y - sk.y) < 20)) pressed = true;
     // falling with no street ahead: flip for more air
     //(unless this fall already lands on a manual pad)
-    if (sk.mode === 'air' && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOn(level, sk, sk.x, sk.y, sk.vsp, false)) {
-      if (sk.vsp > 0.5 && flipNow(level, sk)) pressed = true;
+    if (sk.mode === 'air' && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, false)) {
+      if (sk.vsp > 0.5 && flipNow(level, near, sk)) pressed = true;
       //near the top of the arc: flip already if that lands on something and coming down as we are wouldn't
-      else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true, true) && !landsOn(level, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
+      else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, near, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true, true) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
     }
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.boardY)) pressed = true;

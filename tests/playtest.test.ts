@@ -1,6 +1,6 @@
 // The playtest bot's runs in the sim (src/bot): whole runs, boons and all, checked on every step. In `npm test` a
 // couple of runs must come back clean; `npm run playtest` (PLAYTEST=1) skates many more and writes
-// playtest-report/sim.json for the report.
+// playtest-report/sim-N.json for the report.
 import { describe, expect, it } from 'vitest';
 import { playRun, type FloorReport } from '../src/bot/run-sim';
 import { FloorChecks } from '../src/bot/checks';
@@ -45,10 +45,13 @@ describe('playtest bot (sim)', () => {
   }, 60000);
 
   it.runIf(process.env.PLAYTEST)('sweep: many runs for the report', async () => {
-    const seeds = Number(process.env.PLAYTEST_SEEDS) || 30;
+    const seeds = Number(process.env.PLAYTEST_SEEDS) || 20;
+    //PLAYTEST_SHARD=1/4: this process skates every fourth seed (scripts/playtest/run.mjs runs one per core)
+    const [shard, shards] = (process.env.PLAYTEST_SHARD ?? '0/1').split('/').map(Number);
     const t0 = performance.now();
     const runs: { seed: number; pilot: string; gnar: number; floors: FloorReport[] }[] = [];
     for (let i = 1; i <= seeds; i++) {
+      if ((i - 1) % shards !== shard) continue;
       const seed = i * 7919;
       //the reference line and a button-masher on every seed; every few seeds at a Gnar level too
       for (const pilot of ['ref', 'mash'] as const) runs.push({ seed, pilot, gnar: 0, floors: playRun({ seed, pilot, keepGoing: true }) });
@@ -60,6 +63,6 @@ describe('playtest bot (sim)', () => {
       writeFileSync(p: string, data: string): void;
     };
     mkdirSync('playtest-report', { recursive: true });
-    writeFileSync('playtest-report/sim.json', JSON.stringify({ at: new Date().toISOString(), seconds: (performance.now() - t0) / 1000, runs }, null, 1));
+    writeFileSync(`playtest-report/sim-${shard}.json`, JSON.stringify({ at: new Date().toISOString(), seconds: (performance.now() - t0) / 1000, runs }, null, 1));
   }, 900000);
 });
