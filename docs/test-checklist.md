@@ -598,6 +598,19 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Reach the gate still up top and you're on the high road.
 - [ ] `?bot=high` plays the top route for you.
 
+## Traffic and the scenery (nothing clips)
+
+- [ ] At the foot of every hill there's a concrete tunnel mouth at the back of the road, and one at the foot of every cable car climb.
+- [ ] With some Heat, the cruiser is nowhere while you're up a hill, then swings out of the tunnel mouth behind you as you reach the bottom. It never drives through the side of the hill.
+- [ ] Ride up a cable car climb and the cruiser stops at the foot and turns into the tunnel there.
+- [ ] Over a canal the cruiser jumps it instead of floating over the water.
+- [ ] Cars pulling out of your lane (and wrecks) drive in the back lane in front of the curb, never through the people, lamps, bus stops or the L's columns on the sidewalk.
+- [ ] A car heading into a hill turns into the tunnel instead of driving into the hillside.
+- [ ] A robotaxi or a turning car that drives into a cone or crate knocks it flying (no points for you).
+- [ ] Every floor's street ends with a side street just before the next floor starts. With the cruiser on your tail as you roll into the next floor, it turns up that side street behind you instead of vanishing.
+- [ ] The helicopter follows you smoothly (no stepping), and it doesn't bob up and down with every ollie.
+- [ ] The helicopter over the top route and the high-Heat drone drop in from the sky and stay above the hill, never down inside it. When you come down off the top route the helicopter climbs away.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

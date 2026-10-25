@@ -7,6 +7,8 @@ import { buildParkedCars } from './car-damage';
 import { buildProps } from './props';
 import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
+import { STREET_Z } from '../traffic/traffic';
+import { TURN_OFF, turnOff } from '../traffic/tunnel';
 import { inHill, type Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
 import { makeRng, randInt } from '../gen/rng';
@@ -14,7 +16,7 @@ import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, u
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
 import { buildForeground, buildHill } from './hillside';
-import { buildElTrack, elCuts } from './el-view';
+import { buildElTrack, elCuts, setColumn } from './el-view';
 import { quarters, type Quarter } from './quarters';
 import { projectSurfaces, surface } from './surfaces';
 
@@ -23,6 +25,7 @@ export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
+const WALK = STREET_Z.curb - STREET_BACK; // the back sidewalk's depth, wall to curb
 const LANDMARK_W = 8; // art/landmarks.py's are up to 8 wide
 const PLAZA = ['Flamingo', 'Picasso'];
 // buildings, stairs and banks under the descent run from BLOCK_BACK to BLOCK_FRONT: the front face sits well in
@@ -115,11 +118,11 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
         ctx.fillStyle = look.road; // asphalt (a park path, sand, the sea floor...)
         ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = look.back; // sidewalk at the back
-        ctx.fillRect(0, 0, W, H * 0.3);
+        ctx.fillRect(0, 0, W, (H * WALK) / STREET_DEPTH);
         ctx.fillStyle = look.seam;
-        for (let px = 0; px < W; px += 16) ctx.fillRect(px, 0, 1, H * 0.3);
+        for (let px = 0; px < W; px += 16) ctx.fillRect(px, 0, 1, (H * WALK) / STREET_DEPTH);
         ctx.fillStyle = look.edge; // curb
-        ctx.fillRect(0, H * 0.3, W, 2);
+        ctx.fillRect(0, (H * WALK) / STREET_DEPTH, W, 2);
         if (look.line) {
           ctx.fillStyle = look.line; // centre line
           for (let px = (c * 8) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
@@ -149,6 +152,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   }
   //cross streets cut the wall and the block behind it
   const gaps = level.crossings.map((i) => toX(i.x + CROSS.w / 2)).map((cx) => [cx - CROSS.street, cx + CROSS.street]);
+  //and the side street at the end of the floor, which the cruiser turns up as the next floor begins (tunnel.ts)
+  const off = turnOff(level);
+  if (off !== null) gaps.push([toX(off) - TURN_OFF.half, toX(off) + TURN_OFF.half]);
   //and so do the L's bends (el-view.ts)
   //and the later stretches of hill between the street chases, which draw their own (hillside.ts)
   const hillCuts = (level.hillSpans ?? []).slice(1).map(([a, b]) => [toX(a), toX(b)]);
@@ -394,10 +400,8 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       }
       for (let x = x0 + 0.6; x < x1; x += 3) {
         const col = model('ElColumn')!;
-        col.position.set(x, 0, 0);
-        col.scale.y = y - 0.08;
         const cap = model('ElColumnCap')!;
-        cap.position.set(x, y, 0);
+        setColumn(col, cap, x, 0, 0, y);
         kit.add(col, cap);
       }
     }
@@ -439,13 +443,13 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
         rail.position.set(x0 + w / 2, y + 0.38, z);
         kit.add(rail);
       }
-      //columns down to the street, in the back lane so they never touch the skate lane
+      //columns down to the street at the curb, so they never touch the skate lane or the back lane's traffic
       for (let x = x0 + 0.6; x < x1; x += 3) {
         const col = new THREE.Mesh(new THREE.BoxGeometry(0.35, y, 0.35), steel);
-        col.position.set(x, y / 2, -2.4);
+        col.position.set(x, y / 2, STREET_Z.lamp - 0.15);
         kit.add(col);
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 1.1), steel);
-        arm.position.set(x, y - 0.1, -1.9);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 1.25), steel);
+        arm.position.set(x, y - 0.1, STREET_Z.lamp - 0.15 + 0.6);
         kit.add(arm);
       }
     }
@@ -513,12 +517,12 @@ function crossStreet(x0: number, x1: number, sideMat: THREE.Material): THREE.Gro
     g.add(kerb);
   }
   //the main street's sidewalk is road here, with a crosswalk across the mouth of the side street
-  const cut = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.8).rotateX(-Math.PI / 2), surface('asphalt', 0x2a2830));
-  cut.position.set(cx, 0.004, STREET_BACK + 0.9);
+  const cut = new THREE.Mesh(new THREE.PlaneGeometry(w, WALK).rotateX(-Math.PI / 2), surface('asphalt', 0x2a2830));
+  cut.position.set(cx, 0.004, STREET_BACK + WALK / 2);
   const zebra = new THREE.MeshBasicMaterial({ color: 0xd8d8de, transparent: true, opacity: 0.6, depthWrite: false });
   for (let bx = x0 + 0.25; bx < x1 - 0.1; bx += 0.45) {
-    const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 1.4).rotateX(-Math.PI / 2), zebra);
-    bar.position.set(bx, 0.008, STREET_BACK + 0.9);
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.22, WALK - 0.3).rotateX(-Math.PI / 2), zebra);
+    bar.position.set(bx, 0.008, STREET_BACK + WALK / 2);
     g.add(bar);
   }
   g.add(side, cut);

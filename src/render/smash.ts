@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { Particles, Spray } from './particles';
 import { FX } from './fx-settings';
 
-export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb';
+export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb' | 'car';
 export type Stuff = 'glass' | 'metal' | 'wood' | 'plastic' | 'stone' | 'paper';
 
 export interface SmashHit {

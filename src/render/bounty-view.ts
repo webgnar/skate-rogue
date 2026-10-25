@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { Level } from '../physics/level';
 import { BOUNTY } from '../run/bounty';
+import { STREET_Z } from '../traffic/traffic';
 import { toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
@@ -65,7 +66,7 @@ export class BountyView {
     const face = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.6), new THREE.MeshBasicMaterial({ map: poster() }));
     face.position.set(0, 1.95, 0.05);
     board.add(face);
-    board.position.set(toX(level.bounty.x), toY(level, level.streetY), -2.1);
+    board.position.set(toX(level.bounty.x), toY(level, level.streetY), STREET_Z.walk);
     this.group.add(board);
   }
 }

@@ -10,9 +10,29 @@ import { TILE } from '../physics/constants';
 import { flatGeometry, hasModel, model } from './models';
 import { inkify } from './toon';
 import { toX, toY } from './kit';
+import { STREET_Z } from '../traffic/traffic';
 
 const SPAN = 3; // ElSpan's length, tiles
 const BEND_STEPS = 6; // spans per bend
+
+// ElColumn stands at z -2.4 (art/street.py COLUMN_Y) with its cap's arm reaching to the back girder at -1.25. Back
+// lane traffic would brush that, so a column stands further back, at the curb, and its cap is stretched along z
+// (pinned at the girder end) to still reach
+const COLUMN = { model: -2.4, girder: -1.25, at: STREET_Z.lamp - 0.15 };
+const CAP_STRETCH = (COLUMN.at - COLUMN.girder) / (COLUMN.model - COLUMN.girder);
+
+// place an ElColumn and its cap at (x, z), the model's own origin, turned by `turn`, `under` the track
+export function setColumn(col: THREE.Object3D, cap: THREE.Object3D, x: number, z: number, turn: number, under: number): void {
+  const along = (dz: number) => new THREE.Vector3(0, 0, dz).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn);
+  const c = along(COLUMN.at - COLUMN.model);
+  col.position.set(x + c.x, 0, z + c.z);
+  col.rotation.y = turn;
+  col.scale.y = under - 0.08;
+  const k = along(COLUMN.girder * (1 - CAP_STRETCH));
+  cap.position.set(x + k.x, under, z + k.z);
+  cap.rotation.y = turn;
+  cap.scale.z = CAP_STRETCH;
+}
 
 // the stretches' bends cut the back wall and the city behind it here (tiles), as cross streets do
 export function elCuts(level: Level): [number, number][] {
@@ -97,21 +117,17 @@ export function buildElTrack(level: Level, kit: THREE.Group): void {
         g.rotation.y = turn;
         kit.add(g);
       }
-      //a column under every span's start, but not out in the skate lane: on the straight they stand in the back
-      //lane (the model's own offset), round the bends beside the track
+      //a column under every span's start, but not out in the skate lane: on the straight they stand at the curb,
+      //round the bends beside the track
       const onStraight = p.heading === 0;
       if (built) {
         const col = piece('ElColumn');
         const cap = piece('ElColumnCap');
-        col.position.set(p.x + off.x, 0, p.z + off.z);
-        col.rotation.y = turn;
-        col.scale.y = under - 0.08;
-        cap.position.set(p.x + off.x, under, p.z + off.z);
-        cap.rotation.y = turn;
+        setColumn(col, cap, p.x + off.x, p.z + off.z, turn, under);
         if (onStraight || i > 1) kit.add(col, cap);
       } else {
         const col = new THREE.Mesh(new THREE.BoxGeometry(0.35, under, 0.35), steel);
-        const back = new THREE.Vector3(0, 0, -2.4).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn);
+        const back = new THREE.Vector3(0, 0, COLUMN.at).applyAxisAngle(new THREE.Vector3(0, 1, 0), turn);
         col.position.set(p.x + back.x, under / 2, p.z + back.z);
         kit.add(col);
       }

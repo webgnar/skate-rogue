@@ -6,6 +6,7 @@ import { PHYS, TILE } from '../physics/constants';
 import { inHill, isStreetAt, type Car, type Level } from '../physics/level';
 import { CROSS, CrossCar, type Intersection } from './cross';
 import { CarDoor, STOP, type BusStop } from './street';
+import { TUNNEL, groundAt, mouthX, mouths } from './tunnel';
 
 // robotaxis, buses and box trucks drive your way (slower than you); oncoming cars come at you; a 'car' turned
 // onto your road from a cross street, a human driver who doesn't brake for you
@@ -21,6 +22,7 @@ export interface Vehicle extends Car {
   look?: number; // which paint, for a car that came from a cross street (it keeps its colour)
   wrecked?: boolean; // car-hopped to scrap (src/traffic/damage.ts): rolling to a stop out of the lane
   stop?: { x: number; t: number }; // a bus pulling in at a bus stop: where its back stops, frames since it started
+  tunnel?: number; // turning into a tunnel's mouth at the foot of a hill (src/traffic/tunnel.ts), 0 to 1: then it's gone
 }
 
 export interface Spawn {
@@ -28,6 +30,17 @@ export interface Spawn {
   kind: VehicleKind;
   speed: number;
 }
+
+// how deep things stand across the street (z, tiles; the skate lane is 0, the wall at the back -3.5). The road
+// runs from the curb to the front, with room behind the skate lane for a vehicle to pull into (the back lane:
+// cars getting out of the way, wrecks, the Heat cruiser) without touching the sidewalk, where the people, lamps,
+// bus stops and the L's columns stand
+export const STREET_Z = {
+  back: -1.5, // the back lane's middle: a 1.6 wide car reaches the curb, the skate lane's cars just clear it
+  curb: -2.3,
+  lamp: -2.45, // street lamps, signals and the L's columns, at the curb
+  walk: -2.8, // where people stand and stroll, and the bus stops and wanted posters
+};
 
 export const TRAFFIC = {
   carW: 2 * TILE,
@@ -138,6 +151,10 @@ export class Traffic {
     for (const d of this.doors) d.step(skaterX);
 
     for (const v of this.vehicles) {
+      if (v.tunnel !== undefined) {
+        this.intoTunnel(v);
+        continue;
+      }
       if (v.stop) {
         this.atStop(v, v.stop);
         continue;
@@ -159,10 +176,31 @@ export class Traffic {
         if (this.blockedAt(ahead[0], ahead[1]) || this.busAt(v, ahead[0], ahead[1])) v.leaving = true;
       }
       if (v.leaving) v.lane = Math.min(1, v.lane + 1 / TRAFFIC.laneFrames);
+      //out of the lane and up to a tunnel's mouth at the foot of a hill: it turns in rather than drive into it
+      if (v.leaving && !v.wrecked && v.lane > 0.5) {
+        const m = mouths(this.level).find((t) => (v.speed > 0 ? t.way === 'in' && v.x1 >= mouthX(t) - TILE && v.x0 < mouthX(t) : t.way === 'out' && v.x0 <= mouthX(t) + TILE && v.x1 > mouthX(t)));
+        if (m) v.tunnel = 0;
+      }
     }
-    //drop vehicles far behind the skater or gone from the lane long ago
-    //and gone round the corner where the street runs into a hill
-    this.vehicles = this.vehicles.filter((v) => v.x1 > skaterX - 40 * TILE && v.x0 < skaterX + 60 * TILE && !(v.lane >= 1 && inHill(this.level, v.x0) && inHill(this.level, v.x1)));
+    //drop vehicles far behind the skater, gone into a tunnel, or (with no tunnel there) gone from the lane into
+    //the hillside itself
+    this.vehicles = this.vehicles.filter((v) => v.x1 > skaterX - 40 * TILE && v.x0 < skaterX + 60 * TILE && !((v.tunnel ?? 0) >= 1) && !(v.lane >= 1 && this.inHillside(v)));
+  }
+
+  // a vehicle stood in the hill, not on street-height ground
+  private inHillside(v: Vehicle): boolean {
+    const high = (x: number) => (groundAt(this.level, x) ?? 0) > TUNNEL.flat;
+    return inHill(this.level, v.x0) && inHill(this.level, v.x1) && (high(v.x0) || high(v.x1));
+  }
+
+  // swinging into a tunnel's mouth: slowing, its middle drawn round to the opening
+  private intoTunnel(v: Vehicle): void {
+    const m = mouths(this.level).find((t) => Math.abs(mouthX(t) - (v.x0 + v.x1) / 2) < (TUNNEL.w + 3) * TILE);
+    v.tunnel = Math.min(1, (v.tunnel ?? 0) + 1 / TUNNEL.turnFrames);
+    const dx = m ? (mouthX(m) - (v.x0 + v.x1) / 2) * 0.12 : v.speed;
+    v.speed = dx;
+    v.x0 += dx;
+    v.x1 += dx;
   }
 
   // a cross street's car has turned onto the road: from here it's traffic, driving your way

@@ -9,8 +9,22 @@ import { toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 import { FX } from './fx-settings';
+import { groundAt } from '../traffic/tunnel';
 
 const HIGH = 5.6; // tiles over the street: in the top of the frame, over the L tracks
+// a critically damped spring toward `to` (Unity's SmoothDamp): no overshoot, no steps, whatever the frame rate
+function smooth(from: number, to: number, v: { v: number }, time: number, dt: number): number {
+  const w = 2 / time;
+  const x = w * dt;
+  const e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const d = from - to;
+  const t = (v.v + w * d) * dt;
+  v.v = (v.v - w * t) * e;
+  return to + (d + t) * e;
+}
+
+const FOLLOW = { x: 0.18, y: 0.6, bank: 0.35 }; // seconds the follow takes to settle: along, up and down, banking
+const DROP = 9; // tiles over its height it comes in from, out of the sky, and climbs back up to when it leaves
 
 export class ChopperView {
   readonly group = new THREE.Group();
@@ -22,6 +36,11 @@ export class ChopperView {
   private readonly coneMat: THREE.MeshBasicMaterial;
   private readonly poolMat: THREE.MeshBasicMaterial;
   private t = 0;
+  private lift = 0; // tiles above where it hovers: dropping in from the sky, or climbing away
+  //(it follows smoothly, between the sim's 60 Hz steps and over the skater's every hop: zack found it choppy)
+  private readonly vx = { v: 0 };
+  private readonly vy = { v: 0 };
+  private readonly vb = { v: 0 };
 
   constructor() {
     const hull = model('Chopper');
@@ -82,12 +101,25 @@ export class ChopperView {
     this.group.visible = ch !== null;
     if (!ch) return;
     this.t += dt;
-    const x = toX(ch.x);
-    const street = ground && was ? this.group.position.y + (ground.y - this.group.position.y) * Math.min(1, dt * 4) : ground ? ground.y : toY(level, level.streetY);
-    this.group.position.set(x, street, 0);
+    const x = was ? smooth(this.group.position.x, toX(ch.x), this.vx, FOLLOW.x, dt) : toX(ch.x);
+    //it hovers over the skater (or the street), and never lower than the hill under it; it drops in out of the sky
+    //and, over the top route once you're down, climbs back up into it (zack: "it should come from the sky, not
+    //from ground level, which makes it clip through the side of the hill")
+    const hill = toY(level, level.streetY) + Math.max(0, ...[-3, 0, 3].map((d) => groundAt(level, (x + d) * TILE) ?? 0));
+    if (!was) {
+      this.lift = DROP;
+      this.vx.v = this.vy.v = this.vb.v = 0;
+    }
+    const leaving = !!ground && !ch.lit;
+    this.lift = leaving ? Math.min(DROP * 2, this.lift + dt * 3) : this.lift * Math.exp(-dt * 2.2);
+    const want = Math.max(hill, ground && !leaving ? ground.y : toY(level, level.streetY));
+    const base = was ? this.group.position.y : want;
+    this.group.position.set(x, leaving ? Math.max(base, hill) : smooth(base, want, this.vy, FOLLOW.y, dt), 0);
     //banks the way it flies, and the rotor spins
-    this.body.rotation.z = -Math.max(-0.3, Math.min(0.3, ch.v * 0.05));
-    this.body.position.y = HIGH + Math.sin(this.t * 2.1) * 0.12;
+    this.body.rotation.z = smooth(this.body.rotation.z, -Math.max(-0.3, Math.min(0.3, ch.v * 0.05)), this.vb, FOLLOW.bank, dt);
+    this.body.position.y = HIGH + this.lift + Math.sin(this.t * 2.1) * 0.12;
+    //its light comes on once it's down to its height
+    this.cone.visible = this.lift < 1;
     this.blur.rotation.y += dt * 40;
     //spun slower than real so the blades read, not strobe; the tail rotor turns about its own axle
     const [main, tail] = this.rotors;
@@ -99,6 +131,6 @@ export class ChopperView {
     this.coneMat.color.setHex(ch.lit ? 0xfff8e0 : 0xffe9a0);
     this.poolMat.opacity = 0.5 + 0.35 * hot;
     //no pool where the L tracks are overhead
-    this.pool.visible = ground ? ground.pool : !ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1);
+    this.pool.visible = this.lift < 1 && (ground ? ground.pool : !ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1));
   }
 }
