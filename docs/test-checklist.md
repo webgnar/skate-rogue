@@ -595,6 +595,11 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] The cable car up the hill is maroon and cream with open bench ends, brass poles, windows and the 60 on its side.
 - [ ] Calder's red Flamingo and the Picasso stand behind the street in the plain Chicago stretches between the other worlds' quarters.
 
+**Switch (back to the camera, after a 180)**
+- [ ] Pushing switch, the back foot strokes behind you, not ahead.
+- [ ] Switch ollies and flips pop off the trailing end of the board, and grinds call out SWITCH.
+- [ ] ?editor lists the switch clips (switchPush, switchKickflip...) and keys them apart from the regular ones.
+
 ## Top route (power lines and rooftops)
 
 - [ ] On a hill, the power line hangs high from about halfway down: you can't ollie or flip up to it, and there are no launch ramps (how you get up is still being worked out).

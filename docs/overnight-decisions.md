@@ -634,6 +634,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   flies at z -34, between the back buildings (to about -10) and the skyline backdrops (-60 and back), drawn 18 tiles
   long so it still reads big, a little over the rooftops on screen. The rooftops cross in front of it, and where
   the back buildings fill the frame (much of the street) it only shows in the gaps.
+- **Switch clips (zack, 2026-10-25).** With Lou's back to the camera (the rig turned half round when the sim rides
+  fakie), every clip but idle and busted now has a switch twin, `switchPush`, `switchKickflip`, `switchGrind1` and
+  so on. Each twin starts out as its regular clip mirrored along the board: the other foot pushes, pops and flicks,
+  the other arm leads, and the board pitches and spins the other way. The left foot stays on the left of the board,
+  so the legs never cross. Played as-is, the turned-round regular clips pushed and popped toward where he was going.
+  The twins are clips of their own, so they show up in ?editor and can be keyed apart. An unedited twin follows its
+  regular clip's edits. Switch grinds call out "SWITCH 50-50" and so on. Switch twins aren't baked into the GLB yet;
+  they play from their keys.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

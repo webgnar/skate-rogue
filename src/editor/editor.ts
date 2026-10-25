@@ -819,12 +819,12 @@ export async function startEditor(base: string): Promise<void> {
     grid.position.x = -(rolled % 1);
     playBtn.textContent = playing ? '❚❚' : '▶';
     const pose = sampleNow();
-    rig.preview(pose);
+    rig.preview(pose, name);
     if (!gizmo.dragging) placeHandles(pose);
     // the ghost: the last key before the playhead (or the one before the key under it)
     const prev = [...clip.keys].reverse().find((k) => k.t < t - 1e-6);
     ghost.mesh.visible = ghostOn && !!prev;
-    if (ghostOn && prev) ghost.preview(prev.pose);
+    if (ghostOn && prev) ghost.preview(prev.pose, name);
     if (t !== shownT) {
       shownT = t;
       if (!playing) selected = keyAt(clip, t);
