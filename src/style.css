@@ -9,6 +9,7 @@
 html, body {
   margin: 0;
   height: 100%;
+  height: 100dvh;
   background: #120c1e;
   overflow: hidden;
   overscroll-behavior: none;
@@ -588,6 +589,9 @@ html, body {
 #paused .settings b { font-weight: normal; min-width: 3.5em; text-align: center; padding: 2px 6px; background: #3a3050; border: 2px solid #000; }
 #paused .settings .on b { background: var(--trick); color: #1a1028; }
 #paused .settings input[type='range'] { width: 55%; accent-color: var(--trick); }
+#paused .settings .row[hidden], #paused .settings .fshelp[hidden] { display: none; }
+#paused .settings .fshelp { grid-column: 1 / -1; padding: 6px 10px; font: 14px/1.35 system-ui, sans-serif; letter-spacing: 0; color: #fff; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--trick); }
+#paused .settings .fshelp b { all: unset; font-weight: 700; color: var(--trick); }
 #quitrun { all: unset; cursor: pointer; padding: 6px 18px; font-size: 16px; color: #fff; background: #5a1a2a; border: 3px solid #000; transform: skewX(-10deg); }
 #app.calm #paused, #app.calm #stoke .badge svg { animation: none; }
 /* narrow landscape phones (iPhone SE): slimmer meters so Heat's stars fit */
