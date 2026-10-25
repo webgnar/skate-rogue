@@ -278,17 +278,17 @@ export class Skater {
       }
     };
     for (const s of this.level.surfaces) {
-      if (x < s.x0 || x > s.x1 || this.gone.has(s) || !inLane(s, this.lane)) continue;
+      if (x < s.x0 || x > s.x1 || this.gone.has(s)) continue;
       hit(surfaceY(s, x), surfaceSlope(s));
     }
     for (const rail of this.level.rails) {
-      if (rail === this.railIgnore || !inLane(rail, this.lane)) continue;
+      if (rail === this.railIgnore) continue;
       const y = rail.yAt(x);
       const a = rail.yAt(x - 1);
       const b = rail.yAt(x + 1);
       if (y !== undefined) hit(y, a !== undefined && b !== undefined ? (b - a) / 2 : 0);
     }
-    for (const car of this.cars()) if (x >= car.x0 && x <= car.x1 && inLane(car, this.lane)) hit(car.roof, 0);
+    for (const car of this.cars()) if (x >= car.x0 && x <= car.x1) hit(car.roof, 0);
     if (isStreetAt(this.level, x)) hit(this.level.streetY, 0);
     return depth === Infinity ? null : { angle, depth };
   }

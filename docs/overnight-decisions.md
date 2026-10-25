@@ -468,6 +468,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Next: Endless.** The GDD promises an Endless mode after a win (floors forever, its own leaderboard), and it
   isn't built. It's the next gameplay item unless zack says otherwise.
 
+- **Lanes rolled back (Oct 25).** zack: "the twin street thing might have been a mistake... remove it and polish what we have", and "we have to do this vertically not horizontally". I reverted #122, #123, #126 and #127, so the fork is the overpass at the end of the floor again. Next is a vertical high/low route through the whole floor, shown to zack as a sketch before building.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)
