@@ -11,6 +11,7 @@ import type { Skater } from '../physics/skater';
 import { TILE } from '../physics/constants';
 import { CROSS } from '../traffic/cross';
 import { STOP } from '../traffic/street';
+import { STREET_Z } from '../traffic/traffic';
 import { makeRng, randInt, type Rng } from '../gen/rng';
 import { model } from './models';
 import { props } from './props';
@@ -24,7 +25,7 @@ const HIP_Y = 0.95;
 const HIP_X = 0.1;
 const SHOULDER = { x: 0.26, y: 1.5 };
 const NECK_Y = 1.56;
-const LANE_Z = -2.2; // on the sidewalk, in front of the street props
+const LANE_Z = STREET_Z.walk; // on the sidewalk, behind the lamps and in front of the street props
 const SHOW = 18; // tiles either side of the camera that people are drawn
 
 const TOPS = [0x3a7be8, 0xd94a4a, 0x48b86a, 0xe8c33a, 0xf0f0f0, 0x2a2a34, 0xff8a3a, 0x8a5ad8, 0x3ab8b0, 0xe86aa8];
@@ -234,7 +235,7 @@ export class PedView {
         delay: rng() * 0.35,
         snapAt: -Infinity,
       };
-      person.mesh.position.set(x, 0, LANE_Z + (rng() - 0.5) * 0.4);
+      person.mesh.position.set(x, 0, LANE_Z + (rng() - 0.5) * 0.16);
       this.group.add(person.mesh);
       this.people.push(person);
       if (rng() < 0.3) x += 0.8; // sometimes a pair, chatting

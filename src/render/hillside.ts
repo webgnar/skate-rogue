@@ -17,6 +17,7 @@ import { inHill, type Level, type Surface } from '../physics/level';
 import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
 import { surfaceTexture } from './surfaces';
+import { TUNNEL, mouths } from '../traffic/tunnel';
 
 const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
 
@@ -811,6 +812,10 @@ export function buildHill(level: Level, group: THREE.Group): void {
     tee(x0, x1, low);
   }
   const cut = (xa: number, xb: number) => [...crossings, ...holes].some(([a, b]) => xb > a - 0.1 && xa < b + 0.1);
+  //the tunnels' mouths at the feet of the hill (src/traffic/tunnel.ts): the back row of houses makes way for them
+  const portals = mouths(level).map((p): [number, number] => [tx(p.x0), tx(p.x1)]);
+  for (const [x0, x1] of portals) portal(m, x0, x1, laneHeight(ground, hill, (x0 + x1) / 2));
+  const atPortal = (xa: number, xb: number) => portals.some(([a, b]) => xb > a - 0.3 && xa < b + 0.3);
   //row houses stepping down the hill behind the back sidewalk, and a row further up it
   const rng = makeRng(level.layout.seed * 53 + level.layout.floor * 7);
   const lane = (x: number) => laneHeight(ground, hill, x);
@@ -819,7 +824,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
   const [bz0, bz1] = HILLSIDE.backRow;
   const [uz1, uz0, up] = HILLSIDE.upRow;
   for (const [s0, s1] of stretches) {
-    houseRow(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, cut, { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
+    houseRow(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, (a, b) => cut(a, b) || atPortal(a, b), { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
     houseRow(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
     //cypresses between the rows, standing over the back row's roofs now and then
     for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
@@ -835,6 +840,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
   const topLine = level.rails.filter((r) => r.top).map((r) => [tx(r.x0), tx(r.x1)]);
   for (const x of along) {
     if (holes.some(([a, b]) => x > a - 0.5 && x < b + 0.5)) continue;
+    if (atPortal(x - 1, x + 1)) continue; // clear of the tunnel's mouth, where the cruiser swings out
     if (topLine.some(([a, b]) => x > a - 1 && x < b + 1)) continue; // the top route's line hangs there instead
     const top = lane(x) + c + P.height;
     poles.push([x, top]);
@@ -868,9 +874,63 @@ export function buildHill(level: Level, group: THREE.Group): void {
     const [xa] = poles[i - 1];
     const [xb] = poles[i];
     const x = (xa + xb) / 2 + (rng() - 0.5) * 2;
-    if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
+    if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2) && !atPortal(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
   }
   m.build(group);
+}
+
+// a tunnel's mouth from x0 to x1 (tiles) at the back of the road, the ground there `base` high: a board-formed
+// concrete headwall with an arched opening into the dark, lamps along the inside, the hill's garden on top and a
+// driveway across the sidewalk for the traffic swinging in and out (the cruiser comes out of here behind you)
+function portal(m: Mesher, x0: number, x1: number, base: number): void {
+  const F = TUNNEL.face;
+  const back = HILLSIDE.upRow[0]; // the row further up the hill stands behind it
+  const H = base + TUNNEL.height;
+  const [ox0, ox1] = [x0 + TUNNEL.open[0], x0 + TUNNEL.open[1]];
+  const r = (ox1 - ox0) / 2;
+  const cx = (ox0 + ox1) / 2;
+  const spring = base + TUNNEL.height - r - 0.5;
+  const deep = TUNNEL.deep - 1;
+  const cf = UV.front(2, 2);
+  const cs = UV.side(2, 2);
+  const dark = rectUv(SWATCH.dark);
+  const trim = rectUv(SWATCH.trim);
+  const B = HILLSIDE.bottom;
+  //the piers either side of the opening, the mass of the hill behind them and its sides
+  m.box(x0, ox0, B, H, H, back, F, { front: ['concrete', cf], left: ['concrete', cs] });
+  m.box(ox1, x1, B, H, H, back, F, { front: ['concrete', cf], right: ['concrete', cs] });
+  //over the opening, down to the arch
+  const N = 12;
+  const arc = (k: number): [number, number] => [cx - r * Math.cos((Math.PI * k) / N), spring + r * Math.sin((Math.PI * k) / N)];
+  for (let k = 0; k < N; k++) {
+    const [ax, ay] = arc(k);
+    const [bx, by] = arc(k + 1);
+    m.quad('concrete', [ax, ay, F], [bx, by, F], [bx, H, F], [ax, H, F], cf);
+    //the ring of voussoirs round the arch, standing proud of the face
+    const out = (x: number, y: number, d: number): V3 => [cx + (x - cx) * (1 + d / r), spring + (y - spring) * (1 + d / r), F + 0.03];
+    m.quad('house', out(ax, ay, 0), out(bx, by, 0), out(bx, by, 0.22), out(ax, ay, 0.22), trim);
+    //the barrel vault inside
+    m.quad('house', [bx, by, F], [ax, ay, F], [ax, ay, deep], [bx, by, deep], dark);
+  }
+  m.quad('house', [ox0 - 0.03, base, F + 0.03], [ox0 + 0.19, base, F + 0.03], [ox0 + 0.19, spring, F + 0.03], [ox0 - 0.03, spring, F + 0.03], trim);
+  m.quad('house', [ox1 - 0.19, base, F + 0.03], [ox1 + 0.03, base, F + 0.03], [ox1 + 0.03, spring, F + 0.03], [ox1 - 0.19, spring, F + 0.03], trim);
+  //inside: the walls up to the vault, the far dark, the roadway, a lamp every couple of tiles along each wall
+  m.quad('house', [ox0, base, deep], [ox0, base, F], [ox0, spring, F], [ox0, spring, deep], dark);
+  m.quad('house', [ox1, base, F], [ox1, base, deep], [ox1, spring, deep], [ox1, spring, F], dark);
+  m.quad('house', [ox0, base, deep], [ox1, base, deep], [ox1, spring + r, deep], [ox0, spring + r, deep], dark);
+  m.quad('road', [ox0, base + 0.004, F], [ox1, base + 0.004, F], [ox1, base + 0.004, deep], [ox0, base + 0.004, deep], UV.top(4, 1));
+  for (let z = F - 0.8; z > deep + 0.5; z -= 1.8) {
+    m.quad('house', [ox0 + 0.01, spring - 0.1, z + 0.35], [ox0 + 0.01, spring - 0.1, z - 0.35], [ox0 + 0.01, spring + 0.08, z - 0.35], [ox0 + 0.01, spring + 0.08, z + 0.35], trim);
+    m.quad('house', [ox1 - 0.01, spring - 0.1, z - 0.35], [ox1 - 0.01, spring - 0.1, z + 0.35], [ox1 - 0.01, spring + 0.08, z + 0.35], [ox1 - 0.01, spring + 0.08, z - 0.35], trim);
+  }
+  //the headwall's coping, and the hill's garden on top with a shrub or two
+  m.box(x0 - 0.12, x1 + 0.12, H - 0.05, H + 0.18, H + 0.18, F - 0.25, F + 0.12, { top: ['concrete', UV.top(2, 2)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+  m.quad('house', [x0, H, F - 0.25], [x1, H, F - 0.25], [x1, H, back], [x0, H, back], rectUv(SWATCH.leaf));
+  shrub(m, x0 + 0.5, F - 0.7, H, true);
+  shrub(m, x1 - 0.6, F - 1.4, H, false);
+  //the driveway across the back sidewalk
+  const walk = base + HILLSIDE.curb + 0.006;
+  m.quad('road', [ox0 - 0.4, walk, HILLSIDE.road[0]], [ox1 + 0.4, walk, HILLSIDE.road[0]], [ox1 + 0.4, walk, F], [ox0 - 0.4, walk, F], UV.top(4, 1));
 }
 
 // ------------------------------------------------------------------------------------------- the foreground

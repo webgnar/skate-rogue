@@ -24,6 +24,7 @@ import type { Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
+import { STREET_Z } from '../traffic/traffic';
 import { ElView } from '../render/el-view';
 import { CableView } from '../render/cable-view';
 import { Impacts } from '../render/impact';
@@ -517,7 +518,7 @@ export class Game {
     this.run.stokenScale = mods.stokenScale;
     this.run.nearScale = mods.nearScale;
     this.carry = 0;
-    this.trafficView.clear();
+    this.trafficView.clear(!!from);
     this.elView.clear();
     this.cableView.set(this.level);
     this.pickups.setLevel(this.level);
@@ -716,6 +717,7 @@ export class Game {
     const x = old.width / TILE;
     const y = -(level.streetY - level.startY) / TILE;
     this.view.promote(specKey(spec), level, this.seed, next.floor, x, y);
+    this.trafficView.handOff(old);
     for (const fx of [this.particles, this.impacts, this.words, this.smashFx]) fx.shift(-x, -y);
     const skater = this.skater;
     this.floor = next.floor;
@@ -1241,6 +1243,11 @@ export class Game {
   // smashed a prop: a little style, maybe loot, and a Wrecking Ball for a quick chain; the break itself is the
   // effects' (src/render/smash.ts)
   private smashed(e: Extract<FloorSim['events'][number], { type: 'smash' }>): void {
+    //traffic ran it over: just the break
+    if (e.how === 'car') {
+      this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), z: this.level.props[e.index]?.z, how: e.how, speed: 0.6 });
+      return;
+    }
     this.run.addStyle(SCORE.smash);
     this.smashChain = this.clock - this.smashAt < SMASH_CHAIN_SECS ? this.smashChain + 1 : 1;
     this.smashAt = this.clock;
@@ -1268,7 +1275,7 @@ export class Game {
       const v = this.sim.traffic.vehicles.find((t) => t.id === id);
       if (v) {
         paint = this.trafficView.paintOf(v);
-        z = v.lane * -2.2;
+        z = v.lane * STREET_Z.back;
       }
     } else {
       this.carFx.jolt(damageParked(this.view.currentKit, this.level, e.car.parked, e.stage));

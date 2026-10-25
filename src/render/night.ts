@@ -3,6 +3,8 @@
 // night costs a handful of draw calls and no real lights. How lit it all is follows the mood's neon value.
 import * as THREE from 'three';
 import type { Level } from '../physics/level';
+import { STREET_Z } from '../traffic/traffic';
+import { TURN_OFF } from '../traffic/tunnel';
 import { toX, toY } from './kit';
 import { cityTiles } from './textures';
 import { inkify, toon } from './toon';
@@ -274,7 +276,7 @@ export class NightCity {
     //lamp spots: along the back of the sidewalk, and the back of wide roofs
     const lamps: { x: number; y: number; z: number }[] = [];
     let c = Math.round(toX(level.finaleX));
-    for (let x = c + 3; x < level.street.length - 2; x += NIGHT.lampEvery) if (level.street[Math.floor(x)]) lamps.push({ x, y: 0, z: -2.9 });
+    for (let x = c + 3; x < level.street.length - TURN_OFF.back - TURN_OFF.half - 0.5; x += NIGHT.lampEvery) if (level.street[Math.floor(x)]) lamps.push({ x, y: 0, z: STREET_Z.lamp });
     for (const s of level.surfaces) {
       if (s.kind !== 'roof') continue;
       const y = toY(level, s.y);

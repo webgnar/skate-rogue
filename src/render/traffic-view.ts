@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import type { Traffic, Vehicle, VehicleKind } from '../traffic/traffic';
-import { TRAFFIC } from '../traffic/traffic';
+import { STREET_Z, TRAFFIC } from '../traffic/traffic';
 import { CROSS, type CrossCar } from '../traffic/cross';
 import { STOP, type CarDoor } from '../traffic/street';
 import { makeBus, makeCar, makeTruck, parkedPaint, toX, toY } from './kit';
@@ -12,6 +12,7 @@ import { inkify } from './toon';
 import { headlights } from './night';
 import { HeatBeams } from './heat-beams';
 import { STAGE_MODEL, damagedLook } from './car-damage';
+import { CruiserPath, TUNNEL, groundAt, turnAt, turnOff } from '../traffic/tunnel';
 import type { Stage } from '../traffic/damage';
 
 const DRONE_EYE = new THREE.Vector3(-0.4, -0.25, 0); // from the drone's centre
@@ -24,9 +25,9 @@ const PAINTS: Record<VehicleKind, number[]> = {
   truck: [0xf4f1ea, 0xd9e2ec, 0xffd23f],
   car: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a], // the cross streets' cars, the same as their own paints
 };
-const BACK_LANE_Z = -2.2;
+const BACK_LANE_Z = STREET_Z.back;
 const DOOR_OPEN = (40 * Math.PI) / 180; // how far an open door swings
-const CRUISER_Z = -1.3; // the lane just behind the skate lane
+const CRUISER_Z = STREET_Z.back; // the back lane, behind the skate lane
 
 export class TrafficView {
   readonly group = new THREE.Group();
@@ -41,6 +42,10 @@ export class TrafficView {
   private blinkers = new Map<number, THREE.Mesh>();
   private stages = new Map<number, Stage>(); // car-hop damage by vehicle id (car-damage.ts)
   private cruiserGap = 10; // tiles behind the skater
+  private path: CruiserPath | null = null;
+  private turning: { x: number; to: number; u: number } | null = null; // up the side street at the last floor's end
+  private droneLift = 0; // tiles: the drone drops in out of the sky
+  private droneY = 0; // its way along the street and through the hills' tunnels
   private t = 0;
   readonly heatLights = new HeatLights();
   readonly beams = new HeatBeams();
@@ -107,7 +112,8 @@ export class TrafficView {
     return drone;
   }
 
-  clear(): void {
+  // (rolledOn: the run carried on into this floor from the last, so a cruiser turning off keeps going)
+  clear(rolledOn = false): void {
     for (const m of this.meshes.values()) this.group.remove(m);
     this.meshes.clear();
     for (const c of this.crossings) this.group.remove(c.car, c.post);
@@ -119,6 +125,20 @@ export class TrafficView {
     this.blinkers.clear();
     this.stages.clear();
     this.cruiserGap = 10;
+    this.path = null;
+    if (!rolledOn) this.turning = null;
+  }
+
+  // the floor ran on into the next one, `dx` tiles on: a cruiser on your tail turns off up the old floor's last
+  // side street, just behind you now, rather than vanish (the next floor's cruiser comes out of its own tunnel)
+  handOff(old: Level): void {
+    const off = turnOff(old);
+    const p = this.path;
+    if (off !== null && p && p.mode === 'street' && this.cruiser.visible) {
+      const dx = old.width / TILE;
+      this.turning = { x: p.x - dx, to: off / TILE - dx, u: 0 };
+    }
+    this.path = null;
   }
 
   sync(level: Level, vehicles: Vehicle[]): void {
@@ -156,6 +176,12 @@ export class TrafficView {
       }
       mesh.position.x = toX((v.x0 + v.x1) / 2);
       mesh.position.z = v.lane * BACK_LANE_Z;
+      //turning into a tunnel at the foot of a hill
+      if (v.tunnel !== undefined) {
+        const t = turnAt(v.tunnel);
+        mesh.position.z = t.z;
+        mesh.rotation.y = v.cruise < 0 ? Math.PI - (t.turn * Math.PI) / 2 : (t.turn * Math.PI) / 2;
+      }
     }
     for (const [id, mesh] of this.meshes) {
       if (!live.has(id)) {
@@ -245,7 +271,7 @@ export class TrafficView {
     }
     post.add(red, green);
     //on the near corner of the cross street, at the back of the sidewalk
-    post.position.set(toX(c.box.x0 + CROSS.w / 2) - CROSS.street - 0.45, street, -2.0);
+    post.position.set(toX(c.box.x0 + CROSS.w / 2) - CROSS.street - 0.45, street, STREET_Z.lamp);
     this.group.add(car, post);
     return { car, post, red, green };
   }
@@ -288,7 +314,7 @@ export class TrafficView {
     } else this.stopSignPrims(g);
     inkify(g);
     //at the bus's front end, back of the sidewalk
-    g.position.set(toX(x + STOP.busW) + 0.4, street, -2.0);
+    g.position.set(toX(x + STOP.busW) + 0.4, street, STREET_Z.walk + 0.1);
     this.group.add(g);
     return g;
   }
@@ -335,10 +361,26 @@ export class TrafficView {
     this.t += dtMs;
     const target = caught ? 0.2 : 9 - 8.3 * (heat / 100);
     if (!(hold && target < this.cruiserGap)) this.cruiserGap += (target - this.cruiserGap) * (caught ? 0.12 : 0.06);
-    const x = toX(skaterX) - this.cruiserGap - TRAFFIC.carW / TILE / 2;
-    this.cruiser.position.x = x;
-    this.cruiser.position.y = toY(level, level.streetY);
-    this.cruiser.visible = this.cruiserGap < 8.8;
+    //it keeps to the street: held at the foot of a hill, through the tunnel under it, over the canals
+    if (this.path?.level !== level) this.path = new CruiserPath(level);
+    const frames = dtMs / (1000 / 60);
+    this.path.step(toX(skaterX) - this.cruiserGap - TRAFFIC.carW / TILE / 2, frames);
+    const turn = this.turning;
+    if (turn) {
+      //up to the corner, then round it and away up the side street
+      const k = Math.min(1, 0.08 * frames);
+      turn.x += (turn.to - turn.x) * k;
+      if (Math.abs(turn.to - turn.x) < 0.6) turn.u += frames / TUNNEL.turnFrames;
+      const t = turnAt(turn.u);
+      this.cruiser.position.set(turn.x, toY(level, level.startY), t.z);
+      this.cruiser.rotation.y = (t.turn * Math.PI) / 2;
+      this.cruiser.visible = true;
+      if (turn.u >= 1) this.turning = null;
+    } else {
+      this.cruiser.position.set(this.path.x, toY(level, level.streetY) + this.path.y, this.path.z);
+      this.cruiser.rotation.y = (this.path.turn * Math.PI) / 2;
+      this.cruiser.visible = this.path.visible && this.cruiserGap < 8.8;
+    }
     const flash = Math.floor(this.t / 160) % 2 === 0;
     this.lights[0].visible = flash;
     this.lights[1].visible = !flash;
@@ -347,9 +389,16 @@ export class TrafficView {
     this.heatLights.update(this.bar, this.cruiser.visible, flash, heat, caught, dtMs / 1000);
 
     //a drone drops in front at 75
+    const wasDrone = this.drone.visible;
     this.drone.visible = heat >= 75 || caught;
     if (this.drone.visible) {
-      this.drone.position.set(toX(skaterX) + 3.5, 3.2 + Math.sin(this.t / 200) * 0.15, 0.4);
+      //over the skater, never down in the hill in front of them, and in out of the sky
+      const dx = toX(skaterX) + 3.5;
+      const floor = Math.max(toY(level, skaterY), toY(level, level.streetY) + Math.max(0, groundAt(level, dx * TILE) ?? 0));
+      if (!wasDrone) [this.droneLift, this.droneY] = [8, floor];
+      this.droneY += (floor - this.droneY) * Math.min(1, dtMs / 250);
+      this.droneLift = Math.max(0, this.droneLift - dtMs / 200);
+      this.drone.position.set(dx, this.droneY + 3.2 + this.droneLift + Math.sin(this.t / 200) * 0.15, 0.4);
       //a slight bank and bob, rotors spinning in opposite pairs
       this.drone.rotation.set(Math.sin(this.t / 330) * 0.06, 0, Math.sin(this.t / 260) * 0.05);
       this.rotors.forEach((r, i) => (r.rotation.y += (i % 3 === 0 ? 1 : -1) * dtMs * 0.06));
@@ -359,6 +408,6 @@ export class TrafficView {
     const ground = toY(level, skaterY);
     const from = this.cruiser.visible ? this.beamFrom.set(this.cruiser.position.x + 0.5, this.cruiser.position.y + 1.4, this.cruiser.position.z + 0.35) : null;
     this.beams.searchlight(from, toX(skaterX), ground, heat, caught, dtMs / 1000);
-    this.beams.droneScan(this.drone.visible ? this.eyeAt.copy(this.drone.position).add(DRONE_EYE) : null, toY(level, level.streetY));
+    this.beams.droneScan(this.drone.visible ? this.eyeAt.copy(this.drone.position).add(DRONE_EYE) : null, this.droneY);
   }
 }

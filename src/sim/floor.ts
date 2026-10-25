@@ -35,7 +35,7 @@ export type FloorEvent =
   | { type: 'dent'; car: CarRef; kind: DamageKind; hits: number; health: number; stage: Stage; x: number; y: number };
 
 // how a prop got smashed (GDD: Smashables), for the effects to tell apart
-export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb';
+export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb' | 'car'; // 'car': traffic ran it over
 
 export const SMASH = {
   bigLanding: 8, // px/frame of fall: a landing this hard breaks everything near you
@@ -146,6 +146,7 @@ export class FloorSim {
     this.closeCalls(skaterEvents);
     this.slipstream();
     this.smash(skaterEvents);
+    this.runOver();
     this.wear(skaterEvents);
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
@@ -343,6 +344,22 @@ export class FloorSim {
       this.broken[i] = true;
       this.events.push({ type: 'smash', index: i, prop: p.name, x: p.x, y: p.y, how: by, ...(p.loot ? { loot: p.loot } : {}) });
       if (p.ai) this.heat.add(-SMASH.aiCool);
+    });
+  }
+
+  // traffic in the skate lane doesn't drive through the street's smashables, it knocks them flying. Nothing for the
+  // skater (no style, no loot), except the floor's golden prop, which a car leaves standing for you
+  private runOver(): void {
+    const props = this.level.props;
+    if (!props.length) return;
+    const cars = [...this.traffic.inLane, ...this.traffic.crossing];
+    if (!cars.length) return;
+    props.forEach((p, i) => {
+      if (!p.breaks || this.broken[i] || p.loot === 'stoken' || Math.abs(p.y - this.level.streetY) > 2) return;
+      const w = (PROP_SIZE[p.name] ?? { w: 8 }).w;
+      if (!cars.some((c) => c.x1 > p.x - w && c.x0 < p.x + w && c.bottom >= p.y - 2)) return;
+      this.broken[i] = true;
+      this.events.push({ type: 'smash', index: i, prop: p.name, x: p.x, y: p.y, how: 'car' });
     });
   }
 

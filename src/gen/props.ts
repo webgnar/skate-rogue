@@ -57,7 +57,7 @@ const LOOT = new Set(['Crate', 'NewsBoxRed', 'NewsBoxBlue', 'NewsBoxYellow', 'Tr
 
 export const PROPS = {
   sceneryZ: -3.2, // back of the sidewalk, clear of the street lamps
-  laneZ: [-0.5, 0.4] as [number, number], // smashables stand in the skate lane
+  laneZ: [-0.3, 0.4] as [number, number], // smashables stand in the skate lane (clear of the back lane)
   streetGap: [4, 9] as [number, number], // tiles between street smashables
   sceneryGap: [3, 7] as [number, number],
   ledgeMin: 3 * TILE, // ledges and roofs this long get a prop or two
