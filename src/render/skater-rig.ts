@@ -654,6 +654,12 @@ export class SkaterRig {
     if (this.bound.length) this.absorb(0);
   }
 
+  // the animation editor's head handle: where the neck pivot is now (rig space)
+  headAt(): THREE.Vector3 {
+    this.mesh.updateMatrixWorld(true);
+    return this.mesh.worldToLocal(this.head.getWorldPosition(new THREE.Vector3()));
+  }
+
   // the animation editor's arm IK: where a hand ends up for a pose (rig space), without posing the rig
   handFor(p: Pose, arm: 0 | 1): THREE.Vector3 {
     const m = (pos: THREE.Vector3, e: THREE.Euler) => new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromEuler(e), ONE);
@@ -845,7 +851,7 @@ export class SkaterRig {
     this.pelvis.position.set(p.hipX, p.hipY, p.hipZ);
     this.pelvis.rotation.set(0, p.yaw, p.tumble, 'ZYX');
     this.spine.rotation.set(p.bend, 0, -p.lean);
-    this.head.rotation.set(p.nod, p.head, 0, 'YXZ');
+    this.head.rotation.set(p.nod, p.head, -p.headTilt, 'YXZ');
     const arms: [number, number, number][] = [
       [p.armLRaise, p.armLFwd, p.armLElbow],
       [p.armRRaise, p.armRFwd, p.armRElbow],

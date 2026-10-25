@@ -28,6 +28,7 @@ export interface Pose {
   bend: number; // torso pitch toward the camera (crouching over the toes)
   head: number; // head turn toward +x
   nod: number; // head pitch, + looks down
+  headTilt: number; // head roll, + tips it toward the way they skate
   armLRaise: number; // lead (left, +x) arm: 0 hanging, 1.57 straight out sideways
   armLFwd: number; // swing toward the camera
   armLElbow: number;
@@ -69,6 +70,7 @@ export const BASE: Pose = {
   bend: 0.12,
   head: 0.5,
   nod: 0.1,
+  headTilt: 0,
   armLRaise: 0.45,
   armLFwd: 0.15,
   armLElbow: 0.45,
