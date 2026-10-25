@@ -1,7 +1,7 @@
 // The 2.5D view: renderer, Lou Gnar's camera (see camera.ts), lights, sky and skyline.
 import * as THREE from 'three';
 import type { Level } from '../physics/level';
-import { LouZoom, viewHeight } from './camera';
+import { CamDrift, DYN_CAM, LouZoom, framing, type Framing } from './camera';
 import { buildKit, toX, toY } from './kit';
 import { NightCity } from './night';
 import { FX } from './fx-settings';
@@ -122,10 +122,13 @@ export class StreetView {
   private flash = 0; // seconds into the current glow
   private mood: Mood | null = null;
   readonly zoom = new LouZoom();
+  readonly drift = new CamDrift();
   private camX = 0;
   private camY = 2;
+  private lagY = 0; // world units the camera trails the feet in y, easing to 0 (a soft follow on jumps and drops)
+  private lastY = 2;
   private dist = 22;
-  private baseH = 16;
+  private frame: Framing = framing(16, 9);
   private pixelRatio: number; // what the renderer draws at: autoRatio, or coarser for the chunky look (FX.pixel)
   private autoRatio: number; // the device's ratio, lowered when frames stay slow
   private slowMs = 0;
@@ -401,6 +404,7 @@ export class StreetView {
     //the far cards stay where they were on screen: the skyline drifts back down to its place over a few seconds
     for (const b of this.backdrop) b.off = THREE.MathUtils.euclideanModulo(b.off + a.at.x * (b.parallax - 1) + b.w / 2, b.w) - b.w / 2;
     this.skyDrop -= a.at.y;
+    this.lastY -= a.at.y; //the feet jump by the join's offset; the camera's soft follow mustn't see it as a drop
   }
 
   private dropBehind(): void {
@@ -429,17 +433,34 @@ export class StreetView {
     this.gates.update(dt, toX(px));
     this.sirens.update(dt);
     this.camY = toY(this.level, py);
-    //a slam punches the camera in and rolls it, settling over about half a second (held through the hit-stop)
-    const zoom = this.zoom.zoom * (1 + this.punchAmt * 0.35);
-    this.camera.fov = (2 * Math.atan(this.baseH / (2 * zoom * this.dist)) * 180) / Math.PI;
+    //soft in y: the camera trails a jump or a drop a little and catches up fast, never letting the feet off screen
+    const f = this.frame;
+    this.lagY = dt > 0 ? this.lagY + (this.camY - this.lastY) : 0;
+    this.lastY = this.camY;
+    this.lagY *= Math.exp(-9 * dt);
+    this.lagY = THREE.MathUtils.clamp(this.lagY, -f.viewH * 0.18, f.viewH * 0.18);
+    //zoom is a dolly: the trick/grind zoom (scaled down on phones), the drift's air and speed pull-out and landing
+    //kick, and a slam's punch. The lens widens as the camera rushes in and narrows as it backs off
+    const trick = 1 + (this.zoom.zoom - 1) * f.punch;
+    const zoom = trick * this.drift.pull * (1 + this.drift.kick * 0.1) * (1 + this.punchAmt * 0.35);
+    const fov = f.fov + (zoom - 1) * DYN_CAM.zoomFov + this.drift.fovAdd + this.punchAmt * 10;
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+    const viewH = f.viewH / zoom;
+    this.dist = Math.max(DYN_CAM.minDist, viewH / (2 * tanHalf));
+    this.camera.fov = (2 * Math.atan(viewH / (2 * this.dist)) * 180) / Math.PI;
     this.camera.updateProjectionMatrix();
     //a slam shakes the camera, dying off fast
     const sx = (Math.random() - 0.5) * this.shakeAmt;
     const sy = (Math.random() - 0.5) * this.shakeAmt;
     this.shakeAmt *= Math.pow(0.86, dt * 60);
-    //a little above the skater looking down at them, so the street reads in depth; the feet stay centred
-    this.camera.position.set(this.camX + sx, this.camY + this.dist * 0.18 + sy, this.dist);
-    this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0.25);
+    //a little above the skater looking down at them, so the street reads in depth. The whole view pans ahead and up
+    //so Lou sits left of and below centre (framing): more street ahead, the wires and roofs above
+    const panX = f.lead * viewH * this.camera.aspect * 0.5;
+    const panY = f.low * viewH * 0.5 - this.lagY;
+    const cx = this.camX + panX + sx;
+    const cy = this.camY + panY + sy;
+    this.camera.position.set(cx, cy + this.dist * 0.18, this.dist);
+    this.camera.lookAt(cx - sx * 0.4, cy - sy * 0.4, 0.25);
     this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
     this.punchAmt *= Math.pow(0.91, dt * 60);
     //far away: barely moves. After a floor joins on, the skyline eases back down to where it sits
@@ -493,10 +514,8 @@ export class StreetView {
     const h = this.canvas.clientHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    //Lou Gnar's 800 x 600 box: full height on wide screens, full width on narrow ones; back off rather than go fish-eye
-    this.baseH = viewHeight(w / h);
-    this.dist = Math.max(22, this.baseH / (2 * Math.tan((32 * Math.PI) / 180)));
-    this.camera.fov = (2 * Math.atan(this.baseH / (2 * this.zoom.zoom * this.dist)) * 180) / Math.PI;
+    //desktop: Lou Gnar's 800 x 600 box. Phones: in close with a wide lens, upright or sideways (camera.ts framing)
+    this.frame = framing(w, h);
     this.camera.updateProjectionMatrix();
     const buf = this.renderer.getDrawingBufferSize(this.buf);
     setInkResolution(buf.x, buf.y, this.pixelRatio);
