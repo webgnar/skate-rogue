@@ -137,9 +137,9 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     </button>`);
   }
   const hint = !picked
-    ? 'Drag a card onto your board or gear to buy it · drag slots to swap them · triggers fire the effects to their right'
+    ? 'Tap or drag a card to buy it · drag slots to swap them · triggers fire the effects to their right'
     : 'stock' in picked
-      ? `Drop or tap a slot for ${modDef(shop.stock[picked.stock]!).name}`
+      ? `Board full: tap the slot ${modDef(shop.stock[picked.stock]!).name} replaces`
       : 'Tap another slot to swap';
   return { slots, parts, hand: cards.join(''), hint };
 }

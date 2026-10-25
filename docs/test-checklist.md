@@ -307,7 +307,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **Drag to buy:** drag a mod card onto a slot (it replaces what's there), `+1 SLOT` onto your board, a gear card onto your gear. While you drag, the places it can go glow cyan and the one under your thumb swells yellow; the drop stamps in and the price floats off your cash.
 - [ ] **Miss and too poor:** let go away from a slot and the card flies back with nothing bought. A card you can't afford is grey with a red price, and shakes instead of lifting.
 - [ ] **Rearrange:** drag one board slot onto another to swap them.
-- [ ] **Taps still work:** tap a mod card then a slot; tap the slot or gear card to buy it straight away.
+- [ ] **Tap to buy:** tapping a mod card buys it into the first empty slot; tapping a gear or +1 SLOT card buys it straight away. With the board full, a tap picks the card and the next slot you tap is the one it replaces.
 - [ ] **Thumb feel:** the card under your thumb shrinks so you can see the slot under it. Is it easy to drop where you mean on the phone? Are the cards big enough to read?
 - [ ] **No accidental ollie:** nothing you do in the shop makes Lou ollie when you skate on.
 - [ ] **Shop look (zack's Oct 25 mockup, ui3-shop-look):** graffiti SKATE SHOP title, cash on a black strip, RESTOCK and SKATE ON top right; YOUR BOARD and YOUR GEAR with yellow tape labels; cards coloured by type (trigger purple, effect blue, modifier yellow, board green, gear orange) standing on a wooden workbench, with the hint painted along it.

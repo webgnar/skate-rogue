@@ -809,8 +809,20 @@ export class Game {
     const pick = this.shopPick;
     let next: ShopState | null = s;
     if (el.dataset.stock !== undefined) {
+      //zack: a tap buys the card into the first empty slot; with the board full, it's picked and the next slot
+      //tapped is the one it replaces
       const i = Number(el.dataset.stock);
-      this.shopPick = pick && 'stock' in pick && pick.stock === i ? null : s.stock[i] ? { stock: i } : null;
+      const empty = s.board.indexOf(null);
+      if (pick && 'stock' in pick && pick.stock === i) this.shopPick = null;
+      else if (!s.stock[i]) this.shopPick = null;
+      else if (empty >= 0) {
+        next = buy(s, i, empty);
+        this.shopPick = null;
+        if (!next) {
+          this.hud.callout('NOT ENOUGH CASH', 'bad');
+          next = s;
+        }
+      } else this.shopPick = { stock: i };
     } else if (el.dataset.slot !== undefined) {
       const j = Number(el.dataset.slot);
       if (pick && 'stock' in pick) next = buy(s, pick.stock, j);
