@@ -463,9 +463,20 @@ async function start() {
   //the one button blocks touchstart on the whole game (src/game/input.ts), which on a phone also kills the taps' clicks
   //and the scrolling on the pause card: let the card have its touches back
   document.getElementById('paused')!.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) game.setPaused(true);
-  });
+  //leaving the app (home, the app switcher, another app, a call, the lock button) pauses the run and silences the
+  //sound. The app switcher only blurs the page on iPhone, so blur counts too; coming back keeps the pause card up
+  const away = () => {
+    game.setPaused(true);
+    sound.sleep(true);
+  };
+  const back = () => {
+    if (!document.hidden) sound.sleep(false);
+  };
+  document.addEventListener('visibilitychange', () => (document.hidden ? away() : back()));
+  window.addEventListener('pagehide', away);
+  window.addEventListener('blur', away);
+  window.addEventListener('pageshow', back);
+  window.addEventListener('focus', back);
   //dev tools (src/ui/dev-panel.ts) on the pause card. The collision overlay (src/render/collision-debug.ts): ?debug=collision
   //(or ?collision) or the saved switch starts with it on, C flips it, [ and ] step the slow motion, . freezes and then
   //steps one frame. With ?debug a COL button flips it too.

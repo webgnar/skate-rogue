@@ -25,13 +25,14 @@ export class Sound {
   private music: { id: MusicId; src: AudioBufferSourceNode } | null = null;
   private want: MusicId | null = null;
   private track: Record<MusicId, number> = { gameplay: 0, title: 0 }; // where each slot is in its list
+  private away = false; // the app is in the background (sleep)
 
   constructor(private readonly base: string) {}
 
   // call from a user gesture: makes the context (or wakes it) and starts loading the samples
   unlock(): void {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => {});
+      if (this.ctx.state === 'suspended' && !this.away) void this.ctx.resume().catch(() => {});
       return;
     }
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -83,9 +84,16 @@ export class Sound {
     src.start();
   }
 
+  // silent while the app is in the background: frames stop there, so update() can't do it, and phones keep a web
+  // page's audio playing behind other apps
+  sleep(on: boolean): void {
+    this.away = on;
+    if (on && this.ctx?.state === 'running') void this.ctx.suspend().catch(() => {});
+  }
+
   // the loops and the music, every frame
   update(f: SoundFrame): void {
-    if (!this.ctx) return;
+    if (!this.ctx || this.away) return;
     if (f.paused) {
       if (this.ctx.state === 'running') void this.ctx.suspend().catch(() => {});
       return;
