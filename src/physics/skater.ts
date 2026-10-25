@@ -714,7 +714,9 @@ export class Skater {
   private checkHazards(): void {
     const half = PHYS.width / 2;
     for (const car of this.cars()) {
-      if (this.hitCars.has(car)) continue;
+      //an L train is a one-way platform (zack, 2026-10-25): you pass through it from below and the sides, and only
+      //its roof counts, as a grind
+      if (this.hitCars.has(car) || car.ledge) continue;
       //a dropped tailgate: roll up it and it kicks you up over the box, with a burst of speed (a bomb)
       if (car.kicker && this.mode === 'roll' && !this.surface && this.x + half >= car.x0 - car.kicker && this.x < car.x0) {
         this.hitCars.add(car);
@@ -723,13 +725,6 @@ export class Skater {
       }
       const overlapX = this.x + half > car.x0 && this.x - half < car.x1;
       const overlapY = this.y > car.roof + 6 && this.y - PHYS.height < car.bottom;
-      //an L train overhead: jumping up into its underside bumps your head and you come down, no slam
-      if (overlapX && overlapY && car.ledge && this.mode === 'air' && this.y - this.vsp - PHYS.height >= car.bottom - 4) {
-        this.feel.bounce(Math.max(0, -this.vsp), 0);
-        this.y = car.bottom + PHYS.height;
-        this.vsp = Math.max(0, this.vsp);
-        continue;
-      }
       if (overlapX && overlapY) {
         this.hitCars.add(car);
         this.slam();

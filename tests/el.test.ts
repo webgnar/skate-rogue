@@ -75,7 +75,7 @@ describe('the L', () => {
     expect(reachedAll).toBe(ramps);
   });
 
-  it('a train overhead bumps your head when you jump up into it, no slam; and its roof is a grind', () => {
+  it('a train is a one-way platform: you pass through it from below and the sides, never slammed, and its roof is a grind', () => {
     const l = chicago(4, 2);
     const s = l.el![0];
     const t = new ElTrain(s);
@@ -84,15 +84,29 @@ describe('the L', () => {
     const mid = (s.x0 + s.x1) / 2;
     while (!t.inLane.some((b) => b.x0 < mid - TILE && b.x1 > mid + TILE) && t.t < 5000) t.step(s.trigger);
     const boxes = t.inLane;
-    //from the street under it, ollie straight up into it
+    //from the street under it, straight up into it
     const under = new Skater({ ...l, startX: mid, startY: l.streetY, el: [] } as Level);
     under.movers = boxes;
     const slams: string[] = [];
+    let through = false;
+    //a big pop (a kicker, a bus roof): up through the floor of the car
+    under.mode = 'air';
+    under.vsp = -8;
     for (let f = 0; f < 60; f++) {
-      under.step({ pressed: f === 0, held: true });
+      under.step({ pressed: false, held: true });
       slams.push(...under.events.map((e) => e.type).filter((e) => e === 'slam'));
       under.events.length = 0;
-      expect(under.y - 48).toBeGreaterThanOrEqual(boxes[0].bottom - 8);
+      if (under.y - 48 < boxes[0].bottom) through = true;
+    }
+    expect(through).toBe(true);
+    //into its back end at its own height, from the track behind it
+    const behind = boxes.reduce((a, b) => (b.x0 < a.x0 ? b : a));
+    const side = new Skater({ ...l, startX: behind.x0 - 3 * TILE, startY: s.y } as Level);
+    side.movers = boxes;
+    for (let f = 0; f < 60; f++) {
+      side.step({ pressed: false, held: false });
+      slams.push(...side.events.map((e) => e.type).filter((e) => e === 'slam'));
+      side.events.length = 0;
     }
     expect(slams).toEqual([]);
     //dropped onto its roof, you grind it
