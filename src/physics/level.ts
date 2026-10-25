@@ -52,7 +52,7 @@ export interface Car {
   bottom: number;
   model?: 'cruiser' | 'bus'; // parked roadblock vehicles; plain parked cars leave it out
   kicker?: number; // a box truck's dropped tailgate: this far behind x0 it launches you (px)
-  ledge?: Surface; // an L train's car (src/traffic/el.ts): its roof is a grind that moves with it, and from under it you bump your head, not slam
+  ledge?: Surface; // an L train's car (src/traffic/el.ts): a one-way platform: its roof is a grind that moves with it, and it never hits you
 }
 
 export interface Glass {
