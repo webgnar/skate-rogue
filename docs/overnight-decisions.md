@@ -594,6 +594,11 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Pedestrians in the fused city.** With the worlds fused into one city, about a third of the people on the
   Chicago street now dress from another world (tunics and laurels, sea colours, gallery coats, flight suits and
   helmets, techwear); the rest dress for Chicago.
+- **Shoes split at the ball (for the editor's foot bones).** Lou's and the QFS skaters' shoes and soles are now two
+  parts each: the heel on {side}Foot and the toe cap on {side}ToeBase, cut at the ball (0.12 ahead of the ankle)
+  with a little overlap so a bend never opens a gap. The toes bend with the editor's toe fields and a heel lift
+  no longer pushes the toe cap through the deck. The worn hole in the lead shoe moved to the toe cap. GLBs
+  re-exported; the clips are unchanged.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 
