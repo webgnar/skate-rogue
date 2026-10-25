@@ -85,6 +85,6 @@ describe('district twists', () => {
       process.stderr.write(`${twist}: ${tries.toFixed(1)} tries\n`);
       expect(tries).toBeLessThan(4);
     }
-  });
+  }, 30000); // thirty floors of bot runs: about 5 s, past vitest's default under a full suite
 });
 declare const process: { stderr: { write(s: string): void } };
