@@ -13,6 +13,7 @@ import type { Fork } from './roads';
 import { CHUNK_W, makeLayout, STREET_ROW } from './layout';
 import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
+import { addTopRoute, TOP } from './top-route';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
 import { floorEdit } from './level-edits';
 import { elPlan } from '../traffic/el';
@@ -252,7 +253,8 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   if (opts.fork) {
     //starts 6 tiles into the runway piece and runs past the gate in the exit piece
     const x0 = finale.width + off - 26 * TILE;
-    const y = finale.streetY - PICKUPS.fork;
+    //(on a hill floor, up at the top route's height: you reach it along the rooftops)
+    const y = finale.streetY - (opts.hills ? TOP.height : PICKUPS.fork);
     fork = { x0, x1: exitX + 4 * TILE, y, ...opts.fork };
     for (let x = x0 + 2 * TILE; x < exitX - TILE; x += 2 * TILE) pickups.push({ kind: 'cash', x, y: y - PICKUPS.ride });
   }
@@ -282,6 +284,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   //Chicago's L over the street, before the side line so the side line stays clear of it
   if (opts.hills) level.el = elPlan(level, level.layout.seed);
   addSideLine(level, level.layout.seed);
+  if (opts.hills && !opts.short) addTopRoute(level, level.layout.seed);
   applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);

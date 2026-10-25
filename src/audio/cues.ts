@@ -64,6 +64,8 @@ export function cueFor(e: FloorEvent): Cue | null {
       return cue('ufo_explode', e.how === 'roll' ? 0.4 : 0.6, 1.3 + ((e.index * 7) % 5) * 0.08);
     case 'drone':
       return cue('ufo_explode');
+    case 'birds':
+      return cue('impact', 0.5, 1.8); // a flurry of wings
     case 'mod':
       return cue('coin', 0.3, 2);
     case 'bail':

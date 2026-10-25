@@ -579,6 +579,16 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Knees always bend toward the camera when Lou lands, squashes or rides a slope; never backward or sideways.
 - [ ] Pedestrians are mostly Chicago, with a mix of other worlds' looks: laurels, space helmets, techwear, sea colours.
 
+## Top route (power lines and rooftops)
+
+- [ ] On a hill, ollie off the crest where the power line dips close: you land on the wire and grind it all the way down, past the poles, without getting kicked off.
+- [ ] Off the wire's end you land on a rooftop, and ollies at each rooftop's end carry you on to the next. Miss one and you're back on the street.
+- [ ] Up top, the helicopter flies in over you with its light on you and your Heat climbs slowly. Tricks still cool it. Back on the street, the helicopter peels away.
+- [ ] Pigeons sit on rooftops and on the wire. Ollie over them and they fly off. Skate into them for "BIRD STRIKE!", a bit less speed and a little Heat.
+- [ ] Now and then an airliner crosses the sky behind the city, more often while you're up.
+- [ ] Reach the gate still up top and you're on the high road.
+- [ ] `?bot=high` plays the top route for you.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

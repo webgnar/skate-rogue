@@ -375,10 +375,10 @@ async function start() {
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
-  //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?turbo=4 runs it 4x faster
+  //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
   const bot = params.get('bot');
   if (bot !== null) {
-    game.setAutopilot(bot === 'mash' ? 'mash' : 'ref');
+    game.setAutopilot(bot === 'mash' || bot === 'high' ? bot : 'ref');
     game.timeScale = Math.min(8, Math.max(1, Number(params.get('turbo')) || 1));
   }
   //?debug (and ?bot) expose the game for headless checks: the playtest runner reads game.playtest and window.rig

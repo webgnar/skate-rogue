@@ -1,4 +1,5 @@
 // A floor as the physics sees it: street columns, one-way surfaces, curved rails and parked cars, in pixels.
+import type { FlockSite } from '../sim/sky';
 import type { Prop } from '../gen/props';
 import type { Intersection } from '../traffic/cross';
 import type { BusStop } from '../traffic/street';
@@ -26,6 +27,7 @@ export interface Surface {
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
   kicker?: boolean; // a kicker ramp on the street (the L's, src/traffic/el.ts): drawn as a steel launch ramp
   tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
+  top?: boolean; // part of the top route (src/gen/top-route.ts): a rooftop up where the helicopter sees you
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
@@ -58,6 +60,22 @@ export interface Glass {
   x1: number;
 }
 
+// a rail through these points (px), as one grind: the top route's power line down a whole stretch of hill
+export function polyRail(points: [number, number][]): CurvedRail {
+  const [a, b] = [points[0], points[points.length - 1]];
+  const r = new CurvedRail(a[0], a[1], b[0], b[1], 0, 1);
+  r.xs.length = r.ys.length = r.ds.length = 0;
+  let d = 0;
+  points.forEach(([x, y], i) => {
+    if (i > 0) d += Math.hypot(x - points[i - 1][0], y - points[i - 1][1]);
+    r.xs.push(x);
+    r.ys.push(y);
+    r.ds.push(d);
+  });
+  (r as { length: number }).length = d;
+  return r;
+}
+
 // a curved rail, sampled into a polyline with arc length (QFS o_grind_rail)
 export class CurvedRail {
   readonly xs: number[] = [];
@@ -66,6 +84,7 @@ export class CurvedRail {
   readonly length: number;
   material: Material = 'metal'; // handrails and curved rails are steel
   wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
+  top = false; // the top route's power line (src/gen/top-route.ts)
 
   constructor(
     readonly x0: number,
@@ -189,6 +208,7 @@ export interface Level {
   // every stretch of hill, px: the opening descent [0, finaleX] and the later ones between the street chases
   // (a cable car up from the street, then down again); left out = just the opening descent
   hillSpans?: [number, number][];
+  flocks?: FlockSite[]; // pigeons on the top route (src/sim/sky.ts)
 }
 
 // on a stretch of hill (or the opening descent), not the street
