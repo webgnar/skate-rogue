@@ -27,6 +27,7 @@ export interface Surface {
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
   kicker?: boolean; // a kicker ramp on the street (the L's, src/traffic/el.ts): drawn as a steel launch ramp
   tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
+  sky?: string; // a sky beat (src/gen/sky-beats.ts): roofs, billboard, tower or scaffold, drawn by src/render/sky-kit.ts
   top?: boolean; // part of the top route (src/gen/top-route.ts): a rooftop up where the helicopter sees you
 }
 
@@ -85,6 +86,7 @@ export class CurvedRail {
   material: Material = 'metal'; // handrails and curved rails are steel
   wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
   top = false; // the top route's power line (src/gen/top-route.ts)
+  sky?: string; // a sky beat's grind (src/gen/sky-beats.ts): a crane's boom
 
   constructor(
     readonly x0: number,

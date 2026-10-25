@@ -7,6 +7,7 @@
 import { FIRST_ROAD, rollFork, type Road } from '../gen/roads';
 import { floorRecipe, hillDials as hillOnly, recipe, type Beat } from '../gen/hills';
 import { topDials } from '../gen/top-route';
+import { skyDials, skyPick, skyRecipe, type SkyBeat } from '../gen/sky-beats';
 import { SAVED_EDITS, floorEdit, useLevelEdits, type FloorEdit, type LevelEdits } from '../gen/level-edits';
 import { buildFloor, type FloorOptions } from '../gen/descent';
 import { validatedFloor } from '../gen/validate';
@@ -18,7 +19,7 @@ import { SCORE } from '../run/score';
 import { spawnPlan } from '../traffic/traffic';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
-import { BEATS, formatLevelEdits, isLevelEdits, loadLevelDrafts, saveLevelDrafts } from './drafts';
+import { BEATS, SKY_BEAT_LIST, formatLevelEdits, isLevelEdits, loadLevelDrafts, saveLevelDrafts } from './drafts';
 import { floorSVG, silhouetteSVG, type BotLine } from './draw';
 import './levels.css';
 
@@ -42,6 +43,15 @@ const BEAT_HELP: Record<string, string> = {
   gap: 'jump the cross street onto the next block',
   kicker: 'a short climb that throws you into the air',
   chase: 'a flat stretch with traffic',
+};
+
+const SKY_HELP: Record<SkyBeat, string> = {
+  roofs: 'two rooftop decks with a gap to ollie between',
+  billboard: 'the catwalk rail along the top of a billboard',
+  tower: "a water tower's lid, a little higher than the rest",
+  crane: "a crane's boom, a long grind falling with the hill",
+  scaffold: 'three scaffold decks stepping down',
+  gap: 'open sky, with a Stoken in it now and then',
 };
 
 const ROADS: { id: string; name: string; road: Road }[] = [
@@ -75,11 +85,13 @@ const DIALS: Dial[] = [
   { key: 'topStart', name: 'power line start', help: 'top route: how far down each hill the power line starts (0 = the crest, 1 = the foot)', min: 0, max: 0.9, step: 0.05 },
   { key: 'roofGap', name: 'rooftop gaps', help: 'top route: tiles to ollie between rooftops', min: 1, max: 6, step: 1, pair: true },
   { key: 'flocks', name: 'pigeons', help: 'top route: chance of pigeons on each wire and long rooftop', min: 0, max: 1, step: 0.05 },
+  { key: 'skyHeight', name: 'sky height', help: 'sky beats: tiles over the highest ground behind (the power line is at 5)', min: 3, max: 9, step: 0.5 },
+  { key: 'skyStart', name: 'sky start', help: 'sky beats: how far down each hill the first one stands (0 = the crest, 1 = the foot)', min: 0, max: 0.9, step: 0.05 },
   { key: 'street', name: 'last street', help: 'street pieces after the last hill, up to the fork', min: 1, max: 8, step: 1 },
 ];
 
-// the hill's dials and the top route's, as the editor shows them
-const hillDials = (f: number) => ({ ...hillOnly(f), ...topDials(f) });
+// the hill's dials, the top route's and the sky beats', as the editor shows them
+const hillDials = (f: number) => ({ ...hillOnly(f), ...topDials(f), ...skyDials(f) });
 
 interface Built {
   level: Level;
@@ -170,6 +182,12 @@ export function startLevels(): void {
         <p class="lv-help">The hill is built slot by slot, top to bottom. Each slot picks one of its lit beats from the seed (the outlined one is this seed's pick). The last slot is the floor's peak, its biggest stairway.</p>
         <ol class="lv-slots" id="lv-slots"></ol>
         <button id="lv-add" type="button">+ add a slot</button>
+      </section>
+      <section class="lv-panel">
+        <div class="lv-head"><h2>Sky beats · floor <span class="lv-fl"></span></h2><span class="lv-tag" id="lv-stag"></span><button id="lv-srevert" type="button">use code sky</button></div>
+        <p class="lv-help">Up high, over the power line: what's there to land on when you fly over it, laid down each hill slot by slot. Each slot picks one of its lit beats from the seed (each hill its own pick; the outlined one is the first hill's). No slots, no sky beats.</p>
+        <ol class="lv-slots" id="lv-sslots"></ol>
+        <button id="lv-sadd" type="button">+ add a sky slot</button>
       </section>
       <section class="lv-panel">
         <div class="lv-head"><h2>Dials · floor <span class="lv-fl"></span></h2><span class="lv-tag" id="lv-dtag"></span><button id="lv-drevert" type="button">use code dials</button></div>
@@ -303,6 +321,62 @@ export function startLevels(): void {
     changed();
   });
 
+  // ---------- sky beats ----------
+  function drawSky(): void {
+    const slots = skyRecipe(floor);
+    const picked = skyPick(seed, floor, 0);
+    const edited = !!floorEdit(floor).sky;
+    $('lv-stag').textContent = edited ? 'edited' : 'from code';
+    $('lv-stag').classList.toggle('on', edited);
+    $<HTMLButtonElement>('lv-srevert').disabled = !edited;
+    $('lv-sslots').innerHTML = slots
+      .map((slot, i) => {
+        const chips = SKY_BEAT_LIST.map((b) => {
+          const lit = slot.includes(b);
+          const pick = picked[i] === b;
+          return `<button type="button" class="beat${lit ? ' lit' : ''}${pick ? ' pick' : ''}" data-slot="${i}" data-beat="${b}" title="${SKY_HELP[b]}">${b}</button>`;
+        }).join('');
+        const tools = `<button type="button" class="tool" data-up="${i}" title="move up"${i === 0 ? ' disabled' : ''}>↑</button><button type="button" class="tool" data-down="${i}" title="move down"${i >= slots.length - 1 ? ' disabled' : ''}>↓</button><button type="button" class="tool" data-del="${i}" title="remove">✕</button>`;
+        return `<li><span class="n">${i + 1}</span><span class="beats">${chips}</span><span class="tools">${tools}</span></li>`;
+      })
+      .join('') || '<li class="lv-none">no sky beats on this floor</li>';
+  }
+
+  function setSky(fn: (r: SkyBeat[][]) => void): void {
+    const r = clone(skyRecipe(floor));
+    fn(r);
+    edit().sky = r;
+    changed();
+  }
+
+  $('lv-sslots').addEventListener('click', (ev) => {
+    const t = (ev.target as HTMLElement).closest('button');
+    if (!t || t.disabled) return;
+    if (t.dataset.beat) {
+      const i = Number(t.dataset.slot);
+      const b = t.dataset.beat as SkyBeat;
+      setSky((r) => {
+        const has = r[i].includes(b);
+        if (has && r[i].length === 1) return;
+        r[i] = has ? r[i].filter((x) => x !== b) : [...r[i], b];
+      });
+    } else if (t.dataset.up) {
+      const i = Number(t.dataset.up);
+      setSky((r) => ([r[i - 1], r[i]] = [r[i], r[i - 1]]));
+    } else if (t.dataset.down) {
+      const i = Number(t.dataset.down);
+      setSky((r) => ([r[i + 1], r[i]] = [r[i], r[i + 1]]));
+    } else if (t.dataset.del) {
+      const i = Number(t.dataset.del);
+      setSky((r) => r.splice(i, 1));
+    }
+  });
+  $('lv-sadd').addEventListener('click', () => setSky((r) => r.push(['roofs'])));
+  $('lv-srevert').addEventListener('click', () => {
+    delete edit().sky;
+    changed();
+  });
+
   // ---------- dials ----------
   function dialValue(d: Dial, f: number, code: boolean): number | Pair {
     if (d.key === 'street') return code ? codeStreet(f) : (floorEdit(f).street ?? codeStreet(f));
@@ -414,6 +488,7 @@ export function startLevels(): void {
       drawRecipe();
       drawDials();
     } else drawRecipe();
+    drawSky();
     markDirty();
     clearTimeout(buildT);
     buildT = window.setTimeout(() => {
@@ -432,6 +507,7 @@ export function startLevels(): void {
     root.querySelectorAll('.lv-fl').forEach((e) => (e.textContent = String(floor)));
     useLevelEdits(edits);
     drawRecipe();
+    drawSky();
     drawDials();
     markDirty();
     build();
