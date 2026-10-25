@@ -55,6 +55,9 @@ const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
   hop: 'onHop',
 };
 
+// the furthest any smash below can reach: a bomb, a big landing or a slam, or touching the widest prop
+const SMASH_FAR = Math.max(SMASH.bombReach, SMASH.landReach, SMASH.slamReach, ...Object.values(PROP_SIZE).map((s) => s.w), 8) + PHYS.width / 2 + 1;
+
 export const SLIP = { reach: 4 * TILE }; // Slipstream: how close behind a car counts as drafting
 export const NEAR_MISS = 10; // px of air between your wheels and a roof that counts as a close call
 export const PICKUP_RADIUS = 26; // px around the skater's middle
@@ -330,8 +333,9 @@ export class FloorSim {
     const half = PHYS.width / 2;
     props.forEach((p, i) => {
       if (!p.breaks || this.broken[i]) return;
-      const size = PROP_SIZE[p.name] ?? { w: 8, h: 16 };
       const dx = p.x - sk.x;
+      if (Math.abs(dx) > SMASH_FAR) return; // out of reach of every way below (the floor has hundreds)
+      const size = PROP_SIZE[p.name] ?? { w: 8, h: 16 };
       //on the same ground (within a step) and side by side
       const level = Math.abs(sk.y - p.y) < 10;
       let by: SmashHow | null = null;

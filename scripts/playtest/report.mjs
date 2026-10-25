@@ -1,7 +1,7 @@
-// Turns the playtest bot's runs (playtest-report/sim.json and browser.json) into playtest-report/index.html: what
+// Turns the playtest bot's runs (playtest-report/sim-N.json and browser.json) into playtest-report/index.html: what
 // it found, grouped by kind, each with its test URL (on your Mac's dev server and on the live site) and a screenshot.
 // Also writes summary.md (the CI job summary) and prints the short version.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const OUT = 'playtest-report';
 const LOCAL = 'http://localhost:5173/';
@@ -35,7 +35,9 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0
 const read = (f) => (existsSync(`${OUT}/${f}`) ? JSON.parse(readFileSync(`${OUT}/${f}`, 'utf8')) : null);
 
 export function collect() {
-  const sim = read('sim.json');
+  //the sim's shards (sim-0.json, sim-1.json...), one per core, as one
+  const parts = existsSync(OUT) ? readdirSync(OUT).filter((f) => /^sim(-\d+)?\.json$/.test(f)).map(read) : [];
+  const sim = parts.length ? { at: parts[0].at, seconds: Math.max(...parts.map((p) => p.seconds)), runs: parts.flatMap((p) => p.runs).sort((a, b) => a.seed - b.seed) } : null;
   const browser = read('browser.json');
   const items = []; // { kind, where, message, url, shot, from }
   if (sim) {
