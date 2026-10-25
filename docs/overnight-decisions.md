@@ -622,6 +622,10 @@ and listed it here for review. Any of these can be flipped in the morning.
   Follow-up (zack: "above the power lines"): the airliner now flies over the wires, 5.6 tiles over the skater on
   the street and 3.2 over them up on the top route, easing between the two. The camera shows little sky, so on the
   street that puts it in the strip just under the HUD.
+  Then (zack: "behind the buildings, between the far background sprite and the front background buildings"): it
+  flies at z -34, between the back buildings (to about -10) and the skyline backdrops (-60 and back), drawn 18 tiles
+  long so it still reads big, a little over the rooftops on screen. The rooftops cross in front of it, and where
+  the back buildings fill the frame (much of the street) it only shows in the gaps.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

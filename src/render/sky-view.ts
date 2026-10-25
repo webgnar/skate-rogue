@@ -10,13 +10,12 @@ import { model } from './models';
 import { inkify } from './toon';
 
 const BIRDS = 5; // pigeons a flock
-// The airliner (art/airliner.py, from the QFS Chicago level's sprite) is drawn way bigger than before (zack), about
-// 10 tiles nose to tail, just behind the street and high in the sky, over the power lines (zack): the wires hang 5
-// and more tiles over the road, so down on the street it flies near the top of the frame, and up on the wires and
-// rooftops (where the camera rises with you) a little lower over you
-const PLANE_Z = -2;
-const PLANE_UP = { street: 5.6, top: 3.2 }; // tiles above the skater: over the wires (5 over the road), under the top of the frame
-const PLANE_S = 0.75; // of the model's 14 tiles
+// The airliner (art/airliner.py, from the QFS Chicago level's sprite) flies far behind the street, between the
+// buildings at the back of it and the skyline backdrop (zack), so the rooftops cross in front of it. That far off it
+// is drawn big, 18 tiles nose to tail, to still read way bigger than it used to.
+const PLANE_Z = -34; // the buildings stand to about -10, the skyline backdrops from -60 back
+const PLANE_UP = { street: 5.5, top: 5.5 }; // tiles above the skater: this far back, just over the rooftops on screen
+const PLANE_S = 1.3; // of the model's 14 tiles
 const PLANE_EVERY = [9, 18]; // seconds between airliners, down on the street (halved up top)
 
 export class SkyView {
@@ -122,13 +121,13 @@ export class SkyView {
       this.planeT -= dt * (up ? 2 : 1);
       if (this.planeT <= 0) {
         this.flying = true;
-        this.planeX = toX(skaterX) + 60;
+        this.planeX = toX(skaterX) + 80; // off the side of the frame, which is wide that far back
         this.plane.visible = true;
       }
     } else {
       //coming the other way, so it crosses the frame in a few seconds
-      this.planeX -= dt * 9;
-      if (this.planeX < toX(skaterX) - 60) {
+      this.planeX -= dt * 16;
+      if (this.planeX < toX(skaterX) - 80) {
         this.flying = false;
         this.plane.visible = false;
         this.planeT = PLANE_EVERY[0] + ((Math.floor(this.t * 7) % 10) / 10) * (PLANE_EVERY[1] - PLANE_EVERY[0]);
