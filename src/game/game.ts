@@ -92,6 +92,15 @@ export interface RunResult {
   stoken: number; // earned this run
   bank: number; // Stoken kept across runs
   daily: { best: number; newBest: boolean } | null; // on a daily run
+  continues: number; // continues used this run
+}
+
+// a run-ending fall offers a continue (zack, 2026-10-25: "i want to give the player 3 Continues, before they have to
+// start all over")
+export interface ContinueView {
+  caught: boolean;
+  left: number; // continues left, this one included
+  floor: number;
 }
 
 // what the meta tree sets for a run: the skater and deck, the boon library, and whether it's the daily run
@@ -154,9 +163,15 @@ export interface Hud {
   shop(view: ShopView | null): void; // null hides the shop
   under(view: UnderView | null): void; // the underground spot; null hides it
   gear(gear: Gear): void; // how worn your deck, shoes, trucks and wheels are
+  cont(view: ContinueView | null): void; // the continue card after a bail or a bust; null hides it
+  continues(left: number): void; // continues left this run
 }
 
-type State = 'skate' | 'caught' | 'pick' | 'shop' | 'under' | 'over';
+type State = 'skate' | 'caught' | 'cont' | 'pick' | 'shop' | 'under' | 'over';
+
+// continues a run: each puts you back at the start of the floor you fell on, as you were when you started it (score,
+// cash, gear, Heat), so a continue can't farm a floor's cash; after the last, a fall ends the run
+export const CONTINUES = 3;
 
 const CAUGHT_BEAT_MS = 800;
 //one street: the floor ahead comes into view this far before the join (tiles), and the light and weather blend
@@ -165,6 +180,7 @@ const AHEAD_TILES = 44;
 const MOOD_BLEND_SECS = 4;
 
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
+const CONT_LOCK_MS = 700;
 const SMASH_CHAIN = 4; // smashes in quick succession for a Wrecking Ball
 const SMASH_CHAIN_SECS = 1.2;
 //slam: hit-stop, then slow motion easing back to full speed
@@ -225,6 +241,10 @@ export class Game {
   private readonly bountyView = new BountyView();
   private readonly twistView = new TwistView();
   private floorStoken = 0; // Stoken at the floor's start, for a bounty
+  private continuesLeft = CONTINUES;
+  private contCaught = false; // the continue card is up after a bust (not a bail)
+  // the run as it was when this floor started: a continue puts it back
+  private floorStart: { run: RunScore; gear: Gear; carry: number } | null = null;
   private bountySeen = false;
   private tutorial = false; // on the tutorial floor, before the run's first floor
   private tutorialOut = false; // through the tutorial's gate, rolling on to the run's first floor
@@ -397,6 +417,11 @@ export class Game {
     else if (this.state === 'under') this.underChoose('low');
     else if (this.state === 'shop') this.leaveShop();
     else if (this.state === 'over' && now - this.menuAt > 3000) this.newRun();
+    //the playtest counts each fall as a run's end, as before continues
+    else if (this.state === 'cont') {
+      this.hud.cont(null);
+      this.endRun(now, this.contCaught);
+    }
   }
 
   private makeLevel(): Level {
@@ -419,6 +444,7 @@ export class Game {
     this.shopVisits = 0;
     this.run = new RunScore();
     this.carry = 0;
+    this.continuesLeft = CONTINUES;
     this.road = this.firstRoad();
     this.level = this.makeLevel();
     this.hud.over(null);
@@ -512,6 +538,7 @@ export class Game {
       this.input.clear();
     }
     this.boonFx.setBoons(this.boons);
+    this.floorStart = { run: Object.assign(new RunScore(), this.run), gear: { ...this.gear }, carry: this.carry };
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
     const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
@@ -557,6 +584,7 @@ export class Game {
     this.hud.boons(this.boons);
     this.hud.board(this.board);
     this.hud.gear(this.gear);
+    this.hud.continues(this.continuesLeft);
     this.hud.money(this.run.cash, this.run.stoken);
     if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
     if (this.road.kind === 'escape') {
@@ -918,7 +946,31 @@ export class Game {
       stoken: this.run.stoken,
       bank: next.stoken,
       daily,
+      continues: CONTINUES - this.continuesLeft,
     });
+  }
+
+  // a bail or a bust: a continue while there are any left, else the run's over
+  private fell(now: number, caught: boolean): void {
+    if (this.continuesLeft <= 0 || !this.floorStart) return this.endRun(now, caught);
+    this.contCaught = caught;
+    this.openMenu('cont', now);
+    this.hud.cont({ caught, left: this.continuesLeft, floor: this.floor });
+  }
+
+  // back to the start of this floor as you were when you started it
+  private continueRun(): void {
+    const at = this.floorStart;
+    if (!at || this.continuesLeft <= 0) return;
+    this.continuesLeft--;
+    this.run = Object.assign(new RunScore(), at.run);
+    this.gear = { ...at.gear };
+    this.carry = at.carry;
+    this.hud.cont(null);
+    this.startFloor();
+    const left = this.continuesLeft;
+    this.hud.callout(left ? `CONTINUE! ${left} LEFT` : 'LAST CHANCE!', left ? 'good' : 'bad');
+    this.sound?.play(MOMENT.start);
   }
 
   private get skater(): Skater {
@@ -997,10 +1049,19 @@ export class Game {
       if (this.input.takePress() && this.input.lastTarget && now - this.menuAt >= MENU_LOCK_MS) this.shopTap(this.input.lastTarget);
     } else if (this.state === 'over') {
       if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.newRun();
+    } else if (this.state === 'cont') {
+      //tap to continue; END RUN gives up
+      //(a longer lock: you were likely mashing the button as you went down)
+      if (this.input.takePress() && now - this.menuAt >= CONT_LOCK_MS) {
+        if (this.input.lastTarget?.closest('[data-giveup]')) {
+          this.hud.cont(null);
+          this.endRun(now, this.contCaught);
+        } else this.continueRun();
+      }
     } else if (this.state === 'caught') {
       //the cruiser cuts in, then the summary
       if (now - this.menuAt >= CAUGHT_BEAT_MS) {
-        this.endRun(now, true);
+        this.fell(now, true);
       }
     } else {
       const step = () => {
@@ -1041,7 +1102,7 @@ export class Game {
       this.finished = true;
       this.finishFloor(now);
     } else if (this.state === 'skate' && this.sim.state === 'bail') {
-      this.endRun(now, false);
+      this.fell(now, false);
     } else if (this.state === 'skate' && this.sim.state === 'caught') {
       this.state = 'caught';
       this.menuAt = now;

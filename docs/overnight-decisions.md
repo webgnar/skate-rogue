@@ -489,6 +489,13 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - **Launch ramps removed (Oct 25).** zack: "the ramps are bad. remove them. ill figure out a new way to get the player up to that higher route. they like Auto move him up there. it should be all physics based". Taken out, along with their level editor drawing and dial name. The power line stays high (at least 5 tiles over the ground behind it) from about halfway down each hill. For now there's no designed way up to it.
 
+- **Continues (Oct 25).** zack: "i want to give the player 3 Continues, before they have to start all over". What I chose:
+  - A continue restarts the floor you fell on, from a standstill. Score, cash, gear and Heat go back to what they were when the floor started, so you can't farm a floor's cash by dying.
+  - Boons and the board stay.
+  - The card's default (tap anywhere) is CONTINUE. END RUN is a small button.
+  - It's three per run, shown as hearts in the HUD.
+  - The playtest bot gives up at the card, so its stats still count each fall as a run's end.
+
 ## Models thread: animation
 
 - **Car hops play a Boneless (2026-10-25, zack).** `boneless` in poses.ts is a rough first pass for zack to tune

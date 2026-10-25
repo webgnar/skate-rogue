@@ -429,6 +429,15 @@ chase is what makes mistakes matter, so it has to be tight: always visible, alwa
 This keeps runs fast and tense: no health bar to manage, just keep moving, but one mistake is never the end.
 The Heat numbers above are a first guess and need prototyping.
 
+#### Continues
+
+Built Oct 25, 2026 (zack: "i want to give the player 3 Continues, before they have to start all over"). A run has
+**3 continues**. A bail or a bust shows a continue card. Tap to go back to the start of the floor you fell on, as you
+were when you got there: the same score, cash, gear and Heat, so dying can't farm a floor's cash twice. Boons and the
+board are kept. END RUN gives up. After the third continue, the next fall ends the run as before. The HUD shows the
+continues left as hearts beside the floor, and the run summary says how many were used. Quitting from the pause card
+ends the run without offering one.
+
 ## Procedural generation
 
 The generator is QFS Survivor's, ported to TypeScript and extended.

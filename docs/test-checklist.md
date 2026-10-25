@@ -626,6 +626,14 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] The helicopter over the top route and the high-Heat drone drop in from the sky and stay above the hill, never down inside it. When you come down off the top route the helicopter climbs away.
 - [ ] Traffic, cross street cars, the L trains, the cable car, the chaser, drones and birds all glide as smoothly as the skater (no stepping, best seen on a 120 Hz screen). With `?debug=collision` the player's box and the car boxes stay glued to their sprites.
 
+## Continues
+
+- [ ] The HUD shows three pink hearts beside the floor name at the start of a run.
+- [ ] Bail into a gap, or get busted: a BAILED or BUSTED card says "3 CONTINUES LEFT". Tap CONTINUE and you're back at the start of that floor, with the score, cash and gear you had when you got there, and one heart fewer.
+- [ ] END RUN on the card goes straight to the run summary.
+- [ ] After the third continue there are no hearts, and the next fall ends the run. The summary says "3 continues used".
+- [ ] A new run gives you three hearts again.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor
