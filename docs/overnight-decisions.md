@@ -479,6 +479,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - **Top route ramps (Oct 25).** zack: "dont have the upper levels power lines reach down low. there should be certain ramps that can get you air to get up to them". The power line now stays at least 5 tiles over the road under it (and over the highest ground in the 8 tiles behind), so an ollie and a flip can't reach it. A launch ramp (2 tiles long, 1.5 tiles high, drawn like the L's kicker) stands on the hill road about halfway down, under the wire's start: pop off the lip at speed (or pop and flip when slow) to catch it. Roll off without popping and you stay low. Each street chase gets a street launch ramp 3 tiles before its second rooftop, as the way back up.
 
+- **Launch ramps removed (Oct 25).** zack: "the ramps are bad. remove them. ill figure out a new way to get the player up to that higher route. they like Auto move him up there. it should be all physics based". Taken out, along with their level editor drawing and dial name. The power line stays high (at least 5 tiles over the ground behind it) from about halfway down each hill. For now there's no designed way up to it.
+
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

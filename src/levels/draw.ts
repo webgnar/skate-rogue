@@ -54,7 +54,7 @@ const spanOf = (L: Level, x: number) => hillSpans(L).findIndex(([a, b]) => x >= 
 // the descent's sections, named from its surfaces in order
 export function sectionNotes(level: Level): { x: number; y: number; text: string; kind: string }[] {
   const ds = level.surfaces
-    .filter((s) => inHill(level, s.x0) && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank') && !s.side && !s.launch)
+    .filter((s) => inHill(level, s.x0) && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank') && !s.side)
     .sort((a, b) => a.x0 - b.x0);
   const notes: { x: number; y: number; text: string; kind: string }[] = [];
   for (let i = 0; i < ds.length; i++) {
@@ -99,7 +99,7 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
     g.push(`<text x="${f(x)}" y="${f(y)}" fill="${col}" font-size="10" ${MONO} ${extra}>${s}</text>`);
   // the hill and its stairways, solid down to the ground
   for (const s of L.surfaces) {
-    if (!inHill(L, s.x0) || s.side || s.launch) continue;
+    if (!inHill(L, s.x0) || s.side) continue;
     if (s.kind === 'roof' || s.kind === 'bank') {
       const y1 = s.y1 ?? s.y;
       g.push(`<polygon points="${f(X(s.x0))},${f(Y(s.y))} ${f(X(s.x1))},${f(Y(y1))} ${f(X(s.x1))},${f(Y(base))} ${f(X(s.x0))},${f(Y(base))}" fill="${C.hill}"/>`);
@@ -141,12 +141,11 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
   for (const s of L.surfaces) {
     const fin = !inHill(L, s.x0);
     if (s.el) continue;
-    if (s.kind === 'bank' && (s.kicker || s.launch)) {
-      //a steel ramp up off the road: the L's kicker, or a launch up to the top route
+    if (s.kind === 'bank' && s.kicker) {
+      //the L's kicker: a steel ramp up off the street
       const y1 = s.y1 ?? s.y;
-      const col = s.launch ? C.up : C.kicker;
-      g.push(`<polygon points="${f(X(s.x0))},${f(Y(s.y))} ${f(X(s.x1))},${f(Y(y1))} ${f(X(s.x1))},${f(Y(s.y))}" fill="${col}"/>`);
-      text(X((s.x0 + s.x1) / 2), Y(y1) - 6, s.launch ? 'launch ↗ top' : 'L kicker', col, 'text-anchor="middle"');
+      g.push(`<polygon points="${f(X(s.x0))},${f(Y(s.y))} ${f(X(s.x1))},${f(Y(y1))} ${f(X(s.x1))},${f(Y(s.y))}" fill="${C.kicker}"/>`);
+      text(X((s.x0 + s.x1) / 2), Y(y1) - 6, 'L kicker', C.kicker, 'text-anchor="middle"');
     } else if (s.kind === 'ledge' || (fin && s.kind === 'roof')) {
       g.push(`<rect x="${f(X(s.x0))}" y="${f(Y(s.y))}" width="${f((s.x1 - s.x0) * scale)}" height="${f(Math.max(2, 10 * scale))}" fill="${s.top ? C.up : s.side ? C.side : C.ledge}"/>`);
     } else if (s.kind === 'rail') {
@@ -237,7 +236,6 @@ export function silhouetteSVG(L: Level, scale: number, maxW: number, top: number
     }
   }
   for (const r of L.rails) if (inHill(L, r.x0)) g.push(`<line x1="${X(r.x0)}" y1="${Y(r.y0)}" x2="${X(r.x1)}" y2="${Y(r.y1)}" stroke="${r.top ? C.up : r.wire ? C.wire : C.rail}" stroke-width="${r.wire ? 1 : 1.5}"/>`);
-  for (const s of L.surfaces) if (s.launch) g.push(`<polygon points="${X(s.x0)},${Y(s.y)} ${X(s.x1)},${Y(s.y1 ?? s.y)} ${X(s.x1)},${Y(s.y)}" fill="${C.up}"/>`);
   for (const s of L.surfaces) if (s.top) g.push(`<rect x="${X(s.x0)}" y="${Y(s.y)}" width="${X(s.x1 - s.x0)}" height="1.5" fill="${C.up}"/>`);
   for (const [a, b] of streetSpans(L)) g.push(`<rect x="${X(a)}" y="${Y(L.streetY)}" width="${X(b - a)}" height="4" fill="#4a4262"/>`);
   if (L.fork) g.push(`<rect x="${X(L.fork.x0)}" y="${Y(L.fork.y)}" width="${X(L.fork.x1 - L.fork.x0)}" height="2" fill="${C.cash}"/>`);
