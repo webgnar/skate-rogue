@@ -10,10 +10,12 @@ export const GEAR_PARTS: GearPart[] = ['deck', 'shoes', 'trucks', 'wheels'];
 export const GEAR = {
   // wear per use, out of 100
   // (balance pass, 2026-10-24: about 4 floors to half worn for the bot. Halved again when floors became two or three
-  // stretches of hill with street chases between, about twice as long: 0.8, 1.0, 1.1 and 0.9 before)
-  ollie: 0.38, // deck, per ollie
-  flip: 0.46, // shoes, per flip trick
-  grindSec: 0.5, // trucks, per second on a rail or ledge
+  // stretches of hill with street chases between, about twice as long: 0.8, 1.0, 1.1 and 0.9 before; trimmed about 8%
+  // when a rail-catch bug stopped lifting the bot onto the top route's power line and its floors ran longer: 0.38,
+  // 0.46 and 0.5 before)
+  ollie: 0.35, // deck, per ollie
+  flip: 0.42, // shoes, per flip trick
+  grindSec: 0.46, // trucks, per second on a rail or ledge
   fastSec: 0.38, // wheels, per second going faster than fastOver x cruising speed (0.42 before the L's kicker sent you up
   // onto its fast grind more often)
   fastOver: 1.25,
