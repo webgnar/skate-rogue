@@ -35,7 +35,7 @@ export const PHYS = {
   slamFrames: 36, // ~0.6 s to get back to full speed
   bufferFrames: 6, // 100 ms input buffer
   coyoteFrames: 5,
-  width: 16,
+  width: 30, // the board's length, nose to tail (zack, 2026-10-25): what cars, drones and props hit
   height: 48,
   // boons
   floatyFrames: 24, // Floaty Flip

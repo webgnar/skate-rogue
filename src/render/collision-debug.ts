@@ -376,18 +376,20 @@ export class CollisionDebug {
     ctx.globalAlpha = 1;
     this.marks = this.marks.filter((m) => m.t > 0);
 
-    //the skater: the body box cars hit, the feet (the one point that lands), the trucks, the speed, and in the air
-    //the ray straight down the landing pose reads
+    //the skater: the body box cars hit, the one point that lands (the feet, or in the air the board the clip lifts
+    //with the knees tucked: the box balls up to it), the trucks, the speed, and in the air the ray straight down the
+    //landing pose reads
     //(where it's drawn on screen, between the sim's steps, so the shapes sit on the skater)
     const me = drawn ?? sk;
-    const feet = P(me.x, me.y);
+    const by = me.y - (sk.mode === 'air' ? sk.tuck.lift : 0);
+    const feet = P(me.x, by);
     const head = P(me.x - half, me.y - PHYS.height);
-    const toe = P(me.x + half, me.y);
+    const toe = P(me.x + half, by);
     line([head, [toe[0], head[1]], toe, [head[0], toe[1]], head], COLLIDER.body, 2);
     const pitch = sk.feel.pitch;
     const wb = FEEL.wheelbase / 2;
-    const back = P(me.x - wb * Math.cos(pitch), me.y + wb * Math.sin(pitch));
-    const front = P(me.x + wb * Math.cos(pitch), me.y - wb * Math.sin(pitch));
+    const back = P(me.x - wb * Math.cos(pitch), by + wb * Math.sin(pitch));
+    const front = P(me.x + wb * Math.cos(pitch), by - wb * Math.sin(pitch));
     line([back, front], '#fff', 3);
     for (const t of [back, front]) ring(t, 3, sk.grounded ? MODE_COLOR[sk.mode] : '#fff', 1.5);
     ring(feet, 4, MODE_COLOR[sk.mode], 2.5);
@@ -403,7 +405,7 @@ export class CollisionDebug {
     const below = sk.mode === 'air' ? sk.below() : null;
     if (sk.mode === 'air') {
       if (below) {
-        const hit = P(me.x, me.y + below.depth);
+        const hit = P(me.x, by + below.depth);
         line([feet, hit], COLLIDER.ray, 1.5, [4, 3]);
         //the ground's angle where the ray hits
         const r = 14;

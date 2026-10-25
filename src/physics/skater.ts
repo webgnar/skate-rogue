@@ -4,6 +4,7 @@ import { NO_MODS, type Mods } from '../boons/mods';
 import { NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
+import { Tuck } from './tuck';
 import { rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
 import { ceilingAt, currentAt, isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
@@ -66,6 +67,7 @@ export class Skater {
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
   readonly feel = new Feel(); // the body and board response (src/physics/feel.ts)
+  readonly tuck = new Tuck(); // the board's lift above the feet in the air, from the clips (src/physics/tuck.ts)
   private roofs = new WeakMap<Car, number>(); // each vehicle's roof as of the last step
   trickT = 0; // frames since the last flip trick
   trickCatch = 0; // frames that flip takes to catch (0: no flip going)
@@ -113,13 +115,26 @@ export class Skater {
     return this.mode === 'roll' && !!this.surface?.manual;
   }
 
+  // the height of what lands: the board, lifted off the feet by the clip in the air, else the feet
+  get boardY(): number {
+    return this.mode === 'air' ? this.y - this.tuck.lift : this.y;
+  }
+
   get grounded(): boolean {
     return this.mode === 'roll' || this.mode === 'grind' || this.mode === 'rail';
   }
 
   step(input: StepInput): void {
     if (this.mode === 'bail' || this.mode === 'exit') return;
+    this.tuck.step(this.mode === 'air');
+    const from = this.events.length;
     this.advance(input);
+    //the clip the rig starts on a pop or a flip lifts the board (see tuck.ts)
+    for (let i = from; i < this.events.length; i++) {
+      const e = this.events[i];
+      if (e.type === 'ollie' || e.type === 'hop' || e.type === 'kicker') this.tuck.start('ollie');
+      else if (e.type === 'trick') this.tuck.start(e.name);
+    }
     //where each roof was this step, so a landing next step sees one that has since moved (see land())
     for (const car of this.cars()) this.roofs.set(car, car.roof);
   }
@@ -272,8 +287,9 @@ export class Skater {
     const x = this.x;
     let depth = Infinity;
     let angle = 0;
+    const from = this.boardY; // the ray starts at the board (tuck.ts)
     const hit = (y: number, m: number) => {
-      const d = y - this.y;
+      const d = y - from;
       if (d >= -1 && d < depth) {
         depth = Math.max(0, d);
         angle = Math.atan(-m);
@@ -431,7 +447,8 @@ export class Skater {
         if (ramp) this.surface = ramp;
       }
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);
-      if (!this.supported() && !this.rollOnto()) {
+      //ground under the middle of the board first, then a truck still on the edge holds you
+      if (!this.underFeet() && !this.rollOnto() && !this.supported()) {
         //rolled off the edge: fall, keeping both jumps (QFS); a slope throws you along its angle (bank kick)
         const fromRail = this.mode === 'grind';
         const slope = this.surface ? surfaceSlope(this.surface) : 0;
@@ -509,14 +526,36 @@ export class Skater {
     return false;
   }
 
-  private supported(): boolean {
-    if (this.surface) return this.x >= this.surface.x0 && this.x <= this.surface.x1 && !this.gone.has(this.surface);
+  // the ground we're on is under the middle of the board
+  private underFeet(): boolean {
+    const s = this.surface;
+    if (s) return this.x >= s.x0 && this.x <= s.x1 && !this.gone.has(s);
     return isStreetAt(this.level, this.x);
   }
 
+  // still on the ground: flat ground holds you while a truck is on it (the board stays level, one truck hanging over
+  // the edge, the way a real board does), slopes, stairs and rails under the feet
+  private supported(): boolean {
+    const s = this.surface;
+    if (s) {
+      const r = truckReach(s);
+      return this.x + r >= s.x0 && this.x - r <= s.x1 && !this.gone.has(s);
+    }
+    return this.streetUnder(this.x);
+  }
+
+  // street under either truck
+  private streetUnder(x: number): boolean {
+    const r = FEEL.wheelbase / 2;
+    return isStreetAt(this.level, x) || isStreetAt(this.level, x - r) || isStreetAt(this.level, x + r);
+  }
+
   // falling: find the highest surface the feet crossed this step
-  private land(px: number, py: number): void {
+  private land(px: number, py0: number): void {
     const x = this.x;
+    //in the air the board is what lands, lifted off the feet by the clip (tuck.ts)
+    const py = py0 - this.tuck.prev;
+    const fy = this.y - this.tuck.lift;
     let bestY = Infinity;
     let best: (() => void) | null = null;
     const consider = (y: number, act: () => void) => {
@@ -531,7 +570,7 @@ export class Skater {
     //`was` is where the line was at the start of the step, for roofs that move (a bobbing drone, a lifting bus)
     const crossAt = (x0: number, y0: number, m: number, was = y0): number | null => {
       const f0 = py - (was + m * (px - x0));
-      const f1 = this.y - (y0 + m * (x - x0));
+      const f1 = fy - (y0 + m * (x - x0));
       if (f0 > 0.01 || f1 < 0) return null;
       const t = f1 - f0 > 1e-9 ? Math.min(1, Math.max(0, -f0 / (f1 - f0))) : 0;
       return px + t * (x - px);
@@ -543,14 +582,16 @@ export class Skater {
     };
 
     const sx = crossAt(0, this.level.streetY, 0);
-    if (sx !== null && (isStreetAt(this.level, sx) || isStreetAt(this.level, x))) consider(this.level.streetY, () => this.touchDown(null));
+    if (sx !== null && (this.streetUnder(sx) || this.streetUnder(x))) consider(this.level.streetY, () => this.touchDown(null));
     const magnet = this.mods.railMagnet;
     for (const s of this.surfaces()) {
       //Rail Magnet: rails reach out for you before their start
-      if (!hits(s.x0, s.y, surfaceSlope(s), s.kind === 'rail' ? s.x0 - magnet : s.x0, s.x1)) continue;
+      //flat ground catches a truck: you land with the other one hanging over the edge
+      const r = truckReach(s);
+      if (!hits(s.x0, s.y, surfaceSlope(s), s.kind === 'rail' ? s.x0 - magnet : s.x0 - r, s.x1 + r)) continue;
       //touched down on it this step: if the step carried you past its far end, you land on the edge
-      const lx = Math.min(Math.max(x, s.x0), s.x1);
-      consider(surfaceY(s, lx), () => {
+      const lx = Math.min(Math.max(x, s.x0 - r), s.x1 + r);
+      consider(surfaceY(s, Math.min(Math.max(lx, s.x0), s.x1)), () => {
         this.x = lx;
         this.touchDown(s);
       });
@@ -574,7 +615,7 @@ export class Skater {
       const pry = near ? start.y : (rail.yAt(px) ?? start.y);
       if (ry === undefined) continue;
       //compare against the rail's height where we were last step too, so a sloped rail can't slip past (rising or falling)
-      if (py <= pry + 0.01 && this.y >= ry && ry < bestY) {
+      if (py <= pry + 0.01 && fy >= ry && ry < bestY) {
         bestY = ry;
         best = () => {
           if (near) this.x = start.x;
@@ -583,6 +624,8 @@ export class Skater {
       }
     }
     if (best) {
+      //the feet come down to the board: the rig is drawn that much lower and eases up as the legs extend
+      this.feel.settle(this.tuck.lift);
       this.y = bestY;
       (best as () => void)();
     }
@@ -730,7 +773,8 @@ export class Skater {
         continue;
       }
       const overlapX = this.x + half > car.x0 && this.x - half < car.x1;
-      const overlapY = this.y > car.roof + 6 && this.y - PHYS.height < car.bottom;
+      //tucked in the air, the body balls up: its bottom is the lifted board
+      const overlapY = this.y - (this.mode === 'air' ? this.tuck.lift : 0) > car.roof + 6 && this.y - PHYS.height < car.bottom;
       if (overlapX && overlapY) {
         this.hitCars.add(car);
         this.slam();
@@ -783,4 +827,10 @@ function roofLedge(car: Car): Surface {
     ROOFS.set(car, s);
   }
   return s;
+}
+
+// how far past the end of a piece of ground the board still stands on it: half the wheelbase on flat ground (a truck
+// is on it), none on slopes, stairs and rails (the feet have to be on those)
+function truckReach(s: Surface): number {
+  return s.kind === 'rail' || s.kind === 'stairs' || surfaceSlope(s) !== 0 ? 0 : FEEL.wheelbase / 2;
 }

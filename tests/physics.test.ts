@@ -53,7 +53,7 @@ describe('ollie', () => {
     sk.step({ pressed: true, held: true }); // ollie
     sk.step({ pressed: true, held: true }); // trick
     let f = 2;
-    while (sk.vsp < 0 || sk.y < sk.level.streetY - 3 * sk.vsp - 1) sk.step({ pressed: false, held: false }), f++;
+    while (sk.vsp < 0 || sk.boardY < sk.level.streetY - 3 * sk.vsp - 1) sk.step({ pressed: false, held: false }), f++;
     const before = sk.events.filter((e) => e.type === 'ollie').length;
     sk.step({ pressed: true, held: true });
     for (let i = 0; i < 6; i++) sk.step({ pressed: false, held: true });

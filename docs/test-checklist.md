@@ -157,6 +157,16 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 
 **Collisions (physics round 2)**
 
+- [ ] **The board is the collision (2026-10-25).** Turn on the collision overlay (C, or ?debug=collision).
+  - [ ] The body box is as long as the board, nose to tail (30 px).
+  - [ ] Roll off the end of a roof: you stay up, level, until the back truck rolls off, then drop.
+  - [ ] Drop with only the back truck over a roof's edge: you land on it, the front truck hanging over.
+  - [ ] Banks and stairs still need the middle of the board on them.
+  - [ ] In a flip or at the top of an ollie, the board rises off the feet. When the board looks clear over a ledge,
+        you land on it. When it looks under the edge, you don't. The legs reach down to it as you land, with no pop.
+  - [ ] Car sides: you hit them with the whole board's length now. Car hops are a bit easier (you can hop a
+        roof with a truck over its end).
+
 - [ ] Clip the near corner of a roof, ledge, bar or car roof as you come down: you land on it rather than slipping
       past. Drop off the far end of something at speed with your feet still over it: you land on the edge, then roll off.
 - [ ] With fast builds (New Wheels, Slingshot, Kicker Boost) you never fall through a roof, bar, bank or car roof.

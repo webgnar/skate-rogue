@@ -3,6 +3,8 @@ import { PHYS, TILE } from '../src/physics/constants';
 import { BIOME_GRAVITY, FEEL, landQuality, MOMENTUM, normalImpact, type MomentumMode } from '../src/physics/feel';
 import { CurvedRail, type Level, type Surface } from '../src/physics/level';
 import { Skater, type SkaterEvent } from '../src/physics/skater';
+import { RIG_SCALE } from '../src/physics/tuck';
+import { SCALE } from '../src/render/skater-rig';
 import { TRICK_CATCH, TRICK_ROLL } from '../src/physics/tricks';
 import { CLIPS, sample } from '../src/render/poses';
 import { FLAT, levelOf, pressAt, run } from './helpers';
@@ -523,5 +525,125 @@ describe('momentum on slopes (?momentum=, being explored)', () => {
     //soften leaves down slopes alone, transfer leaves up ramps alone
     expect(crestJump('soften').after).toBeCloseTo(real.after, 5);
     expect(early('transfer').after).toBeCloseTo(early('real').after, 5);
+  });
+});
+
+describe('the board is the box (zack, 2026-10-25)', () => {
+  const street = levelOf(FLAT).streetY;
+  const y = street - 3 * TILE;
+  const roof: Surface = { kind: 'roof', x0: 4 * TILE, x1: 8 * TILE, y, row: -1 };
+  const level = (): Level => ({ ...withExtras([roof]), street: levelOf(FLAT).street.map(() => false) });
+
+  it('the collision box is as long as the board', () => {
+    expect(PHYS.width).toBe(30);
+  });
+
+  it('dropping with the back truck over a roof edge lands you on it', () => {
+    const sk = new Skater(level());
+    sk.mode = 'air';
+    sk.surface = null;
+    sk.x = roof.x1 + FEEL.wheelbase / 2 - 2; // the middle of the board just past the edge, the back truck over it
+    sk.y = y - 10;
+    sk.hsp = 0.01;
+    sk.vsp = 2;
+    for (let f = 0; f < 20 && sk.mode === 'air'; f++) sk.step({ pressed: false, held: false });
+    expect(sk.mode).toBe('roll');
+    expect(sk.y).toBeCloseTo(y);
+  });
+
+  it('rolling off a roof, you stay on it until the back truck rolls off, level the whole way', () => {
+    const sk = new Skater(withExtras([roof], [], { x: 5 * TILE, y }));
+    let left = 0;
+    for (let f = 0; f < 120 && !left; f++) {
+      sk.step({ pressed: false, held: false });
+      if (sk.mode === 'air') left = sk.x;
+      else expect(sk.feel.pitch).toBeCloseTo(0);
+    }
+    expect(left - roof.x1).toBeGreaterThan(FEEL.wheelbase / 2 - PHYS.baseSpeed - 0.5);
+    expect(left - roof.x1).toBeLessThanOrEqual(FEEL.wheelbase / 2 + PHYS.baseSpeed);
+  });
+
+  it('a bank or stairs needs the middle of the board on it, not a truck', () => {
+    const bank: Surface = { kind: 'bank', x0: 4 * TILE, x1: 8 * TILE, y, y1: y - TILE, row: -1 };
+    const sk = new Skater({ ...withExtras([bank]), street: levelOf(FLAT).street.map(() => false) });
+    sk.mode = 'air';
+    sk.surface = null;
+    sk.x = bank.x1 + 4;
+    sk.y = y - 2 * TILE;
+    sk.hsp = 0.01;
+    sk.vsp = 2;
+    for (let f = 0; f < 60 && sk.mode === 'air'; f++) sk.step({ pressed: false, held: false });
+    expect(sk.surface).not.toBe(bank);
+  });
+});
+
+describe('tucked in the air, the board is what lands (zack, 2026-10-25)', () => {
+  const street = levelOf(FLAT).streetY;
+
+  it("the lift follows the clips: an ollie's peak about 18 px, the air clip none", () => {
+    const sk = new Skater(levelOf(FLAT));
+    let peak = 0;
+    for (let f = 0; f < 80; f++) {
+      sk.step({ pressed: f === 0, held: f < 20 });
+      peak = Math.max(peak, sk.tuck.lift);
+      if (sk.mode === 'air') expect(sk.boardY).toBeCloseTo(sk.y - sk.tuck.lift);
+    }
+    const clip = Math.max(...CLIPS.ollie.keys.map((k) => k.pose.boardY ?? 0)) * RIG_SCALE * TILE;
+    expect(peak).toBeGreaterThan(clip * 0.9);
+    expect(peak).toBeLessThanOrEqual(clip + 0.01);
+    expect(Math.max(...CLIPS.air.keys.map((k) => k.pose.boardY ?? 0))).toBe(0);
+  });
+
+  it('the rig is drawn at the scale the tuck reads the clips at', () => {
+    expect(RIG_SCALE).toBe(SCALE);
+  });
+
+  // a plain ollie from the street, and a ledge halfway between the feet's and the board's highest points
+  const ollie = () => {
+    const sk = new Skater(levelOf(FLAT));
+    let feetTop = Infinity;
+    let boardTop = Infinity;
+    for (let f = 0; f < 80; f++) {
+      sk.step({ pressed: f === 0, held: f < 20 });
+      feetTop = Math.min(feetTop, sk.y);
+      boardTop = Math.min(boardTop, sk.boardY);
+    }
+    return { feetTop, boardTop, y: Math.round((feetTop + boardTop) / 2) };
+  };
+  const ontoLedge = (y: number) => {
+    const ledge: Surface = { kind: 'ledge', x0: 5 * TILE, x1: 30 * TILE, y, row: -1 };
+    const sk = new Skater(withExtras([ledge]));
+    let drop = 0;
+    for (let f = 0; f < 80; f++) {
+      const air = sk.mode === 'air';
+      sk.step({ pressed: f === 0, held: f < 20 });
+      if (air && sk.mode === 'roll') drop = sk.feel.drop;
+    }
+    return { sk, ledge, drop };
+  };
+
+  it('a board that clears a ledge lands on it, though the feet tucked under it never get that high', () => {
+    const { feetTop, boardTop, y } = ollie();
+    expect(feetTop).toBeGreaterThan(y);
+    expect(boardTop).toBeLessThan(y);
+    const { sk, ledge } = ontoLedge(y);
+    expect(sk.surface).toBe(ledge);
+    expect(sk.y).toBeCloseTo(y);
+  });
+
+  it('landing on a lifted board, the skater is drawn lower and the legs reach down to it over the crossfade', () => {
+    const { sk, drop } = ontoLedge(ollie().y);
+    expect(drop).toBeGreaterThan(5);
+    expect(sk.feel.drop).toBe(0);
+  });
+
+  it('a plain ollie to flat lands with the board back under the feet (the clip is over by then)', () => {
+    const sk = new Skater(levelOf(FLAT));
+    for (let f = 0; f < 80; f++) {
+      const air = sk.mode === 'air';
+      sk.step({ pressed: f === 0, held: f < 20 });
+      if (air && sk.mode === 'roll') expect(sk.feel.drop).toBeLessThan(8);
+    }
+    expect(sk.y).toBe(street);
   });
 });

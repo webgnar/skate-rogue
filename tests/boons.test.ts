@@ -190,7 +190,7 @@ describe('GRIND boons', () => {
     let f = 0;
     while (sk.mode !== 'grind' && f++ < 60) sk.step({ pressed: f === 1, held: true });
     const early = sk.hsp;
-    run(sk, 45);
+    run(sk, 35); // still on the rail: the lifted board catches it a few frames into it (src/physics/tuck.ts)
     expect(sk.mode).toBe('grind');
     expect(sk.hsp).toBeGreaterThan(early * 1.05);
   });
