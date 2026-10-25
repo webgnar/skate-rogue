@@ -24,6 +24,7 @@ export interface Surface {
   conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
   el?: boolean; // the L's running rails (src/traffic/el.ts): drawn with the track, not as a bar on posts
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
+  kicker?: boolean; // a kicker ramp on the street (the L's, src/traffic/el.ts): drawn as a steel launch ramp
   tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
 }
 
@@ -49,6 +50,7 @@ export interface Car {
   bottom: number;
   model?: 'cruiser' | 'bus'; // parked roadblock vehicles; plain parked cars leave it out
   kicker?: number; // a box truck's dropped tailgate: this far behind x0 it launches you (px)
+  ledge?: Surface; // an L train's car (src/traffic/el.ts): its roof is a grind that moves with it, and from under it you bump your head, not slam
 }
 
 export interface Glass {

@@ -285,6 +285,17 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
         step.position.set(toX(s.x0) + i + 0.5, (top - 0.5) / 2, BLOCK_Z);
         kit.add(step);
       }
+    } else if (s.kind === 'bank' && s.kicker) {
+      //the L's kicker: a skatepark launch ramp out on the street, plywood sides and a steel face
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.lineTo(w, 0);
+      shape.lineTo(w, toY(level, s.y1!));
+      shape.closePath();
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.6, bevelEnabled: false });
+      const ramp = new THREE.Mesh(geo, [lambert(null, 0xc89a5a), lambert(null, 0x9aa4b4)]);
+      ramp.position.set(toX(s.x0), 0, -0.55);
+      kit.add(ramp);
     } else if (s.kind === 'bank') {
       //a concrete wedge
       const y1 = toY(level, s.y1!);
