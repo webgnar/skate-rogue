@@ -3,7 +3,7 @@
 import { NO_MODS, type Mods } from '../boons/mods';
 import { NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
-import { Feel, FEEL, MATERIALS, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
+import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
 import { ceilingAt, currentAt, isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
@@ -12,7 +12,7 @@ export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 export type SkaterEvent =
   | { type: 'ollie'; spin: 0 | 180; lip?: boolean } // lip: popped right at the edge of the ground (or just off it)
   | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean } // fakie: the stance it was thrown from
-  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean } // impact: px/frame into the surface, along its normal; manual: onto a manual pad
+  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; lined?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad; lined: 0..1, how lined up with a falling slope (?momentum=transfer)
   | { type: 'grind' }
   | { type: 'rail' }
   | { type: 'hop' }
@@ -612,8 +612,19 @@ export class Skater {
       if (this.mods.butter) this.carry = Math.max(this.carry, Math.abs(this.hsp));
       //on a slope you keep the speed along it: a bank that falls away turns the drop into speed
       //(cruising speed still holds: an uphill bank only eats flow speed)
+      let lined = 0;
       if (m !== 0) {
-        const along = alongSlope(this.hsp, vsp, m);
+        let along = alongSlope(this.hsp, vsp, m);
+        const mo = MOMENTUM.mode;
+        const uphill = m * (this.hsp < 0 ? -1 : 1) < 0;
+        //soften (being explored): coming down on the face of an up ramp keeps most of your speed; the rest of the
+        //climb still slows you, as if you'd rolled up to there
+        if (uphill && (mo === 'soften' || mo === 'both')) along = Math.max(along, this.hsp * MOMENTUM.keep);
+        //transfer (being explored): coming down in line with a slope that falls away carries you on faster
+        if (!uphill && (mo === 'transfer' || mo === 'both')) {
+          lined = Math.max(0, 1 - misalign(this.hsp, vsp, m) / MOMENTUM.align);
+          along *= 1 + MOMENTUM.boost * lined;
+        }
         if (along > this.hsp) this.carry = Math.max(this.carry, along);
         else if (!this.mods.butter) this.carry = Math.min(this.carry, Math.max(0, along));
         this.hsp = Math.max(along, Math.min(this.hsp, this.baseSpeed()));
@@ -625,7 +636,7 @@ export class Skater {
       if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
       this.feel.land(impact, quality, this.looseWheels);
       //a manual pad: you ride it in a manual (unless you slammed onto it)
-      this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}) });
+      this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}), ...(lined > 0 ? { lined } : {}) });
       if (quality === 'slam') this.slam();
     }
   }

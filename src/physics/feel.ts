@@ -38,6 +38,27 @@ export const FEEL = {
   wornRock: 2, // worn gear rocks you more: x(1 + this x what the part costs you), wheels 1.5 times that
 } as const;
 
+// Momentum on slopes, being explored (zack, 2026-10-25): which way landings on a slope treat your speed. `real` is
+// the plain physics, the default: you keep the speed along the slope. `soften` lets a landing on the face of an up
+// ramp keep most of your speed (the climb still slows you). `transfer` rewards landing lined up with a slope that
+// falls away. `both` is the two together. Picked with ?momentum= to try them in the game.
+export type MomentumMode = 'real' | 'soften' | 'transfer' | 'both';
+export const MOMENTUM_MODES: readonly MomentumMode[] = ['real', 'soften', 'transfer', 'both'];
+export const MOMENTUM = {
+  mode: 'real' as MomentumMode,
+  keep: 0.9, // soften: an up-ramp landing keeps at least this share of your speed
+  align: 1, // transfer: within this many rad of the slope's angle counts as lined up, full reward at 0 (an ollie's arc
+  // meets a 16 degree hill block about 40 degrees off it)
+  boost: 0.25, // transfer: a perfectly lined-up landing adds this share of your speed
+};
+
+// how far off the slope's line you came in, rad: the angle between your velocity and a slope m (dy/dx, y down),
+// heading the way you're moving
+export function misalign(hsp: number, vsp: number, m: number): number {
+  const dir = hsp < 0 ? -1 : 1;
+  return Math.abs(Math.atan2(vsp, Math.abs(hsp)) - Math.atan(m * dir));
+}
+
 // gravity by district (GDD: Biomes), as a share of QFS's; a floor carries its own in Level.gravity
 export const BIOME_GRAVITY: Record<string, number> = {
   chicago: 1,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PHYS, TILE } from '../src/physics/constants';
-import { BIOME_GRAVITY, FEEL, landQuality, normalImpact } from '../src/physics/feel';
+import { BIOME_GRAVITY, FEEL, landQuality, MOMENTUM, normalImpact, type MomentumMode } from '../src/physics/feel';
 import { CurvedRail, type Level, type Surface } from '../src/physics/level';
 import { Skater, type SkaterEvent } from '../src/physics/skater';
 import { TRICK_CATCH, TRICK_ROLL } from '../src/physics/tricks';
@@ -450,5 +450,57 @@ describe('lining up in the air', () => {
     sk.step({ pressed: false, held: false });
     expect(sk.mode).toBe('air');
     expect(Math.abs(sk.feel.pitch)).toBeLessThan(0.01);
+  });
+});
+
+describe('momentum on slopes (?momentum=, being explored)', () => {
+  const street = levelOf(FLAT).streetY;
+  const upRamp: Surface = { kind: 'bank', x0: 10 * TILE, x1: 14 * TILE, y: street, y1: street - 2 * TILE, row: -1 };
+  const crest = (): Surface[] => [{ kind: 'roof', x0: 0, x1: 12 * TILE, y: street - 6 * TILE, row: -1 }, { kind: 'bank', x0: 15 * TILE, x1: 29 * TILE, y: street - 5.5 * TILE, y1: street - 1.5 * TILE, row: -1 }];
+  // speed in, speed out and the land event of the first landing, with an ollie at `ollieAt` tiles
+  function landing(mode: MomentumMode, surfaces: Surface[], start: { x: number; y: number }, speed: number, ollieAt: number) {
+    MOMENTUM.mode = mode;
+    try {
+      const sk = new Skater(withExtras(surfaces, [], start));
+      sk.hsp = speed;
+      sk.carry = speed;
+      let popped = false;
+      for (let f = 0; f < 200; f++) {
+        const press: boolean = !popped && sk.x >= ollieAt * TILE;
+        popped ||= press;
+        const before = sk.hsp;
+        sk.step({ pressed: press, held: press || (popped && sk.vsp < 0) });
+        const e = lands(sk)[0];
+        if (e) return { before, after: sk.hsp, e };
+        sk.events.length = 0;
+      }
+      throw new Error('never landed');
+    } finally {
+      MOMENTUM.mode = 'real';
+    }
+  }
+  const early = (mode: MomentumMode) => landing(mode, [upRamp], { x: 2 * TILE, y: street }, 6.5, 6);
+  const crestJump = (mode: MomentumMode) => landing(mode, crest(), { x: 2 * TILE, y: street - 6 * TILE }, 6.5, 11.7);
+
+  it('by default an early ollie onto an up ramp drops you to cruising speed', () => {
+    const { before, after } = early('real');
+    expect(before).toBeGreaterThan(5.5);
+    expect(after).toBeCloseTo(PHYS.baseSpeed, 1);
+  });
+
+  it('soften: landing on the face of an up ramp keeps most of your speed', () => {
+    const { before, after } = early('soften');
+    expect(after).toBeCloseTo(before * MOMENTUM.keep, 1);
+  });
+
+  it('transfer: landing in line with a down slope carries you out faster, and says how lined up you were', () => {
+    const real = crestJump('real');
+    const t = crestJump('transfer');
+    expect(t.e.lined).toBeGreaterThan(0.2);
+    expect(t.after).toBeGreaterThan(real.after * 1.05);
+    expect(real.e.lined).toBeUndefined();
+    //soften leaves down slopes alone, transfer leaves up ramps alone
+    expect(crestJump('soften').after).toBeCloseTo(real.after, 5);
+    expect(early('transfer').after).toBeCloseTo(early('real').after, 5);
   });
 });
