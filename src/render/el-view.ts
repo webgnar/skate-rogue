@@ -12,6 +12,7 @@ import { flatGeometry, hasModel, model } from './models';
 import { inkify } from './toon';
 import { toX, toY } from './kit';
 import { STREET_Z } from '../traffic/traffic';
+import { at } from '../game/interp';
 
 const SPAN = 3; // ElSpan's length, tiles
 const BEND_STEPS = 6; // spans per bend
@@ -222,7 +223,7 @@ export class ElView {
       });
     }
     for (const { train, cars } of this.lines) {
-      const spans = train.cars();
+      const spans = train.cars(at(train, 't', 2)); // between the sim's steps (src/game/interp.ts)
       const total = pathLength(train.stretch);
       const y = toY(level, train.stretch.y);
       cars.forEach((car, i) => {

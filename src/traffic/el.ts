@@ -169,16 +169,21 @@ export class ElTrain {
   }
 
   // the nose's distance along the path, tiles (negative: not out yet); null between trains
-  get nose(): number | null {
-    if (this.t < 0 || this.stopped) return null;
-    const d = ((this.t % EL.period) * EL.speed) / TILE;
+  // (t: the frame to read it at, which the view draws between steps)
+  noseAt(t = this.t): number | null {
+    if (t < 0 || this.stopped) return null;
+    const d = ((t % EL.period) * EL.speed) / TILE;
     const trainLen = (EL.cars * EL.carLen + (EL.cars - 1) * EL.coupling) / TILE;
     return d - trainLen < pathLength(this.stretch) ? d : null;
   }
 
+  get nose(): number | null {
+    return this.noseAt();
+  }
+
   // each car's back and front along the path, tiles
-  cars(): [number, number][] {
-    const n = this.nose;
+  cars(t = this.t): [number, number][] {
+    const n = this.noseAt(t);
     if (n === null) return [];
     const len = EL.carLen / TILE;
     const gap = EL.coupling / TILE;

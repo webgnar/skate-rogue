@@ -3,6 +3,7 @@
 // more often while you're up (zack: "the upper route has birds flying by and airplanes"). The helicopter is the
 // escape's chopper view (src/render/chopper-view.ts) fed the top route's.
 import * as THREE from 'three';
+import { at } from '../game/interp';
 import type { Level } from '../physics/level';
 import type { Sky } from '../sim/sky';
 import { toX, toY } from './kit';
@@ -105,7 +106,7 @@ export class SkyView {
       if (!g) return;
       g.visible = Math.abs(f.x - skaterX) < 900 && f.y > -2000;
       if (!g.visible) return;
-      g.position.set(toX(f.x), toY(level, f.y), 0);
+      g.position.set(toX(at(f, 'x')), toY(level, at(f, 'y')), 0);
       for (const bird of g.children) {
         //folded along the back when sat; flapping hard up and away when they go
         const flap = f.state === 'perch' ? -1.3 : Math.sin(this.t * 24 + bird.userData.phase) * 0.9;

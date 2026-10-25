@@ -3,6 +3,7 @@
 // inked like the rest; it eases toward the sim's position so a slam reads as it surging forward, and it bobs as it
 // runs. Hidden on any other floor.
 import * as THREE from 'three';
+import { at } from '../game/interp';
 import type { Chaser } from '../sim/chaser';
 import type { Level } from '../physics/level';
 import { toX, toY } from './kit';
@@ -203,7 +204,7 @@ export class ChaserView {
     }
     this.t += dt;
     //surge after a slam, settle back as you get away
-    const target = toX(chaser.x);
+    const target = toX(at(chaser, 'x'));
     this.surging = target - this.x > 0.5;
     this.x += (target - this.x) * Math.min(1, dt * (target > this.x ? 6 : 2));
     this.group.position.set(this.x, toY(level, level.streetY), 0.2);

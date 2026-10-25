@@ -622,6 +622,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Every floor's street ends with a side street just before the next floor starts. With the cruiser on your tail as you roll into the next floor, it turns up that side street behind you instead of vanishing.
 - [ ] The helicopter follows you smoothly (no stepping), and it doesn't bob up and down with every ollie.
 - [ ] The helicopter over the top route and the high-Heat drone drop in from the sky and stay above the hill, never down inside it. When you come down off the top route the helicopter climbs away.
+- [ ] Traffic, cross street cars, the L trains, the cable car, the chaser, drones and birds all glide as smoothly as the skater (no stepping, best seen on a 120 Hz screen). With `?debug=collision` the player's box and the car boxes stay glued to their sprites.
 
 ## Performance
 

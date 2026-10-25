@@ -25,6 +25,7 @@ import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
 import { STREET_Z } from '../traffic/traffic';
+import { INTERP, at, keep } from './interp';
 import { ElView } from '../render/el-view';
 import { CableView } from '../render/cable-view';
 import { Impacts } from '../render/impact';
@@ -945,6 +946,26 @@ export class Game {
     this.endRun(performance.now(), false);
   }
 
+  // before a step: what everything that moves is drawn from, so it's drawn between steps like the skater (interp.ts)
+  private keepForDrawing(): void {
+    const sim = this.sim;
+    for (const v of sim.traffic.vehicles) keep(v, 'x0', 'x1', 'lane', 'tunnel');
+    for (const c of sim.traffic.cross) {
+      keep(c, 'z', 'turn');
+      keep(c.box, 'x0', 'x1');
+    }
+    for (const d of sim.traffic.doors) keep(d, 'open');
+    for (const t of sim.trains) {
+      keep(t, 't');
+      for (const b of t.boxes) keep(b, 'x0', 'x1');
+    }
+    if (sim.chaser) keep(sim.chaser, 'x');
+    if (sim.chopper) keep(sim.chopper, 'x');
+    keep(sim.sky.chopper, 'x');
+    for (const f of sim.sky.flocks) keep(f, 'x', 'y');
+    for (const d of sim.swarm?.drones ?? []) keep(d, 'x', 'roof');
+  }
+
   frame(now: number): void {
     //never negative: a frame's timestamp can come from before the game was made, and a negative step would
     //poison the time warp (and through it the camera and the physics clock) with NaN
@@ -984,6 +1005,7 @@ export class Game {
     } else {
       const step = () => {
         this.prev = { x: this.skater.x, y: this.skater.y };
+        this.keepForDrawing();
         this.fallSpeed = this.skater.mode === 'air' ? this.skater.vsp : 0;
         //the gnar state: faster cruising, slams cost no Heat
         this.skater.boost = this.run.gnar ? SCORE.gnarBoost : 1;
@@ -1007,6 +1029,7 @@ export class Game {
         this.loop.alpha = 1; // show exactly where the sim is
       } else this.loop.advance(dt, step, 5 * this.timeScale);
     }
+    INTERP.alpha = this.loop.alpha;
     if (this.state !== 'over') {
       this.showAhead();
       this.view.tick();
@@ -1027,6 +1050,10 @@ export class Game {
       this.sound?.play(MOMENT.busted);
     }
 
+    //where the skater is drawn this frame, between the sim's last two steps (the camera follows it)
+    const a = this.loop.alpha;
+    const x = this.prev.x + (this.skater.x - this.prev.x) * a;
+    const y = this.prev.y + (this.skater.y - this.prev.y) * a;
     //traffic, the cruiser and the warnings
     this.trafficView.sync(this.level, this.sim.traffic.vehicles);
     if (this.pendingJolt !== null) {
@@ -1034,11 +1061,11 @@ export class Game {
       this.pendingJolt = null;
     }
     this.elView.sync(this.level, this.sim.trains);
-    this.cableView.sync(this.level, this.skater.x);
+    this.cableView.sync(this.level, x);
     this.trafficView.syncCross(this.level, this.sim.traffic.cross);
     this.trafficView.syncStreet(this.level, this.sim.traffic);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
-    this.trafficView.chase(this.level, this.skater.x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, this.skater.y);
+    this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y);
     this.hud.heat(heat);
     this.sound?.update({
       mode: this.skater.mode,
@@ -1067,9 +1094,6 @@ export class Game {
       (this.ghostMesh.material as THREE.MeshBasicMaterial).opacity = 0.25 + 0.4 * Math.min(1, ghost.ttl / 60);
     }
 
-    const a = this.loop.alpha;
-    const x = this.prev.x + (this.skater.x - this.prev.x) * a;
-    const y = this.prev.y + (this.skater.y - this.prev.y) * a;
     this.sprite.mesh.position.x = toX(x);
     this.sprite.mesh.position.y = toY(this.level, y);
     const sk = this.skater;
@@ -1081,15 +1105,15 @@ export class Game {
     this.impacts.update(dt);
     this.chopper.update(this.level, this.sim.chopper, dt);
     const top = this.sim.sky.chopper;
-    this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? this.skater.y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
-    this.skyView.update(this.level, this.sim.sky, this.skater.x, this.skater.y, this.sim.up, dt);
+    this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
+    this.skyView.update(this.level, this.sim.sky, x, y, this.sim.up, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, dt);
     this.twistView.update(dt, this.skater);
     if (this.state === 'skate') {
       const street = toY(this.level, this.level.streetY);
       const ch = this.sim.chopper;
-      if (ch) this.escapeFx.chopper(toX(ch.x), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
+      if (ch) this.escapeFx.chopper(toX(at(ch, 'x')), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
       if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, street, this.chaserView.surging, dt);
     }
     this.pedView.update(this.level, this.skater, dt, toX(this.skater.x), this.biome);
@@ -1127,7 +1151,7 @@ export class Game {
     this.view.adapt(realDt * 1000);
     this.view.render();
     this.perf(realDt);
-    if (this.colDebug?.on) this.colDebug.draw(this.level, this.skater, this.view.camera, realDt, this.perfText);
+    if (this.colDebug?.on) this.colDebug.draw(this.level, this.skater, this.view.camera, realDt, this.perfText, { x, y });
     this.updatePlaytest();
   }
 
