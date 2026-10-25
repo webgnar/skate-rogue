@@ -16,7 +16,7 @@
         <div id="top">
           <div id="logo">
             <div class="mark"><b class="gnar">GNAR</b><b class="run">RUN</b></div>
-            <div class="sub"><span id="floortext">ACT 1-1 · FLOOR 1</span><span id="road"></span></div>
+            <div class="sub"><span id="floortext">ACT 1-1 · FLOOR 1</span><span id="road"></span><span id="continues"></span></div>
           </div>
           <div id="center">
             <div id="scorebox" class="panel"><small>SCORE</small><span id="score">0</span></div>
@@ -81,6 +81,13 @@
         </div>
         <div class="hand"></div>
         <div class="hint"></div>
+      </div>
+      <div id="cont" hidden>
+        <b>BAILED</b>
+        <span class="left"></span>
+        <button class="go" data-continue>CONTINUE &#9654;</button>
+        <span class="note">back to the start of this floor, as you were when you got here</span>
+        <button class="giveup" data-giveup>END RUN</button>
       </div>
       <div id="over" hidden>
         <b>BAILED</b>

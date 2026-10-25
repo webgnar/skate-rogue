@@ -154,6 +154,7 @@ function makeHud(): Hud {
   const boonsEl = document.getElementById('boons')!;
   const pickEl = document.getElementById('pick')!;
   const overEl = document.getElementById('over')!;
+  const contEl = document.getElementById('cont')!;
   const appEl = document.getElementById('app')!;
   const warnEl = document.getElementById('warn')!;
   const shopEl = document.getElementById('shop')!;
@@ -288,6 +289,13 @@ function makeHud(): Hud {
         btn.hidden = info.rerollCost < 0; // no reroll on this pick
       }
     },
+    cont: (v) => {
+      contEl.hidden = !v;
+      if (!v) return;
+      contEl.querySelector('b')!.textContent = v.caught ? 'BUSTED' : 'BAILED';
+      contEl.querySelector('.left')!.textContent = `${v.left} CONTINUE${v.left === 1 ? '' : 'S'} LEFT`;
+    },
+    continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
     over: (result) => {
       overEl.hidden = !result;
       if (!result) return;
@@ -296,6 +304,7 @@ function makeHud(): Hud {
       overEl.querySelector('.reached')!.textContent = result.won
         ? `Out of the city in ${result.floor} floors · escape #${result.wins}`
         : `You made it to act ${result.act}, floor ${result.floor}`;
+      if (result.continues) overEl.querySelector('.reached')!.textContent += ` · ${result.continues} continue${result.continues === 1 ? '' : 's'} used`;
       overEl.querySelector('.final')!.textContent = `${result.score.toLocaleString()}${result.newBest ? ' · NEW BEST' : ''}`;
       overEl.querySelector('.best')!.textContent = `best ${result.best.toLocaleString()} · ◆ ${result.stoken} Stoken this run (${result.bank} banked)`;
       overEl.querySelector('.best')!.textContent += result.daily
