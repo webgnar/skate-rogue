@@ -124,6 +124,12 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 
 **Slopes and banks**
 
+- [ ] **Momentum options (try each, tell me which feels right).** Same floor with `?momentum=real`, `soften`,
+      `transfer` and `both` added to the URL. Find a hill floor with crest jumps and kicker banks.
+  - [ ] soften: ollie early at speed and land on the face of an up bank. You keep your speed instead of dropping
+        to cruise (the climb still slows you).
+  - [ ] transfer: ollie off a crest and land high on the next downhill block, in line with it. You come out faster
+        than with `real`. Is the difference enough to notice without a call-out?
 - [ ] **Lining up in the air.** Drop off a roof onto a bank that falls away: on the way down the board tips nose-down
       to the bank's angle and lands flush, with no snap on touchdown. Fly at an up bank: the nose comes up to meet it.
       Over flat ground or way up high, the board stays level. Ollie onto a stair handrail: the board lines up with the rail.

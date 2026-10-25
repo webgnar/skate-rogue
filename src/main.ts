@@ -1,3 +1,4 @@
+import { MOMENTUM, MOMENTUM_MODES, type MomentumMode } from './physics/feel';
 import '@fontsource/bangers/latin-400.css';
 import './style.css';
 import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type Held } from './boons/defs';
@@ -324,6 +325,9 @@ async function start() {
   }
   // clips saved from the editor: reload to play them; ?drafts plays the editor's unsaved ones
   import.meta.hot?.on('clip-edits', () => location.reload());
+  //momentum on slopes, being explored: ?momentum=real|soften|transfer|both (src/physics/feel.ts)
+  const momentum = params.get('momentum');
+  if (MOMENTUM_MODES.includes(momentum as MomentumMode)) MOMENTUM.mode = momentum as MomentumMode;
   if (params.has('drafts')) applyClipEdits(loadDrafts());
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   loadSettings();
