@@ -1036,7 +1036,7 @@ export class Game {
     this.impacts.update(dt);
     this.chopper.update(this.level, this.sim.chopper, dt);
     const top = this.sim.sky.chopper;
-    this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt);
+    this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? this.skater.y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
     this.skyView.update(this.level, this.sim.sky, this.skater.x, this.skater.y, this.sim.up, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, dt);

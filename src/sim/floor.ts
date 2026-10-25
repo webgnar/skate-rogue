@@ -151,6 +151,7 @@ export class FloorSim {
     if (sk.rail?.top || sk.surface?.top) this.up = true;
     else if (sk.grounded && sk.surface?.kind !== 'overpass') this.up = false;
     if (this.up) this.heat.add(TOP.heatPerSec / 60);
+    this.heat.watched = this.up;
     if (this.sky.step(sk, this.up)) {
       this.heat.add(SKY.strikeHeat);
       this.events.push({ type: 'birds' });

@@ -22,7 +22,7 @@ export const TOP = {
   stoken: 0.25, // chance of a Stoken over a gap between rooftops
   wear: 0.3, // share of the usual truck and wheel wear grinding the power line costs
   flocks: 0.35, // chance of a flock of pigeons on a rooftop, or along a wire's stretch (src/sim/sky.ts)
-  heatPerSec: 9, // the helicopter's Heat while you're up there: more than clean skating and grinding cool (src/heat/heat.ts)
+  heatPerSec: 2.5, // the helicopter's Heat while you're up there, where clean skating and grinding don't cool it; tricks still do (src/heat/heat.ts)
 };
 
 const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo + 1));
@@ -86,6 +86,8 @@ function busy(level: Level, x0: number, x1: number, y: number): boolean {
   const near = (sy: number) => Math.abs(sy - y) < TOP.clear;
   for (const s of level.surfaces) if (s.x1 > x0 && s.x0 < x1 && s.kind !== 'overpass' && near(Math.min(s.y, s.y1 ?? s.y))) return true;
   for (const r of level.rails) if (r.x1 > x0 && r.x0 < x1 && r.ys.some(near)) return true;
+  //and the L: its trains' roofs are a way along up there already (src/traffic/el.ts)
+  if ((level.el ?? []).some((e) => e.x1 > x0 - 2 * TILE && e.x0 < x1 + 2 * TILE)) return true;
   return false;
 }
 

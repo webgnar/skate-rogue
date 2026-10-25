@@ -75,12 +75,15 @@ export class ChopperView {
   }
 
   // (the escape's, or the top route's: src/sim/sky.ts)
-  update(level: Level, ch: Pick<Chopper, 'x' | 'v' | 'lit' | 'covers'> | null, dt: number): void {
+  // (ground: over the top route it flies over the skater, not the street: their height, and whether the pool lands
+  // on something there)
+  update(level: Level, ch: Pick<Chopper, 'x' | 'v' | 'lit' | 'covers'> | null, dt: number, ground?: { y: number; pool: boolean }): void {
+    const was = this.group.visible;
     this.group.visible = ch !== null;
     if (!ch) return;
     this.t += dt;
     const x = toX(ch.x);
-    const street = toY(level, level.streetY);
+    const street = ground && was ? this.group.position.y + (ground.y - this.group.position.y) * Math.min(1, dt * 4) : ground ? ground.y : toY(level, level.streetY);
     this.group.position.set(x, street, 0);
     //banks the way it flies, and the rotor spins
     this.body.rotation.z = -Math.max(-0.3, Math.min(0.3, ch.v * 0.05));
@@ -96,6 +99,6 @@ export class ChopperView {
     this.coneMat.color.setHex(ch.lit ? 0xfff8e0 : 0xffe9a0);
     this.poolMat.opacity = 0.5 + 0.35 * hot;
     //no pool where the L tracks are overhead
-    this.pool.visible = !ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1);
+    this.pool.visible = ground ? ground.pool : !ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1);
   }
 }

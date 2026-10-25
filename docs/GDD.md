@@ -163,6 +163,14 @@ that boon street. The underground spot comes with carried-over Heat. Built overn
 carries into the next floor at half, and the spot can turn up from the floor 3 fork (lay low, swap a boon, or
 remove a curse once curses exist), then you skate the boon street after it.
 
+**The top route** (built Oct 25, 2026; zack wanted a top or bottom route through the whole floor, "vertically, not
+horizontally"). On hill floors, a power line runs down each stretch of hill from the crest. Ollie off the crest's edge
+to catch it, then grind it all the way down. Over the street chases, rooftops carry the route on at the gate's
+height, so whichever height you reach the gate at decides your road. Up there there's no traffic, but the police
+helicopter is on you: clean skating and grinding don't cool your Heat, and it climbs slowly (tricks still cool it).
+Pigeons sit on the rooftops and the wire, so ollie them or take a bird strike, which costs speed and a little Heat.
+Airliners cross the sky behind. Code: `src/gen/top-route.ts`, `src/sim/sky.ts`.
+
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
 

@@ -33,6 +33,7 @@ export class Heat {
   sinceSlam = Infinity; // frames
   holdT = 0; // the cruiser holds still while the skater remounts
   slamFree = false; // gnar state: slams cost no Heat
+  watched = false; // the top route's helicopter is on you: skating clean and grinding don't cool (src/sim/floor.ts)
   mods: HeatMods = NO_HEAT_MODS;
   decoyFired = false; // this step
   private decoyUsed = false;
@@ -53,8 +54,8 @@ export class Heat {
       else if (e.type === 'hop') d += HEAT.carHop - this.mods.hopCool;
     }
     if (sk.mode === 'roll' && sk.hsp < PHYS.baseSpeed - 0.01) d += (HEAT.slowPerSec / 60) * this.mods.slow;
-    if (sk.mode === 'grind' || sk.mode === 'rail') d += HEAT.grindPerSec / 60;
-    if (this.sinceSlam >= HEAT.cleanAfter) d += HEAT.cleanPerSec / 60;
+    if ((sk.mode === 'grind' || sk.mode === 'rail') && !this.watched) d += HEAT.grindPerSec / 60;
+    if (this.sinceSlam >= HEAT.cleanAfter && !this.watched) d += HEAT.cleanPerSec / 60;
     if (d < 0 && sk.mode === 'air') d *= this.mods.airCool ?? 1;
     this.sinceSlam++;
     if (this.holdT > 0) this.holdT--;
