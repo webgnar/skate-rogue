@@ -187,6 +187,12 @@ and listed it here for review. Any of these can be flipped in the morning.
   chrome on a flat-faced bar shows a single colour. At night the steel dims to a violet tint. All rails still batch
   into one draw. The L's modelled rails have no UVs, so they get the same chrome without the dents. The L's girders
   keep the riveted steel from #146: that's structure, not something you grind.
+- **The cruiser jets across canals (cruiser-jets.ts, zack's ask).** When the Heat cruiser jumps a canal, two
+  thruster pods fold down out of its sill on the camera side, between the wheels, in about 0.1 s. They fire a
+  white-hot core inside an orange flame, plus smoke and embers. The flames are longest on the way up and flicker
+  in length only, never in brightness, so nothing strobes. The pods fold away about half a second after the
+  landing, which kicks up dust. They're only drawn while they're out, so the cruiser costs nothing extra on the
+  street.
 - **Landmarks get no extra night treatment.** I checked all seven at floor 13. They already carry their own glowing
   materials and read fine against the night sky, so I left them alone.
 

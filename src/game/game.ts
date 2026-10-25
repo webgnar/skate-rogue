@@ -1139,6 +1139,7 @@ export class Game {
     this.trafficView.syncStreet(this.level, this.sim.traffic);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y);
+    if (this.trafficView.cruiserShown) this.trafficView.jets.exhaust(this.particles, toY(this.level, this.level.streetY), dt);
     this.hud.heat(heat);
     this.sound?.update({
       mode: this.skater.mode,

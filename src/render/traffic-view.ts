@@ -1,5 +1,6 @@
 // Draws moving traffic, the enforcer cruiser (the Heat meter) and the drone that drops in at high Heat.
 import * as THREE from 'three';
+import { CruiserJets } from './cruiser-jets';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import type { Traffic, Vehicle, VehicleKind } from '../traffic/traffic';
@@ -43,6 +44,7 @@ export class TrafficView {
   private blinkers = new Map<number, THREE.Mesh>();
   private stages = new Map<number, Stage>(); // car-hop damage by vehicle id (car-damage.ts)
   private cruiserGap = 10; // tiles behind the skater
+  readonly jets = new CruiserJets(); // fold out for a canal jump
   private path: CruiserPath | null = null;
   private turning: { x: number; to: number; u: number } | null = null; // up the side street at the last floor's end
   private droneLift = 0; // tiles: the drone drops in out of the sky
@@ -56,6 +58,7 @@ export class TrafficView {
 
   constructor() {
     this.cruiser = this.makeCruiser();
+    this.cruiser.add(this.jets.group);
     this.drone = this.makeDrone();
     this.group.add(this.cruiser, this.drone, this.heatLights.group, this.beams.group);
     inkify(this.group);
@@ -126,6 +129,7 @@ export class TrafficView {
     this.blinkers.clear();
     this.stages.clear();
     this.cruiserGap = 10;
+    this.jets.reset();
     this.path = null;
     if (!rolledOn) this.turning = null;
   }
@@ -358,6 +362,11 @@ export class TrafficView {
     g.add(panel, glass);
   }
 
+  // whether the cruiser is on screen to throw exhaust
+  get cruiserShown(): boolean {
+    return this.cruiser.visible;
+  }
+
   // heat 0..100; hold: don't creep closer during a remount; caught: pull level with the skater
   // skaterY (px) aims the searchlight; it defaults to the street
   chase(level: Level, skaterX: number, heat: number, hold: boolean, caught: boolean, dtMs: number, skaterY = level.streetY): void {
@@ -384,6 +393,7 @@ export class TrafficView {
       this.cruiser.rotation.y = (this.path.turn * Math.PI) / 2;
       this.cruiser.visible = this.path.visible && this.cruiserGap < 8.8;
     }
+    this.jets.update(turn ? 0 : this.path.y, dtMs / 1000);
     const flash = Math.floor(this.t / 160) % 2 === 0;
     this.lights[0].visible = flash;
     this.lights[1].visible = !flash;
