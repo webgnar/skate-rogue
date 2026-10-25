@@ -47,6 +47,69 @@ describe('the L', () => {
     expect(reached).toBe(true);
   });
 
+  it('has a kicker ramp before the parked car: roll up it, ollie off the lip and land on the rails', () => {
+    let reachedAll = 0;
+    let ramps = 0;
+    for (let seed = 1; seed <= 6; seed++) {
+      const l = chicago(seed, 2);
+      const s = l.el![0];
+      const ramp = l.surfaces.find((r) => r.kicker && r.x1 < s.x0 && r.x1 > s.x0 - 8 * TILE);
+      if (!ramp) continue;
+      ramps++;
+      let reached = false;
+      //ollie somewhere on the ramp, hold it, and flip once in the air
+      for (let ollie = 40; ollie < 100 && !reached; ollie++) {
+        for (const flip of [0, 10, 16, 22]) {
+          const sk = new Skater({ ...l, startX: ramp.x0 - 6 * TILE, startY: l.streetY } as Level);
+          for (let f = 0; f < 200 && !reached; f++) {
+            sk.step({ pressed: f === ollie || (flip > 0 && f === ollie + flip), held: f >= ollie });
+            sk.events.length = 0;
+            if (sk.mode === 'grind' && sk.surface?.el) reached = true;
+          }
+          if (reached) break;
+        }
+      }
+      if (reached) reachedAll++;
+    }
+    expect(ramps).toBeGreaterThan(3);
+    expect(reachedAll).toBe(ramps);
+  });
+
+  it('a train overhead bumps your head when you jump up into it, no slam; and its roof is a grind', () => {
+    const l = chicago(4, 2);
+    const s = l.el![0];
+    const t = new ElTrain(s);
+    t.step(s.trigger);
+    //run it until a car is over the middle of the stretch
+    const mid = (s.x0 + s.x1) / 2;
+    while (!t.inLane.some((b) => b.x0 < mid - TILE && b.x1 > mid + TILE) && t.t < 5000) t.step(s.trigger);
+    const boxes = t.inLane;
+    //from the street under it, ollie straight up into it
+    const under = new Skater({ ...l, startX: mid, startY: l.streetY, el: [] } as Level);
+    under.movers = boxes;
+    const slams: string[] = [];
+    for (let f = 0; f < 60; f++) {
+      under.step({ pressed: f === 0, held: true });
+      slams.push(...under.events.map((e) => e.type).filter((e) => e === 'slam'));
+      under.events.length = 0;
+      expect(under.y - 48).toBeGreaterThanOrEqual(boxes[0].bottom - 8);
+    }
+    expect(slams).toEqual([]);
+    //dropped onto its roof, you grind it
+    const box = boxes.find((b) => b.x0 < mid && b.x1 > mid)!;
+    const top = new Skater({ ...l, startX: mid - TILE, startY: l.streetY } as Level);
+    top.movers = boxes;
+    top.mode = 'air';
+    top.y = box.roof - 40;
+    let grinding = false;
+    for (let f = 0; f < 40 && !grinding; f++) {
+      top.step({ pressed: false, held: false });
+      top.events.length = 0;
+      if ((top.mode as string) === 'grind' && top.surface === box.ledge) grinding = true;
+    }
+    expect(grinding).toBe(true);
+  });
+
   it('a bus fits under it', () => {
     const l = chicago(4, 2);
     expect(l.streetY - l.el![0].under).toBeGreaterThan(72);

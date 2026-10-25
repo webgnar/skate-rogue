@@ -423,6 +423,11 @@ export class Skater {
     }
 
     if (this.mode === 'roll' || this.mode === 'grind') {
+      //a kicker ramp standing on the street: you roll up onto it
+      if (this.mode === 'roll' && !this.surface) {
+        const ramp = this.level.surfaces.find((s) => s.kicker && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
+        if (ramp) this.surface = ramp;
+      }
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);
       if (!this.supported() && !this.rollOnto()) {
         //rolled off the edge: fall, keeping both jumps (QFS); a slope throws you along its angle (bank kick)
@@ -552,7 +557,9 @@ export class Skater {
       if (!hits(0, car.roof, 0, car.x0 - half, car.x1 + half, this.roofs.get(car) ?? car.roof)) continue;
       //Roof Rider: a parked roof is a ledge to grind
       const parked = this.mods.roofRider && this.level.cars.includes(car);
-      consider(car.roof, parked ? () => this.touchDown(roofLedge(car)) : () => this.carHop());
+      //an L train's roof is always a grind
+      const ledge = car.ledge ?? (parked ? roofLedge(car) : null);
+      consider(car.roof, ledge ? () => this.touchDown(ledge) : () => this.carHop());
     }
     for (const rail of this.level.rails) {
       if (rail === this.railIgnore) continue;
@@ -705,6 +712,13 @@ export class Skater {
       }
       const overlapX = this.x + half > car.x0 && this.x - half < car.x1;
       const overlapY = this.y > car.roof + 6 && this.y - PHYS.height < car.bottom;
+      //an L train overhead: jumping up into its underside bumps your head and you come down, no slam
+      if (overlapX && overlapY && car.ledge && this.mode === 'air' && this.y - this.vsp - PHYS.height >= car.bottom - 4) {
+        this.feel.bounce(Math.max(0, -this.vsp), 0);
+        this.y = car.bottom + PHYS.height;
+        this.vsp = Math.max(0, this.vsp);
+        continue;
+      }
       if (overlapX && overlapY) {
         this.hitCars.add(car);
         this.slam();

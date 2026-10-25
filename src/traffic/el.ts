@@ -7,7 +7,7 @@
 // get there, and sometimes it's gone. You see it coming round the bend before it reaches the lane. Pure.
 import { makeRng } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
-import { inHill, isStreetAt, type Car, type Level } from '../physics/level';
+import { inHill, isStreetAt, type Car, type Level, type Surface } from '../physics/level';
 
 export const EL = {
   under: 2.6, // tiles: the structure's underside over the street (a bus fits under; a car roof plus an ollie reaches)
@@ -27,7 +27,11 @@ export const EL = {
   first: 12, // tiles into the street the first stretch starts (over EL_PIECE, the block after the start piece)
   from: 1, // floors with the L
   second: 4, // a second stretch from this floor
+  runOut: 10, // tiles of street past the end of a stretch to come down on
   offHill: 14, // tiles of street between the foot of a stretch of hill and a stretch's parked car
+  //a kicker ramp on the street before the parked car (zack, 2026-10-25: "the L tracks need a kicker ramp to ollie up
+  //to them"): roll up it and ollie off the lip, over the car and onto the track
+  kicker: { len: 3, rise: 1.5, gap: 0 }, // tiles: its run, and its lip's height, just over the car's roof: roll off it onto the roof and hop
 };
 
 export interface ElStretch {
@@ -96,6 +100,8 @@ export function elPlan(level: Level, seed: number): ElStretch[] {
     level.rails.some((r) => r.x1 > x0 && r.x0 < x1 && Math.min(...r.ys) < level.streetY - 1.4 * TILE) ||
     level.cars.some((c) => c.x1 > x0 && c.x0 < x1 && c.model);
   const out: ElStretch[] = [];
+  //street to come down on past the end of a stretch: you drop off it fast and high
+  const landing = (x1: number) => street(x1, x1 + EL.runOut * TILE);
   const place = (x: number, len: number) => {
     //trains from the seed against your arrival, as cross traffic is: -60 = just ahead of you on the stretch,
     //0-120 = pulling in as you get there, past 200 = long gone round the far bend
@@ -107,13 +113,24 @@ export function elPlan(level: Level, seed: number): ElStretch[] {
     for (let p = a; p <= b; p += TILE / 2) if (!isStreetAt(level, p)) return false;
     return true;
   };
+  //the kicker ramp before a parked car at carX (when the street's clear for it)
+  const kicker = (carX: number) => {
+    const x1 = carX - EL.kicker.gap * TILE;
+    const x0 = x1 - EL.kicker.len * TILE;
+    if (!street(x0 - TILE, x1) || level.cars.some((c) => c.x1 > x0 - TILE && c.x0 < x1)) return;
+    level.surfaces.push({ kind: 'bank', x0, x1, y: level.streetY, y1: level.streetY - EL.kicker.rise * TILE, row: -1, kicker: true });
+  };
   const lenOf = () => (EL.len[0] + Math.floor(rng() * (EL.len[1] - EL.len[0] + 1))) * TILE;
   //the first over the plain block after the start (EL_PIECE), its parked car just before it
   const block = level.layout.pieces.findIndex((p) => p.name === 'el');
   if (block > 0) {
     const x = level.finaleX + EL.first * TILE;
     level.cars.push({ x0: x - TILE - EL.access, x1: x - TILE, roof: level.streetY - 40, bottom: level.streetY });
-    place(x, lenOf());
+    kicker(x - TILE - EL.access);
+    //shortened if need be so it ends over street to come down on
+    let len = lenOf();
+    while (len > EL.len[0] * TILE && !landing(x + len)) len -= TILE;
+    place(x, len);
   }
   //more wherever the street is clear under it, each over a parked car or room for one
   let x = (out.length ? out[0].x1 + 24 * TILE : level.finaleX + 12 * TILE);
@@ -124,8 +141,9 @@ export function elPlan(level: Level, seed: number): ElStretch[] {
     const room = street(carX - TILE, x) && !level.cars.some((c) => c.x1 > carX - TILE && c.x0 < x + TILE);
     //never right at the foot of a stretch of hill: you come off it too fast to ollie a parked car
     const offHill = !inHill(level, carX - EL.offHill * TILE);
-    if (x + len < end && offHill && !tall(x - 2 * TILE, x + len + 2 * TILE) && (parked || room)) {
+    if (x + len < end && offHill && landing(x + len) && !tall(x - 2 * TILE, x + len + 2 * TILE) && (parked || room)) {
       if (!parked) level.cars.push({ x0: carX, x1: carX + EL.access, roof: level.streetY - 40, bottom: level.streetY });
+      kicker(parked ? parked.x0 : carX);
       place(x, len);
       x += len + (24 + Math.floor(rng() * 20)) * TILE;
     } else x += 2 * TILE;
@@ -142,7 +160,12 @@ export class ElTrain {
   readonly boxes: Car[]; // each car's box while it's on the stretch (off it, it's out of the lane)
 
   constructor(readonly stretch: ElStretch) {
-    this.boxes = Array.from({ length: EL.cars }, () => ({ x0: 0, x1: 0, roof: stretch.y - EL.carH, bottom: stretch.y }));
+    //each car's roof is a grind riding along with it (zack, 2026-10-25: "the train should be grindable")
+    this.boxes = Array.from({ length: EL.cars }, () => {
+      const roof = stretch.y - EL.carH;
+      const ledge: Surface = { kind: 'rail', x0: 0, x1: 0, y: roof, row: -1, material: 'metal' };
+      return { x0: 0, x1: 0, roof, bottom: stretch.y, ledge };
+    });
   }
 
   // the nose's distance along the path, tiles (negative: not out yet); null between trains
@@ -174,6 +197,8 @@ export class ElTrain {
       const box = this.boxes[i];
       box.x0 = Math.max(s.x0, x0);
       box.x1 = Math.min(s.x1, x1);
+      box.ledge!.x0 = box.x0;
+      box.ledge!.x1 = box.x1;
       out.push(box);
     });
     return out;

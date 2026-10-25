@@ -14,7 +14,8 @@ export const GEAR = {
   ollie: 0.38, // deck, per ollie
   flip: 0.46, // shoes, per flip trick
   grindSec: 0.5, // trucks, per second on a rail or ledge
-  fastSec: 0.42, // wheels, per second going faster than fastOver x cruising speed
+  fastSec: 0.38, // wheels, per second going faster than fastOver x cruising speed (0.42 before the L's kicker sent you up
+  // onto its fast grind more often)
   fastOver: 1.25,
   wornFrom: 50, // below this a part starts to cost you
   busted: 15, // the HUD flashes it from here
