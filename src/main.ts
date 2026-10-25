@@ -24,7 +24,7 @@ import { loadSave, writeSave } from './run/save';
 import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
 import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
-import { loadModels, missingModels } from './render/models';
+import { loadLater, loadModels, missingModels } from './render/models';
 import { parseBoons } from './bot/repro';
 import { ACTS, FLOORS_PER_ACT } from './gen/escape';
 import { loadCityTiles } from './render/textures';
@@ -345,6 +345,7 @@ async function start() {
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 
   await Promise.all([loadCityTiles(`${base}tex/chicago_tiles.png`), loadModels(base)]);
+  void loadLater(base);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await view.loadBackdrop(base);
   //?skater=webster (keanu, roxy, goldie) rides one without unlocking it

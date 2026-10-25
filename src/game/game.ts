@@ -43,7 +43,7 @@ import { hideProp, props, restyle } from '../render/props';
 import { BIOMES, biomeMood, type BiomeId } from '../render/biomes';
 import { clockFor, mixMood, moodAt, rainLevel, rainy, type Mood } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
-import { FloorSim } from '../sim/floor';
+import { FloorSim, type FloorEvent } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
 import { SkyView } from '../render/sky-view';
 import { EscapeFx } from '../render/escape-fx';
@@ -58,7 +58,8 @@ import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig } from '../render/skater-rig';
 import { trickName } from '../physics/tricks';
-import { toX, toY } from '../render/kit';
+import { parkedPaint, toX, toY } from '../render/kit';
+import { CarHopFx, damageParked, parkedDamage, slideParked } from '../render/car-damage';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
 import { FEEL } from '../physics/feel';
@@ -241,6 +242,11 @@ export class Game {
     pieces: (prop) => propPieces(prop), // the Blender break pieces (art/props.py)
     hide: (index) => hideProp(index),
   });
+  private readonly carFx = new CarHopFx(this.particles, this.smashFx, {
+    word: (x, y, w) => this.words.spawn(x, y, w),
+    shake: (a) => this.view.shake(a),
+  });
+  private pendingJolt: number | null = null; // a vehicle just hopped: squash it once it's rebuilt at its new stage
   private biome: BiomeId = 'chicago';
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
   private perfT = 0;
@@ -988,6 +994,10 @@ export class Game {
 
     //traffic, the cruiser and the warnings
     this.trafficView.sync(this.level, this.sim.traffic.vehicles);
+    if (this.pendingJolt !== null) {
+      this.carFx.jolt(this.trafficView.meshOf(this.pendingJolt));
+      this.pendingJolt = null;
+    }
     this.elView.sync(this.level, this.sim.trains);
     this.cableView.sync(this.level, this.skater.x);
     this.trafficView.syncCross(this.level, this.sim.traffic.cross);
@@ -1069,6 +1079,8 @@ export class Game {
     this.water(dt);
     this.particles.update(dt, this.view.pointScale);
     this.smashFx.update(dt);
+    slideParked(this.view.currentKit, dt);
+    this.carFx.update(dt, [...parkedDamage(this.view.currentKit), ...this.trafficView.damaged()]);
     this.visor.update(dt);
     this.words.update(realDt);
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
@@ -1222,6 +1234,32 @@ export class Game {
     this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), z: this.level.props[e.index]?.z, how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
   }
 
+  // a car hop dented a car (src/traffic/damage.ts): it shows its new stage, and springs and dust burst out of it
+  private dented(e: Extract<FloorEvent, { type: 'dent' }>): void {
+    let paint = 0x9ea2aa;
+    let z = 0;
+    if ('vehicle' in e.car) {
+      const id = e.car.vehicle;
+      this.trafficView.damage(id, e.stage);
+      //rebuilt as its new stage on the next sync; it squashes on the hop either way
+      this.pendingJolt = id;
+      const v = this.sim.traffic.vehicles.find((t) => t.id === id);
+      if (v) {
+        paint = this.trafficView.paintOf(v);
+        z = v.lane * -2.2;
+      }
+    } else {
+      this.carFx.jolt(damageParked(this.view.currentKit, this.level, e.car.parked, e.stage));
+      paint = parkedPaint(this.level, e.car.parked);
+    }
+    this.carFx.hop(toX(e.x), toY(this.level, e.y), toY(this.level, this.level.streetY), z, e.stage, paint);
+    //totaled: the comic burst and a punch in
+    if (e.stage === 3) {
+      this.impacts.spawn(toX(e.x), toY(this.level, e.y), 1.3);
+      this.view.zoom.trick();
+    }
+  }
+
   // a part of your gear wore past half, or is nearly done
   private worn(part: GearPart, level: 'worn' | 'busted'): void {
     const name = GEAR.names[part].toUpperCase();
@@ -1256,6 +1294,7 @@ export class Game {
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type === 'smash') return this.smashed(e);
+    if (e.type === 'dent') return this.dented(e);
     if (e.type === 'wear') return this.worn(e.part, e.level);
     if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip' && e.type !== 'birds') {
       this.sprite.onEvent(e);

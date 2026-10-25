@@ -71,6 +71,8 @@ export class Skater {
   trickCatch = 0; // frames that flip takes to catch (0: no flip going)
   readonly crumbling = new Map<Surface, number>(); // Greece's ruins: frames until each ledge you've stood on falls
   readonly gone = new Set<Surface>(); // ruins that have fallen
+  readonly wrecked = new Set<Car>(); // cars hopped to scrap (src/traffic/damage.ts): no roof, no sides, out of the way
+  hopped: Car | null = null; // the roof the last car hop came off
   rollOn = false; // through the gate you keep skating onto the next floor (src/game/game.ts) instead of stopping
   exited = false; // through the gate, rolling on
 
@@ -465,7 +467,8 @@ export class Skater {
 
   // parked cars plus moving traffic
   private cars(): Car[] {
-    return this.movers.length ? [...this.level.cars, ...this.movers] : this.level.cars;
+    const all = this.movers.length ? [...this.level.cars, ...this.movers] : this.level.cars;
+    return this.wrecked.size ? all.filter((c) => !this.wrecked.has(c)) : all;
   }
 
   // the level's ledges, roofs and rails, plus a live ghost rail
@@ -559,7 +562,7 @@ export class Skater {
       const parked = this.mods.roofRider && this.level.cars.includes(car);
       //an L train's roof is always a grind
       const ledge = car.ledge ?? (parked ? roofLedge(car) : null);
-      consider(car.roof, ledge ? () => this.touchDown(ledge) : () => this.carHop());
+      consider(car.roof, ledge ? () => this.touchDown(ledge) : () => this.carHop(car));
     }
     for (const rail of this.level.rails) {
       if (rail === this.railIgnore) continue;
@@ -641,7 +644,8 @@ export class Skater {
     }
   }
 
-  private carHop(): void {
+  private carHop(car: Car): void {
+    this.hopped = car;
     //the knees take the roof and fire you back up; caught mid-flip, the board's only half under you and you rock
     this.feel.bounce(Math.max(0, this.vsp), this.caught < 1 ? this.looseWheels : 0);
     this.trickCatch = 0;

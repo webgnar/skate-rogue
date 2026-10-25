@@ -66,6 +66,9 @@ export function cueFor(e: FloorEvent): Cue | null {
       return cue('ufo_explode');
     case 'birds':
       return cue('impact', 0.5, 1.8); // a flurry of wings
+    case 'dent':
+      //the hop's bonk is the hop's own; a wreck goes off like a drone
+      return e.stage === 3 ? cue('ufo_explode', 0.9, 0.8) : null;
     case 'mod':
       return cue('coin', 0.3, 2);
     case 'bail':
@@ -109,5 +112,6 @@ export function buzzFor(e: FloorEvent): number | number[] | null {
   if (e.type === 'slam') return 60;
   if (e.type === 'tuck') return 40;
   if (e.type === 'hop') return 15;
+  if (e.type === 'dent' && e.stage === 3) return [30, 40, 50];
   return null;
 }

@@ -123,7 +123,14 @@ export class SmashFx {
     }
   }
 
-  private fling(piece: Piece, hit: SmashHit, color: number, dir: number, k: number): void {
+  // other effects' pieces (the springs and panels of a car hop, car-damage.ts): flung up and out from (x, y, z),
+  // out to either side by their offsets, landing on `floor`; color -1 for vertex-coloured pieces
+  burst(list: Piece[], x: number, y: number, z: number, floor: number, color: number, k = 1): void {
+    const at = { x, y, z } as SmashHit;
+    for (const piece of list) this.fling(piece, at, color, 0, k, floor);
+  }
+
+  private fling(piece: Piece, hit: SmashHit, color: number, dir: number, k: number, floor = hit.y): void {
     if (this.live.length >= (FX.tier === 'low' ? SMASH.maxPieces / 2 : SMASH.maxPieces)) this.retire(this.live[0]);
     const mesh = this.free.pop() ?? new THREE.Mesh();
     mesh.geometry = piece.geometry;
@@ -140,7 +147,7 @@ export class SmashFx {
       THREE.MathUtils.randFloat(0.5, 2.5), // out toward the street
     );
     const spin = new THREE.Vector3(THREE.MathUtils.randFloatSpread(14), THREE.MathUtils.randFloatSpread(14), THREE.MathUtils.randFloatSpread(14));
-    this.live.push({ mesh, v, spin, age: 0, floor: hit.y });
+    this.live.push({ mesh, v, spin, age: 0, floor });
   }
 
   // one shared toon material per colour; -1 for the models' vertex-coloured pieces

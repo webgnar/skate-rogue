@@ -254,6 +254,11 @@ export class StreetView {
     this.flash = 99;
   }
 
+  // this floor's street kit (its parked cars show car-hop damage, car-damage.ts); null while it builds
+  get currentKit(): THREE.Group | null {
+    return this.kit;
+  }
+
   // seed and floor place the night city's lamps, cameras and billboards. A fresh start: the floors ahead and behind
   // are dropped (the game asks for the next one again)
   setLevel(level: Level, seed = 0, floor = 1): void {

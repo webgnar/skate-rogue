@@ -20,6 +20,7 @@ export const SCORE = {
   railStart: 75,
   grindPerSec: 60,
   carHop: 150,
+  wreck: 300, // car-hopping a car to scrap, on top of the hop
   kicker: 150, // off a box truck's tailgate
   nearMiss: 200, // a close call: over a vehicle with a few px to spare, or one passing right under you
   drone: 250, // stomping a drone out of the sky, on top of the hop
@@ -103,6 +104,9 @@ export class RunScore {
         break;
       case 'hop':
         this.add(SCORE.carHop);
+        break;
+      case 'dent':
+        if (e.stage === 3) this.add(SCORE.wreck);
         break;
       case 'kicker':
         this.add(SCORE.kicker);
