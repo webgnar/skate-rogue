@@ -16,6 +16,9 @@ export interface FloorEdit {
   street?: number; // street pieces before the fork
   climbTop?: number; // tiles each cable car takes you up after a street chase
   chasePieces?: number; // street pieces in each flat chase between stretches of hill
+  topStart?: number; // top route: how far down each stretch of hill (0-1) its power line starts
+  roofGap?: [number, number]; // top route: tiles between rooftops
+  flocks?: number; // top route: chance of pigeons on a wire or a long rooftop
 }
 
 export interface LevelEdits {

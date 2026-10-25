@@ -18,8 +18,8 @@ export function isFloorEdit(e: unknown): e is FloorEdit {
       f.recipe.every((slot) => Array.isArray(slot) && slot.length > 0 && slot.every((b) => BEATS.includes(b as Beat)));
     if (!ok) return false;
   }
-  for (const k of ['top', 'grade', 'finalSet', 'street', 'climbTop', 'chasePieces']) if (f[k] !== undefined && !isNum(f[k])) return false;
-  for (const k of ['run', 'crest', 'gap', 'midSet']) if (f[k] !== undefined && !isPair(f[k])) return false;
+  for (const k of ['top', 'grade', 'finalSet', 'street', 'climbTop', 'chasePieces', 'topStart', 'flocks']) if (f[k] !== undefined && !isNum(f[k])) return false;
+  for (const k of ['run', 'crest', 'gap', 'midSet', 'roofGap']) if (f[k] !== undefined && !isPair(f[k])) return false;
   return true;
 }
 
