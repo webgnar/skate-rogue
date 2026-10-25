@@ -6,6 +6,7 @@ import { PHYS, TILE } from '../physics/constants';
 import { FEEL } from '../physics/feel';
 import { isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
 import type { Mode, Skater } from '../physics/skater';
+import { devSpeed } from '../ui/dev';
 
 // one colour per kind of thing the sim collides with (the readout's legend shows them)
 export const COLLIDER = {
@@ -32,7 +33,6 @@ export const COLLIDER = {
 const MODE_COLOR: Record<Mode, string> = { roll: '#39d98a', air: '#ffffff', grind: '#ff4fd8', rail: '#ff8af0', bail: '#ff3b3b', exit: '#a8b0b8' };
 const TRAIL = 150; // steps of the feet's path kept (2.5 s)
 const MARK_LIFE = 1.6; // s a contact marker stays up
-const SLOW = [1, 0.5, 0.25, 0.1, 0]; // the slow-motion steps; 0 freezes (. steps one frame)
 
 interface Mark {
   x: number;
@@ -65,18 +65,15 @@ function surfaceTags(s: Surface): string {
 
 export class CollisionDebug {
   on = false;
-  slow = 0; // index into SLOW
   private readonly canvas = document.createElement('canvas');
   private readonly ctx: CanvasRenderingContext2D;
   private readonly panel = document.createElement('pre');
-  private readonly buttons = document.createElement('div');
   private readonly v = new THREE.Vector3();
   private w = 0;
   private h = 0;
   private trail: { x: number; y: number; mode: Mode }[] = [];
   private marks: Mark[] = [];
   private last: { mode: Mode; surface: Surface | null; rail: CurvedRail | null; slamT: number; hopped: Car | null } | null = null;
-  private stepAsk = false;
 
   constructor(
     app: HTMLElement,
@@ -87,52 +84,13 @@ export class CollisionDebug {
     gameCanvas.after(this.canvas);
     this.panel.className = 'coldebug-panel';
     app.append(this.panel);
-    //phone controls: the overlay's own buttons, which never reach the one button (no ollie on a tap)
-    this.buttons.className = 'coldebug-buttons';
-    this.buttons.innerHTML = '<button data-c="slow">SLOW</button><button data-c="step">STEP</button>';
-    this.buttons.addEventListener('pointerdown', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const c = (e.target as HTMLElement).closest<HTMLElement>('[data-c]')?.dataset.c;
-      if (c === 'slow') this.slower(1);
-      else if (c === 'step') this.step();
-    });
-    app.append(this.buttons);
     this.show(false);
-  }
-
-  get timeScale(): number {
-    return this.on ? SLOW[this.slow] : 1;
-  }
-
-  get frozen(): boolean {
-    return this.timeScale === 0;
   }
 
   show(on: boolean): void {
     this.on = on;
     this.canvas.hidden = !on;
     this.panel.hidden = !on;
-    this.buttons.hidden = !on;
-    if (!on) this.slow = 0;
-  }
-
-  // step through the slow-motion speeds (wrapping round): 1x, 0.5x, 0.25x, 0.1x, frozen
-  slower(by: number): void {
-    this.slow = (this.slow + by + SLOW.length) % SLOW.length;
-  }
-
-  // frozen: one physics step; running: freeze
-  step(): void {
-    if (!this.frozen) this.slow = SLOW.length - 1;
-    else this.stepAsk = true;
-  }
-
-  // the game asks once per frame while frozen: whether to run one step
-  takeStep(): boolean {
-    const ask = this.stepAsk;
-    this.stepAsk = false;
-    return ask;
   }
 
   // a new floor: its own coordinates
@@ -459,7 +417,7 @@ export class CollisionDebug {
       `x ${sk.x.toFixed(1)} (col ${Math.floor(sk.x / TILE)}) y ${sk.y.toFixed(1)} (${((level.streetY - sk.y) / TILE).toFixed(2)}t up) · under: ${street}`,
       `hsp ${sk.hsp.toFixed(2)} vsp ${sk.vsp.toFixed(2)} px/f · carry ${sk.carry.toFixed(2)} · jumps ${sk.jumps} coyote ${sk.coyote}`,
       `pitch ${deg(sk.feel.pitch)}` + (below ? ` · ray ${below.depth.toFixed(0)}px to ${deg(below.angle)}` : sk.mode === 'air' ? ' · ray: nothing below' : '') + (sk.slamT ? ` · slam ${sk.slamT}f` : ''),
-      `${SLOW[this.slow] === 0 ? 'FROZEN (. or STEP: one frame)' : `speed ${SLOW[this.slow]}×`} · [ ] slow/fast · C off`,
+      `${devSpeed() === 0 ? 'FROZEN (. or STEP: one frame)' : `speed ${devSpeed()}×`} · [ ] slow/fast · C off`,
     ];
     const key = (c: string, t: string) => `<i style="color:${c}">■</i>${t}`;
     this.panel.innerHTML =

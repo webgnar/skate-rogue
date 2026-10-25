@@ -70,6 +70,7 @@ import { reproQuery } from '../bot/repro';
 import { makeRng } from '../gen/rng';
 import { landDust, landKick } from '../render/land-fx';
 import { CollisionDebug } from '../render/collision-debug';
+import { DEV, devSpeed, takeStep } from '../ui/dev';
 
 export interface PickInfo {
   title: string;
@@ -325,14 +326,24 @@ export class Game {
   toggleCollision(on = !this.colDebug?.on): void {
     if (on && !this.colDebug) this.colDebug = new CollisionDebug(document.getElementById('app')!, this.view.canvas);
     this.colDebug?.show(on);
+    DEV.collision = on;
+  }
+
+  get pilot(): PilotStyle | null {
+    return this.autopilot?.style ?? null;
   }
 
   get collision(): CollisionDebug | null {
     return this.colDebug?.on ? this.colDebug : null;
   }
 
-  // hand the button to the playtest bot: 'ref' skates the validator's line, 'mash' presses at random
-  setAutopilot(style: PilotStyle): void {
+  // hand the button to the playtest bot: 'ref' skates the validator's line, 'mash' presses at random (null: back to you)
+  setAutopilot(style: PilotStyle | null): void {
+    if (!style) {
+      this.autopilot = null;
+      this.checks = null;
+      return;
+    }
     this.autopilot = new Pilot(style, this.seed);
     this.botRng = makeRng(this.seed * 5 + 3);
     this.checks = new FloorChecks(this.sim);
@@ -946,9 +957,10 @@ export class Game {
       return;
     }
     //game time: frozen on a slam's hit-stop, then slow motion
-    //the collision overlay's slow motion (0: frozen, stepped a frame at a time)
+    //the dev tools' slow motion (0: frozen, stepped a frame at a time)
     const col = this.collision;
-    const scale = this.timeScale * (col?.timeScale ?? 1);
+    const frozen = devSpeed() === 0;
+    const scale = this.timeScale * devSpeed();
     const dt = realDt * this.warp.scale * scale;
     this.warp.update(realDt * scale);
     if (this.autopilot && this.state !== 'skate' && this.state !== 'caught') this.botMenu(now);
@@ -990,8 +1002,8 @@ export class Game {
         //rolled off the end of the floor: the next one carries on from here
         if (this.finished && this.pending && this.skater.x >= this.level.width) this.cross();
       };
-      if (col?.frozen) {
-        if (col.takeStep()) step();
+      if (frozen) {
+        if (takeStep()) step();
         this.loop.alpha = 1; // show exactly where the sim is
       } else this.loop.advance(dt, step, 5 * this.timeScale);
     }
