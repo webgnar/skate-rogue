@@ -17,7 +17,7 @@ export function loadLater(base: string): Promise<void> {
   return loadModels(base, LATER);
 }
 
-const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb'];
+const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb', 'airliner.glb'];
 // materials that glow instead of taking light
 const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen', 'elCarSign', 'elCarLamp']); // the sheriff gold is reflective livery
 

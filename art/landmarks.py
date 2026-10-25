@@ -1,6 +1,8 @@
 # Builds the big landmarks that stand behind the street in the other QFS worlds and exports
 # public/models/landmarks.glb: a Greek temple front, Atlantis's sunken arch, Clemente Park's ballpark light tower, a
 # giant museum bust, High-Tech City's data spire, a rocket on its gantry in space, and the AI's tower in the Hive.
+# And two of downtown Chicago's plaza sculptures for the city's own quarters (zack): Calder's red Flamingo and the
+# Chicago Picasso.
 # The kit stands one every few screens behind the back wall, in place of a building (src/render/kit.ts).
 #
 #   blender -b -P art/landmarks.py            (or run it from Blender's Text Editor; it rebuilds the scene)
@@ -50,6 +52,10 @@ COLORS = {
     'hiveRib': 0x2A1418,
     'eye': 0xFF2A2A,  # glows
     'amber': 0xFF8A3A,  # glows
+    'calderRed': 0xE8432C,  # Calder red, vermilion
+    'corten': 0x7C5A44,  # weathered Cor-ten steel
+    'cortenDark': 0x4E3628,
+    'plazaGranite': 0x9C7C74,
 }
 
 
@@ -329,10 +335,128 @@ def hive_tower(m):
     return join(parts, 'HiveTower')
 
 
+def catmull(pts, n=6):
+    """A smooth path through the points (Catmull-Rom), n steps a span."""
+    p = [pts[0]] + list(pts) + [pts[-1]]
+    out = []
+    for i in range(1, len(p) - 2):
+        for k in range(n):
+            t = k / n
+            out.append(tuple(0.5 * ((2 * p[i][j]) + (-p[i - 1][j] + p[i + 1][j]) * t + (2 * p[i - 1][j] - 5 * p[i][j] + 4 * p[i + 1][j] - p[i + 2][j]) * t * t
+                                    + (-p[i - 1][j] + 3 * p[i][j] - 3 * p[i + 1][j] + p[i + 2][j]) * t ** 3) for j in range(3)))
+    out.append(tuple(pts[-1]))
+    return out
+
+
+def sweep(bm, path, size):
+    """A bar along a path, its section size(t) = (thick, deep): thick across the path in the x-z plane, deep along y."""
+    rings = []
+    for i, (x, y, z) in enumerate(path):
+        a, b = path[max(0, i - 1)], path[min(len(path) - 1, i + 1)]
+        tx, tz = b[0] - a[0], b[2] - a[2]
+        ln = math.hypot(tx, tz) or 1
+        nx, nz = -tz / ln, tx / ln
+        th, dp = size(i / (len(path) - 1))
+        rings.append([bm.verts.new((x + sx * nx * th / 2, y + sy * dp / 2, z + sx * nz * th / 2)) for sx, sy in ((1, 1), (-1, 1), (-1, -1), (1, -1))])
+    for r0, r1 in zip(rings, rings[1:]):
+        for k in range(4):
+            j = (k + 1) % 4
+            bm.faces.new((r0[k], r0[j], r1[j], r1[k]))
+    bm.faces.new(rings[0])
+    bm.faces.new(rings[-1][::-1])
+
+
+def plate(bm, pts, t):
+    """A flat plate through 3D points (a polygon), t thick along its normal."""
+    from mathutils import Vector
+    v = [Vector(p) for p in pts]
+    nrm = (v[1] - v[0]).cross(v[2] - v[0]).normalized() * (t / 2)
+    lo = [bm.verts.new(p - nrm) for p in v]
+    hi = [bm.verts.new(p + nrm) for p in v]
+    bm.faces.new(lo[::-1])
+    bm.faces.new(hi)
+    n = len(v)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((lo[i], lo[j], hi[j], hi[i]))
+
+
+def profile(bm, pts, y0, y1):
+    """An (x, z) outline extruded through y0..y1."""
+    a = [bm.verts.new((x, y0, z)) for x, z in pts]
+    b = [bm.verts.new((x, y1, z)) for x, z in pts]
+    bm.faces.new(a)
+    bm.faces.new(b[::-1])
+    n = len(pts)
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((a[j], a[i], b[i], b[j]))
+
+
+def arc(cx, cz, r, a0, a1, n=8):
+    return [(cx + r * math.cos(a0 + (a1 - a0) * k / n), cz + r * math.sin(a0 + (a1 - a0) * k / n)) for k in range(n + 1)]
+
+
+def flamingo(m):
+    """Calder's Flamingo in Federal Plaza: arches of vermilion plate, one tall arch striding over, a second rising
+    out of it and down to the right, and a knot of flared triangular fins where they meet over a third leg."""
+    bm = bmesh.new()
+    taper = lambda t: (0.6 - 0.25 * abs(2 * t - 1) ** 3, 0.55)  # bars thin a little toward their feet
+    # the big arch, striding from the left foot over to a foot near the middle
+    sweep(bm, catmull([(-3.4, 0.5, 0), (-3.1, 0.35, 3.4), (-2.3, 0.15, 7.2), (-1.2, 0, 9.0), (-0.3, 0, 8.6), (0.0, 0, 6.2), (0.1, 0.1, 3.0), (0.0, 0.25, 0)]), taper)
+    # the second arch, rising out of the first's crown and over to the far right foot
+    sweep(bm, catmull([(-0.5, 0, 8.4), (0.8, -0.25, 7.9), (2.0, -0.4, 6.0), (2.9, -0.5, 3.2), (3.5, -0.6, 0)]), lambda t: (0.55 - 0.2 * t, 0.5))
+    # the third leg, down from the knot where the plates meet
+    sweep(bm, catmull([(1.5, -0.35, 5.6), (1.5, 0.2, 3.0), (1.6, 0.8, 0)]), lambda t: (0.45 - 0.2 * t, 0.45))
+    plate(bm, [(0.9, -0.3, 6.6), (3.2, -0.55, 4.2), (1.7, -0.45, 3.5)], 0.14)  # the wing out to the right
+    plate(bm, [(0.1, -0.1, 6.4), (1.6, -0.4, 5.8), (1.0, -0.3, 1.2)], 0.14)  # the long fin hung from the knot
+    plate(bm, [(1.7, -0.45, 3.5), (2.6, -0.5, 3.0), (2.3, 0.1, 0.3)], 0.14)  # a plate down toward the ground
+    for fx, fy, fw in ((-3.4, 0.5, 2.4), (0.0, 0.25, 2.0), (1.6, 0.8, 1.6), (3.5, -0.6, 2.2)):  # the feet flare where they're bolted down
+        plate(bm, [(fx - 0.45, fy, 0), (fx + 0.45, fy, 0), (fx, fy, fw)], 0.12)
+    red = link('calderRed', bm, m['calderRed'])
+    bm = bmesh.new()
+    box(bm, -4.0, 4.0, -1.2, 1.4, -0.02, 0.06)  # the plaza's granite under it
+    return join([red, link('plazaGranite', bm, m['plazaGranite'])], 'Flamingo')
+
+
+def picasso(m):
+    """The Chicago Picasso in Daley Plaza, seen from the plaza: the long face in profile on its neck, the eyes
+    and the nose, two great wings of plate behind it with the cables strung between them, the swept back sitting on
+    the ground behind, all in weathered Cor-ten on a granite plinth."""
+    steel, dark = bmesh.new(), bmesh.new()
+    # the back: a long low sweep along the ground, rolling up at the right
+    back = [(-1.4, 0.2)] + [(x, 0.2) for x in (0.4, 2.0, 3.0)] + arc(2.9, 1.0, 0.8, -math.pi / 2, math.pi / 2, 6)[1:] + [(1.4, 1.5), (0.0, 1.05), (-1.4, 0.7)]
+    profile(steel, back, 0.2, 1.8)
+    # the neck and the front leg: a broad foot narrowing up to the throat
+    neck = [(-2.0, 0.2), (-0.4, 0.2), (-0.55, 1.4), (-0.75, 2.8), (-0.8, 4.2), (-1.15, 4.2), (-1.25, 2.6), (-1.6, 1.2)]
+    profile(steel, neck, -0.45, -0.15)
+    # the face in profile, the forehead jutting forward to the left at the top
+    face = [(-0.8, 3.9), (-0.55, 5.3), (-0.4, 6.9), (-0.55, 7.4), (-1.1, 7.45), (-2.0, 7.2), (-2.15, 6.95), (-1.5, 6.8), (-1.25, 6.4),
+            (-1.35, 5.6), (-1.2, 4.6), (-1.15, 3.9)]
+    profile(steel, face, -0.62, -0.42)
+    for ex, ez in ((-1.55, 6.95), (-1.0, 5.1)):  # the eye, and the nostrils under it
+        w = 0.3 if ez > 6 else 0.12
+        box(dark, ex - w, ex + w, -0.66, -0.6, ez - 0.05, ez + 0.05)
+    box(dark, -1.08, -0.98, -0.66, -0.6, 5.05, 5.15)
+    # the wings: a slim blade rising over the head on the left, a great leaf sweeping down to the right
+    left = [(-0.6, 4.6)] + [(-0.6 - 0.35 * math.sin(math.pi * k / 8), 4.6 + 4.6 * k / 8) for k in range(1, 9)] + [(0.2, 9.0), (0.15, 7.0), (-0.1, 5.0)]
+    profile(steel, left, 0.0, 0.14)
+    leaf = [(0.1, 9.3)] + [(0.1 + 2.8 * math.sin(math.pi * k / 10) ** 0.8, 9.3 - 6.6 * k / 10) for k in range(1, 11)] + [(0.3, 4.4), (0.15, 7.0)]
+    profile(steel, leaf, 0.35, 0.5)
+    # the cables, strung from the face's edge out to the leaf
+    for k in range(10):
+        a = (-0.45, -0.4, 4.4 + 0.27 * k)
+        b = (1.8 - 0.06 * k, 0.4, 3.6 + 0.48 * k)
+        sweep(dark, [a, b], lambda t: (0.035, 0.035))
+    plinth = bmesh.new()
+    box(plinth, -2.6, 4.0, -1.2, 2.1, 0, 0.2)
+    return join([link('corten', steel, m['corten']), link('cortenDark', dark, m['cortenDark']), link('plazaGranite', plinth, m['plazaGranite'])], 'Picasso')
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     m = {k: material(k, v) for k, v in COLORS.items()}
-    marks = [temple(m), sunken_arch(m), light_tower(m), giant_bust(m), data_spire(m), rocket(m), hive_tower(m)]
+    marks = [temple(m), sunken_arch(m), light_tower(m), giant_bust(m), data_spire(m), rocket(m), hive_tower(m), flamingo(m), picasso(m)]
     for i, ob in enumerate(marks):  # in a row in the file; the game reads each from its origin
         ob.location.x = i * 9
     return marks

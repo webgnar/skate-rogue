@@ -610,6 +610,15 @@ and listed it here for review. Any of these can be flipped in the morning.
   with a little overlap so a bend never opens a gap. The toes bend with the editor's toe fields and a heel lift
   no longer pushes the toe cap through the deck. The worn hole in the lead shoe moved to the toe cap. GLBs
   re-exported; the clips are unchanged.
+- **Airliner, cable car, Picasso and Flamingo (zack, 2026-10-25).** The airliner over the top route is now a
+  Blender model (art/airliner.py) after the QFS Chicago level's airplane sprite: pale grey widebody, blue fin,
+  blue engine cowls, window rows. It's drawn about five times bigger than the old one (about 10 tiles long), just
+  behind the street and above the skater. Further back or higher, the houses and the HUD hide it, since the camera
+  shows little sky. The cable car is rebuilt from zack's photo of car 60 (street.py `CableCar`): maroon and cream,
+  a windowed saloon, open bench ends with brass poles, the 60 and the Municipal Railway band, gold-lettered roof
+  boards and a clerestory. Calder's Flamingo and the Chicago Picasso are new landmarks (landmarks.py). The city's
+  plain Chicago quarters (all but the first, which is under the L) take them in turn, with the other worlds'
+  landmarks still in their quarters.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 

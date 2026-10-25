@@ -1,13 +1,15 @@
 // The cable cars up the later stretches of hill (src/gen/hills.ts buildClimb). One waits at the foot of each climb;
 // when you roll onto the cable slot it takes you up, running just ahead of you in the next lane so it reads as the
 // car towing you, and it stops at the top. A San Francisco car: maroon below, cream above, open ends with poles,
-// a clerestory roof. Built in code as one vertex-coloured mesh (one draw, plus its outline).
+// a clerestory roof. The model is art/street.py's CableCar (from zack's photo of car 60), its colours baked into
+// the vertices so it stays one draw plus its outline; the code-built car below is the fallback.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { surfaceY, type Level, type Surface } from '../physics/level';
 import { TILE } from '../physics/constants';
 import { inkify } from './toon';
 import { toX, toY } from './kit';
+import { flatGeometry } from './models';
 
 export const CABLE = {
   len: 4.2, // tiles
@@ -52,7 +54,7 @@ export class CableView {
     for (const c of this.cars) c.mesh.geometry.dispose();
     this.group.clear();
     this.cars = [];
-    const geo = cableCarGeometry();
+    const geo = flatGeometry('CableCar') ?? cableCarGeometry();
     for (const s of level.surfaces) {
       if (!s.tow) continue;
       const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
