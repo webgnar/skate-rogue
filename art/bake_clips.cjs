@@ -67,6 +67,8 @@ function modeFor(name) {
       for (const bone of bones) rest[bone.name] = round(skinned.skeleton.boneInverses[all.indexOf(bone)].clone().invert());
       const clips = {};
       for (const name of names) {
+        s.fakie = false;
+        s.clipName = s.shown = '';
         s.play(name, 0);
         const clip = s.clip;
         const len = clip.keys[clip.keys.length - 1].t;
@@ -74,6 +76,10 @@ function modeFor(name) {
         const n = Math.max(1, Math.round(len * FPS));
         const frames = [];
         for (let f = 0; f <= n; f++) {
+          // regular stance every frame: replaying a 180 would otherwise settle its spin, flip the rig to fakie and pick
+          // the switch twin on every other frame
+          s.fakie = false;
+          s.clipName = s.shown = '';
           s.play(name, 0);
           s.t = clip.loop && f === n ? 0 : Math.min(f / FPS, len - 1e-4); // a loop ends where it starts
           s.hold?.(name === 'idle' || name === 'busted' ? name : null); // held clips: the rig would leave them otherwise
