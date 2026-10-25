@@ -268,6 +268,16 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     } else if (s.kind === 'ledge' && s.crumble) {
       //Greece's ruins fall away, so they're drawn on their own (src/render/twist-view.ts)
       continue;
+    } else if (s.kind === 'ledge' && s.top) {
+      //the top route over the street (src/gen/top-route.ts): a tar-and-gravel roof deck on steel legs behind the lane
+      const deck = slab(w, 0.4, 2.6, lambert(null, 0x5d5662), lambert(null, 0x48424f), sideMat);
+      deck.position.set(x, y - 0.2, -0.2);
+      kit.add(deck);
+      for (let px = toX(s.x0) + 0.6; px < toX(s.x1); px += 3.5) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, y - 0.4, 0.22), postMat);
+        leg.position.set(px, (y - 0.4) / 2, -1.3);
+        kit.add(leg);
+      }
     } else if (s.kind === 'ledge') {
       const row = new Array(Math.round(w)).fill(skin.ledge[1]);
       row[0] = skin.ledge[0];

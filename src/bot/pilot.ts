@@ -3,14 +3,15 @@
 // to shake out states the reference line never reaches. Pure, so the validator, the sim playtest and the game's
 // ?bot autopilot all press the same way.
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, surfaceY, type Car, type Level } from '../physics/level';
+import { isStreetAt, surfaceY, type Car, type CurvedRail, type Level } from '../physics/level';
 import type { Skater, StepInput } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
 import type { CrossCar } from '../traffic/cross';
 import { makeRng } from '../gen/rng';
 
-export type PilotStyle = 'ref' | 'mash';
+// 'high' is the reference bot going for the top route (src/gen/top-route.ts): it ollies off the end of each rooftop
+export type PilotStyle = 'ref' | 'mash' | 'high';
 
 function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: Car[], cross: CrossCar[]): boolean {
   for (let dx = 20; dx <= 70; dx += 4) {
@@ -34,6 +35,13 @@ function blocked(cars: Car[], x: number, y: number): boolean {
 
 const EDGE = 6;
 
+// does another rail, or a roof, pick up where this rail ends?
+function continues(level: Level, rail: CurvedRail): boolean {
+  const [x, y] = [rail.xs[rail.xs.length - 1], rail.ys[rail.ys.length - 1]];
+  if (level.rails.some((r) => r !== rail && Math.abs(r.xs[0] - x) < 4 && Math.abs(r.ys[0] - y) < 8)) return true;
+  return level.surfaces.some((s) => Math.abs(s.x0 - x) < 4 && Math.abs(s.y - y) < 8);
+}
+
 // follow a fall (no more presses) from (x, y) at vsp: does it come down on a manual pad, or (any) on anything?
 function landsOn(level: Level, sk: Skater, x: number, y: number, vsp: number, any: boolean): boolean {
   for (let f = 0; f < 120 && y < level.streetY + 1; f++) {
@@ -47,6 +55,8 @@ function landsOn(level: Level, sk: Skater, x: number, y: number, vsp: number, an
       const sy = surfaceY(s, x);
       if (y <= sy && ny >= sy) return true;
     }
+    //and rails: the top route's next wire
+    if (any && level.rails.some((r) => r !== sk.railIgnore && (r.yAt(x) ?? -1e9) >= y && (r.yAt(x) ?? 1e9) <= ny)) return true;
     y = ny;
   }
   return false;
@@ -81,7 +91,7 @@ export class Pilot {
   // the button for the sim's next step
   input(sim: FloorSim): StepInput {
     const pressed = this.style === 'mash' ? this.mash() : this.ref(sim);
-    if (this.style === 'ref' && pressed && sim.skater.grounded) this.hold = 30;
+    if (this.style !== 'mash' && pressed && sim.skater.grounded) this.hold = 30;
     const held = this.hold > 0 || pressed;
     if (this.hold > 0) this.hold--;
     return { pressed, held };
@@ -103,7 +113,9 @@ export class Pilot {
     let pressed = false;
     if (sk.mode === 'roll' && !sk.surface && danger(level, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
     if (onSurface && sk.surface && sk.x > sk.surface.x1 - 24 && danger(level, sk.x, sk.hsp, movers, drones, sim.traffic.cross)) pressed = true;
-    if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30) pressed = true;
+    //(not where another rail picks up right where this one ends: the top route's wires, pole to pole)
+    if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) pressed = true;
+    if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
     // falling with no street ahead: flip for more air
     //(unless this fall already lands on a manual pad)
     if (sk.mode === 'air' && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOn(level, sk, sk.x, sk.y, sk.vsp, false)) {

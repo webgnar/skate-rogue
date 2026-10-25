@@ -11,6 +11,7 @@
 // Draw budget: the whole lot is four meshes (road, sidewalk, concrete, and the houses off one painted atlas), so
 // a floor costs four draws plus its share of the kit's one merged outline.
 import * as THREE from 'three';
+import { TOP } from '../gen/top-route';
 import { TILE } from '../physics/constants';
 import { inHill, type Level, type Surface } from '../physics/level';
 import { makeRng, randInt } from '../gen/rng';
@@ -793,7 +794,9 @@ export function buildHill(level: Level, group: THREE.Group): void {
       const [a, b] = [pts[i - 1], pts[i]];
       m.quad('wire', [a[0], a[1] - hw, lineZ + 0.02], [b[0], b[1] - hw, lineZ + 0.02], [b[0], b[1] + hw, lineZ + 0.02], [a[0], a[1] + hw, lineZ + 0.02], [[0, 0], [1, 0], [1, 1], [0, 1]]);
     }
-    for (const p of [pts[0], pts[pts.length - 1]]) {
+    //(the top route's line runs a whole stretch: a pole every few tiles along it)
+    const at = r.top ? pts.filter((p, i) => i === 0 || i === pts.length - 1 || Math.floor(p[0] / TOP.pole) !== Math.floor(pts[i - 1][0] / TOP.pole)) : [pts[0], pts[pts.length - 1]];
+    for (const p of at) {
       const foot = laneHeight(ground, hill, p[0]) + c;
       const pz = HILLSIDE.road[0] + 0.15;
       oct(m, p[0], pz, 0.1, foot, p[1] + 0.7, wood, 0.08);
@@ -828,8 +831,10 @@ export function buildHill(level: Level, group: THREE.Group): void {
     for (let x = Math.max(s0, ground.length ? ground[0].x0 : 0) + 2; x < s1 - 2; x += P.every[0] + rng() * (P.every[1] - P.every[0])) xs.push(x);
     return xs;
   });
+  const topLine = level.rails.filter((r) => r.top).map((r) => [tx(r.x0), tx(r.x1)]);
   for (const x of along) {
     if (holes.some(([a, b]) => x > a - 0.5 && x < b + 0.5)) continue;
+    if (topLine.some(([a, b]) => x > a - 1 && x < b + 1)) continue; // the top route's line hangs there instead
     const top = lane(x) + c + P.height;
     poles.push([x, top]);
     const pole = rectUv(SWATCH.pole);

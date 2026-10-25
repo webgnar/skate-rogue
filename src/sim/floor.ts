@@ -5,6 +5,7 @@ import { BOARD, fires, type EffectId, type Slots, type TriggerId } from '../boar
 import { PHYS, TILE } from '../physics/constants';
 import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
+import { TOP } from '../gen/top-route';
 import { Chaser } from './chaser';
 import { Swarm } from './drones';
 import type { Car, Level, PickupKind } from '../physics/level';
@@ -63,6 +64,7 @@ export class FloorSim {
   readonly taken: boolean[]; // pickups collected
   road: 'high' | 'low' | null = null; // which road the skater left the floor on
   readonly chopper: Chopper | null; // the helicopter escape's spotlight
+  up = false; // on the top route (src/gen/top-route.ts)
   readonly swarm: Swarm | null; // the drone swarm escape
   readonly chaser: Chaser | null; // act 3's chaser
   readonly trains: ElTrain[]; // the L's trains, one line per stretch of track
@@ -139,6 +141,12 @@ export class FloorSim {
     this.heat.step(this.skater, skaterEvents);
     //in the helicopter's light, the Heat climbs
     if (this.chopper?.step(this.skater)) this.heat.add(CHOPPER.heatPerSec / 60);
+    //up on the top route the police helicopter sees you (zack: "the upper route could have heat with a
+    //helicopter"): from getting onto a top wire or rooftop until you're back on the ground below
+    const sk = this.skater;
+    if (sk.rail?.top || sk.surface?.top) this.up = true;
+    else if (sk.grounded && sk.surface?.kind !== 'overpass') this.up = false;
+    if (this.up) this.heat.add(TOP.heatPerSec / 60);
     this.chaser?.step(this.skater, skaterEvents);
     if (this.heat.decoyFired) this.events.push({ type: 'decoy' });
     if (this.state === 'exit') return;
