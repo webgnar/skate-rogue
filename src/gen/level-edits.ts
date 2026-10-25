@@ -14,6 +14,8 @@ export interface FloorEdit {
   midSet?: [number, number]; // steps in a stairway before the last
   finalSet?: number; // the most steps the last stairway can have
   street?: number; // street pieces before the fork
+  climbTop?: number; // tiles each cable car takes you up after a street chase
+  chasePieces?: number; // street pieces in each flat chase between stretches of hill
 }
 
 export interface LevelEdits {

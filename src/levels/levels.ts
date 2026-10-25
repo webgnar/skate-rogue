@@ -69,7 +69,9 @@ const DIALS: Dial[] = [
   { key: 'gap', name: 'crest jump', help: 'tiles across the cross street', min: 1, max: 7, step: 1, pair: true },
   { key: 'midSet', name: 'stairway steps', help: 'steps in a stairway before the last', min: 2, max: 16, step: 1, pair: true },
   { key: 'finalSet', name: 'last stairway', help: 'the most steps in the floor\'s last (biggest) stairway', min: 4, max: 24, step: 1 },
-  { key: 'street', name: 'street pieces', help: 'street blocks between the hill and the fork', min: 1, max: 8, step: 1 },
+  { key: 'chasePieces', name: 'chase length', help: 'street pieces in each flat chase between hills', min: 1, max: 8, step: 1 },
+  { key: 'climbTop', name: 'cable car climb', help: 'tiles the cable car takes you up after a chase', min: 4, max: 40, step: 1 },
+  { key: 'street', name: 'last street', help: 'street pieces after the last hill, up to the fork', min: 1, max: 8, step: 1 },
 ];
 
 interface Built {
@@ -216,7 +218,8 @@ export function startLevels(): void {
     view.style.height = `${Number(view.querySelector('svg')?.getAttribute('height') ?? 0) + 14}px`;
     view.scrollLeft = keep;
     const tiles = Math.round(L.width / TILE);
-    const hill = Math.round(L.finaleX / TILE);
+    const hill = Math.round((L.hillSpans ?? [[0, L.finaleX]]).reduce((n, [a, b]) => n + b - a, 0) / TILE);
+    const chases = Math.max(0, (L.hillSpans?.length ?? 1) - 1);
     const ok = (r: string) => (r === 'exit' ? '<span class="ok">reaches the gate</span>' : `<span class="bad">${esc(r)}</span>`);
     const c = built.cruise;
     const pct = (n: number) => Math.round((100 * n) / Math.max(1, c.frames));
@@ -227,7 +230,7 @@ export function startLevels(): void {
           ? `<div class="warn">The first ${built.tries - 1} roll${built.tries > 2 ? 's' : ''} failed the bot, so the game rerolled${built.tierDrops ? ' and used easier street pieces' : ''}. Floors that pass first time hold their shape best.</div>`
           : '';
     $('lv-result').innerHTML = `
-      <span><b>${tiles}</b> tiles (${hill} hill, ${tiles - hill} street)</span>
+      <span><b>${tiles}</b> tiles (${hill} hill, ${tiles - hill} street${chases ? `, ${chases} chase${chases > 1 ? 's' : ''} + cable car${chases > 1 ? 's' : ''}` : ''})</span>
       <span>starts <b>${Math.round((L.streetY - L.startY) / TILE)}</b> up</span>
       <span>bot ${ok(c.result)} in <b>${(c.frames / 60).toFixed(1)}s</b> · ${pct(c.grind)}% grinding · ${pct(c.air)}% in the air · ${c.bot.slams.length} slams</span>
       <span>at gnar speed ${ok(built.gnar.result)}</span>

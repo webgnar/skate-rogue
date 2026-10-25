@@ -14,7 +14,10 @@ as text instead of writing the file (see Saving).
 
 - **The floor**, to scale, as the game builds it for the seed, floor and road at the top: the hill, its stairways
   and handrails, the street pieces, parked cars, coins and Stoken, where traffic is set off, the fork and the gate.
-  Each section is named (`hill ↓7 + rail`, `8 stairs + rail`, `3-tile jump`, `kicker ↑2`).
+  Each section is named (`hill ↓7 + rail`, `8 stairs + rail`, `3-tile jump`, `kicker ↑2`, `cable car ↑14`).
+  A floor with chases reads HILL, CHASE, HILL 2, and so on along the bottom: each chase is flat street, then a cable car
+  (the purple dashed slope) tows you up the next hill. Power lines over a block are thin dashed wires; the L's kicker
+  ramp is orange.
 - **The bot's line**: the floor validator's reference bot (no boons) skating it. White is rolling, yellow is in the
   air, green is grinding, a red ✕ is a slam. Under the view: how long it took, and whether it reaches the gate at
   cruising speed and at gnar speed. A floor has to pass both to ship. If the first roll fails, the game rerolls it,
@@ -35,9 +38,11 @@ one before the last. The last slot is the peak: the floor's biggest stairway.
 | drop | a retaining wall down onto the next street |
 | crest jump | jump the cross street onto the next block |
 | kicker | a short climb that throws you into the air |
+| chase | the hill ends in a flat street chase, then a cable car takes you up the next hill and the slots after it carry on down that one |
 
 **Dials.** Start height, steepness, block length, the flat at the top of each block, crest jump width, stairway
-steps, the last stairway's size, and how many street pieces come before the fork. Each shows the code's value; an
+steps, the last stairway's size, how long each chase is (street pieces), how high each cable car climbs, and how many
+street pieces come after the last hill before the fork. Each shows the code's value; an
 edited dial gets a yellow edge and a reset link. The hill's height is shared out between the beats, so a taller
 start makes every block and stairway bigger.
 

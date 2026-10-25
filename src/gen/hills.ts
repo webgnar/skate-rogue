@@ -91,8 +91,8 @@ export function hillDials(floor: number) {
     gap: e.gap ?? HILLS.gap(floor),
     midSet: e.midSet ?? HILLS.midSet(floor),
     finalSet: e.finalSet ?? HILLS.finalSet(floor),
-    climbTop: HILLS.climbTop(floor), // the cable car's climb (tiles) and the street pieces of each chase
-    chasePieces: HILLS.chasePieces(floor),
+    climbTop: e.climbTop ?? HILLS.climbTop(floor), // the cable car's climb (tiles) and the street pieces of each chase
+    chasePieces: e.chasePieces ?? HILLS.chasePieces(floor),
   };
 }
 
