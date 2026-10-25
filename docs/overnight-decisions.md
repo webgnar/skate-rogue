@@ -468,21 +468,6 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Next: Endless.** The GDD promises an Endless mode after a win (floors forever, its own leaderboard), and it
   isn't built. It's the next gameplay item unless zack says otherwise.
 
-- **The fork as lane switches (zack: the fork should come much earlier, chosen by luck, weaving in depth; then
-  "certain spots will force you into either lane a or b").** I put three options on a card. zack's follow-up
-  matched the first, and I built it (src/gen/lanes.ts).
-  - Two depth lanes run from a quarter of the way down the street, and the lane at the gate is the road (B high,
-    A low). The overpass is gone.
-  - There are three or four switches. Hops change your lane if you're in the air as you cross. Forced ones close a
-    lane with barriers. The first and last are always hops, so the road is never decided by the level alone.
-  - Each lane gets its own rails, ledges, cars and glass. Moving traffic keeps to lane A, so lane B gets more of its
-    own obstacles to make up for it.
-  - The validator clears each floor taking lane A at every hop, and again taking lane B, at both speeds.
-  - It's a prototype. The depth shift is 2 tiles, which reads subtly from the side camera, and the markers are
-    simple shapes for the level-design thread to dress.
-  - One playtest finding is left: a moving car pulled out of the lane while the bot was over it (floor 7, seed
-    15838). That's the existing pull-out-for-a-gap behaviour, not the lanes.
-
 ## Models thread: animation
 
 - **Reference photos stay out of the repo.** The repo is public, so photos and video frames (zack's and the web's)

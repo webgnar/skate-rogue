@@ -3,7 +3,7 @@
 // before canals, parked cars and glass, so they never sit where the street can't hold them.
 import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
-import { inHill, inLane, isStreetAt, type Car, type Level } from '../physics/level';
+import { inHill, isStreetAt, type Car, type Level } from '../physics/level';
 import { CROSS, CrossCar, type Intersection } from './cross';
 import { CarDoor, STOP, type BusStop } from './street';
 
@@ -106,9 +106,8 @@ export class Traffic {
 
   private blockedAt(x0: number, x1: number): boolean {
     for (let x = x0; x <= x1; x += TILE / 2) if (!isStreetAt(this.level, x)) return true;
-    //(traffic keeps to lane A: what's only in lane B isn't in its way)
-    if (this.level.cars.some((c) => c.x1 > x0 && c.x0 < x1 && inLane(c, 0))) return true;
-    if (this.level.glass.some((g) => g.x1 > x0 && g.x0 < x1 && inLane(g, 0))) return true;
+    if (this.level.cars.some((c) => c.x1 > x0 && c.x0 < x1)) return true;
+    if (this.level.glass.some((g) => g.x1 > x0 && g.x0 < x1)) return true;
     return false;
   }
 

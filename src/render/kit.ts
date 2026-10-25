@@ -6,7 +6,7 @@ import { model } from './models';
 import { buildProps } from './props';
 import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
-import { inHill, type Lane, type Level } from '../physics/level';
+import { inHill, type Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
 import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
@@ -18,9 +18,6 @@ import { quarters, type Quarter } from './quarters';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
-// lane B (src/gen/lanes.ts) runs this far back of the skate lane
-export const LANE_B_Z = -2;
-export const laneZ = (o: { track?: Lane }) => (o.track === 1 ? LANE_B_Z : 0);
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
@@ -214,15 +211,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   const stepTop = lambert(null, 0xb9b4c2);
   //rails up on the roofs stand on the roof, not on the street
   const postH = (px: number, y: number) => (inHill(level, px) ? Math.min(y, 0.75) : y);
-  //lane B's things (src/gen/lanes.ts) are built at the back: everything added while one is being built moves back
-  let laneShift = 0;
-  const add = kit.add.bind(kit);
-  kit.add = (...objs: THREE.Object3D[]) => {
-    for (const o of objs) o.position.z += laneShift;
-    return add(...objs);
-  };
   for (const s of level.surfaces) {
-    laneShift = laneZ(s);
     const w = toX(s.x1 - s.x0);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
@@ -325,7 +314,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //--- curved rails ---------------------------------------------------------------------------
   for (const rail of level.rails) {
     if (rail.wire) continue; // a power line: the hillside draws it with its poles
-    laneShift = laneZ(rail);
     const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
     const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.07, 6), metal);
     kit.add(tube);
@@ -341,7 +329,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
 
   //--- parked cars ----------------------------------------------------------------------------
   level.cars.forEach((car, i) => {
-    laneShift = laneZ(car);
     const x0 = toX(car.x0);
     const x1 = toX(car.x1);
     const bottom = toY(level, car.bottom);
@@ -354,7 +341,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //--- broken glass ----------------------------------------------------------------------------
   const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe8ff, emissive: 0x204050 });
   for (const g of level.glass) {
-    laneShift = laneZ(g);
     for (let px = toX(g.x0); px < toX(g.x1); px += 0.35) {
       const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.12), glassMat);
       shard.position.set(px + rng() * 0.2, 0.06, (rng() - 0.5) * 1.5);
@@ -362,7 +348,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       kit.add(shard);
     }
   }
-  laneShift = 0;
 
   //--- the L over Chicago's street, round its bends into the city (el-view.ts) -----------------
   buildElTrack(level, kit);
@@ -451,62 +436,18 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   gate.userData.gate = true; // gate-fx.ts fills the arch
   kit.add(gate);
 
-  //--- lane switches (src/gen/lanes.ts): a dashed divider between the lanes from the first switch, yellow chevrons
-  //at a hop switch, striped barriers closing the other lane at a forced one, and lane B's own gate ---------------
-  if (level.fork?.switches?.length) {
-    const sw = level.fork.switches;
-    const dividerZ = LANE_B_Z / 2;
-    const dash = lambert(null, 0xf2f2e8);
-    for (let px = toX(sw[0].x); px < toX(level.exitX); px += 1.5) {
-      if (!isStreetAtTile(level, px)) continue;
-      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.12).rotateX(-Math.PI / 2), dash);
-      d.position.set(px, 0.012, dividerZ);
-      kit.add(d);
-    }
-    const yellow = new THREE.MeshBasicMaterial({ color: 0xffd23f });
-    const stripe = new THREE.MeshBasicMaterial({ map: barrierTexture() });
-    for (const s of sw) {
-      const x = toX(s.x);
-      if (s.to === undefined) {
-        //a hop switch: chevrons on the divider, pointing both ways across it
-        for (const dz of [-0.45, 0.45]) {
-          const c = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.35).rotateX(-Math.PI / 2), yellow);
-          c.rotation.y = dz > 0 ? 0.6 : -0.6;
-          c.position.set(x, 0.015, dividerZ + dz);
-          kit.add(c);
-        }
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.6), postMat);
-        post.position.set(x - 0.6, 0.8, dividerZ);
-        const sign = new THREE.Mesh(new THREE.CircleGeometry(0.4, 16), yellow);
-        sign.position.set(x - 0.6, 1.75, dividerZ + 0.07);
-        kit.add(post, sign);
-      } else {
-        //a forced switch: the closed lane gets a run of striped barriers
-        const z = s.to === 1 ? 0 : LANE_B_Z;
-        for (let i = 0; i < 3; i++) {
-          const bar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.7, 0.25), stripe);
-          bar.position.set(x - 0.4 + i * 1.3, 0.45, z + (i % 2 ? 0.35 : -0.35));
-          kit.add(bar);
-        }
-      }
-    }
-  }
-
-  //--- the fork: a second gate (up on the overpass, or in lane B) and signs for both roads -----------------------
+  //--- the fork: a second gate up on the overpass and signs for both roads ----------------------
   if (level.fork) {
     const fork = level.fork;
-    const lanes = !!fork.switches?.length;
     const hy = toY(level, fork.y);
     const high = gate.clone();
     high.material = new THREE.MeshBasicMaterial({ color: 0xffd23f });
     high.userData = { gate: true };
     high.scale.setScalar(0.8);
-    high.position.set(toX(level.exitX) + 0.5, lanes ? 0 : hy, lanes ? LANE_B_Z : -0.2);
-    if (lanes) high.scale.setScalar(1);
+    high.position.set(toX(level.exitX) + 0.5, hy, -0.2);
     kit.add(high);
-    //signs a few tiles before the overpass (or the first lane switch), on a gantry over the street: high road (lane
-    //B) on top, low road (lane A) under it
-    const sx = toX(fork.switches?.[0]?.x ?? fork.x0) - 7;
+    //signs a few tiles before the overpass, on a gantry over the street: high road on top, low road under it
+    const sx = toX(fork.x0) - 7;
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, hy + 3.2, 0.18), postMat);
     post.position.set(sx - 2.1, (hy + 3.2) / 2, -1.3);
     kit.add(post);
@@ -856,32 +797,4 @@ function roadSign(road: Road, high: boolean): THREE.Mesh {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return new THREE.Mesh(new THREE.PlaneGeometry(4, 1.5), new THREE.MeshBasicMaterial({ map: tex }));
-}
-
-// is there street under this x (in tiles)
-function isStreetAtTile(level: Level, x: number): boolean {
-  return level.street[Math.floor(x)] ?? false;
-}
-
-// orange and white road-works stripes for a lane closure
-function barrierTexture(): THREE.Texture {
-  const c = document.createElement('canvas');
-  c.width = 64;
-  c.height = 16;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 64, 16);
-  ctx.fillStyle = '#ff6a1a';
-  for (let x = -16; x < 64; x += 16) {
-    ctx.beginPath();
-    ctx.moveTo(x, 16);
-    ctx.lineTo(x + 8, 0);
-    ctx.lineTo(x + 16, 0);
-    ctx.lineTo(x + 8, 16);
-    ctx.fill();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.magFilter = THREE.NearestFilter;
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
 }

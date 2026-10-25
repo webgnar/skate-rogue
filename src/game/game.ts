@@ -57,7 +57,7 @@ import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
 import { SkaterRig } from '../render/skater-rig';
 import { trickName } from '../physics/tricks';
-import { LANE_B_Z, toX, toY } from '../render/kit';
+import { toX, toY } from '../render/kit';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
 import { FEEL } from '../physics/feel';
@@ -488,7 +488,6 @@ export class Game {
       this.reported = 0;
     }
     this.floorFrames = 0;
-    if (!from) this.sprite.mesh.position.z = 0; // every floor starts in lane A (rolling on, it eases there)
     this.run.scoreScale = mods.scoreScale;
     this.run.slamStoke = mods.slamStoke;
     this.run.stokenScale = mods.stokenScale;
@@ -1024,9 +1023,6 @@ export class Game {
     this.sprite.mesh.position.x = toX(x);
     this.sprite.mesh.position.y = toY(this.level, y);
     const sk = this.skater;
-    //weaving between lanes A and B (src/gen/lanes.ts): ease over to the lane's depth, like a car changing lanes
-    const laneTo = sk.lane === 1 ? LANE_B_Z : 0;
-    this.sprite.mesh.position.z += (laneTo - this.sprite.mesh.position.z) * Math.min(1, dt * 10);
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
     this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
     this.sprite.setGear(this.sim.gear);
@@ -1279,13 +1275,6 @@ export class Game {
       case 'hop':
         this.hud.callout('CAR HOP!' + combo, 'good');
         break;
-      case 'lane': {
-        //which road the lane leads to, from the fork's signs
-        const fork = this.level.fork;
-        const to = fork ? label(e.lane === 1 ? fork.high : fork.low) : '';
-        this.hud.callout(`LANE ${e.lane === 1 ? 'B' : 'A'}${to ? ` · ${to}` : ''}`, 'good');
-        break;
-      }
       case 'kicker':
         this.view.zoom.trick();
         this.hud.callout('TAILGATE BOMB!' + combo, 'trick');
