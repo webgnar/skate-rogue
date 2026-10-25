@@ -7,6 +7,7 @@ import { validatedFloor } from '../src/gen/validate';
 import { floorTwist } from '../src/gen/twists';
 import { FloorSim } from '../src/sim/floor';
 import { Pilot } from '../src/bot/pilot';
+import { surfaceY } from '../src/physics/level';
 import { SKY } from '../src/sim/sky';
 
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
@@ -22,6 +23,22 @@ describe('the top route', () => {
       expect(roofs.length).toBeGreaterThan(0);
       for (const r of roofs) expect(r.y).toBe(l.streetY - TOP.height);
       if (l.fork) expect(l.fork.y).toBe(l.streetY - TOP.height);
+    }
+  });
+
+  it("the power line hangs out of an ollie's reach, and a launch ramp on the road gets you up to it", () => {
+    for (let seed = 1; seed <= 6; seed++) {
+      const l = chicago(seed * 31, 3);
+      const ramps = l.surfaces.filter((s) => s.launch);
+      for (const w of l.rails.filter((r) => r.top)) {
+        //a ramp just before it
+        expect(ramps.some((r) => r.x1 <= w.xs[0] && w.xs[0] - r.x1 <= 2 * 32)).toBe(true);
+        //never closer to the road under it than an ollie and a flip reach (100 px)
+        for (let i = 0; i < w.xs.length; i += 4) {
+          const under = l.surfaces.filter((s) => s.hill && w.xs[i] >= s.x0 && w.xs[i] <= s.x1).map((s) => surfaceY(s, w.xs[i]));
+          for (const g of under) expect(g - w.ys[i]).toBeGreaterThan(100);
+        }
+      }
     }
   });
 

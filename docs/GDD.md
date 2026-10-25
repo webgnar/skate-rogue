@@ -164,8 +164,9 @@ carries into the next floor at half, and the spot can turn up from the floor 3 f
 remove a curse once curses exist), then you skate the boon street after it.
 
 **The top route** (built Oct 25, 2026; zack wanted a top or bottom route through the whole floor, "vertically, not
-horizontally"). On hill floors, a power line runs from about halfway down each stretch of hill. Ollie off the edge
-under where it starts to catch it, then grind it all the way down. Over the street chases, rooftops carry the route on at the gate's
+horizontally"). On hill floors, a power line hangs high over each stretch of hill from about halfway down, out of an
+ollie's reach. A launch ramp on the road under its start gets you up: pop off the lip to catch it, then grind it all
+the way down. On the street chases a launch ramp before a rooftop is the way back up. Over the street chases, rooftops carry the route on at the gate's
 height, so whichever height you reach the gate at decides your road. Up there there's no traffic, but the police
 helicopter is on you: clean skating and grinding don't cool your Heat, and it climbs slowly (tricks still cool it).
 Pigeons sit on the rooftops and the wire, so ollie them or take a bird strike, which costs speed and a little Heat.

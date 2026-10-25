@@ -585,7 +585,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 ## Top route (power lines and rooftops)
 
-- [ ] On a hill, ollie off the crest where the power line dips close: you land on the wire and grind it all the way down, past the poles, without getting kicked off.
+- [ ] On a hill, the power line hangs high: you can't ollie or flip up to it. About halfway down there's a launch ramp on the road: pop off its lip to land on the wire and grind it down. Roll off without popping and you stay on the street.
+- [ ] On a street chase, a launch ramp before a rooftop gets you back up there.
 - [ ] Off the wire's end you land on a rooftop, and ollies at each rooftop's end carry you on to the next. Miss one and you're back on the street.
 - [ ] Up top, the helicopter flies in over you with its light on you and your Heat climbs slowly. Tricks still cool it. Back on the street, the helicopter peels away.
 - [ ] Pigeons sit on rooftops and on the wire. Ollie over them and they fly off. Skate into them for "BIRD STRIKE!", a bit less speed and a little Heat.
