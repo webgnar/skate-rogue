@@ -2,6 +2,7 @@
 // other worlds' landmarks and act 3's chasers. Loaded once at startup; anything that fails to load falls back to the
 // code-built version (or, for a landmark, isn't drawn).
 import * as THREE from 'three';
+import { railMetal } from './rail-metal';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const parts = new Map<string, THREE.Mesh>();
@@ -95,6 +96,7 @@ export function model(name: string, paint?: number): THREE.Mesh | null {
   const mats = [src.material].flat().map((m) => {
     const std = m as THREE.MeshStandardMaterial;
     if (std.name === 'paint' && paint !== undefined) return new THREE.MeshLambertMaterial({ color: paint });
+    if (std.name === 'elRail') return railMetal(false); // the L's running rails: grindable steel
     let mat = shared.get(std.name);
     if (!mat) {
       mat = LIT.has(std.name)

@@ -1,6 +1,7 @@
 // Builds a floor's 3D kit from the physics level: street slabs, canals, buildings under rooftops, ledges, rails,
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
+import { railBar, railMetal, railUv } from './rail-metal';
 import { BOON_COLORS } from '../boons/defs';
 import { hasModel, model } from './models';
 import { buildParkedCars } from './car-damage';
@@ -330,7 +331,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       bank.position.set(toX(s.x0), 0, BLOCK_BACK);
       kit.add(bank);
     } else {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.14), metal);
+      const bar = new THREE.Mesh(railBar(w), railMetal());
       bar.position.set(x, y - 0.06, 0);
       kit.add(bar);
       for (let px = toX(s.x0) + 0.3; px < toX(s.x1); px += 2) {
@@ -346,7 +347,8 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   for (const rail of level.rails) {
     if (rail.wire) continue; // a power line: the hillside draws it with its poles
     const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.07, 6), metal);
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tube = new THREE.Mesh(railUv(new THREE.TubeGeometry(curve, 64, 0.07, 6), curve.getLength()), railMetal());
     kit.add(tube);
     for (const i of [0, Math.floor(pts.length / 2), pts.length - 1]) {
       const p = pts[i];
