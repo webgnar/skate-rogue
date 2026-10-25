@@ -45,6 +45,7 @@ import { clockFor, mixMood, moodAt, rainLevel, rainy, type Mood } from '../rende
 import { puddleSpots } from '../render/puddles';
 import { FloorSim } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
+import { SkyView } from '../render/sky-view';
 import { EscapeFx } from '../render/escape-fx';
 import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
@@ -210,6 +211,8 @@ export class Game {
   private dripT = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
   private readonly chopper = new ChopperView();
+  private readonly topChopper = new ChopperView(); // over the top route (src/sim/sky.ts)
+  private readonly skyView = new SkyView();
   private readonly droneView = new DroneView();
   private readonly chaserView = new ChaserView();
   private readonly pedView = new PedView();
@@ -286,6 +289,7 @@ export class Game {
     this.board = newBoard(DECK_SLOTS[meta.loadout.deck]);
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
+    this.skyView.reset(this.sim.sky);
     this.view.front.add(this.sprite.mesh);
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
@@ -294,7 +298,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
+    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -480,6 +484,7 @@ export class Game {
     const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
+    this.skyView.reset(this.sim.sky);
     if (from) this.sim.skater.carryOn(from.skater, from.dx, from.dy);
     //the last escape ends the run at its gate; every other floor rolls on into the next
     this.sim.rollOn = this.following().length > 0;
@@ -1030,6 +1035,9 @@ export class Game {
     this.sprite.hold(this.state === 'caught' ? 'busted' : this.state === 'skate' ? null : 'idle');
     this.impacts.update(dt);
     this.chopper.update(this.level, this.sim.chopper, dt);
+    const top = this.sim.sky.chopper;
+    this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt);
+    this.skyView.update(this.level, this.sim.sky, this.skater.x, this.skater.y, this.sim.up, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, dt);
     this.twistView.update(dt, this.skater);
@@ -1249,7 +1257,7 @@ export class Game {
     if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type === 'smash') return this.smashed(e);
     if (e.type === 'wear') return this.worn(e.part, e.level);
-    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip') {
+    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip' && e.type !== 'birds') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;
       this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));
@@ -1294,6 +1302,10 @@ export class Game {
         break;
       case 'decoy':
         this.hud.callout('DECOY! HEAT 35', 'good');
+        break;
+      case 'birds':
+        this.hud.callout('BIRD STRIKE!', 'bad');
+        this.view.shake(0.2);
         break;
       case 'near':
         //a slow-mo beat on a close call (GDD: Camera)

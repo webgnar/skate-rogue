@@ -14,6 +14,7 @@ import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic } from '../traffic/traffic';
 import { ElTrain } from '../traffic/el';
+import { Sky, SKY } from './sky';
 import { crossed, freshGear, GEAR, GEAR_PARTS, gearScale, type Gear, type GearPart } from '../run/gear';
 
 export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
@@ -25,6 +26,7 @@ export type FloorEvent =
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'decoy' } // the Decoy boon pulled the cruiser back
+  | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
   | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' };
@@ -65,6 +67,7 @@ export class FloorSim {
   road: 'high' | 'low' | null = null; // which road the skater left the floor on
   readonly chopper: Chopper | null; // the helicopter escape's spotlight
   up = false; // on the top route (src/gen/top-route.ts)
+  readonly sky: Sky; // its pigeons and helicopter
   readonly swarm: Swarm | null; // the drone swarm escape
   readonly chaser: Chaser | null; // act 3's chaser
   readonly trains: ElTrain[]; // the L's trains, one line per stretch of track
@@ -97,6 +100,7 @@ export class FloorSim {
     this.taken = level.pickups.map(() => false);
     this.broken = level.props.map(() => false);
     const esc = level.escape;
+    this.sky = new Sky(level);
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
     this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX) : null;
@@ -147,6 +151,10 @@ export class FloorSim {
     if (sk.rail?.top || sk.surface?.top) this.up = true;
     else if (sk.grounded && sk.surface?.kind !== 'overpass') this.up = false;
     if (this.up) this.heat.add(TOP.heatPerSec / 60);
+    if (this.sky.step(sk, this.up)) {
+      this.heat.add(SKY.strikeHeat);
+      this.events.push({ type: 'birds' });
+    }
     this.chaser?.step(this.skater, skaterEvents);
     if (this.heat.decoyFired) this.events.push({ type: 'decoy' });
     if (this.state === 'exit') return;

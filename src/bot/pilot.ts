@@ -116,6 +116,8 @@ export class Pilot {
     //(not where another rail picks up right where this one ends: the top route's wires, pole to pole)
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) pressed = true;
     if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
+    //pigeons sitting on the top route ahead: ollie over them
+    if ((onSurface || sk.mode === 'rail') && sim.sky.flocks.some((f) => f.state === 'perch' && f.x - sk.x > 0 && f.x - sk.x < 8 * Math.max(sk.hsp, sk.railV) && Math.abs(f.y - sk.y) < 20)) pressed = true;
     // falling with no street ahead: flip for more air
     //(unless this fall already lands on a manual pad)
     if (sk.mode === 'air' && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOn(level, sk, sk.x, sk.y, sk.vsp, false)) {

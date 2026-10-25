@@ -74,7 +74,8 @@ export class ChopperView {
     this.group.visible = false;
   }
 
-  update(level: Level, ch: Chopper | null, dt: number): void {
+  // (the escape's, or the top route's: src/sim/sky.ts)
+  update(level: Level, ch: Pick<Chopper, 'x' | 'v' | 'lit' | 'covers'> | null, dt: number): void {
     this.group.visible = ch !== null;
     if (!ch) return;
     this.t += dt;

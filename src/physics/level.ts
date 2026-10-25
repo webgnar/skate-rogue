@@ -1,4 +1,5 @@
 // A floor as the physics sees it: street columns, one-way surfaces, curved rails and parked cars, in pixels.
+import type { FlockSite } from '../sim/sky';
 import type { Prop } from '../gen/props';
 import type { Intersection } from '../traffic/cross';
 import type { BusStop } from '../traffic/street';
@@ -207,6 +208,7 @@ export interface Level {
   // every stretch of hill, px: the opening descent [0, finaleX] and the later ones between the street chases
   // (a cable car up from the street, then down again); left out = just the opening descent
   hillSpans?: [number, number][];
+  flocks?: FlockSite[]; // pigeons on the top route (src/sim/sky.ts)
 }
 
 // on a stretch of hill (or the opening descent), not the street
