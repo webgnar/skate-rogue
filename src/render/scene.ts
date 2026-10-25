@@ -1,8 +1,8 @@
 // The 2.5D view: renderer, Lou Gnar's camera (see camera.ts), lights, sky and skyline.
 import * as THREE from 'three';
-import type { Level } from '../physics/level';
+import type { Lane, Level } from '../physics/level';
 import { LouZoom, viewHeight } from './camera';
-import { buildKit, toX, toY } from './kit';
+import { buildKit, showLane, toX, toY } from './kit';
 import { NightCity } from './night';
 import { FX } from './fx-settings';
 import { batchStatic } from './batch';
@@ -21,6 +21,7 @@ import { Puddles } from './puddles';
 const NO_CUT = 1e6;
 // the floor just left stays drawn behind the skater until the camera is this many tiles into the next one
 const BEHIND_TILES = 40;
+const LANE_RISE = 0.32; // the camera rises by this share of its distance over two streets (src/gen/lanes.ts)
 
 // the next floor, built ahead of time past the end of this one (src/game/game.ts runs a whole run as one street):
 // its kit is built a step a frame so it never stalls the game, then waits, hidden, until the skater nears the join
@@ -416,6 +417,15 @@ export class StreetView {
     if (this.kit) this.setLevel(this.level, this.seed, this.floor);
   }
 
+  // the lane the skater is in stays solid, the other fades back (kit.ts showLane)
+  laneView = 0; // 1 where the street runs as two: the camera rises to look down on both streets (eases)
+  laneZ = 0; // the skater's depth: the camera slides with them to whichever street they're on
+  private laneTilt = 0;
+
+  showLane(lane: Lane): void {
+    if (this.kit) showLane(this.kit, lane);
+  }
+
   // lock the camera on the skater's feet at (px, py), zoomed for what they're doing; dt in seconds
   follow(px: number, py: number, dt = 0): void {
     this.camX = toX(px);
@@ -431,8 +441,10 @@ export class StreetView {
     const sy = (Math.random() - 0.5) * this.shakeAmt;
     this.shakeAmt *= Math.pow(0.86, dt * 60);
     //a little above the skater looking down at them, so the street reads in depth; the feet stay centred
-    this.camera.position.set(this.camX + sx, this.camY + this.dist * 0.18 + sy, this.dist);
-    this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0.25);
+    //(higher over the two streets, so the other one reads as a street beside yours; and in line with yours)
+    this.laneTilt += (this.laneView - this.laneTilt) * Math.min(1, dt * 2);
+    this.camera.position.set(this.camX + sx, this.camY + this.dist * (0.18 + LANE_RISE * this.laneTilt) + sy, this.dist + this.laneZ);
+    this.camera.lookAt(this.camX + sx * 0.6, this.camY + sy * 0.6, 0.25 + this.laneZ);
     this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
     this.punchAmt *= Math.pow(0.91, dt * 60);
     //far away: barely moves. After a floor joins on, the skyline eases back down to where it sits

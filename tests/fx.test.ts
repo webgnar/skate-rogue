@@ -367,7 +367,7 @@ describe('kit merge', () => {
     expect(slabs).toHaveLength(4);
     batchStatic(root);
     inkify(root, { outline: (m) => !m.userData.noInk && solid(m) });
-    const ink = mergeInk(root, slabs)!;
+    const ink = mergeInk(root, slabs)[0];
     expect(ink.userData.ink).toBe(true);
     // 4 fronts + 1 side batch + 1 top batch + the sign + its own outline + the merged ink
     expect(draws(root)).toBe(9);
@@ -535,5 +535,45 @@ describe('escape set pieces', () => {
     log.length = 0;
     fx.chaser('guards', 0, 0, true, 1 / 60);
     expect(log[0].rate).toBeGreaterThan(slow);
+  });
+});
+
+import { showLane } from '../src/render/kit';
+
+describe('twin streets: the lane you are not in fades', () => {
+  it('batches and outlines each lane apart, and fades only the other lane', () => {
+    const root = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+    const box = (track?: 0 | 1, x = 0) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+      m.position.x = x;
+      if (track !== undefined) m.userData.track = track;
+      root.add(m);
+    };
+    box(undefined, 0);
+    box(undefined, 2);
+    box(0, 4);
+    box(0, 6);
+    box(1, 8);
+    box(1, 10);
+    batchStatic(root);
+    inkify(root, { toon: false });
+    mergeInk(root);
+    const meshes = root.children.filter((o): o is THREE.Mesh => o instanceof THREE.Mesh);
+    const solids = meshes.filter((m) => !m.userData.ink);
+    const inks = meshes.filter((m) => m.userData.ink);
+    expect(solids.map((m) => m.userData.track ?? '-').map(String).sort()).toEqual(['-', '0', '1']);
+    expect(inks.map((m) => m.userData.track ?? '-').map(String).sort()).toEqual(['-', '0', '1']);
+    showLane(root, 0);
+    const of = (t: 0 | 1 | undefined) => solids.find((m) => m.userData.track === t)!;
+    expect((of(1).material as THREE.Material).opacity).toBeLessThan(0.5);
+    expect((of(0).material as THREE.Material).opacity).toBe(1);
+    expect((of(undefined).material as THREE.Material).opacity).toBe(1);
+    expect(inks.find((m) => m.userData.track === 1)!.visible).toBe(false);
+    //switching back restores it, and the shared material was never touched
+    showLane(root, 1);
+    expect((of(1).material as THREE.Material).opacity).toBe(1);
+    expect((of(0).material as THREE.Material).opacity).toBeLessThan(0.5);
+    expect(mat.opacity).toBe(1);
   });
 });

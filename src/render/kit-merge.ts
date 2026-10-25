@@ -48,10 +48,12 @@ export function splitSlabs(root: THREE.Object3D): THREE.BufferGeometry[] {
       piece.scale.copy(mesh.scale);
       piece.renderOrder = mesh.renderOrder;
       piece.userData.noInk = true;
+      if (mesh.userData.track !== undefined) piece.userData.track = mesh.userData.track;
       parent.add(piece);
     }
     const box = geo.clone();
     box.clearGroups();
+    box.userData.track = mesh.userData.track;
     whole.push(box.applyMatrix4(local(mesh, root)));
     mesh.removeFromParent();
     geo.dispose();
@@ -76,8 +78,9 @@ function hullGeometry(src: THREE.BufferGeometry, m: THREE.Matrix4 | null): THREE
   return g;
 }
 
-// merge the kit's static outlines, and outlines for the split boxes, into one mesh
-export function mergeInk(root: THREE.Object3D, whole: THREE.BufferGeometry[] = []): THREE.Mesh | null {
+// merge the kit's static outlines, and outlines for the split boxes, into one mesh (one a lane, where a floor has
+// lanes: the lane the skater isn't in loses its outlines)
+export function mergeInk(root: THREE.Object3D, whole: THREE.BufferGeometry[] = []): THREE.Mesh[] {
   root.updateMatrixWorld(true);
   const hulls: THREE.Mesh[] = [];
   root.traverse((o) => {
@@ -86,18 +89,29 @@ export function mergeInk(root: THREE.Object3D, whole: THREE.BufferGeometry[] = [
     if (!p || p instanceof THREE.InstancedMesh || p instanceof THREE.SkinnedMesh || live(p) || !p.visible) return;
     hulls.push(o);
   });
-  const geos = [...hulls.map((h) => hullGeometry(h.geometry, local(h, root))), ...whole.map((g) => hullGeometry(g, null))];
+  const lanes = new Map<string, THREE.BufferGeometry[]>();
+  const put = (track: unknown, g: THREE.BufferGeometry) => {
+    const k = String(track ?? '-');
+    lanes.set(k, [...(lanes.get(k) ?? []), g]);
+  };
+  for (const h of hulls) put(h.parent!.userData.track, hullGeometry(h.geometry, local(h, root)));
+  for (const g of whole) put(g.userData.track, hullGeometry(g, null));
   for (const g of whole) g.dispose();
-  if (!geos.length) return null;
-  const merged = mergeGeometries(geos);
-  for (const g of geos) g.dispose();
-  if (!merged) return null;
+  const out: THREE.Mesh[] = [];
+  for (const [k, geos] of lanes) {
+    const merged = mergeGeometries(geos);
+    for (const g of geos) g.dispose();
+    if (!merged) continue;
+    const ink = new THREE.Mesh(merged, outlineMaterial());
+    ink.name = 'ink';
+    ink.userData.ink = true;
+    ink.userData.inkMerged = true;
+    if (k !== '-') ink.userData.track = Number(k);
+    ink.frustumCulled = false;
+    out.push(ink);
+  }
+  if (!out.length) return out;
   for (const h of hulls) h.removeFromParent();
-  const ink = new THREE.Mesh(merged, outlineMaterial());
-  ink.name = 'ink';
-  ink.userData.ink = true;
-  ink.userData.inkMerged = true;
-  ink.frustumCulled = false;
-  root.add(ink);
-  return ink;
+  root.add(...out);
+  return out;
 }
