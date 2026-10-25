@@ -16,6 +16,7 @@ import type { BiomeId } from './biomes';
 import { buildForeground, buildHill } from './hillside';
 import { buildElTrack, elCuts } from './el-view';
 import { quarters, type Quarter } from './quarters';
+import { projectSurfaces, surface } from './surfaces';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
@@ -63,7 +64,8 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   const fusedAt = (x: number) => fused.find((q) => x >= q.x0 && x < q.x1) ?? null;
   const rng = makeRng(level.layout.seed * 31 + level.layout.floor);
   const cols = level.street.length;
-  const sideMat = lambert(null, skin.side);
+  const sideMat = surface('concrete', skin.side);
+  const brickMat = surface('brick', skin.side); // buildings' sides
 
   //--- the alley far below the descent: you only see it if you fall ---------------------------
   const first = Math.round(toX(level.finaleX));
@@ -71,7 +73,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   if (level.hills) buildHill(level, kit);
   if (city) buildForeground(level, kit);
   if (first > 0 && !level.hills) {
-    const alley = slab(first, 3, STREET_DEPTH, lambert(null, 0x18121f), lambert(null, 0x221a2c), sideMat);
+    const alley = slab(first, 3, STREET_DEPTH, surface('concrete', 0x18121f), surface('asphalt', 0x221a2c), sideMat);
     alley.position.set(first / 2, -2.5, STREET_BACK + STREET_DEPTH / 2);
     kit.add(alley);
   }
@@ -131,7 +133,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       const pit = skin.pit === 'city' ? { top: CITY.waterTop, fill: CITY.water } : skin.pit;
       const front = [new Array(n).fill(pit.top), new Array(n).fill(pit.fill), new Array(n).fill(pit.fill)];
       const tex = tileTexture(front, skin.pit === 'city' ? cityTiles() : undefined);
-      const water = slab(n, 2.4, STREET_DEPTH, lambert(tex), lambert(null, 0x3a5fb0), sideMat);
+      const water = slab(n, 2.4, STREET_DEPTH, lambert(tex), surface('water', 0x3a5fb0), sideMat);
       water.position.set(x, -1.8, STREET_BACK + STREET_DEPTH / 2);
       kit.add(water);
     }
@@ -163,7 +165,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       if (b1 <= b0) continue;
       const q = fusedAt(b0);
       const rows = q ? [0, 1].map((r) => Array.from({ length: b1 - b0 }, (_, i) => q.skin.block.fill[((b0 + i) * (r ? 5 : 7) + r * 3) % q.skin.block.fill.length])) : wallRows.map((row) => row.slice(b0, b1));
-      const wall = slab(b1 - b0, 2, 0.5, lambert(q ? tileTexture(rows, q.sheet) : tileTexture(rows)), lambert(null, q ? q.skin.side : city ? 0x6b5a55 : skin.side), sideMat);
+      const wall = slab(b1 - b0, 2, 0.5, lambert(q ? tileTexture(rows, q.sheet) : tileTexture(rows)), surface('pavers', q ? q.skin.side : city ? 0x6b5a55 : skin.side), sideMat);
       wall.position.set((b0 + b1) / 2, 1, STREET_BACK - 0.25);
       kit.add(wall);
     }
@@ -205,7 +207,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       //some of a quarter's buildings are its world's blocks
       const q = fusedAt(bx);
       const face = q && rng() < 0.5 ? blockMat(w, h, q.skin, 0xd8c8e8, q.sheet) : city ? facadeMat(w, h, t, 0xd8c8e8) : blockMat(w, h, skin, 0xd8c8e8);
-      const b = slab(w, h, 4, face, lambert(null, 0x2b2638), sideMat);
+      const b = slab(w, h, 4, face, surface('roof', 0x2b2638), brickMat);
       b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - back);
       kit.add(b);
     }
@@ -215,8 +217,8 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //--- one-way surfaces: buildings under rooftops, floating ledges, flat rails -------------------
   const metal = new THREE.MeshLambertMaterial({ color: 0xb8bcc8 });
   const postMat = new THREE.MeshLambertMaterial({ color: 0x55596a });
-  const concrete = lambert(null, 0x8c8794);
-  const stepTop = lambert(null, 0xb9b4c2);
+  const concrete = surface('concrete', 0x8c8794);
+  const stepTop = surface('pavers', 0xb9b4c2);
   //rails up on the roofs stand on the roof, not on the street
   const postH = (px: number, y: number) => (inHill(level, px) ? Math.min(y, 0.75) : y);
   for (const s of level.surfaces) {
@@ -230,19 +232,19 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     if (s.kind === 'roof') {
       //a roof at street level is just more street (the descent's last run-out)
       if (y < 0.5) {
-        const pad = slab(w, 3, STREET_DEPTH, lambert(null, 0x3a3640), lambert(null, 0x6d6a76), sideMat);
+        const pad = slab(w, 3, STREET_DEPTH, surface('concrete', 0x3a3640), surface('asphalt', 0x6d6a76), sideMat);
         pad.position.set(x, y - 1.5, STREET_BACK + STREET_DEPTH / 2);
         kit.add(pad);
         continue;
       }
       const t = CITY.facade[randInt(rng, CITY.facade.length)];
       const face = city ? facadeMat(Math.round(w), Math.ceil(y), t) : blockMat(Math.round(w), Math.ceil(y), skin);
-      const b = slab(w, y, BLOCK_DEPTH, face, lambert(null, city ? 0x6a6478 : skin.side), sideMat);
+      const b = slab(w, y, BLOCK_DEPTH, face, surface('roof', city ? 0x6a6478 : skin.side), brickMat);
       b.position.set(x, y / 2, BLOCK_Z);
       kit.add(b);
     } else if (s.kind === 'overpass') {
       //a concrete deck over the street on pillars behind the lane, with a railing at the back
-      const deck = slab(w, 0.45, 2.9, lambert(null, 0x6f6a7a), lambert(null, 0x8d889a), sideMat);
+      const deck = slab(w, 0.45, 2.9, surface('concrete', 0x6f6a7a), surface('asphalt', 0x8d889a), sideMat);
       deck.position.set(x, y - 0.225, 0.05);
       kit.add(deck);
       const built = model('OverpassPillar'); // art/street.py: pillars with flared caps, a railing with balusters
@@ -278,7 +280,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       continue;
     } else if (s.kind === 'ledge' && s.top) {
       //the top route over the street (src/gen/top-route.ts): a tar-and-gravel roof deck on steel legs behind the lane
-      const deck = slab(w, 0.4, 2.6, lambert(null, 0x5d5662), lambert(null, 0x48424f), sideMat);
+      const deck = slab(w, 0.4, 2.6, surface('concrete', 0x5d5662), surface('roof', 0x48424f), sideMat);
       deck.position.set(x, y - 0.2, -0.2);
       kit.add(deck);
       for (let px = toX(s.x0) + 0.6; px < toX(s.x1); px += 3.5) {
@@ -291,7 +293,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       row[0] = skin.ledge[0];
       row[row.length - 1] = skin.ledge[2];
       //as deep as the blocks in front of the skater (zack: platforms have to stick out toward the camera), less at the back
-      const l = slab(w, 0.35, BLOCK_FRONT + LEDGE_BACK, lambert(tileTexture([row])), lambert(null, 0x8a6a50), sideMat);
+      const l = slab(w, 0.35, BLOCK_FRONT + LEDGE_BACK, lambert(tileTexture([row])), surface('planks', 0x8a6a50), sideMat);
       l.position.set(x, y - 0.175, (BLOCK_FRONT - LEDGE_BACK) / 2);
       kit.add(l);
     } else if (s.kind === 'stairs') {
@@ -311,7 +313,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       shape.lineTo(w, toY(level, s.y1!));
       shape.closePath();
       const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.6, bevelEnabled: false });
-      const ramp = new THREE.Mesh(geo, [lambert(null, 0xc89a5a), lambert(null, 0x9aa4b4)]);
+      const ramp = new THREE.Mesh(geo, [surface('plywood', 0xc89a5a), surface('plate', 0x9aa4b4)]);
       ramp.position.set(toX(s.x0), 0, -0.55);
       kit.add(ramp);
     } else if (s.kind === 'bank') {
@@ -400,9 +402,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       }
     }
   } else if (level.escape?.covers.length) {
-    const steel = new THREE.MeshLambertMaterial({ color: 0x2f3a33 });
+    const steel = surface('steel', 0x2f3a33);
     const rust = new THREE.MeshLambertMaterial({ color: 0x5a3a2a });
-    const tie = new THREE.MeshLambertMaterial({ color: 0x3a2a20 });
+    const tie = surface('planks', 0x3a2a20);
     for (const c of level.escape.covers) {
       const x0 = toX(c.x0);
       const x1 = toX(c.x1);
@@ -482,6 +484,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     kit.add(top, bottom);
   }
 
+  projectSurfaces(kit);
   return kit;
 }
 
@@ -500,17 +503,17 @@ function crossStreet(x0: number, x1: number, sideMat: THREE.Material): THREE.Gro
     ctx.fillStyle = '#d8b84a'; // centre line, along the road
     for (let py = 0; py < H; py += 24) ctx.fillRect(W / 2 - 1, py, 2, 12);
   });
-  const side = slab(w, 3, far, lambert(null, 0x2a2830), lambert(road), sideMat);
+  const side = slab(w, 3, far, surface('concrete', 0x2a2830), lambert(road), sideMat);
   side.position.set(cx, -1.5, STREET_BACK - far / 2);
   //sidewalks and kerbs down both sides
-  const walk = lambert(null, 0x7d7a86);
+  const walk = surface('pavers', 0x7d7a86);
   for (const sx of [x0 - 0.35, x1 + 0.35]) {
     const kerb = slab(0.7, 0.12, far, walk, walk, sideMat);
     kerb.position.set(sx, 0.06, STREET_BACK - far / 2);
     g.add(kerb);
   }
   //the main street's sidewalk is road here, with a crosswalk across the mouth of the side street
-  const cut = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.8).rotateX(-Math.PI / 2), lambert(null, 0x2a2830));
+  const cut = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.8).rotateX(-Math.PI / 2), surface('asphalt', 0x2a2830));
   cut.position.set(cx, 0.004, STREET_BACK + 0.9);
   const zebra = new THREE.MeshBasicMaterial({ color: 0xd8d8de, transparent: true, opacity: 0.6, depthWrite: false });
   for (let bx = x0 + 0.25; bx < x1 - 0.1; bx += 0.45) {
