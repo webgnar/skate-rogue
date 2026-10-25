@@ -22,7 +22,8 @@ export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
-const LANDMARK_W = 8; // art/landmarks.py's are up to 7.2 wide
+const LANDMARK_W = 8; // art/landmarks.py's are up to 8 wide
+const PLAZA = ['Flamingo', 'Picasso'];
 // buildings, stairs and banks under the descent run from BLOCK_BACK to BLOCK_FRONT: the front face sits well in
 // front of the skater (z = 0.25), so they ride on the roof, not along its front edge
 const BLOCK_BACK = -3.1;
@@ -176,7 +177,13 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
 
   //the world's landmark stands in for a building every few screens, the first one soon after the start
   //(in the one city, each quarter's own landmark, in the middle of it)
-  const marks = fused.filter((q) => q.skin.landmark).map((q) => ({ x: Math.max(q.x0, (q.x0 + q.x1) / 2 - LANDMARK_W / 2), name: q.skin.landmark! }));
+  //(the city's own Chicago quarters get its plaza sculptures in turn: Calder's Flamingo, the Picasso; zack)
+  const mid = (q: { x0: number; x1: number }) => Math.max(q.x0, (q.x0 + q.x1) / 2 - LANDMARK_W / 2);
+  const plazas = worlds.size ? quarters(level).filter((q) => q.world === 'chicago').slice(1) : []; // not under the L at the start
+  const marks = [
+    ...fused.filter((q) => q.skin.landmark).map((q) => ({ x: mid(q), name: q.skin.landmark! })),
+    ...plazas.map((q, i) => ({ x: mid(q), name: PLAZA[i % PLAZA.length] })),
+  ].sort((a, b) => a.x - b.x);
   let mark = marks.length ? marks[0].x : skin.landmark && !worlds.size ? first + 6 + randInt(rng, 8) : Infinity;
   for (let bx = level.hills ? first - 2 : -8; bx < cols + 20; ) {
     if (bx >= mark) {

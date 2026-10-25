@@ -583,6 +583,11 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Knees always bend toward the camera when Lou lands, squashes or rides a slope; never backward or sideways.
 - [ ] Pedestrians are mostly Chicago, with a mix of other worlds' looks: laurels, space helmets, techwear, sea colours.
 
+**Airliner, cable car, Chicago sculptures**
+- [ ] The airliner crossing the sky is big (about half a screen long), grey with a blue tail and engines, and not hidden behind the HUD.
+- [ ] The cable car up the hill is maroon and cream with open bench ends, brass poles, windows and the 60 on its side.
+- [ ] Calder's red Flamingo and the Picasso stand behind the street in the plain Chicago stretches between the other worlds' quarters.
+
 ## Top route (power lines and rooftops)
 
 - [ ] On a hill, the power line hangs high from about halfway down: you can't ollie or flip up to it, and there are no launch ramps (how you get up is still being worked out).

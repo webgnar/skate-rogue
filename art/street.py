@@ -19,6 +19,9 @@
 #                 the running rail heads, centred between the rails (game z 0.2): stainless body, a blue and red
 #                 stripe, the dark window band, two door pairs a side, low roof gear, a plain end at each end
 #   ElCarFront    the same car with the cab at its +x end: windshield, destination sign, headlights
+#   CableCar      a San Francisco cable car, 4.2 long, origin at the middle of its wheels' bottoms: maroon and cream,
+#                 a windowed saloon in the middle, open bench sections with brass poles at both ends, the "60" and
+#                 the Municipal Railway band on the sides, gold-lettered roof boards and the clerestory on top
 #   WantedBoard   the bounty's notice board: two posts, a framed plank panel and a little roof, origin on the ground;
 #                 the game pins its poster (a canvas texture) over the panel, 1.2 x 1.6 centred 1.95 up
 import math
@@ -27,6 +30,7 @@ import sys
 
 import bpy  # first: the bpy module provides bmesh and mathutils
 import bmesh
+from mathutils import Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else bpy.path.abspath('//')
 sys.path.insert(0, HERE)
@@ -65,6 +69,14 @@ COLORS = {
     'elCarUnder': 0x30333A,
     'elCarSign': 0xFFB030,
     'elCarLamp': 0xFFF4D0,
+    'ccMaroon': 0x7A1F26,
+    'ccCream': 0xEFE3C4,
+    'ccWood': 0xA8682E,
+    'ccBrass': 0xD8B048,
+    'ccGold': 0xE6BE48,
+    'ccGlass': 0x26323E,
+    'ccUnder': 0x26232A,
+    'ccRoof': 0xD9CFB6,
     'sigRed': 0xFF2A2A,  # glow
     'sigGreen': 0x3AFF7A,  # glow
 }
@@ -281,16 +293,131 @@ def el_car(m, cab=False):
     return join(parts, 'ElCarFront' if cab else 'ElCar')
 
 
+CC_L, CC_W = 4.2, 1.3
+
+# seven-segment digits for the car's number, lit segments a..g (top, top right, bottom right, bottom, bottom left,
+# top left, middle)
+SEGMENTS = {'6': 'acdefg', '0': 'abcdef'}
+
+
+def digits(bm, text, x0, y0, y1, z0, h):
+    """Gold numerals on a side or end, h tall from z0, starting at x0 (along x), through y0..y1."""
+    w, t = h * 0.5, h * 0.14
+    for i, ch in enumerate(text):
+        x = x0 + i * (w + t * 1.6)
+        segs = {
+            'a': (x, x + w, z0 + h - t, z0 + h), 'd': (x, x + w, z0, z0 + t), 'g': (x, x + w, z0 + h / 2 - t / 2, z0 + h / 2 + t / 2),
+            'b': (x + w - t, x + w, z0 + h / 2, z0 + h), 'c': (x + w - t, x + w, z0, z0 + h / 2),
+            'e': (x, x + t, z0, z0 + h / 2), 'f': (x, x + t, z0 + h / 2, z0 + h),
+        }
+        for k in SEGMENTS[ch]:
+            a, b, c, d = segs[k]
+            box(bm, a, b, y0, y1, c, d)
+
+
+def lettering(bm, x0, x1, y0, y1, z0, z1, seed=0):
+    """A line of lettering too small to read: word-length runs of little strokes."""
+    x, i = x0, seed
+    while x < x1:
+        word = 3 + (i * 7) % 6
+        for _ in range(word):
+            if x + 0.035 > x1:
+                break
+            box(bm, x, x + 0.035, y0, y1, z0, z1)
+            x += 0.055
+        x += 0.09
+        i += 1
+
+
+def cable_car(m):
+    L, W = CC_L, CC_W
+    hl, hw = L / 2, W / 2
+    maroon, cream, wood, brass, gold, glass, under, roof = (bmesh.new() for _ in range(8))
+    # running gear and frame
+    for tx in (-1.15, 1.15):
+        box(under, tx - 0.4, tx + 0.4, -0.5, 0.5, 0.12, 0.3)
+        for wx in (tx - 0.25, tx + 0.25):
+            cyl(under, 0.12, 1.1, (wx, 0, 0.12), segs=8)
+    box(under, -hl + 0.1, hl - 0.1, -hw + 0.15, hw - 0.15, 0.26, 0.36)
+    # the floor and the cream sill band with the Municipal Railway line on each side
+    box(cream, -hl, hl, -hw - 0.06, hw + 0.06, 0.36, 0.56)
+    for fy in (-hw - 0.06, hw + 0.06):
+        f = sorted((fy, fy + (0.01 if fy > 0 else -0.01)))
+        lettering(maroon, -1.0, 1.05, *f, 0.43, 0.49)
+    # the saloon in the middle: maroon panels under a band of windows, a cream letter board over them
+    sx = 1.0
+    box(maroon, -sx, sx, -hw, hw, 0.56, 0.95)
+    box(cream, -sx, sx, -hw, hw, 0.95, 1.43)  # the window frames
+    box(cream, -sx, sx, -hw - 0.005, hw + 0.005, 1.43, 1.55)  # letter board
+    for fy, out in ((-hw, -1), (hw, 1)):
+        f = sorted((fy, fy + out * 0.015))
+        for i in range(4):
+            x0 = -sx + 0.08 + i * 0.49
+            box(glass, x0, x0 + 0.41, *f, 1.0, 1.38)
+        box(gold, -0.36, 0.4, *f, 0.66, 0.68)  # the panel's gold lining and the number in it
+        box(gold, -0.36, 0.4, *f, 0.86, 0.88)
+        digits(gold, '60', -0.13, *sorted((fy, fy + out * 0.022)), 0.7, 0.13)
+    # the open sections: benches facing out along both sides, brass grab poles, maroon corner posts
+    for side in (-1, 1):
+        x0, x1 = (sx, hl - 0.18) if side > 0 else (-hl + 0.18, -sx)
+        for by in (-hw + 0.2, hw - 0.2):
+            box(wood, x0, x1, by - 0.16, by + 0.16, 0.74, 0.8)  # the seat
+            box(wood, x0, x1, by - 0.03 * (1 if by > 0 else -1) - 0.03, by - 0.03 * (1 if by > 0 else -1) + 0.03, 0.8, 1.12)  # its back
+            box(maroon, x0, x1, by - 0.12, by + 0.12, 0.56, 0.74)  # the bench box under it
+        for px in [x0 + (x1 - x0) * k / 3 for k in range(4)]:
+            for py in (-hw + 0.03, hw - 0.03):
+                vcyl(brass, 0.025, 1.0, 0.56, at=(px, py), segs=6)
+        # the end: a maroon dash with the number, windows over it
+        ex = side * (hl - 0.09)
+        box(maroon, ex - 0.09, ex + 0.09, -hw, hw, 0.56, 0.98)
+        box(cream, ex - 0.07, ex + 0.07, -hw, hw, 0.98, 1.43)
+        f = sorted((side * hl, side * (hl + 0.015)))
+        for wy in (-0.42, 0.0, 0.42):
+            box(glass, *f, wy - 0.17, wy + 0.17, 1.03, 1.38)
+        box(gold, *f, -0.45, 0.45, 0.62, 0.64)
+        box(gold, *f, -0.45, 0.45, 0.9, 0.92)
+        # the number on the dash, reading across the end (built along x, turned onto the end below)
+        dash = bmesh.new()
+        digits(dash, '60', -0.13, -0.011, 0.0, 0.69, 0.15)
+        bmesh.ops.rotate(dash, verts=dash.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(-side * math.pi / 2, 3, 'Z'))
+        bmesh.ops.translate(dash, verts=dash.verts, vec=(side * hl, 0, 0))
+        dm = bpy.data.meshes.new('ccDash')
+        dash.to_mesh(dm)
+        dash.free()
+        gold.from_mesh(dm)
+        bpy.data.meshes.remove(dm)
+        box(cream, ex - 0.05, ex + 0.05, -0.32, 0.32, 1.68, 1.86)  # the route sign on the roof
+        box(glass, *sorted((side * (hl - 0.04), side * (hl - 0.06))), -0.27, 0.27, 1.71, 1.83)
+    # posts holding the roof up over the open sections
+    for px in (-hl + 0.12, hl - 0.12, -sx - 0.04, sx + 0.04):
+        for py in (-hw + 0.04, hw - 0.04):
+            box(maroon, px - 0.04, px + 0.04, py - 0.04, py + 0.04, 0.56, 1.55)
+    # the roof: maroon boards with the gold-lettered routes, the cream deck, the clerestory down the middle
+    box(roof, -hl - 0.08, hl + 0.08, -hw - 0.06, hw + 0.06, 1.62, 1.68)
+    for fy, out in ((-hw - 0.06, -1), (hw + 0.06, 1)):
+        box(maroon, -hl - 0.08, hl + 0.08, *sorted((fy, fy - out * 0.04)), 1.5, 1.66)
+        lettering(gold, -hl + 0.2, hl - 0.2, *sorted((fy, fy + out * 0.008)), 1.55, 1.61, seed=3)
+    box(cream, -1.5, 1.5, -0.4, 0.4, 1.68, 1.82)
+    box(roof, -1.55, 1.55, -0.45, 0.45, 1.82, 1.86)
+    for fy, out in ((-0.4, -1), (0.4, 1)):
+        for i in range(8):
+            x0 = -1.4 + i * 0.36
+            box(glass, x0, x0 + 0.24, *sorted((fy, fy + out * 0.012)), 1.71, 1.79)
+    parts = [link(n, bm, m[n]) for n, bm in (('ccMaroon', maroon), ('ccCream', cream), ('ccWood', wood), ('ccBrass', brass),
+                                             ('ccGold', gold), ('ccGlass', glass), ('ccUnder', under), ('ccRoof', roof))]
+    return join(parts, 'CableCar')
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     m = {k: material(k, v) for k, v in COLORS.items()}
     obs = [el_span(m), el_column(m), el_column_cap(m), signal(m), lens(m, 'SignalRed', 'sigRed', 3.33), lens(m, 'SignalGreen', 'sigGreen', 2.87), wanted_board(m),
-           overpass_pillar(m), overpass_cap(m), overpass_rail(m), el_car(m), el_car(m, cab=True)]
+           overpass_pillar(m), overpass_cap(m), overpass_rail(m), el_car(m), el_car(m, cab=True), cable_car(m)]
     # laid out in the file for a look: a span on a column, the signal beside it
     at = {'ElSpan': (0, 0, 4), 'ElColumn': (0.6, 0, 0), 'ElColumnCap': (0.6, 0, 3.9), 'TrafficSignal': (-2, 0, 0),
           'SignalRed': (-2, 0, 0), 'SignalGreen': (-2, 0, 0), 'WantedBoard': (-4, 0, 0),
           'OverpassPillar': (6, 0, 0), 'OverpassCap': (6, 0, 3), 'OverpassRail': (5, 0, 3.2),
-          'ElCar': (-4, 0, 4.44), 'ElCarFront': (0, 0, 4.44)}
+          'ElCar': (-4, 0, 4.44), 'ElCarFront': (0, 0, 4.44), 'CableCar': (-8, 0, 0)}
     obs[1].scale = (1, 1, 3.9)
     for ob in obs:
         ob.location = at[ob.name]

@@ -6,10 +6,16 @@ import * as THREE from 'three';
 import type { Level } from '../physics/level';
 import type { Sky } from '../sim/sky';
 import { toX, toY } from './kit';
+import { model } from './models';
 import { inkify } from './toon';
 
 const BIRDS = 5; // pigeons a flock
-const PLANE_Z = 1.5; // in front of the street: any further back, the houses, the hills and the HUD hide the sky
+// The airliner (art/airliner.py, from the QFS Chicago level's sprite) is drawn way bigger than before (zack), about
+// 10 tiles nose to tail, just behind the street and above the skater: any further back or higher, the houses and
+// the HUD hide it (the camera shows little sky)
+const PLANE_Z = -2;
+const PLANE_UP = 4.5; // above the skater
+const PLANE_S = 0.75; // of the model's 14 tiles
 const PLANE_EVERY = [9, 18]; // seconds between airliners, down on the street (halved up top)
 
 export class SkyView {
@@ -32,20 +38,26 @@ export class SkyView {
     this.wing = new THREE.BufferGeometry();
     this.wing.setAttribute('position', new THREE.Float32BufferAttribute([0.12, 0, 0, -0.2, 0, 0.05, -0.05, 0.02, 0.5], 3));
     //an airliner: fuselage, wings, tail, a pale grey on the sky
-    const hull = new THREE.MeshLambertMaterial({ color: 0xe4e7ee });
     this.plane = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 4.2, 8).rotateZ(Math.PI / 2), hull);
-    const wings = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.08, 4.4), hull);
+    const jet = model('Airliner');
+    if (jet) {
+      this.plane.add(jet);
+    } else {
+      //the model didn't load: a plain one in the same proportions
+      const hull = new THREE.MeshLambertMaterial({ color: 0xe2e2e2 });
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.5, 14, 8).rotateZ(Math.PI / 2), hull);
+      const wings = new THREE.Mesh(new THREE.BoxGeometry(3, 0.14, 13), hull);
+      wings.position.x = -0.5;
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(2, 2.4, 0.1), new THREE.MeshLambertMaterial({ color: 0x004d83 }));
+      tail.position.set(-5.8, 1.5, 0);
+      this.plane.add(body, wings, tail);
+    }
     this.plane.rotation.y = Math.PI; // nose the way it flies, left
-    this.plane.rotation.x = 0.35; // banked a little toward the camera, so the wings show
-    this.plane.scale.setScalar(0.45);
-    wings.position.x = 0.2;
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1, 0.08), hull);
-    tail.position.set(-1.9, 0.5, 0);
-    this.plane.add(body, wings, tail);
+    this.plane.rotation.x = 0.3; // banked a little toward the camera, so the wings show
+    this.plane.scale.setScalar(PLANE_S);
     inkify(this.plane);
     this.trail = new THREE.Mesh(
-      new THREE.PlaneGeometry(40, 0.3).translate(-20 - 2.2, 0, 0),
+      new THREE.PlaneGeometry(80, 0.5).translate(-40 - 7, 0.4, 0),
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false }),
     );
     this.plane.add(this.trail);
@@ -108,18 +120,18 @@ export class SkyView {
       this.planeT -= dt * (up ? 2 : 1);
       if (this.planeT <= 0) {
         this.flying = true;
-        this.planeX = toX(skaterX) + 45;
+        this.planeX = toX(skaterX) + 60;
         this.plane.visible = true;
       }
     } else {
       //coming the other way, so it crosses the frame in a few seconds
-      this.planeX -= dt * 7;
-      if (this.planeX < toX(skaterX) - 40) {
+      this.planeX -= dt * 9;
+      if (this.planeX < toX(skaterX) - 60) {
         this.flying = false;
         this.plane.visible = false;
         this.planeT = PLANE_EVERY[0] + ((Math.floor(this.t * 7) % 10) / 10) * (PLANE_EVERY[1] - PLANE_EVERY[0]);
       }
     }
-    if (this.flying) this.plane.position.set(this.planeX, toY(level, skaterY) + 2.2, PLANE_Z);
+    if (this.flying) this.plane.position.set(this.planeX, toY(level, skaterY) + PLANE_UP, PLANE_Z);
   }
 }
