@@ -15,6 +15,7 @@ import { SKY, type FlockSite } from '../sim/sky';
 export const TOP = {
   height: 5 * TILE, // the rooftops' and the gate's height over the street: over an L train's roof, past a flip
   entry: 1.4 * TILE, // the wire's lowest over the ground: where it dips this close, an ollie gets you on
+  start: 0.45, // how far down a stretch of hill (from its top) the wire starts
   pole: 7, // tiles between the poles it hangs from
   roof: [9, 12], // tiles of rooftop ledge: off the end of one at the speed off a wire, an ollie lands on the next
   gap: [2, 3], // tiles between them, to ollie
@@ -55,11 +56,18 @@ function wire(level: Level, a: number, b: number): CurvedRail | null {
   //from the peak (the top of the cable car's climb, or the hill's top)
   let p = 0;
   for (let i = 1; i < gs.length; i++) if (gs[i] < gs[p]) p = i;
-  //it starts over the end of the crest, where the street first falls away: ollie off the edge to catch it (rolling
-  //off, you're on the street; that's the luck of it)
-  let q = p;
-  while (q < gs.length - 1 && gs[q] < gs[p] + TILE / 2) q++;
-  const x0 = Math.max(xs[p], xs[q] - 2 * TILE);
+  //it starts partway down, not at the crest (zack, 2026-10-25: "it should start higher than the street and the
+  //beginning of where you can get to the high part can start like halfway down the hill"): over the first edge
+  //past that, where the street falls away, ollie off it to catch the wire (roll off and you're on the street below)
+  const half = xs[p] + TOP.start * (b - xs[p]);
+  let q = xs.findIndex((x) => x >= half);
+  if (q < 0) return null;
+  const edge = (i: number) => gs.slice(i + 1, i + 5).some((g) => g >= gs[i] + TILE / 2);
+  let e = q;
+  while (e < gs.length - 8 && !edge(e)) e++;
+  if (e < gs.length - 8) q = e;
+  p = q;
+  const x0 = Math.max(xs[0], xs[q] - TILE);
   const y0 = gs[p] - TOP.entry;
   const yEnd = level.streetY - TOP.height;
   const line = (x: number) => y0 + ((x - x0) / (b - x0)) * (yEnd - y0);

@@ -53,7 +53,7 @@ describe('the top route', () => {
     expect(sim.skater.mode).not.toBe('bail');
   });
 
-  it('the bots clear top-route floors, and the high bot spends most of them up top', () => {
+  it('the bots clear top-route floors, and the high bot spends a good part of them up top (the wire starts halfway down each hill)', () => {
     let up = 0;
     let frames = 0;
     for (let s = 1; s <= 4; s++) {
@@ -68,7 +68,7 @@ describe('the top route', () => {
       }
       expect(['exit', 'bail']).toContain(sim.state);
     }
-    expect(up / frames).toBeGreaterThan(0.5);
+    expect(up / frames).toBeGreaterThan(0.15);
   }, 60000);
 });
 
