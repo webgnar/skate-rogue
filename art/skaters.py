@@ -137,8 +137,76 @@ def head(spec, mats):
         def crown(p):
             return p.z > 0.04 or p.y > 0.0
         parts.append((sphere('hair', HEAD_R + 0.015, HEAD_C, hair, (0.95, 1.02, 1.12), crown), 'Head'))
-        parts.append((sphere('mane', 0.15, HEAD_C + Vector((0, 0.06, -0.2)), hair, (1.05, 0.5, 1.5)), 'Head'))
     return parts
+
+
+# Spring chains: hair clumps and loose cloth hang off a chain of extra bones ('Spring...') that the game swings with
+# the skater's motion (src/render/springs.ts); Lou's clips leave them alone. Each chain: (name, parent bone, root,
+# direction, length, root half-width, root half-depth, taper, bones).
+def chains(spec):
+    out = []
+    if spec['hair'] == 'long':
+        # the long hair falling down the back past the shoulders, in five clumps fanned across the back of the head
+        for i, x in enumerate((-0.085, -0.045, 0.0, 0.045, 0.085)):
+            side = abs(x) / 0.085
+            root = HEAD_C + Vector((x, 0.07 + 0.015 * (1 - side), 0.03 - 0.03 * side))
+            out.append((f'SpringHair{i}', 'Head', root, Vector((x * 0.6, 0.12, -1)), 0.36 - 0.06 * side, 0.05, 0.04, 0.6, 3))
+    if spec['hair'] == 'hood':
+        # the hoodie's drawstrings, hanging down the chest from either side of the neck
+        for i, x in enumerate((-0.045, 0.045)):
+            out.append((f'SpringString{i}', 'Spine1', Vector((x, -0.105, SPINE + 0.47)), Vector((0, -0.08, -1)), 0.2, 0.007, 0.007, 0.2, 2))
+    return out
+
+
+def chain_bones(rig, specs):
+    """Adds each chain's bones to the rig: equal links from the root along its direction, the first off its parent."""
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = rig.data.edit_bones
+    for name, parent, root, d, length, *_rest, n in specs:
+        d = d.normalized()
+        prev = eb[parent]
+        for j in range(n):
+            b = eb.new(f'{name}_{j}')
+            b.head, b.tail = root + d * length * j / n, root + d * length * (j + 1) / n
+            b.parent = prev
+            b.use_connect = j > 0
+            prev = b
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def chain_mesh(spec, mat):
+    """A tapered tube along a chain, skinned along its bones so it bends with them."""
+    name, _parent, root, d, length, w, dep, taper, n = spec
+    d = d.normalized()
+    side = Vector((1, 0, 0)).cross(d).normalized()  # across the clump's depth
+    across = d.cross(side).normalized()
+    rings, seg = 8, 6
+    bm = bmesh.new()
+    loops = []
+    for r in range(rings + 1):
+        t = r / rings
+        k = 1 - taper * t
+        c = root + d * length * t
+        loops.append([bm.verts.new(c + across * w * k * math.cos(2 * math.pi * a / seg) + side * dep * k * math.sin(2 * math.pi * a / seg)) for a in range(seg)])
+    for a, b in zip(loops, loops[1:]):
+        for i in range(seg):
+            j = (i + 1) % seg
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    bm.faces.new(loops[0][::-1])
+    bm.faces.new(loops[-1])
+    ob = lg.link(name, bm, [mat])
+    groups = [ob.vertex_groups.new(name=f'{name}_{j}') for j in range(n)]
+    for v in ob.data.vertices:
+        s = max(0.0, (v.co - root).dot(d)) / length * n  # how far along the chain, in bones
+        w8 = [max(0.0, 1 - abs(s - (j + 0.5))) for j in range(n)]
+        w8[0] = max(w8[0], 1.0 if s < 0.5 else 0.0)
+        w8[-1] = max(w8[-1], 1.0 if s > n - 0.5 else 0.0)
+        tot = sum(w8)
+        for g, x in zip(groups, w8):
+            if x > 0:
+                g.add([v.index], x / tot, 'REPLACE')
+    return ob
 
 
 def feet(spec, mats):
@@ -169,9 +237,14 @@ def build(name, spec):
     rig.select_set(True)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type='ARMATURE_AUTO')
+    bpy.ops.object.select_all(action='DESELECT')
+    specs = chains(spec)
+    chain_bones(rig, specs)  # after the body's automatic weights, so it never skins to them
     for part, bone in head(spec, mats) + feet(spec, mats) + lg.wear_decals(0.11, -0.06):
         lg.rigid(part, bone)
         part.select_set(True)
+    for c in specs:
+        chain_mesh(c, mats['hair'] if c[0].startswith('SpringHair') else mats['top']).select_set(True)
     ob.select_set(True)
     rig.select_set(False)
     bpy.context.view_layer.objects.active = ob

@@ -12,10 +12,12 @@ import { wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
+import { Springs, bodyColliders } from './springs';
 import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, isSwitch, switchName, LEDGE_GRINDS, RAIL_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
+const SCALE_V = new THREE.Vector3();
 export const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
 const THIGH = 0.4;
 const SHIN = 0.4;
@@ -112,6 +114,7 @@ export class SkaterRig {
   // win over the code clip of the same name. The board follows the model's Board bone.
   private readonly baked = new Map<string, { bone: THREE.Bone; pos?: THREE.Interpolant; rot?: THREE.Interpolant }[]>();
   private boardBone: THREE.Bone | null = null;
+  private springs: Springs | null = null; // hair and loose cloth that trail the motion (skater GLBs with Spring bones)
   private boardRest = new THREE.Matrix4(); // the Board bone's rest pose (rig space), inverted
   // the bones and board where a crossfade starts from (skinned model only)
   private snap: { pos: THREE.Vector3[]; rot: THREE.Quaternion[]; board: THREE.Matrix4 } | null = null;
@@ -409,6 +412,9 @@ export class SkaterRig {
         this.bound.push({ bone, driver, offset: d.invert().multiply(b), local: new THREE.Matrix4() });
       }
     });
+    const scale = this.mesh.getWorldScale(new THREE.Vector3()).x;
+    const springs = new Springs(model, bodyColliders((name) => this.bindPos.get(name), scale));
+    if (springs.count) this.springs = springs;
     model.traverse((o) => {
       if ((o as THREE.Bone).isBone && o.name === 'Board') this.boardBone = o as THREE.Bone;
     });
@@ -766,6 +772,8 @@ export class SkaterRig {
     } else {
       this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, angle, 'ZYX');
     }
+
+    this.springs?.update(dt, this.mesh.getWorldScale(SCALE_V).x);
 
     if (this.flash > 0) this.flash -= dt;
     const blink = this.flash > 0 && Math.floor(this.flash * 20) % 2 === 0;
