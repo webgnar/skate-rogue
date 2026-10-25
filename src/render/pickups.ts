@@ -1,8 +1,8 @@
 // Cash coins and Stoken gems floating along the floor's lines. Coins spin; collected ones pop and vanish.
 import * as THREE from 'three';
 import { inkify } from './toon';
-import type { Lane, Level } from '../physics/level';
-import { LANE_B_Z, laneZ, toX, toY, twinAt } from './kit';
+import type { Level } from '../physics/level';
+import { laneZ, toX, toY } from './kit';
 import { flatGeometry } from './models';
 
 const POP_SECS = 0.18;
@@ -11,8 +11,7 @@ export class PickupView {
   readonly group = new THREE.Group();
   private coins: THREE.InstancedMesh | null = null;
   private gems: THREE.InstancedMesh | null = null;
-  private slots: { mesh: THREE.InstancedMesh; i: number; x: number; y: number; z: number; track?: Lane; twin?: number; popT: number; gone: boolean }[] = [];
-  lane: Lane = 0; // the other lane's pickups shrink back (src/render/kit.ts showLane)
+  private slots: { mesh: THREE.InstancedMesh; i: number; x: number; y: number; z: number; popT: number; gone: boolean }[] = [];
   private t = 0;
   private readonly m = new THREE.Matrix4();
   private readonly q = new THREE.Quaternion();
@@ -27,11 +26,8 @@ export class PickupView {
       mesh.dispose();
     }
     this.slots = [];
-    //one in both lanes, where there are two streets, shows on both (src/render/kit.ts twinAt): a second instance
-    const twin = (p: Level['pickups'][number]) => p.track === undefined && twinAt(level, p.x);
-    const count = (kind: string) => level.pickups.filter((p) => p.kind === kind).length + level.pickups.filter((p) => p.kind === kind && twin(p)).length;
-    const cash = count('cash');
-    const stoken = level.pickups.length + level.pickups.filter(twin).length - cash;
+    const cash = level.pickups.filter((p) => p.kind === 'cash').length;
+    const stoken = level.pickups.length - cash;
     //art/pickups.py: a coin with a rim and a raised $, a brilliant-cut gem; colours baked into the vertices
     const coin = flatGeometry('Coin');
     const gem = flatGeometry('Stoken');
@@ -52,11 +48,7 @@ export class PickupView {
     for (const p of level.pickups) {
       const mesh = p.kind === 'cash' ? this.coins : this.gems;
       const i = p.kind === 'cash' ? c++ : g++;
-      this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), z: 0.25 + laneZ(p), track: p.track, popT: 0, gone: false });
-    }
-    for (const [k, s] of this.slots.entries()) {
-      if (!twin(level.pickups[k])) continue;
-      s.twin = s.mesh === this.coins ? c++ : g++;
+      this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), z: 0.25 + laneZ(p), popT: 0, gone: false });
     }
     inkify(this.coins);
     inkify(this.gems);
@@ -73,7 +65,7 @@ export class PickupView {
     this.t += dt;
     for (const s of this.slots) {
       if (s.gone) continue;
-      let scale = s.track === undefined || s.track === this.lane ? 1 : 0.5;
+      let scale = 1;
       let lift = 0;
       if (s.popT > 0) {
         s.popT -= dt;
@@ -92,10 +84,6 @@ export class PickupView {
       this.s.setScalar(scale);
       this.m.compose(this.v, this.q, this.s);
       s.mesh.setMatrixAt(s.i, this.m);
-      if (s.twin === undefined) continue;
-      this.v.z += LANE_B_Z;
-      this.m.compose(this.v, this.q, this.s);
-      s.mesh.setMatrixAt(s.twin, this.m);
     }
     if (this.coins) this.coins.instanceMatrix.needsUpdate = true;
     if (this.gems) this.gems.instanceMatrix.needsUpdate = true;

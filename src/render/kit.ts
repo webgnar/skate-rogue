@@ -18,15 +18,9 @@ import { quarters, type Quarter } from './quarters';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
-// lane B (src/gen/lanes.ts) runs this far back of the skate lane: a whole street (zack, 2026-10-24: "it almost has
-// to be a whole streets wide path")
-export const LANE_B_Z = -7.5; // lane B is a second street behind the first, past a median (src/gen/lanes.ts)
+// lane B (src/gen/lanes.ts) runs this far back of the skate lane
+export const LANE_B_Z = -2;
 export const laneZ = (o: { track?: Lane }) => (o.track === 1 ? LANE_B_Z : 0);
-// where lane B's street runs behind this one (px): from a little before the first switch to the gate, off the hills
-export function twinAt(level: Level, px: number): boolean {
-  const sw = level.fork?.switches;
-  return !!sw?.length && px > sw[0].x - 16 * TILE && px < level.exitX + 6 * TILE && !inHill(level, px);
-}
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
@@ -84,13 +78,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   }
 
   //--- street slabs and canals -------------------------------------------------------------
-  //where the floor runs as two lanes, lane B's street runs behind this one, past a median: a copy of each run of
-  //street or canal from a little before the first switch to the gate (not on the hills between, which are one
-  //lane wide). Everything that stands at the back of the street stands at the back of that one there
-  const sw = level.fork?.switches ?? [];
-  const [l0, l1] = sw.length ? [toX(sw[0].x) - 16, toX(level.exitX) + 6] : [0, -1];
-  const twin: [number, number][] = [];
-  const backZ = (x0: number, x1: number) => (twin.some(([a, b]) => x1 > a && x0 < b) ? LANE_B_Z : 0);
   let c = first;
   while (c < cols) {
     const isStreet = level.street[c];
@@ -140,12 +127,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       const mesh = slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
       mesh.position.set(x, -1.5, STREET_BACK + STREET_DEPTH / 2);
       kit.add(mesh);
-      if (end + 1 > l0 && c < l1) {
-        const back = mesh.clone();
-        back.position.z += LANE_B_Z;
-        kit.add(back);
-        twin.push([c, end + 1]);
-      }
     } else if (!inHill(level, (c + n / 2) * TILE)) {
       //canal: water a bit below the street, QFS's clean water tiles (a stretch of hill draws its own ground)
       const pit = skin.pit === 'city' ? { top: CITY.waterTop, fill: CITY.water } : skin.pit;
@@ -154,12 +135,6 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       const water = slab(n, 2.4, STREET_DEPTH, lambert(tex), lambert(null, 0x3a5fb0), sideMat);
       water.position.set(x, -1.8, STREET_BACK + STREET_DEPTH / 2);
       kit.add(water);
-      if (end + 1 > l0 && c < l1) {
-        const back = water.clone();
-        back.position.z += LANE_B_Z;
-        kit.add(back);
-        twin.push([c, end + 1]);
-      }
     }
     c = end + 1;
   }
@@ -183,14 +158,14 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
     //split where a quarter's own wall takes over (its block tiles)
-    const cutsAt = [a0, ...[...fused.flatMap((q) => [q.x0, q.x1]), ...twin.flat()].filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
+    const cutsAt = [a0, ...fused.flatMap((q) => [q.x0, q.x1]).filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
     for (let k = 0; k + 1 < cutsAt.length; k++) {
       const [b0, b1] = [cutsAt[k], cutsAt[k + 1]];
       if (b1 <= b0) continue;
       const q = fusedAt(b0);
       const rows = q ? [0, 1].map((r) => Array.from({ length: b1 - b0 }, (_, i) => q.skin.block.fill[((b0 + i) * (r ? 5 : 7) + r * 3) % q.skin.block.fill.length])) : wallRows.map((row) => row.slice(b0, b1));
       const wall = slab(b1 - b0, 2, 0.5, lambert(q ? tileTexture(rows, q.sheet) : tileTexture(rows)), lambert(null, q ? q.skin.side : city ? 0x6b5a55 : skin.side), sideMat);
-      wall.position.set((b0 + b1) / 2, 1, STREET_BACK - 0.25 + backZ(b0, b1));
+      wall.position.set((b0 + b1) / 2, 1, STREET_BACK - 0.25);
       kit.add(wall);
     }
     w0 = g1;
@@ -198,7 +173,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
   const props = buildProps(level, biome); // hydrants, benches, newspaper boxes... along the back of the sidewalk
   if (props) kit.add(props);
-  const cards = !city ? scenery([{ skin, sheet: null, x0: first, x1: cols }], rng, inGap, backZ) : scenery(fused.map((q) => ({ skin: q.skin, sheet: q.sheet, x0: Math.max(first, q.x0), x1: Math.min(cols, q.x1) })), rng, inGap, backZ);
+  const cards = !city ? scenery([{ skin, sheet: null, x0: first, x1: cols }], rng, inGap) : scenery(fused.map((q) => ({ skin: q.skin, sheet: q.sheet, x0: Math.max(first, q.x0), x1: Math.min(cols, q.x1) })), rng, inGap);
   if (cards) kit.add(cards);
 
   //the world's landmark stands in for a building every few screens, the first one soon after the start
@@ -209,7 +184,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     if (bx >= mark) {
       const lm = model(marks.length ? marks.shift()!.name : skin.landmark!);
       if (lm && !inGap(bx, bx + LANDMARK_W)) {
-        lm.position.set(bx + LANDMARK_W / 2, 0, STREET_BACK - 2.6 + backZ(bx, bx + LANDMARK_W));
+        lm.position.set(bx + LANDMARK_W / 2, 0, STREET_BACK - 2.6);
         lm.userData.keep = true; // several materials, some glowing: not batched
         kit.add(lm);
         bx += LANDMARK_W + 1;
@@ -226,7 +201,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       const q = fusedAt(bx);
       const face = q && rng() < 0.5 ? blockMat(w, h, q.skin, 0xd8c8e8, q.sheet) : city ? facadeMat(w, h, t, 0xd8c8e8) : blockMat(w, h, skin, 0xd8c8e8);
       const b = slab(w, h, 4, face, lambert(null, 0x2b2638), sideMat);
-      b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - back + backZ(bx, bx + w));
+      b.position.set(bx + w / 2, h / 2 - 0.5, STREET_BACK - 3 - back);
       kit.add(b);
     }
     bx += w + randInt(rng, 2);
@@ -240,32 +215,14 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //rails up on the roofs stand on the roof, not on the street
   const postH = (px: number, y: number) => (inHill(level, px) ? Math.min(y, 0.75) : y);
   //lane B's things (src/gen/lanes.ts) are built at the back: everything added while one is being built moves back
-  //(and tagged with their lane, as is lane A's, so showLane can fade out the lane the skater isn't in)
-  //(and tagged with their lane, as is lane A's, so showLane can fade out the lane the skater isn't in). What's in both
-  //lanes is drawn on both streets where there are two
   let laneShift = 0;
-  let laneTrack: Lane | undefined;
-  let both = false;
-  const setLane = (o: { track?: Lane; x0?: number; x1?: number }) => {
-    laneTrack = o.track;
-    laneShift = laneZ(o);
-    both = o.track === undefined && o.x0 !== undefined && backZ(toX(o.x0), toX(o.x1 ?? o.x0)) !== 0;
-  };
   const add = kit.add.bind(kit);
   kit.add = (...objs: THREE.Object3D[]) => {
-    for (const o of objs) {
-      o.position.z += laneShift;
-      if (laneTrack !== undefined) o.traverse((m) => (m.userData.track = laneTrack));
-      if (both) {
-        const copy = o.clone();
-        copy.position.z += LANE_B_Z;
-        add(copy);
-      }
-    }
+    for (const o of objs) o.position.z += laneShift;
     return add(...objs);
   };
   for (const s of level.surfaces) {
-    setLane(s);
+    laneShift = laneZ(s);
     const w = toX(s.x1 - s.x0);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
@@ -368,7 +325,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //--- curved rails ---------------------------------------------------------------------------
   for (const rail of level.rails) {
     if (rail.wire) continue; // a power line: the hillside draws it with its poles
-    setLane(rail);
+    laneShift = laneZ(rail);
     const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
     const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.07, 6), metal);
     kit.add(tube);
@@ -384,7 +341,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
 
   //--- parked cars ----------------------------------------------------------------------------
   level.cars.forEach((car, i) => {
-    setLane(car);
+    laneShift = laneZ(car);
     const x0 = toX(car.x0);
     const x1 = toX(car.x1);
     const bottom = toY(level, car.bottom);
@@ -397,7 +354,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //--- broken glass ----------------------------------------------------------------------------
   const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe8ff, emissive: 0x204050 });
   for (const g of level.glass) {
-    setLane(g);
+    laneShift = laneZ(g);
     for (let px = toX(g.x0); px < toX(g.x1); px += 0.35) {
       const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(0.12), glassMat);
       shard.position.set(px + rng() * 0.2, 0.06, (rng() - 0.5) * 1.5);
@@ -405,7 +362,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       kit.add(shard);
     }
   }
-  setLane({});
+  laneShift = 0;
 
   //--- the L over Chicago's street, round its bends into the city (el-view.ts) -----------------
   buildElTrack(level, kit);
@@ -494,29 +451,17 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   gate.userData.gate = true; // gate-fx.ts fills the arch
   kit.add(gate);
 
-  //--- lane switches (src/gen/lanes.ts): a raised median between the two streets, open at each switch (asphalt
-  //across: ollie over at a hop, swerve round the barricade at a forced one); city road works mark the switches ------------------------------
-  if (sw.length) {
-    const dividerZ = (2 * STREET_BACK + LANE_B_Z + STREET_DEPTH) / 2; // between this street's back and lane B's front
-    const medianD = -LANE_B_Z - STREET_DEPTH;
-    const crossings = sw.map((s) => toX(s.x)); // every switch crosses it: open there
-    const open = (x: number) => crossings.some((h) => Math.abs(x + 0.5 - h) < 2);
-    const kerb = lambert(null, 0x9a96a0);
-    const top = lambert(null, 0x7d8a6a); // a planted strip
-    const asphalt = lambert(null, 0x3e3a46);
-    for (const [a, b] of twin) {
-      for (let x = a; x < b; ) {
-        const street = isStreetAtTile(level, x);
-        const gap = open(x);
-        let e = x + 1;
-        while (e < b && isStreetAtTile(level, e) === street && open(e) === gap) e++;
-        if (street) {
-          const m = gap ? slab(e - x, 3, medianD, sideMat, asphalt, sideMat) : slab(e - x, 3.3, medianD, kerb, top, kerb);
-          m.position.set((x + e) / 2, gap ? -1.5 : -1.35, dividerZ);
-          kit.add(m);
-        }
-        x = e;
-      }
+  //--- lane switches (src/gen/lanes.ts): a dashed divider between the lanes from the first switch, yellow chevrons
+  //at a hop switch, striped barriers closing the other lane at a forced one, and lane B's own gate ---------------
+  if (level.fork?.switches?.length) {
+    const sw = level.fork.switches;
+    const dividerZ = LANE_B_Z / 2;
+    const dash = lambert(null, 0xf2f2e8);
+    for (let px = toX(sw[0].x); px < toX(level.exitX); px += 1.5) {
+      if (!isStreetAtTile(level, px)) continue;
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.12).rotateX(-Math.PI / 2), dash);
+      d.position.set(px, 0.012, dividerZ);
+      kit.add(d);
     }
     //city road works: painted lane-change arrows, a yellow diamond warning sign and flexi posts at a hop switch;
     //a Chicago Type III barricade with its amber lamp and a taper of cones closing the lane at a forced one
@@ -541,9 +486,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
         }
         //the sign stands at the back of lane B, so it never covers the skater
         const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 6), postMat);
-        post.position.set(x - 1.2, 1.1, LANE_B_Z + STREET_BACK + 0.4);
+        post.position.set(x - 1.2, 1.1, LANE_B_Z - 0.85);
         const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 1.35), warn);
-        sign.position.set(x - 1.2, 2.2, LANE_B_Z + STREET_BACK + 0.45);
+        sign.position.set(x - 1.2, 2.2, LANE_B_Z - 0.8);
         sign.userData.inked = true;
         kit.add(post, sign);
       } else {
@@ -670,7 +615,7 @@ interface ScenerySpan {
   x1: number;
 }
 
-function scenery(spans: ScenerySpan[], rng: () => number, inGap: (x0: number, x1: number) => boolean, backZ: (x0: number, x1: number) => number): THREE.Mesh | null {
+function scenery(spans: ScenerySpan[], rng: () => number, inGap: (x0: number, x1: number) => boolean): THREE.Mesh | null {
   const stamps: { rows: TileCell[][]; x: number; y: number; z: number; sheet: HTMLImageElement | null }[] = [];
   for (const { skin, sheet, x0, x1 } of spans) {
     const decor = skin.decor;
@@ -679,13 +624,13 @@ function scenery(spans: ScenerySpan[], rng: () => number, inGap: (x0: number, x1
       if (rng() > d.chance * 0.5) continue;
       const w = d.rows[0].length;
       if (inGap(x, x + w)) continue;
-      stamps.push({ rows: d.rows, x, y: d.hang ? 0.6 : 0, z: (d.hang ? STREET_BACK - 0.01 : STREET_BACK + 0.08) + backZ(x, x + w), sheet });
+      stamps.push({ rows: d.rows, x, y: d.hang ? 0.6 : 0, z: d.hang ? STREET_BACK - 0.01 : STREET_BACK + 0.08, sheet });
       x += w + 3;
     }
     for (let x = x0 + 2; skin.props.length && x < x1 - 2; x++) {
       if (rng() > 0.14 || inGap(x, x + 1)) continue;
       const p = skin.props[randInt(rng, skin.props.length)];
-      stamps.push({ rows: [p].flat().map((t) => [t]), x, y: skin.sink ? -1 : 0, z: STREET_BACK + 0.55 + rng() * 0.4 + backZ(x, x + 1), sheet });
+      stamps.push({ rows: [p].flat().map((t) => [t]), x, y: skin.sink ? -1 : 0, z: STREET_BACK + 0.55 + rng() * 0.4, sheet });
       x += 2;
     }
   }
@@ -1037,38 +982,4 @@ function barrierTexture(): THREE.Texture {
   t.magFilter = THREE.NearestFilter;
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
-}
-
-// the lane the skater isn't in fades back, so what you can touch is what's solid (its outlines go). A faded mesh
-// gets its own copy of its material the first time: batches of both lanes share them. The copy keeps the floor's
-// cut planes.
-export const LANE_FADE = 0.25;
-export function showLane(kit: THREE.Object3D, lane: Lane): void {
-  kit.traverse((m) => {
-    if (!(m instanceof THREE.Mesh) || m.userData.track === undefined) return;
-    const on = m.userData.track === lane;
-    if (m.userData.ink) {
-      m.visible = on;
-      return;
-    }
-    if (!m.userData.ownMat) {
-      if (on) return;
-      const own = (x: THREE.Material) => {
-        const c = x.clone();
-        c.clippingPlanes = x.clippingPlanes;
-        c.userData.baseOpacity = x.opacity;
-        c.userData.wasTransparent = x.transparent;
-        return c;
-      };
-      m.material = Array.isArray(m.material) ? m.material.map(own) : own(m.material);
-      m.userData.ownMat = true;
-    }
-    for (const mat of [m.material].flat() as THREE.Material[]) {
-      const base = mat.userData.baseOpacity as number;
-      mat.transparent = !on || base < 1 || mat.userData.wasTransparent === true;
-      mat.opacity = on ? base : base * LANE_FADE;
-      mat.depthWrite = on;
-      mat.needsUpdate = true;
-    }
-  });
 }
