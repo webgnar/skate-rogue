@@ -697,58 +697,99 @@ html, body {
 #scores .row { display: flex; justify-content: flex-end; width: 100%; }
 #scores .done { padding: 8px 20px; min-height: 44px; font-size: 22px; color: #000; background: var(--trick); border: 2px solid #000; box-shadow: 3px 3px 0 #000; }
 
-/* ---- the skate shop as a card game (openspec/changes/ui2-card-shop) ----
-   Your setup across the top is where cards land; the stock is a fanned hand along the bottom. Drag a card onto a
-   slot or your gear to buy it (src/ui/shop-drag.ts). Sized off the screen's height like the HUD. */
+/* ---- the skate shop (openspec ui2-card-shop, restyled in ui3-shop-look from zack's mockup) ----
+   A shop wall behind, a workbench along the bottom with the hand of cards standing on it; your setup across the
+   top is where cards land (src/ui/shop-drag.ts). Card art is the game's own models (src/ui/shop-art.ts). Sized off
+   the screen's height like the HUD, and nothing animates unless you touch it. */
 #shop {
   --u: clamp(7px, min(2.5vh, 1.35vw), 13px);
   --pink: #ff2fb4;
   --cyan: #3ff0ff;
   --yellow: #ffe23a;
+  --wood: #6b3f22;
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(var(--u) * 0.9);
-  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  gap: calc(var(--u) * 0.8);
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
   background:
-    radial-gradient(circle, rgba(255, 47, 180, 0.14) 1px, transparent 1.4px) 0 0 / 6px 6px,
-    linear-gradient(180deg, rgba(30, 10, 48, 0.94), rgba(14, 6, 26, 0.96));
+    radial-gradient(ellipse 45% 40% at 85% 0%, rgba(255, 47, 180, 0.35), transparent 70%),
+    radial-gradient(ellipse 40% 45% at 5% 30%, rgba(63, 240, 255, 0.18), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 24px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 52px),
+    linear-gradient(180deg, #2a1c48, #1a1230 60%, #120c22);
   font-family: 'Bangers', 'Arial Black', Impact, sans-serif;
   letter-spacing: 0.05em;
   animation: fade 0.2s ease-out;
   overflow: hidden;
 }
+/* decks hung on the shop wall, behind everything */
+#shop .deco { position: absolute; pointer-events: none; opacity: 0.55; width: calc(var(--u) * 14); z-index: 0; }
+#shop .deco.right { right: calc(var(--u) * -3); top: 34%; transform: rotate(-70deg); }
+#shop > :not(.deco) { position: relative; z-index: 1; }
+#shop > .ghost { position: fixed; z-index: 10; }
 /* :where keeps the reset at zero specificity so the card styles below win */
 :where(#shop button) { all: unset; box-sizing: border-box; cursor: pointer; text-align: center; }
 #shop button:disabled { opacity: 0.35; cursor: default; }
-.ink2, #shop .title, #shop .tag {
-  -webkit-text-stroke: 1.5px #000;
-  paint-order: stroke fill;
-  text-shadow: 2px 2px 0 #000;
-}
-#shop .head { position: relative; display: flex; align-items: center; gap: calc(var(--u) * 1.2); width: 100%; max-width: 900px; }
+#shop .head { display: flex; align-items: center; gap: calc(var(--u) * 1.4); width: 100%; max-width: 980px; }
 #shop .grow { flex: 1; }
-#shop .title { font-size: calc(var(--u) * 3); color: var(--yellow); transform: skewX(-8deg) rotate(-2deg); }
-#shop .cash { font-size: calc(var(--u) * 2.4); color: #4dff8a; -webkit-text-stroke: 1px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+/* the graffiti title: a spray of purple and cyan behind gradient letters */
+#shop .title {
+  position: relative;
+  font-size: calc(var(--u) * 3.6);
+  line-height: 1;
+  padding: calc(var(--u) * 0.4) calc(var(--u) * 1);
+  color: var(--yellow);
+  -webkit-text-stroke: 2px #120a16;
+  paint-order: stroke fill;
+  text-shadow: 3px 3px 0 #ff2fb4, 5px 5px 0 #120a16;
+  transform: skewX(-8deg) rotate(-3deg);
+  isolation: isolate;
+}
+#shop .title::before {
+  content: '';
+  position: absolute;
+  inset: -10% -6%;
+  z-index: -1;
+  background:
+    radial-gradient(closest-side at 35% 55%, #a23cff 55%, transparent 100%),
+    radial-gradient(closest-side at 70% 45%, #7a2cff 50%, transparent 100%),
+    radial-gradient(closest-side at 95% 75%, rgba(63, 240, 255, 0.9) 30%, transparent 100%),
+    radial-gradient(closest-side at 6% 30%, rgba(255, 47, 180, 0.95) 35%, transparent 100%);
+  background-size: 70% 120%, 60% 110%, 18% 40%, 18% 45%;
+  background-position: 0 50%, 100% 30%, 100% 100%, 0 0;
+  background-repeat: no-repeat;
+}
+#shop .cash {
+  font-size: calc(var(--u) * 2.8);
+  line-height: 1;
+  padding: calc(var(--u) * 0.2) calc(var(--u) * 1);
+  color: #4dff8a;
+  background: #0a0610;
+  clip-path: polygon(3% 8%, 98% 0, 100% 88%, 6% 100%, 0 60%);
+  -webkit-text-stroke: 1px #000;
+  paint-order: stroke fill;
+}
 #shop .restock, #shop .done {
   min-height: 40px;
-  padding: 0 calc(var(--u) * 1.6);
+  padding: 0 calc(var(--u) * 1.8);
   display: flex;
   align-items: center;
-  font-size: calc(var(--u) * 1.7);
+  font-size: calc(var(--u) * 2);
   border: 2px solid #000;
   transform: skewX(-10deg);
 }
-#shop .restock { color: #4dff8a; background: #1d1030; box-shadow: 0 0 0 2px #4dff8a, 3px 4px 0 2px #000; }
-#shop .done { color: #1a1028; background: var(--yellow); box-shadow: 0 0 0 2px var(--pink), 3px 4px 0 2px #000; }
+#shop .restock { color: #4dff8a; background: #160c24; box-shadow: 0 0 0 3px #4dff8a, 4px 5px 0 3px #000; }
+#shop .done { color: #120a16; background: var(--yellow); box-shadow: 0 0 0 3px var(--pink), 4px 5px 0 3px #000; }
+#shop .restock:active, #shop .done:active { transform: skewX(-10deg) translateY(2px); }
 #shop .spent {
   position: absolute;
-  left: calc(var(--u) * 16);
+  left: calc(var(--u) * 20);
   top: 0;
   color: #ff4a5a;
-  font-size: calc(var(--u) * 2.2);
+  font-size: calc(var(--u) * 2.4);
   -webkit-text-stroke: 1px #000;
   paint-order: stroke fill;
   pointer-events: none;
@@ -756,39 +797,51 @@ html, body {
 }
 @keyframes spent { to { transform: translateY(-24px); opacity: 0; } }
 
-/* your setup: the drop zones */
-#shop .setup { display: flex; gap: calc(var(--u) * 1.6); justify-content: center; align-items: stretch; width: 100%; max-width: 900px; }
+/* your setup: the drop zones, with yellow tape labels */
+#shop .setup { display: flex; gap: calc(var(--u) * 1.8); justify-content: center; align-items: stretch; width: 100%; max-width: 980px; margin-top: calc(var(--u) * 0.6); }
 #shop .board, #shop .gearrow {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.3);
-  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.8) calc(var(--u) * 0.7);
-  background: rgba(10, 4, 20, 0.8);
+  justify-content: flex-end;
+  padding: calc(var(--u) * 1.6) calc(var(--u) * 0.9) calc(var(--u) * 0.8);
+  background: rgba(10, 4, 20, 0.85);
   border: 2px solid #000;
-  box-shadow: 0 0 0 2px var(--pink), 3px 4px 0 2px #000;
+  box-shadow: 0 0 0 3px var(--pink), 4px 5px 0 3px #000;
   transition: box-shadow 0.12s, transform 0.12s;
 }
-#shop .tag { font-size: calc(var(--u) * 1.5); color: var(--yellow); line-height: 1; }
-#shop .slots, #shop .parts { display: flex; align-items: center; gap: calc(var(--u) * 0.5); }
-#shop .arrow { font-style: normal; opacity: 0.5; font-size: calc(var(--u) * 1.6); color: #fff; }
+#shop .tag {
+  position: absolute;
+  left: calc(var(--u) * -0.4);
+  top: calc(var(--u) * -1.2);
+  padding: 0 calc(var(--u) * 0.8);
+  font-size: calc(var(--u) * 1.8);
+  line-height: 1.25;
+  color: #120a16;
+  background: var(--yellow);
+  transform: rotate(-3deg) skewX(-8deg);
+  box-shadow: 2px 3px 0 #000;
+}
+#shop .slots, #shop .parts { display: flex; align-items: center; gap: calc(var(--u) * 0.6); }
+#shop .arrow { font-style: normal; opacity: 0.6; font-size: calc(var(--u) * 1.8); color: #fff; }
 #shop .slot {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--u) * 6.4);
-  height: calc(var(--u) * 5);
+  width: calc(var(--u) * 6.6);
+  height: calc(var(--u) * 5.2);
   min-width: 48px;
-  min-height: 40px;
+  min-height: 42px;
   padding: 2px;
-  font-size: calc(var(--u) * 1.3);
+  font-size: calc(var(--u) * 1.4);
   line-height: 1;
   color: var(--k, #fff);
   background: #1d1030;
   border: 2.5px solid var(--k, #4a3d5a);
   touch-action: none;
 }
-#shop .slot.empty { border-style: dashed; color: transparent; }
+#shop .slot.empty { border-style: dashed; color: #6a5a7e; background: rgba(29, 16, 48, 0.6); }
+#shop .slot.empty::after { content: '+'; font-size: calc(var(--u) * 3); line-height: 1; }
 #shop .slot.trigger { --k: var(--trigger); }
 #shop .slot.effect { --k: var(--effect); }
 #shop .slot.modifier { --k: var(--modifier); }
@@ -799,23 +852,23 @@ html, body {
 #shop .part {
   display: grid;
   grid-template-columns: auto auto;
-  column-gap: calc(var(--u) * 0.4);
+  column-gap: calc(var(--u) * 0.5);
   align-items: center;
-  padding: calc(var(--u) * 0.3) calc(var(--u) * 0.5);
-  height: calc(var(--u) * 5);
-  min-height: 40px;
+  padding: calc(var(--u) * 0.3) calc(var(--u) * 0.7) calc(var(--u) * 0.3) calc(var(--u) * 0.4);
+  height: calc(var(--u) * 5.2);
+  min-height: 42px;
   background: #1d1030;
-  border: 2px solid #4a3d5a;
+  border: 2px solid #5a4a72;
   color: #fff;
 }
-#shop .part .icon { grid-row: 1 / 3; }
-#shop .part svg, #shop .gearcard svg { height: calc(var(--u) * 2.6); display: block; }
-#shop .part .name { font-size: calc(var(--u) * 1.1); line-height: 1; }
-#shop .cond { display: flex; align-items: center; gap: 4px; font-size: calc(var(--u) * 1); color: var(--tone); }
+#shop .part .icon { grid-row: 1 / 3; width: calc(var(--u) * 4); height: calc(var(--u) * 4); display: grid; place-items: center; }
+#shop .part .pic { max-width: 100%; max-height: 100%; }
+#shop .part .name { font-size: calc(var(--u) * 1.3); line-height: 1; }
+#shop .cond { display: flex; align-items: center; gap: 4px; font-size: calc(var(--u) * 1.2); color: var(--tone); }
 #shop .cond i {
   display: block;
   width: calc(var(--u) * 3.6);
-  height: 5px;
+  height: 6px;
   background: linear-gradient(90deg, var(--tone) var(--c), rgba(255, 247, 232, 0.18) var(--c));
   border: 1px solid #000;
 }
@@ -830,72 +883,117 @@ html, body {
 #shop .board.over, #shop .gearrow.over { transform: scale(1.04); box-shadow: 0 0 0 3px var(--yellow), 0 0 calc(var(--u) * 2.4) var(--yellow); }
 #shop[data-drag='gear'] .part { border-color: var(--cyan); }
 
-/* the hand: overlapping cards in a slight fan */
+/* the workbench: the cards stand on it, the hint is painted on its edge */
+#shop .bench {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: calc(100% + 24px + env(safe-area-inset-left) + env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 max(12px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+#shop .bench::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--u) * 5.4 + env(safe-area-inset-bottom));
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #8a5530, var(--wood) 30%, #3e2414);
+  border-top: 3px solid #120a16;
+  box-shadow: inset 0 4px 0 rgba(255, 210, 150, 0.25);
+  z-index: -1;
+}
 #shop .hand {
   flex: 1;
   min-height: 0;
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  gap: calc(var(--u) * 0.6);
   width: 100%;
-  max-width: 980px;
-  padding: 0 calc(var(--u) * 2) calc(var(--u) * 0.4);
+  max-width: 1100px;
 }
 .card-shop {
+  --c: #fff;
+  --tint: #241a36;
   position: relative;
-  flex: 0 1 calc(var(--u) * 13);
+  flex: 0 1 calc(var(--u) * 12.5);
   min-width: 0;
-  height: min(calc(var(--u) * 17), 100%);
-  max-height: 210px;
-  margin: 0 calc(var(--u) * -0.6);
+  height: min(calc(var(--u) * 19), 100%);
+  max-height: 230px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: calc(var(--u) * 0.4);
-  padding: calc(var(--u) * 0.7) calc(var(--u) * 0.8) calc(var(--u) * 0.8);
+  gap: calc(var(--u) * 0.3);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.6) calc(var(--u) * 0.7);
   text-align: left;
   color: #fff;
   background:
     radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1.4px) 0 0 / 5px 5px,
-    linear-gradient(180deg, #2a1648, #170b28);
-  border: 3px solid var(--c, #fff);
+    linear-gradient(180deg, var(--tint), #120a1c 75%);
+  border: 3px solid var(--c);
   outline: 2px solid #000;
-  box-shadow: 4px 6px 0 #000;
+  box-shadow: 3px 5px 0 #000;
   transform: rotate(var(--tilt, 0deg));
   transition: transform 0.12s, opacity 0.12s;
   touch-action: none;
   overflow: hidden;
 }
-.card-shop:nth-child(odd) { --tilt: -2.5deg; }
-.card-shop:nth-child(even) { --tilt: 2deg; }
-.card-shop:nth-child(3n) { --tilt: -1deg; }
-.card-shop.mod.trigger { --c: var(--trigger); }
-.card-shop.mod.effect { --c: var(--effect); }
-.card-shop.mod.modifier { --c: var(--modifier); }
-.card-shop.extra { --c: #4dff8a; }
-.card-shop.gearcard { --c: #ff9a3a; }
+.card-shop:nth-child(odd) { --tilt: -1deg; }
+.card-shop:nth-child(even) { --tilt: 1deg; }
+.card-shop.mod.trigger { --c: var(--trigger); --tint: #3a1d5c; }
+.card-shop.mod.effect { --c: var(--effect); --tint: #123a5c; }
+.card-shop.mod.modifier { --c: var(--modifier); --tint: #4a3a10; }
+.card-shop.extra { --c: #4dff8a; --tint: #134a2a; }
+.card-shop.gearcard { --c: #ff9a3a; --tint: #4e2a10; }
 .card-shop .kind {
   align-self: flex-start;
-  padding: 1px 6px;
-  font-size: calc(var(--u) * 1);
-  color: #1a1028;
+  margin: calc(var(--u) * -0.5) 0 0 calc(var(--u) * -0.6);
+  padding: 1px calc(var(--u) * 0.7);
+  font-size: calc(var(--u) * 1.15);
+  color: #120a16;
   background: var(--c);
-  transform: skewX(-10deg);
 }
-.card-shop b { font-size: calc(var(--u) * 1.7); line-height: 1; color: var(--c); -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
-.card-shop .text { font: 600 calc(var(--u) * 1.05)/1.25 system-ui, sans-serif; letter-spacing: 0; opacity: 0.9; }
+.card-shop b { font-size: calc(var(--u) * 1.75); line-height: 0.95; color: var(--c); -webkit-text-stroke: 1px #000; paint-order: stroke fill; text-shadow: 1px 2px 0 #000; }
+/* the picture: the model on a burst of the card's colour, a glyph for what it does */
+.card-shop .art { position: relative; flex: 1; min-height: calc(var(--u) * 4); display: grid; place-items: center; }
+.card-shop .art::before {
+  content: '';
+  position: absolute;
+  inset: -10% -20%;
+  background:
+    radial-gradient(circle, var(--c) 0 8%, transparent 45%),
+    repeating-conic-gradient(from 0deg, var(--c) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 62%);
+  mask-image: radial-gradient(circle, #000 20%, transparent 62%);
+  opacity: 0.5;
+}
+.card-shop .pic { position: relative; width: 100%; height: 100%; max-height: calc(var(--u) * 8); object-fit: contain; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.6)); }
+.card-shop .glyph { position: absolute; right: 2%; bottom: 0; width: 42%; max-width: calc(var(--u) * 4); fill: #fff; stroke: #120a16; stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(1px 2px 0 #000); }
+.card-shop .glyph.g-sparks { fill: var(--yellow); }
+.card-shop .glyph.g-plus { fill: #4dff8a; }
+.card-shop .glyph.g-up, .card-shop .glyph.g-down, .card-shop .glyph.g-right, .card-shop .glyph.g-flipv { fill: #fff; }
+.card-shop .glyph.g-speed, .card-shop .glyph.g-curl, .card-shop .glyph.g-ring { stroke: var(--yellow); fill: var(--yellow); }
+.card-shop .glyph.word { width: auto; max-width: none; font-size: calc(var(--u) * 2.6); line-height: 1; color: var(--yellow); -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; transform: rotate(-8deg); }
+.card-shop .text { font: 600 calc(var(--u) * 1.02)/1.2 system-ui, sans-serif; letter-spacing: 0; opacity: 0.92; }
 .card-shop .price {
-  margin-top: auto;
-  align-self: flex-start; /* left: the next card in the hand overlaps the right edge */
-  padding: 0 calc(var(--u) * 0.6);
-  font-size: calc(var(--u) * 1.9);
+  align-self: center;
+  margin-top: calc(var(--u) * 0.2);
+  padding: 0 calc(var(--u) * 0.9);
+  font-size: calc(var(--u) * 2.2);
+  line-height: 1.15;
   color: #4dff8a;
-  background: #000;
-  transform: skewX(-10deg);
+  background: #0a0610;
+  clip-path: polygon(4% 10%, 97% 0, 100% 90%, 2% 100%);
 }
 .card-shop.sold { --c: #4a3d5a; justify-content: center; align-items: center; opacity: 0.4; border-style: dashed; box-shadow: none; }
 .card-shop.sold b { color: #8a7a9a; }
-.card-shop.poor { filter: grayscale(0.8) brightness(0.7); }
+.card-shop.poor { filter: grayscale(0.85) brightness(0.65); }
 .card-shop.poor .price { color: #ff4a5a; }
 .card-shop.picked { transform: translateY(-14px) rotate(0deg); box-shadow: 0 0 0 3px #fff7e8, 4px 8px 0 #000; z-index: 2; }
 .card-shop.lifted { opacity: 0.25; }
@@ -911,9 +1009,7 @@ html, body {
 #shop.opening .card-shop:nth-child(n + 5) { animation-delay: 0.2s; }
 /* the card under your thumb */
 #shop .ghost {
-  position: fixed;
   margin: 0;
-  z-index: 10;
   pointer-events: none;
   opacity: 0.92;
   filter: none;
@@ -921,7 +1017,16 @@ html, body {
   transition: none;
   animation: none;
 }
-#shop .hint { font: 600 calc(var(--u) * 1.1)/1.3 system-ui, sans-serif; letter-spacing: 0; opacity: 0.75; text-align: center; color: #fff; }
+#shop .hint {
+  margin: calc(var(--u) * 0.7) 0 calc(var(--u) * 0.5);
+  padding: calc(var(--u) * 0.3) calc(var(--u) * 1.6);
+  font-size: calc(var(--u) * 1.25);
+  letter-spacing: 0.06em;
+  color: #d8cce8;
+  background: rgba(10, 6, 16, 0.85);
+  clip-path: polygon(1% 0, 100% 8%, 99% 100%, 0 92%);
+  text-align: center;
+}
 
 /* the collision debug overlay (src/render/collision-debug.ts) */
 .coldebug { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -966,3 +1071,22 @@ html, body {
 #paused .settings.dev .jump button { all: unset; cursor: pointer; padding: 2px 8px; background: #3a3050; border: 2px solid #000; color: #fff; }
 #paused .settings.dev .jump [data-dev='go'] { background: var(--trick); color: #1a1028; }
 @media (max-height: 500px) { .coldebug-panel { font-size: 9px; padding: 4px 6px; } }
+/* the shop's setup has to fit an iPhone SE across: the gear tiles share the room left by the board */
+#shop .board { flex: 0 1 auto; min-width: 0; }
+#shop .gearrow { flex: 0 1 auto; min-width: 0; }
+#shop .parts { min-width: 0; }
+#shop .part { flex: 1 1 0; min-width: 0; }
+@media (max-width: 760px) {
+  #shop .setup { gap: calc(var(--u) * 1.2); }
+  #shop .slots { gap: calc(var(--u) * 0.35); }
+  #shop .arrow { display: none; }
+  #shop .slot { width: calc(var(--u) * 5.4); min-width: 40px; }
+  #shop .part { grid-template-columns: auto; justify-items: center; column-gap: 0; padding: 2px calc(var(--u) * 0.4); }
+  #shop .part .icon { grid-row: auto; width: calc(var(--u) * 2.6); height: calc(var(--u) * 2.2); }
+  #shop .part .name { display: none; }
+  #shop .cond i { width: calc(var(--u) * 2.6); }
+}
+#shop .part { grid-template-columns: auto minmax(0, 1fr); overflow: hidden; }
+#shop .cond { min-width: 0; }
+#shop .cond i { width: auto; flex: 1 1 calc(var(--u) * 3.6); min-width: 12px; }
+@media (max-width: 760px) { #shop .part { grid-template-columns: minmax(0, 1fr); } }

@@ -6,8 +6,9 @@ import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
 import { GEAR, wornness } from './run/gear';
 import { modDef, type ModId } from './board/mods';
-import { GEAR_ICONS, GEAR_ORDER, HudView } from './ui/hud';
+import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
+import { gearArt, gearIcon, modArt, slotArt } from './ui/shop-art';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
@@ -110,7 +111,7 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
   const slots = shop.board.map((id, i) => slot(id, i, sel(i))).join('<i class="arrow">›</i>');
   const parts = GEAR_ORDER.map((p) => {
     const c = Math.round(v.gear[p]);
-    return `<div class="part ${gearTone(c)}" data-part="${p}"><span class="icon">${GEAR_ICONS[p]}</span>
+    return `<div class="part ${gearTone(c)}" data-part="${p}"><span class="icon">${gearIcon(p)}</span>
       <span class="name">${GEAR.names[p].toUpperCase()}</span><span class="cond"><i style="--c:${c}%"></i>${c}%</span></div>`;
   }).join('');
   const cards: string[] = shop.stock.map((id, i) => {
@@ -119,19 +120,19 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     const on = picked && 'stock' in picked && picked.stock === i ? 'picked' : '';
     const poor = shop.cash < m.price ? 'poor' : '';
     return `<button class="card-shop mod ${m.kind} ${on} ${poor}" data-stock="${i}">
-      <span class="kind">${KIND_TAG[m.kind]}</span><b>${esc(m.name)}</b><span class="text">${esc(m.text)}</span><span class="price">$${m.price}</span>
+      <span class="kind">${KIND_TAG[m.kind]}</span><b>${esc(m.name)}</b>${modArt(id)}<span class="text">${esc(m.text)}</span><span class="price">$${m.price}</span>
     </button>`;
   });
   if (shop.board.length < v.maxSlots) {
     cards.push(`<button class="card-shop extra ${shop.cash < v.slotPrice ? 'poor' : ''}" data-buyslot>
-      <span class="kind">BOARD</span><b>+1 SLOT</b><span class="text">Room for one more mod</span><span class="price">$${v.slotPrice}</span>
+      <span class="kind">BOARD</span><b>+1 SLOT</b>${slotArt()}<span class="text">Room for one more mod</span><span class="price">$${v.slotPrice}</span>
     </button>`);
   }
   for (const p of GEAR_ORDER) {
     const c = Math.round(v.gear[p]);
     if (c >= 100) continue; // only worn parts are for sale
     cards.push(`<button class="card-shop gearcard ${shop.cash < GEAR.price[p] ? 'poor' : ''}" data-gear="${p}">
-      <span class="kind">GEAR</span><span class="icon">${GEAR_ICONS[p]}</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>
+      <span class="kind">GEAR</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>${gearArt(p)}
       <span class="text">Yours is at ${c}%</span><span class="price">$${GEAR.price[p]}</span>
     </button>`);
   }

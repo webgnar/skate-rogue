@@ -310,6 +310,9 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **Taps still work:** tap a mod card then a slot; tap the slot or gear card to buy it straight away.
 - [ ] **Thumb feel:** the card under your thumb shrinks so you can see the slot under it. Is it easy to drop where you mean on the phone? Are the cards big enough to read?
 - [ ] **No accidental ollie:** nothing you do in the shop makes Lou ollie when you skate on.
+- [ ] **Shop look (zack's Oct 25 mockup, ui3-shop-look):** graffiti SKATE SHOP title, cash on a black strip, RESTOCK and SKATE ON top right; YOUR BOARD and YOUR GEAR with yellow tape labels; cards coloured by type (trigger purple, effect blue, modifier yellow, board green, gear orange) standing on a wooden workbench, with the hint painted along it.
+- [ ] **Card pictures:** every card shows a picture from the game's own models (board, truck, wheel, car, coin, Stoken gem; the sneaker is drawn) with a glyph for what it does. Do the pictures say what each mod does at a glance? Any you'd swap?
+- [ ] **Small phone:** on an iPhone SE all slots (even five) and all four gear tiles fit across; gear tiles there show just the picture and the bar.
 - [ ] **Worn looks on Lou:** a chipped deck nose, a scuffed shoe and then a hole, rusty trucks, coned wheels.
 
 ## Smashables
