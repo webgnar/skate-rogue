@@ -16,7 +16,7 @@ import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, isSwitch, switchName, LEDGE_GR
 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
-const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
+export const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
 const THIGH = 0.4;
 const SHIN = 0.4;
 const ANKLE = 0.075; // sole to ankle

@@ -44,7 +44,7 @@ describe('no falling through things', () => {
             const pressed = r() < 0.04;
             if (pressed) hold = Math.floor(r() * 30);
             const px = sk.x;
-            const py = sk.y;
+            const py = sk.boardY;
             const was = sk.mode;
             const ignore = sk.railIgnore;
             //moving things too: traffic, buses at stops, open car doors, drones (as they stood at the start of the step)
@@ -53,18 +53,19 @@ describe('no falling through things', () => {
             if (was !== 'air' || sk.mode !== 'air' || sim.events.some((e) => e.type === 'hop' || e.type === 'tuck' || e.type === 'kicker')) continue;
             const at = `seed ${seed * 7919} floor ${floor} build ${bi} frame ${f}`;
             for (const s of level.surfaces) {
-              const cx = crossAt(px, py, sk.x, sk.y, s.x0, s.y, surfaceSlope(s));
+              if (sk.gone.has(s)) continue; // Greece's ruins fall away
+              const cx = crossAt(px, py, sk.x, sk.boardY, s.x0, s.y, surfaceSlope(s));
               if (cx !== null && cx >= s.x0 && cx <= s.x1) holes.push(`${at}: through a ${s.kind} at ${Math.round(cx)}`);
             }
             for (const c of [...level.cars, ...movers]) {
-              const cx = crossAt(px, py, sk.x, sk.y, 0, c.roof, 0);
+              const cx = crossAt(px, py, sk.x, sk.boardY, 0, c.roof, 0);
               if (cx !== null && cx + PHYS.width / 2 >= c.x0 && cx - PHYS.width / 2 <= c.x1) holes.push(`${at}: through a car roof`);
             }
             for (const rail of level.rails) {
               if (rail === ignore || rail === sk.railIgnore) continue;
               const a = rail.yAt(px);
               const b = rail.yAt(sk.x);
-              if (a !== undefined && b !== undefined && py <= a + 0.01 && sk.y > b + 0.5) holes.push(`${at}: through a curved rail`);
+              if (a !== undefined && b !== undefined && py <= a + 0.01 && sk.boardY > b + 0.5) holes.push(`${at}: through a curved rail`);
             }
           }
         });
@@ -93,11 +94,11 @@ describe('flying into banks', () => {
             Object.assign(sk, { mode: 'air', surface: null, rail: null, x, y, hsp: 1 + r() * 11, vsp: -10 + r() * 20, coyote: 0 });
             for (let f = 0; f < 200; f++) {
               const px = sk.x;
-              const py = sk.y;
+              const py = sk.boardY;
               sk.step({ pressed: false, held: false });
               if (sk.mode !== 'air') break;
               const over = sk.x > bank.x0 + 1 && sk.x < bank.x1 - 1;
-              if (over && sk.y > surfaceY(bank, sk.x) + 1 && py <= surfaceY(bank, px) + 1) {
+              if (over && sk.boardY > surfaceY(bank, sk.x) + 1 && py <= surfaceY(bank, px) + 1) {
                 holes.push(`seed ${seed} gravity ${gravity}: from (${x.toFixed(1)}, ${y.toFixed(1)}) through the bank at ${Math.round(sk.x)}`);
                 break;
               }

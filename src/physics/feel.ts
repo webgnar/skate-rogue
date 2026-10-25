@@ -35,6 +35,7 @@ export const FEEL = {
   // in the air the skater looks straight down and lines the board up with the ground below: fully within `full` px of
   // it, fading out by `look` px, easing this share a frame, so a bank or a handrail is met at its own angle
   air: { look: 6 * 32, full: 1.5 * 32, ease: 0.15 },
+  settleFrames: 5, // a landing on a lifted board: the legs reach it over this many frames (the rig's 0.08 s crossfade)
   wornRock: 2, // worn gear rocks you more: x(1 + this x what the part costs you), wheels 1.5 times that
 } as const;
 
@@ -78,6 +79,8 @@ export class Feel {
   pitch = 0; // rad, the board's angle, + nose up
   impact = 0; // px/frame of the last landing
   quality: LandQuality = 'clean';
+  drop = 0; // px to draw the skater lower than the sim: landed on a lifted board, the legs reach down to it
+  private dropStep = 0;
   private squashV = 0;
   private leanV = 0;
   private wobbleV = 0;
@@ -90,6 +93,12 @@ export class Feel {
     this.quality = quality;
     this.squashV += impact * FEEL.squash.kick;
     if (quality === 'sketchy') this.rock(FEEL.wobble.sketchy * loose);
+  }
+
+  // touched down on a board lifted `px` off the feet: the feet meet it over the landing's crossfade
+  settle(px: number): void {
+    this.drop = px;
+    this.dropStep = px / FEEL.settleFrames;
   }
 
   // a bounce off something (a car roof, a door, a tailgate): the knees load and fire; `rock` > 0 rocks you too
@@ -112,6 +121,7 @@ export class Feel {
   // one step: `pitch` is the board's target angle on the ground (null in the air), `hsp` the speed now, `below` the
   // ground under you in the air (its angle and how far down it is; null: nothing below)
   step(grounded: boolean, pitch: number | null, hsp: number, below: { angle: number; depth: number } | null = null): void {
+    this.drop = Math.max(0, this.drop - this.dropStep);
     //knees
     const s = FEEL.squash;
     this.squashV += -s.k * this.squash - s.c * this.squashV;

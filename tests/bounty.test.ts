@@ -11,7 +11,7 @@ describe('wanted posters', () => {
     expect(n).toBeLessThan(18);
     for (let s = 1; s < 12; s++) expect(validatedFloor(s * 13, 5, { short: true }).level.bounty).toBeUndefined();
     expect(validatedEscape(5, 1).bounty).toBeUndefined();
-  });
+  }, 20000); // validates 51 floors: over vitest's 5 s default under a full parallel run
 
   it("pays the floor's Stoken again, at least 3, only when the gate is hot", () => {
     expect(bountyPay(5, BOUNTY.heat)).toBe(5);

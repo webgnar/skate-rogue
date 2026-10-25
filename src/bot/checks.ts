@@ -44,7 +44,7 @@ export class FloorChecks {
   private py = 0;
   private mode: Mode = 'roll';
   private ignore: CurvedRail | null = null;
-  private movers: Car[] = [];
+  private movers: { at: Car; car: Car }[] = []; // as each stood at the start of the step, and the thing itself
 
   constructor(private readonly sim: FloorSim) {}
 
@@ -52,11 +52,11 @@ export class FloorChecks {
   before(): void {
     const sk = this.sim.skater;
     this.px = sk.x;
-    this.py = sk.y;
+    this.py = sk.boardY; // the board: what lands (src/physics/tuck.ts)
     this.mode = sk.mode;
     this.ignore = sk.railIgnore;
     //moving things as they stood at the start of the step
-    this.movers = sk.movers.map((c) => ({ ...c }));
+    this.movers = sk.movers.map((c) => ({ at: { ...c }, car: c }));
   }
 
   // call right after sim.step
@@ -74,7 +74,7 @@ export class FloorChecks {
     const top = Math.min(level.startY, ...level.surfaces.map((s) => s.y));
     if (sk.y < top - CHECKS.skyTiles * TILE) this.add('sky-high', `climbed over ${CHECKS.skyTiles} tiles above the highest thing on the floor`, '', true);
     //through the street: below the street with street under you, on this step and the last (a canal is a real fall)
-    if (this.py <= level.streetY + 1 && sk.y > level.streetY + 4 && isStreetAt(level, this.px) && isStreetAt(level, sk.x) && sk.mode !== 'exit') {
+    if (this.py <= level.streetY + 1 && sk.boardY > level.streetY + 4 && isStreetAt(level, this.px) && isStreetAt(level, sk.x) && sk.mode !== 'exit') {
       this.add('through-street', `dropped through the street (mode ${this.mode} to ${sk.mode})`);
     }
     //through the top of something solid, in the air from the start of the step to its end
@@ -82,23 +82,25 @@ export class FloorChecks {
     if (air) {
       for (const s of level.surfaces) {
         if (sk.gone.has(s)) continue; // Greece's ruins fall away
-        const cx = crossAt(this.px, this.py, sk.x, sk.y, s.x0, s.y, surfaceSlope(s));
+        const cx = crossAt(this.px, this.py, sk.x, sk.boardY, s.x0, s.y, surfaceSlope(s));
         if (cx !== null && cx >= s.x0 && cx <= s.x1) this.add('fell-through', `fell through a ${s.kind} (${s.kind === 'bank' || s.kind === 'stairs' ? 'sloped' : 'flat'})`, s.kind);
       }
       for (const c of level.cars) {
-        const cx = crossAt(this.px, this.py, sk.x, sk.y, 0, c.roof, 0);
+        const cx = crossAt(this.px, this.py, sk.x, sk.boardY, 0, c.roof, 0);
         if (cx !== null && cx + PHYS.width / 2 >= c.x0 && cx - PHYS.width / 2 <= c.x1) this.add('fell-through', `fell through a parked ${c.model ?? 'car'}'s roof`, 'car');
       }
       //moving things (traffic, buses, doors, drones) can slide out from under you in a step: only through the middle
-      for (const c of this.movers) {
-        const cx = crossAt(this.px, this.py, sk.x, sk.y, 0, c.roof, 0);
+      //(not one that pulled out of the lane this step: half into the back lane it's no longer under you, src/traffic)
+      for (const { at: c, car } of this.movers) {
+        if (!sk.movers.includes(car)) continue;
+        const cx = crossAt(this.px, this.py, sk.x, sk.boardY, 0, c.roof, 0);
         if (cx !== null && cx >= c.x0 && cx <= c.x1) this.add('fell-through', `fell through the top of a moving ${c.model ?? 'car or drone'}`, 'mover');
       }
       for (const rail of level.rails) {
         if (rail === this.ignore || rail === sk.railIgnore) continue;
         const a = rail.yAt(this.px);
         const b = rail.yAt(sk.x);
-        if (a !== undefined && b !== undefined && this.py <= a + 0.01 && sk.y > b + 0.5) this.add('fell-through', 'fell through a curved rail', 'rail');
+        if (a !== undefined && b !== undefined && this.py <= a + 0.01 && sk.boardY > b + 0.5) this.add('fell-through', 'fell through a curved rail', 'rail');
       }
     }
     //rolling or grinding along a surface: the feet stay on its line

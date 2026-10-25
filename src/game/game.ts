@@ -1168,7 +1168,8 @@ export class Game {
     }
 
     this.sprite.mesh.position.x = toX(x);
-    this.sprite.mesh.position.y = toY(this.level, y);
+    //landed on a lifted board: drawn lower while the legs reach down to it (src/physics/tuck.ts)
+    this.sprite.mesh.position.y = toY(this.level, y + this.skater.feel.drop);
     const sk = this.skater;
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
     this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
