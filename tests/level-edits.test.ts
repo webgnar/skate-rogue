@@ -51,6 +51,17 @@ describe('level edits', () => {
     expect(L.layout.pieces.filter((p) => p.tier > 0).length).toBe(5 + chases);
   });
 
+  it('stretches the chases and the cable car climbs', () => {
+    useLevelEdits(none);
+    const a = buildFloor(2026, 7, PIECES, opts);
+    expect(a.hillSpans!.length).toBeGreaterThan(1);
+    useLevelEdits({ floors: { '7': { chasePieces: hillDials(7).chasePieces + 2, climbTop: 30 } } });
+    const b = buildFloor(2026, 7, PIECES, opts);
+    expect(hillDials(7).climbTop).toBe(30);
+    expect(b.hillSpans![1][0] - a.hillSpans![1][0]).toBe(2 * 16 * TILE);
+    expect(sectionNotes(b).some((n) => n.text === 'cable car ↑30')).toBe(true);
+  });
+
   it('reads dials over the code', () => {
     useLevelEdits({ floors: { '6': { grade: 0.33, run: [10, 12] } } });
     const d = hillDials(6);
