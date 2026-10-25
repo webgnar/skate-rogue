@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BASE, BOARD, CLIPS, clipLength, deckPoint, footTarget, kneePoint, mix, sample, type Pose } from '../src/render/poses';
+import { mirrorPose, switchName } from '../src/render/poses';
 
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
@@ -134,6 +135,24 @@ describe('rig poses', () => {
     expect(p.boardY + BOARD.deckTop - 0.03).toBeCloseTo(0);
     expect(p.yaw).toBeLessThan(-1); // chest turned away from the way he slides
     expect(p.head).toBeGreaterThan(0.5); // looking back down the rail
+  });
+
+  it('switch twins: every clip but the held poses has one, mirrored along the board', () => {
+    for (const name of ['push', 'ride', 'ollie', 'kickflip', 'grind1', 'grind2', 'fiveO', 'manual', 'land', 'bs180']) {
+      expect(CLIPS[switchName(name)], name).toBeTruthy();
+    }
+    expect(CLIPS.switchIdle).toBeUndefined();
+    const p = sample(CLIPS.ride, 0);
+    expect(mirrorPose(mirrorPose(p))).toEqual(p);
+    // the left foot stays on the left (+x) of the board, so the legs never cross
+    const sw = sample(CLIPS.switchRide, 0);
+    expect(footTarget(sw, true).x).toBeGreaterThan(footTarget(sw, false).x);
+    expect(sw.yaw).toBeCloseTo(-p.yaw);
+    // the pushing foot strokes the other way: toward +x, behind you when the rig is turned round
+    const a = sample(CLIPS.switchPush, 0.21);
+    const b = sample(CLIPS.switchPush, 0.56);
+    expect(a.footFOn).toBeLessThan(0.5);
+    expect(b.footFX).toBeGreaterThan(a.footFX);
   });
 
   it('blends between clips take the short way round for spun boards', () => {

@@ -12,7 +12,7 @@ import { wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
-import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, LEDGE_GRINDS, RAIL_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, isSwitch, switchName, LEDGE_GRINDS, RAIL_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
@@ -39,7 +39,7 @@ const COLORS = {
   wheel: 0xf3e6c4,
 };
 
-const GRINDS = new Set(Object.keys(GRIND_NAMES));
+const GRINDS = new Set(Object.keys(GRIND_NAMES).filter((n) => !isSwitch(n)));
 const ON_GROUND = new Set(['push', 'ride', ...GRINDS]); // clips that make no sense in the air
 const DOWN = new THREE.Vector3(0, -1, 0);
 const ONE = new THREE.Vector3(1, 1, 1);
@@ -99,6 +99,7 @@ export class SkaterRig {
   private railGrinds = 0;
   private sk: Skater | null = null; // the skater as of the last update, for what an event landed on
   private fakie = false; // shown riding fakie: the whole skater and board turned half round
+  private shown = ''; // the clip on screen: clipName's switch twin while riding fakie (back to the camera), or clipName
 
   // skinned model bones and the joints they follow
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
@@ -586,20 +587,28 @@ export class SkaterRig {
     this.fade = fade;
     this.fadeLen = fade;
     this.clipName = name;
-    this.clip = CLIPS[name];
+    this.pick();
     this.t = 0;
     if (name === 'push') this.pushes = 0;
+  }
+
+  // the clip to show for clipName: its switch twin while the rig is turned round (zack: switch has its own push,
+  // flip tricks and grinds), keeping its time
+  private pick(): void {
+    const twin = switchName(this.clipName);
+    this.shown = this.fakie && CLIPS[twin] ? twin : this.clipName;
+    this.clip = CLIPS[this.shown] ?? this.clip;
   }
 
   // Leaving a 180 (finished or cut short by the landing): the skater now rides the other way round, so turn the
   // whole rig to fakie (or back) and take the half turn back out of the pose. It looks the same, and a cut-short spin
   // finishes its turn in the crossfade.
   private settleSpin(): number {
-    const spin = SPINS[this.clipName];
+    const spin = SPINS[this.shown];
     if (!spin) return 0;
     this.fakie = !this.fakie;
     this.pose = { ...this.pose, yaw: this.pose.yaw - spin, boardYaw: this.pose.boardYaw - spin };
-    this.clipName = '';
+    this.clipName = this.shown = '';
     return spin;
   }
 
@@ -609,7 +618,7 @@ export class SkaterRig {
 
   // what the HUD calls the grind being shown
   get grindName(): string {
-    return GRIND_NAMES[this.clipName] ?? '50-50';
+    return GRIND_NAMES[this.shown] ?? '50-50';
   }
 
   onEvent(e: SkaterEvent): void {
@@ -643,8 +652,10 @@ export class SkaterRig {
     }
   }
 
-  // the animation editor: show a pose as it is, no clip logic, crossfade or slope
-  preview(p: Pose): void {
+  // the animation editor: show a pose as it is, no clip logic, crossfade or slope (clip: the clip it's from, so a
+  // switch twin's knees bend the way its body faces)
+  preview(p: Pose, clip = ''): void {
+    this.shown = clip;
     this.pose = p;
     this.fade = 0;
     this.raw?.pos.forEach((q, i) => this.bound[i].bone.position.copy(q));
@@ -715,13 +726,16 @@ export class SkaterRig {
     }
 
     // the sim's stance wins, except while a 180 is turning the rig round
-    if (!SPINS[this.clipName]) this.fakie = sk.fakie;
+    if (!SPINS[this.clipName] && this.fakie !== sk.fakie) {
+      this.fakie = sk.fakie;
+      this.pick();
+    }
 
     this.t += dt;
     let pose = sample(this.clip, this.t);
     const k = this.fade > 0 ? 1 - (this.fade = Math.max(0, this.fade - dt)) / this.fadeLen : 1;
     // a clip edited since the GLB was baked plays from its keys
-    const baked = EDITED.has(this.clipName) ? undefined : this.baked.get(this.clipName);
+    const baked = EDITED.has(this.shown) ? undefined : this.baked.get(this.shown);
     if (this.bound.length) {
       // the skinned model: pose it from the Blender clip or the code clip, then crossfade bone by bone
       this.pose = pose;
@@ -886,7 +900,7 @@ export class SkaterRig {
       this.toes[i].rotation.x = -(front ? p.footFToe : p.footBToe);
       const ankle = new THREE.Vector3(0, ANKLE, -0.05).applyQuaternion(foot.quaternion).add(foot.position);
       const hip = this.hips[i].position.clone().applyMatrix4(this.pelvis.matrix);
-      const knee = kneePoint(hip, ankle, THIGH, SHIN, kneePole(front, p.yaw - BASE.yaw));
+      const knee = kneePoint(hip, ankle, THIGH, SHIN, kneePole(front, p.yaw - (isSwitch(this.shown) ? -BASE.yaw : BASE.yaw)));
       const k = new THREE.Vector3(knee.x, knee.y, knee.z);
       place(this.thighs[i], hip, k);
       place(this.shins[i], k, ankle);

@@ -554,6 +554,73 @@ export const CLIPS: Record<string, Clip> = {
   },
 };
 
+// Switch (zack): riding with your back to the camera. The rig shows it turned half round (src/render/skater-rig.ts),
+// so a regular clip played there would push, pop and flick the wrong way, toward where you're going. Each clip has
+// a switch twin, 'switchPush' for 'push' and so on, that starts out as its mirror image along the board: the other
+// foot pushes and pops, the other arm leads, the board turns and pitches the other way. Each twin is a clip of its
+// own, so the editor can key it apart from the regular one.
+const NO_SWITCH = new Set(['idle', 'busted']); // held poses under a menu or a bust, never seen turned round
+export const switchName = (name: string): string => `switch${name[0].toUpperCase()}${name.slice(1)}`;
+export const isSwitch = (name: string): boolean => /^switch[A-Z]/.test(name);
+
+// a pose mirrored along the board (x): the legs and the arms trade roles, so the left leg still stands on the left
+export function mirrorPose(p: Pose): Pose {
+  return {
+    ...p,
+    yaw: -p.yaw,
+    hipX: -p.hipX,
+    lean: -p.lean,
+    head: -p.head,
+    headTilt: -p.headTilt,
+    armLRaise: p.armRRaise,
+    armLFwd: p.armRFwd,
+    armLElbow: p.armRElbow,
+    armRRaise: p.armLRaise,
+    armRFwd: p.armLFwd,
+    armRElbow: p.armLElbow,
+    footFX: -p.footBX,
+    footFY: p.footBY,
+    footFZ: p.footBZ,
+    footFOn: p.footBOn,
+    footFTurn: -p.footBTurn,
+    footFPitch: p.footBPitch,
+    footFToe: p.footBToe,
+    footFRoll: p.footBRoll,
+    footBX: -p.footFX,
+    footBY: p.footFY,
+    footBZ: p.footFZ,
+    footBOn: p.footFOn,
+    footBTurn: -p.footFTurn,
+    footBPitch: p.footFPitch,
+    footBToe: p.footFToe,
+    footBRoll: p.footFRoll,
+    boardX: -p.boardX,
+    boardPivot: -p.boardPivot,
+    boardPitch: -p.boardPitch,
+    boardYaw: -p.boardYaw,
+    tumble: -p.tumble,
+  };
+}
+
+// a key mirrored: everything the pose sets once mirrored, minus what's still the base
+export function mirrorKey(k: Key): Key {
+  const m = mirrorPose({ ...BASE, ...k });
+  const out: Key = {};
+  for (const f of Object.keys(m) as (keyof Pose)[]) if (Math.abs(m[f] - BASE[f]) > 1e-9) out[f] = +m[f].toFixed(4);
+  return out;
+}
+
+export function mirrorClip(c: Clip): Clip {
+  return { loop: c.loop, keys: c.keys.map((k) => ({ t: k.t, pose: mirrorKey(k.pose) })) };
+}
+
+// the twins come from the regular clips as edited, unless a twin is edited itself (applyClipEdits, below)
+for (const name of Object.keys(CLIPS)) {
+  if (NO_SWITCH.has(name)) continue;
+  const edited = (clipEdits as Record<string, Clip>)[name];
+  CLIPS[switchName(name)] = mirrorClip(edited?.keys?.length ? edited : CLIPS[name]);
+}
+
 // Clips keyed in the animation editor (?editor, src/editor) win over the ones above. It saves them to
 // clip-edits.json; the code clips stay as they were, so reverting a clip there brings the code one back.
 export const CODE_CLIPS: Record<string, Clip> = { ...CLIPS };
@@ -586,8 +653,9 @@ export const GRIND_NAMES: Record<string, string> = {
   grind2: 'BS BOARDSLIDE',
   fsBoardslide: 'FS BOARDSLIDE',
 };
+for (const [name, call] of Object.entries(GRIND_NAMES)) GRIND_NAMES[switchName(name)] = `SWITCH ${call}`;
 // spins that leave the skater riding the other way round (fakie): the clip ends turned this far
-export const SPINS: Record<string, number> = { bs180: -Math.PI, fs180: Math.PI };
+export const SPINS: Record<string, number> = { bs180: -Math.PI, fs180: Math.PI, switchBs180: Math.PI, switchFs180: -Math.PI };
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
