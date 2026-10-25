@@ -73,14 +73,15 @@ export class Sky {
       //perched on the wire, they sit on it wherever it is
       if (f.site.rail !== undefined) f.y = (this.level.rails[f.site.rail]?.yAt(f.x) ?? f.site.y) - SKY.perch;
       const dx = f.x - sk.x;
-      if (Math.abs(dx) < SKY.reach && f.y < sk.y + 4 && f.y > sk.y - PHYS.height && sk.mode !== 'bail' && sk.mode !== 'exit') {
+      const into = Math.abs(dx) < SKY.reach && f.y < sk.y + 4 && f.y > sk.y - PHYS.height && sk.mode !== 'bail' && sk.mode !== 'exit';
+      if (into) {
         hit = true;
         sk.hsp *= SKY.strikeSpeed;
         sk.carry *= SKY.strikeSpeed;
         if (sk.mode === 'rail') sk.railV *= SKY.strikeSpeed;
       }
       //they take off as you come over them (or hit them)
-      if (hit || dx < SKY.wake) f.state = 'scatter';
+      if (into || dx < SKY.wake) f.state = 'scatter';
     }
     //the helicopter: in over you while you're up, away ahead once you're down
     const ch = this.chopper;
