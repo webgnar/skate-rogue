@@ -166,6 +166,7 @@ starts at least 12 tiles up, so it's the quickest place to try them.
         you land on it. When it looks under the edge, you don't. The legs reach down to it as you land, with no pop.
   - [ ] Car sides: you hit them with the whole board's length now. Car hops are a bit easier (you can hop a
         roof with a truck over its end).
+- [ ] **No ollie during the impact (2026-10-25, Lou Gnar's rule).** Land from an ollie and mash the button: nothing happens until the landing clip stands back up (350 ms), then the next press pops at once. Grinds and manual pads have no lock. Side lines' ledges are a tile longer so you can still ollie ledge to ledge.
 
 - [ ] Clip the near corner of a roof, ledge, bar or car roof as you come down: you land on it rather than slipping
       past. Drop off the far end of something at speed with your feet still over it: you land on the edge, then roll off.

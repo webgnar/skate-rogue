@@ -11,7 +11,7 @@ export const SIDE = {
   from: 2,
   chance: 0.65,
   steps: [2, 2.5, 3, 3], // each ledge's height over the street, tiles: the first needs an ollie and a flip
-  len: [3, 4], // tiles per ledge
+  len: [4, 5], // tiles per ledge: room to land, sit out the impact (no ollie for 350 ms) and ollie on
   gap: [2, 3], // tiles between ledges: a plain ollie
   clear: 1.4 * TILE, // nothing under the line may stand taller than this (a parked car's roof, 40 px, is fine: hop up from it)
 };

@@ -34,6 +34,7 @@ export const PHYS = {
   slamSpeed: 0.5, // speed drops to half of base
   slamFrames: 36, // ~0.6 s to get back to full speed
   bufferFrames: 6, // 100 ms input buffer
+  impactFrames: 21, // Lou Gnar's IMPACT_DURATION, 350 ms: after a landing, no ollie until the knees are back up (zack)
   coyoteFrames: 5,
   width: 30, // the board's length, nose to tail (zack, 2026-10-25): what cars, drones and props hit
   height: 48,

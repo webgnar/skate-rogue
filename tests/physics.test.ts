@@ -48,7 +48,8 @@ describe('ollie', () => {
     expect(sk.y).toBe(sk.level.streetY);
   });
 
-  it('a press just before landing with no jumps left ollies on landing (buffer)', () => {
+  //(zack, 2026-10-25: Lou Gnar's impact lock wins over the buffer, as it did there: the press is lost)
+  it('a press just before landing with no jumps left does not ollie through the impact', () => {
     const sk = new Skater(levelOf(FLAT));
     sk.step({ pressed: true, held: true }); // ollie
     sk.step({ pressed: true, held: true }); // trick
@@ -56,8 +57,9 @@ describe('ollie', () => {
     while (sk.vsp < 0 || sk.boardY < sk.level.streetY - 3 * sk.vsp - 1) sk.step({ pressed: false, held: false }), f++;
     const before = sk.events.filter((e) => e.type === 'ollie').length;
     sk.step({ pressed: true, held: true });
-    for (let i = 0; i < 6; i++) sk.step({ pressed: false, held: true });
-    expect(sk.events.filter((e) => e.type === 'ollie').length).toBe(before + 1);
+    for (let i = 0; i < 40; i++) sk.step({ pressed: false, held: true });
+    expect(sk.events.filter((e) => e.type === 'ollie').length).toBe(before);
+    expect(sk.mode).toBe('roll');
     expect(f).toBeGreaterThan(0);
   });
 });

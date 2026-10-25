@@ -40,6 +40,7 @@ export class Skater {
   slamT = 0; // frames left of slam recovery
   boost = 1; // cruising speed multiplier (the gnar state)
   buffer = 0; // frames a press stays valid
+  impactT = 0; // frames left of the landing's impact: no ollie, and a press then is lost (Lou Gnar's LANDING state)
   coyote = 0;
   tricks = 0; // counts flip tricks, so the animation choice is deterministic
   surface: Surface | null = null; // what we're rolling or grinding on (null = the street)
@@ -150,6 +151,11 @@ export class Skater {
     this.holdT = input.held && this.holdT > 0 ? this.holdT + 1 : 0;
 
     //the button: ollie from the ground (or just after leaving it), flip trick in the air
+    if (this.mode !== 'roll') this.impactT = 0;
+    if (this.impactT > 0) {
+      this.buffer = 0;
+      this.impactT--;
+    }
     if (this.buffer > 0) {
       if (this.grounded || (this.mode === 'air' && this.coyote > 0)) this.ollie();
       else if (this.mode === 'air' && (this.jumps > 0 || this.spare >= 1)) this.trick();
@@ -179,6 +185,7 @@ export class Skater {
     this.slamT = from.slamT;
     this.boost = from.boost;
     this.buffer = from.buffer;
+    this.impactT = from.impactT;
     this.coyote = from.coyote;
     this.tricks = from.tricks;
     this.floatT = from.floatT;
@@ -685,6 +692,7 @@ export class Skater {
       this.feel.land(impact, quality, this.looseWheels);
       //a manual pad: you ride it in a manual (unless you slammed onto it)
       this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}), ...(lined > 0 ? { lined } : {}) });
+      if (!s?.manual || quality === 'slam') this.impactT = PHYS.impactFrames;
       if (quality === 'slam') this.slam();
     }
   }
