@@ -11,7 +11,7 @@ function key(mesh: THREE.Mesh): string | null {
   const c = (m as THREE.MeshLambertMaterial).color;
   const flags = [m.type, (m as THREE.MeshLambertMaterial).map?.uuid ?? '-', c ? c.getHexString() : '-', (m as THREE.MeshLambertMaterial).emissive?.getHexString() ?? '-', m.transparent, m.alphaTest, m.side, m.vertexColors, m.opacity];
   const attrs = Object.keys(g.attributes).sort().join(',');
-  return `${flags.join('|')}|${attrs}|${g.index ? 'i' : 'n'}`;
+  return `${flags.join('|')}|${attrs}|${g.index ? 'i' : 'n'}|${mesh.userData.track ?? '-'}`; // (lanes batch apart)
 }
 
 // returns how many meshes were merged away
@@ -42,6 +42,7 @@ export function batchStatic(root: THREE.Object3D): number {
     }
     const out = new THREE.Mesh(merged, material);
     out.name = 'batch';
+    if (list[0].userData.track !== undefined) out.userData.track = list[0].userData.track;
     root.add(out);
     saved += list.length - 1;
   }

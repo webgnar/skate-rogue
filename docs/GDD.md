@@ -169,6 +169,11 @@ The overpass is gone. From a quarter of the way down the street it runs as two d
 low road) and lane B at the back (the high road). The lane you're in at the gate picks the road. Along the way
 come three or four switches (src/gen/lanes.ts):
 
+**Twin streets, Oct 25, 2026** (zack: "it almost has to be a whole streets wide path not just a lane in the single
+road"; picked on a card from a mock-up). Lane B is drawn as a second street behind the first, past a planted median
+that opens at every switch. The camera rises over the two streets and slides with the skater to whichever one they're
+on, and the other street's own obstacles fade. The physics is unchanged: the lanes were already separate.
+
 - **Hop switch** (yellow chevrons): in the air as you cross it, you hop over to the other lane; rolling, you stay.
   Placed just past a gap where possible, so it comes down to how you jumped. The first and last switches are hops.
 - **Forced switch** (striped barriers closing one lane): everyone goes into the open lane.
