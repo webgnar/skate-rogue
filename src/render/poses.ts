@@ -23,6 +23,7 @@ export interface Pose {
   yaw: number; // body turn about y; + turns the chest toward the way you skate
   hipX: number;
   hipY: number;
+  hipZ: number; // toward the camera (+)
   lean: number; // torso tilt in the screen plane (+ leans toward +x)
   bend: number; // torso pitch toward the camera (crouching over the toes)
   head: number; // head turn toward +x
@@ -38,11 +39,17 @@ export interface Pose {
   footFZ: number;
   footFOn: number; // 1 = standing on the deck
   footFTurn: number; // foot yaw: 0 across the board (stance), 1.4 pointing forward (pushing)
+  footFPitch: number; // ankle bend about the ball of the foot: + lifts the heel (toes point down)
+  footFToe: number; // toes bend at the ball: + curls them up (back down by footFPitch keeps them flat)
+  footFRoll: number; // tips the shoe onto its outside edge (+), pivoting on that edge of the sole: a scrape
   footBX: number;
   footBY: number;
   footBZ: number;
   footBOn: number;
   footBTurn: number;
+  footBPitch: number;
+  footBToe: number;
+  footBRoll: number;
   boardX: number;
   boardY: number; // lift of the pivot point
   boardZ: number; // sideways shift, to keep a truck on the rail when the board is turned
@@ -57,6 +64,7 @@ export const BASE: Pose = {
   yaw: 0.35,
   hipX: 0,
   hipY: 0.9,
+  hipZ: 0,
   lean: 0.04,
   bend: 0.12,
   head: 0.5,
@@ -72,11 +80,17 @@ export const BASE: Pose = {
   footFZ: 0,
   footFOn: 1,
   footFTurn: 0,
+  footFPitch: 0,
+  footFToe: 0,
+  footFRoll: 0,
   footBX: -BOARD.bolts,
   footBY: BOARD.deckTop,
   footBZ: 0,
   footBOn: 1,
   footBTurn: 0,
+  footBPitch: 0,
+  footBToe: 0,
+  footBRoll: 0,
   boardX: 0,
   boardY: 0,
   boardZ: 0,

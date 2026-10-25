@@ -32,6 +32,7 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
     fields: [
       { f: 'hipX', label: 'hips along', min: -1, max: 1 },
       { f: 'hipY', label: 'hips height', min: 0, max: 1.6 },
+      { f: 'hipZ', label: 'hips toe/heel', min: -0.6, max: 0.6 },
       { f: 'yaw', label: 'body turn', min: -PI * 1.5, max: PI * 1.5, angle: true },
       { f: 'lean', label: 'lean', min: -1, max: 1, angle: true },
       { f: 'bend', label: 'bend over', min: -0.8, max: 1.6, angle: true },
@@ -69,6 +70,9 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
       { f: 'footFY', label: 'height (off)', min: -0.2, max: 1.2 },
       { f: 'footFZ', label: 'toe/heel (off)', min: -0.6, max: 0.6 },
       { f: 'footFTurn', label: 'turn', min: -1.6, max: 1.6, angle: true },
+      { f: 'footFPitch', label: 'heel lift', min: -0.8, max: 1.4, angle: true },
+      { f: 'footFToe', label: 'toes up', min: -0.8, max: 1.4, angle: true },
+      { f: 'footFRoll', label: 'roll on edge', min: -0.6, max: 1.6, angle: true },
     ],
   },
   {
@@ -79,6 +83,9 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
       { f: 'footBY', label: 'height (off)', min: -0.2, max: 1.2 },
       { f: 'footBZ', label: 'toe/heel (off)', min: -0.6, max: 0.6 },
       { f: 'footBTurn', label: 'turn', min: -1.6, max: 1.6, angle: true },
+      { f: 'footBPitch', label: 'heel lift', min: -0.8, max: 1.4, angle: true },
+      { f: 'footBToe', label: 'toes up', min: -0.8, max: 1.4, angle: true },
+      { f: 'footBRoll', label: 'roll on edge', min: -0.6, max: 1.6, angle: true },
     ],
   },
   {
@@ -98,13 +105,20 @@ const DEFS = new Map(GROUPS.flatMap((g) => g.fields).map((d) => [d.f, d]));
 const DEG = 180 / PI;
 const ROLL_SPEED = 6; // tiles a second the ground scrolls by with "roll" on
 
-type Handle = 'hips' | 'footF' | 'footB' | 'board';
+type Handle = 'hips' | 'footF' | 'footB' | 'board' | 'handL' | 'handR';
 const HANDLES: { id: Handle; color: number; label: string }[] = [
   { id: 'hips', color: 0xffd23a, label: 'hips' },
   { id: 'footF', color: 0x4ad8ff, label: 'front foot' },
   { id: 'footB', color: 0xff5ad8, label: 'back foot' },
   { id: 'board', color: 0xff8a2a, label: 'board' },
+  { id: 'handL', color: 0x7df0a0, label: 'front hand' },
+  { id: 'handR', color: 0xb98cff, label: 'back hand' },
 ];
+const OFF_DECK = 0.05; // drag a foot this far off the deck and it steps off the board
+const ARM_FIELDS = [
+  ['armLRaise', 'armLFwd', 'armLElbow'],
+  ['armRRaise', 'armRFwd', 'armRElbow'],
+] as const;
 
 const VIEWS: Record<string, { pos: [number, number, number]; target: [number, number, number] }> = {
   side: { pos: [0, 1.2, 9], target: [0, 1, 0.25] }, // the game's camera: from the toe side
@@ -275,6 +289,7 @@ export async function startEditor(base: string): Promise<void> {
     orbit.update();
   };
   setView('side');
+  if (params.has('debug')) Object.assign(window, { editorView: { camera, orbit } });
 
   status.textContent = 'loading the skater…';
   const rig = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar');
@@ -322,14 +337,19 @@ export async function startEditor(base: string): Promise<void> {
     if (!active || !gizmo.dragging) return;
     const p = handles.get(active)!.position;
     const pose = sampleNow();
-    if (active === 'hips') edit('drag:hips', { hipX: p.x, hipY: p.y });
+    if (active === 'hips') edit('drag:hips', { hipX: p.x, hipY: p.y, hipZ: p.z });
+    else if (active === 'handL' || active === 'handR') edit(`drag:${active}`, reach(pose, active === 'handL' ? 0 : 1, p));
     else if (active === 'board') edit('drag:board', { boardX: p.x, boardY: p.y - BOARD.deckTop, boardZ: p.z });
     else {
       const front = active === 'footF';
       const on = front ? pose.footFOn : pose.footBOn;
       const fx = front ? 'footFX' : 'footBX';
-      // a foot on the board slides along the deck; one off it goes anywhere
-      if (on >= 0.5) edit(`drag:${active}`, { [fx]: nearestDeckX(pose, p) });
+      // a foot on the board slides along the deck; dragged off it, or already off, it goes anywhere
+      const dx = nearestDeckX(pose, p);
+      const deck = footTarget({ ...pose, [front ? 'footFOn' : 'footBOn']: 1, [fx]: dx }, front);
+      const off = Math.hypot(deck.x - p.x, deck.y - p.y, deck.z - p.z) > OFF_DECK;
+      if (on >= 0.5 && !off) edit(`drag:${active}`, { [fx]: dx });
+      else if (on >= 0.5) edit(`drag:${active}`, front ? { footFOn: 0, footFX: p.x, footFY: p.y, footFZ: p.z } : { footBOn: 0, footBX: p.x, footBY: p.y, footBZ: p.z });
       else edit(`drag:${active}`, front ? { footFX: p.x, footFY: p.y, footFZ: p.z } : { footBX: p.x, footBY: p.y, footBZ: p.z });
     }
   });
@@ -337,7 +357,6 @@ export async function startEditor(base: string): Promise<void> {
     active = h;
     if (h) {
       gizmo.attach(handles.get(h)!);
-      gizmo.showZ = h !== 'hips';
     } else gizmo.detach();
     for (const [id, m] of handles) (m.material as THREE.MeshBasicMaterial).opacity = id === h ? 1 : 0.75;
     updateHint();
@@ -347,7 +366,7 @@ export async function startEditor(base: string): Promise<void> {
     if (gizmo.axis !== null) return; // grabbing the gizmo itself
     const r = canvas.getBoundingClientRect();
     ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
-    const hit = ray.intersectObjects([...handles.values()])[0];
+    const hit = ray.intersectObjects([...handles.values()].filter((m) => m.visible))[0];
     if (hit) pick(hit.object.userData.handle as Handle);
   });
 
@@ -539,7 +558,38 @@ export async function startEditor(base: string): Promise<void> {
     }
   }
 
+  // Arm IK: the shoulder raise and swing and the elbow bend that put the hand at `goal` (rig space), found by a few
+  // damped least-squares steps from the current angles. The clip still stores the angles.
+  function reach(pose: Pose, arm: 0 | 1, goal: THREE.Vector3): Partial<Pose> {
+    const fields = ARM_FIELDS[arm];
+    const q = { ...pose };
+    const err = () => goal.clone().sub(rig.handFor(q, arm));
+    for (let it = 0; it < 40; it++) {
+      const e = err();
+      if (e.lengthSq() < 1e-8) break;
+      const J = fields.map((f) => {
+        const v = q[f];
+        q[f] = v + 1e-4;
+        const d = rig.handFor(q, arm).sub(goal).add(e).multiplyScalar(1e4); // d(hand)/d(angle)
+        q[f] = v;
+        return d;
+      });
+      // solve (JᵀJ + λI) dθ = Jᵀe
+      const A = new THREE.Matrix3().set(
+        J[0].dot(J[0]) + 0.01, J[0].dot(J[1]), J[0].dot(J[2]),
+        J[1].dot(J[0]), J[1].dot(J[1]) + 0.01, J[1].dot(J[2]),
+        J[2].dot(J[0]), J[2].dot(J[1]), J[2].dot(J[2]) + 0.01,
+      );
+      const step = new THREE.Vector3(J[0].dot(e), J[1].dot(e), J[2].dot(e)).applyMatrix3(A.invert());
+      fields.forEach((f, k) => (q[f] += Math.max(-0.3, Math.min(0.3, step.getComponent(k)))));
+      q[fields[2]] = Math.max(0, Math.min(2.6, q[fields[2]])); // elbows only bend one way
+    }
+    return Object.fromEntries(fields.map((f) => [f, q[f]]));
+  }
+
   function placeHandles(pose: Pose): void {
+    handles.get('handL')!.position.copy(rig.handFor(pose, 0));
+    handles.get('handR')!.position.copy(rig.handFor(pose, 1));
     handles.get('hips')!.position.set(pose.hipX, pose.hipY, 0);
     const f = footTarget(pose, true);
     const b = footTarget(pose, false);
@@ -551,8 +601,8 @@ export async function startEditor(base: string): Promise<void> {
   function updateHint(): void {
     const h = HANDLES.find((x) => x.id === active);
     hint.innerHTML = h
-      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along the deck: set "on board" to 0 to lift it off)' : ''} · esc to let go`
-      : 'click a dot to move it: <b style="color:#ffd23a">hips</b> <b style="color:#4ad8ff">front foot</b> <b style="color:#ff5ad8">back foot</b> <b style="color:#ff8a2a">board</b> · drag to orbit, scroll to zoom';
+      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along the deck; pull it off the deck and it steps off, "on board" puts it back)' : h.id.startsWith('hand') ? ' (the shoulder and elbow follow)' : ''} · esc to let go`
+      : `click a dot to move it: ${HANDLES.map((x) => `<b style="color:#${x.color.toString(16).padStart(6, '0')}">${x.label}</b>`).join(' ')} · drag to orbit, scroll to zoom, h hides the dots`;
   }
   updateHint();
 
@@ -702,6 +752,12 @@ export async function startEditor(base: string): Promise<void> {
       t = Math.min(clipLength(clip as Clip), snapT(t + (e.key === 'ArrowLeft' ? -SNAP : SNAP)));
       changed();
     } else if (e.key === 'Escape') pick(null);
+    else if (e.key === 'h') {
+      // hide the dots to see the pose underneath
+      const show = !handles.get('hips')!.visible;
+      for (const m of handles.values()) m.visible = show;
+      if (!show) pick(null);
+    }
     else if (e.key === 'w') gizmo.setMode('translate');
   });
 
