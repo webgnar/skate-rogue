@@ -9,7 +9,8 @@ npm run dev
 
 ## Posing
 
-- **Pick a clip** at the top left. Space plays it (0.5× by default; the speed menu goes down to 0.1×). The **roll**
+- **Pick a clip** at the top left. `air` is the one that plays after every air trick (and off drops) until you land;
+  `freefall` is the bail. Space plays it (0.5× by default; the speed menu goes down to 0.1×). The **roll**
   box scrolls the ground so pushes and rides read like they do in the game.
 - **Scrub** by dragging on the timeline. The arrow keys step one frame (1/30 s), `,` and `.` jump between keys.
 - **Drag in the view.** Click a dot, then drag it or its arrows:
@@ -21,6 +22,7 @@ npm run dev
     clip still stores the arm angles, so the sliders keep working).
   A foot on the board slides along the deck (X) and across it toward the toe or heel edge (Z, the "toe/heel" value);
   lift it more than 10 cm up off the deck and it steps off the board.
+  White: the head. It shows rings instead of arrows: turn it, nod it or tilt it.
   `h` hides the dots so you can see the pose under them.
 - **Feet:** each foot has **heel lift** (about the ball of the foot), **toes up** (the toes bend at the ball) and
   **roll on edge** (tips the shoe onto its outside edge, pivoting on that edge of the sole, for scraping the grip

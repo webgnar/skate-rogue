@@ -44,6 +44,7 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
     fields: [
       { f: 'head', label: 'turn', min: -1.6, max: 1.6, angle: true },
       { f: 'nod', label: 'nod (down +)', min: -1, max: 1.2, angle: true },
+      { f: 'headTilt', label: 'tilt', min: -1, max: 1, angle: true },
     ],
   },
   {
@@ -105,7 +106,7 @@ const DEFS = new Map(GROUPS.flatMap((g) => g.fields).map((d) => [d.f, d]));
 const DEG = 180 / PI;
 const ROLL_SPEED = 6; // tiles a second the ground scrolls by with "roll" on
 
-type Handle = 'hips' | 'footF' | 'footB' | 'board' | 'handL' | 'handR';
+type Handle = 'hips' | 'footF' | 'footB' | 'board' | 'handL' | 'handR' | 'head';
 const HANDLES: { id: Handle; color: number; label: string }[] = [
   { id: 'hips', color: 0xffd23a, label: 'hips' },
   { id: 'footF', color: 0x4ad8ff, label: 'front foot' },
@@ -113,7 +114,21 @@ const HANDLES: { id: Handle; color: number; label: string }[] = [
   { id: 'board', color: 0xff8a2a, label: 'board' },
   { id: 'handL', color: 0x7df0a0, label: 'front hand' },
   { id: 'handR', color: 0xb98cff, label: 'back hand' },
+  { id: 'head', color: 0xffffff, label: 'head' },
 ];
+// what the less obvious clips are for, in the clip menu
+const NOTES: Record<string, string> = {
+  air: 'falling after a trick or off a drop',
+  freefall: 'bailed, off the board',
+  ride: 'rolling, no push',
+  land: 'landing squash',
+  grind1: '50-50',
+  grind2: 'bs boardslide',
+  shuv1: 'bs pop shove-it',
+  shuv2: '360 shove-it',
+  tre: '360 flip',
+};
+const HEAD_UP = 0.2; // the head's dot sits this far above the neck pivot, in the helmet
 const OFF_DECK = 0.1; // lift a foot this far up off the deck and it steps off the board
 const ARM_FIELDS = [
   ['armLRaise', 'armLFwd', 'armLElbow'],
@@ -337,7 +352,10 @@ export async function startEditor(base: string): Promise<void> {
     if (!active || !gizmo.dragging) return;
     const p = handles.get(active)!.position;
     const pose = sampleNow();
-    if (active === 'hips') edit('drag:hips', { hipX: p.x, hipY: p.y, hipZ: p.z });
+    if (active === 'head') {
+      const e = new THREE.Euler().setFromQuaternion(handles.get('head')!.quaternion, 'YXZ');
+      edit('drag:head', { nod: e.x, head: e.y, headTilt: -e.z });
+    } else if (active === 'hips') edit('drag:hips', { hipX: p.x, hipY: p.y, hipZ: p.z });
     else if (active === 'handL' || active === 'handR') edit(`drag:${active}`, reach(pose, active === 'handL' ? 0 : 1, p));
     else if (active === 'board') edit('drag:board', { boardX: p.x, boardY: p.y - BOARD.deckTop, boardZ: p.z });
     else {
@@ -360,6 +378,9 @@ export async function startEditor(base: string): Promise<void> {
   const pick = (h: Handle | null) => {
     active = h;
     if (h) {
+      // the head turns (rings), everything else moves (arrows)
+      gizmo.setMode(h === 'head' ? 'rotate' : 'translate');
+      gizmo.setSpace(h === 'head' ? 'local' : 'world');
       gizmo.attach(handles.get(h)!);
     } else gizmo.detach();
     for (const [id, m] of handles) (m.material as THREE.MeshBasicMaterial).opacity = id === h ? 1 : 0.75;
@@ -508,7 +529,7 @@ export async function startEditor(base: string): Promise<void> {
   function refresh(): void {
     const dirty = pending();
     clipSel.replaceChildren(
-      ...names.map((n) => el('option', { value: n }, `${n}${dirty[n] ? ' •' : saved[n] ? ' ✎' : ''}`)),
+      ...names.map((n) => el('option', { value: n }, `${n}${NOTES[n] ? ` (${NOTES[n]})` : ''}${dirty[n] ? ' •' : saved[n] ? ' ✎' : ''}`)),
     );
     clipSel.value = name;
     loopBox.checked = clip.loop;
@@ -592,6 +613,9 @@ export async function startEditor(base: string): Promise<void> {
   }
 
   function placeHandles(pose: Pose): void {
+    const head = handles.get('head')!;
+    head.position.copy(rig.headAt()).add(new THREE.Vector3(0, HEAD_UP, 0));
+    head.quaternion.setFromEuler(new THREE.Euler(pose.nod, pose.head, -pose.headTilt, 'YXZ'));
     handles.get('handL')!.position.copy(rig.handFor(pose, 0));
     handles.get('handR')!.position.copy(rig.handFor(pose, 1));
     handles.get('hips')!.position.set(pose.hipX, pose.hipY, 0);
