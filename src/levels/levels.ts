@@ -72,7 +72,7 @@ const DIALS: Dial[] = [
   { key: 'finalSet', name: 'last stairway', help: 'the most steps in the floor\'s last (biggest) stairway', min: 4, max: 24, step: 1 },
   { key: 'chasePieces', name: 'chase length', help: 'street pieces in each flat chase between hills', min: 1, max: 8, step: 1 },
   { key: 'climbTop', name: 'cable car climb', help: 'tiles the cable car takes you up after a chase', min: 4, max: 40, step: 1 },
-  { key: 'topStart', name: 'launch ramp', help: 'top route: how far down each hill the launch ramp sits, with the power line just past it (0 = the crest, 1 = the foot)', min: 0, max: 0.9, step: 0.05 },
+  { key: 'topStart', name: 'power line start', help: 'top route: how far down each hill the power line starts (0 = the crest, 1 = the foot)', min: 0, max: 0.9, step: 0.05 },
   { key: 'roofGap', name: 'rooftop gaps', help: 'top route: tiles to ollie between rooftops', min: 1, max: 6, step: 1, pair: true },
   { key: 'flocks', name: 'pigeons', help: 'top route: chance of pigeons on each wire and long rooftop', min: 0, max: 1, step: 0.05 },
   { key: 'street', name: 'last street', help: 'street pieces after the last hill, up to the fork', min: 1, max: 8, step: 1 },

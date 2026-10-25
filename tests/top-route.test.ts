@@ -26,13 +26,13 @@ describe('the top route', () => {
     }
   });
 
-  it("the power line hangs out of an ollie's reach, and a launch ramp on the road gets you up to it", () => {
+  it("the power line hangs out of an ollie's reach, from partway down each hill", () => {
     for (let seed = 1; seed <= 6; seed++) {
       const l = chicago(seed * 31, 3);
-      const ramps = l.surfaces.filter((s) => s.launch);
       for (const w of l.rails.filter((r) => r.top)) {
-        //a ramp just before it
-        expect(ramps.some((r) => r.x1 <= w.xs[0] && w.xs[0] - r.x1 <= 2 * 32)).toBe(true);
+        //it starts partway down, not over the crest
+        const sp = l.hillSpans!.find(([a, b]) => w.xs[0] >= a && w.xs[0] < b)!;
+        expect((w.xs[0] - sp[0]) / (sp[1] - sp[0])).toBeGreaterThan(0.3);
         //never closer to the road under it than an ollie and a flip reach (100 px)
         for (let i = 0; i < w.xs.length; i += 4) {
           const under = l.surfaces.filter((s) => s.hill && w.xs[i] >= s.x0 && w.xs[i] <= s.x1).map((s) => surfaceY(s, w.xs[i]));

@@ -75,8 +75,6 @@ describe('level edits', () => {
     expect(gaps.length).toBeGreaterThan(0);
     expect(gaps.every((g) => g === 5 * TILE)).toBe(true);
     expect(floorSVG(b, 0.3)).toContain('TOP ROUTE');
-    expect(floorSVG(b, 0.3)).toContain('launch ↗ top');
-    expect(sectionNotes(b).every((n) => n.kind !== 'kicker' || !b.surfaces.some((x) => x.launch && Math.abs((x.x0 + x.x1) / 2 - n.x) < 1))).toBe(true);
   });
 
   it('reads dials over the code', () => {

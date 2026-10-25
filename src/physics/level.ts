@@ -26,7 +26,6 @@ export interface Surface {
   el?: boolean; // the L's running rails (src/traffic/el.ts): drawn with the track, not as a bar on posts
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
   kicker?: boolean; // a kicker ramp on the street (the L's, src/traffic/el.ts): drawn as a steel launch ramp
-  launch?: boolean; // a kicker up to the top route (src/gen/top-route.ts): pop off its lip to reach the power line or the rooftops
   tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
   top?: boolean; // part of the top route (src/gen/top-route.ts): a rooftop up where the helicopter sees you
 }

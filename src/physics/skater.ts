@@ -426,9 +426,8 @@ export class Skater {
 
     if (this.mode === 'roll' || this.mode === 'grind') {
       //a kicker ramp standing on the street: you roll up onto it
-      //(or on the hill's road: the top route's launch ramps stand on it)
-      if (this.mode === 'roll' && !this.surface?.kicker) {
-        const ramp = this.level.surfaces.find((s) => s.kicker && s !== this.surface && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
+      if (this.mode === 'roll' && !this.surface) {
+        const ramp = this.level.surfaces.find((s) => s.kicker && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
         if (ramp) this.surface = ramp;
       }
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);

@@ -129,8 +129,7 @@ export class Pilot {
     //(not where another rail picks up right where this one ends: the top route's wires, pole to pole)
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) pressed = true;
     if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
-    //pop off a launch ramp's lip, and flip near the top of the arc if that's what reaches the top route
-    if (this.style === 'high' && sk.mode === 'roll' && sk.surface?.launch && sk.x > sk.surface.x1 - 8) pressed = true;
+    //flip near the top of an arc if that's what reaches the top route
     if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, sk, sk.x, sk.y, sk.vsp) && landsTop(level, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick)) pressed = true;
     //pigeons sitting on the top route ahead: ollie over them
     if ((onSurface || sk.mode === 'rail') && sim.sky.flocks.some((f) => f.state === 'perch' && f.x - sk.x > 0 && f.x - sk.x < 8 * Math.max(sk.hsp, sk.railV) && Math.abs(f.y - sk.y) < 20)) pressed = true;
