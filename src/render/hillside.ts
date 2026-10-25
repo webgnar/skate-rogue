@@ -930,3 +930,33 @@ export function buildForeground(level: Level, group: THREE.Group): void {
   houseRow(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, open, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
   m.build(group);
 }
+
+// the planted median between the twin streets (src/render/kit.ts, lane B): a clipped hedge along its middle with
+// flowering shrubs in it, and Chicago's boulevard lamps standing over it. Kept low so it never hides the skater in
+// lane B behind it. `spans` are its runs in tiles, z0..z1 its depth, `top` its height. One mesh.
+export const MEDIAN = { hedge: 0.45, lampEvery: 9, bloomEvery: 3.5, lamp: 3.6 };
+
+export function buildMedian(spans: [number, number][], z0: number, z1: number, top: number, group: THREE.Group): void {
+  const m = new Mesher();
+  const zc = (z0 + z1) / 2;
+  const leaf = rectUv(SWATCH.leaf);
+  const grey = rectUv(SWATCH.grey);
+  const dark = rectUv(SWATCH.dark);
+  const faces = (uv: [number, number][], side = uv) => ({ top: ['house', uv] as [Key, [number, number][]], front: ['house', side] as [Key, [number, number][]], back: ['house', side] as [Key, [number, number][]], left: ['house', side] as [Key, [number, number][]], right: ['house', side] as [Key, [number, number][]] });
+  for (const [a, b] of spans) {
+    if (b - a < 2) continue;
+    const h0 = a + 0.6;
+    const h1 = b - 0.6;
+    m.box(h0, h1, top, top + MEDIAN.hedge, top + MEDIAN.hedge, zc - 0.3, zc + 0.3, faces(leaf));
+    for (let x = h0 + 1; x < h1 - 0.5; x += MEDIAN.bloomEvery) shrub(m, x, zc, top + 0.1, Math.floor(x) % 2 === 0);
+    //a boulevard lamp: a grey post, two arms out over each street, a dark lantern on each
+    for (let x = a + MEDIAN.lampEvery / 2; x < b - 1; x += MEDIAN.lampEvery) {
+      oct(m, x, zc, 0.09, top, top + MEDIAN.lamp, grey, 0.06);
+      m.box(x - 0.05, x + 0.05, top + MEDIAN.lamp - 0.08, top + MEDIAN.lamp, top + MEDIAN.lamp, zc - 0.7, zc + 0.7, faces(grey));
+      for (const dz of [-0.65, 0.65]) {
+        m.box(x - 0.14, x + 0.14, top + MEDIAN.lamp - 0.42, top + MEDIAN.lamp - 0.08, top + MEDIAN.lamp - 0.08, zc + dz - 0.14, zc + dz + 0.14, faces(grey, dark));
+      }
+    }
+  }
+  m.build(group);
+}
