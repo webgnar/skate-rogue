@@ -11,10 +11,11 @@ import { inkify } from './toon';
 
 const BIRDS = 5; // pigeons a flock
 // The airliner (art/airliner.py, from the QFS Chicago level's sprite) is drawn way bigger than before (zack), about
-// 10 tiles nose to tail, just behind the street and above the skater: any further back or higher, the houses and
-// the HUD hide it (the camera shows little sky)
+// 10 tiles nose to tail, just behind the street and high in the sky, over the power lines (zack): the wires hang 5
+// and more tiles over the road, so down on the street it flies near the top of the frame, and up on the wires and
+// rooftops (where the camera rises with you) a little lower over you
 const PLANE_Z = -2;
-const PLANE_UP = 4.5; // above the skater
+const PLANE_UP = { street: 5.6, top: 3.2 }; // tiles above the skater: over the wires (5 over the road), under the top of the frame
 const PLANE_S = 0.75; // of the model's 14 tiles
 const PLANE_EVERY = [9, 18]; // seconds between airliners, down on the street (halved up top)
 
@@ -31,6 +32,7 @@ export class SkyView {
   private planeT = 6;
   private planeX = 0;
   private flying = false;
+  private alt = PLANE_UP.street;
   private t = 0;
 
   constructor() {
@@ -132,6 +134,8 @@ export class SkyView {
         this.planeT = PLANE_EVERY[0] + ((Math.floor(this.t * 7) % 10) / 10) * (PLANE_EVERY[1] - PLANE_EVERY[0]);
       }
     }
-    if (this.flying) this.plane.position.set(this.planeX, toY(level, skaterY) + PLANE_UP, PLANE_Z);
+    //ease between the heights as you go up and come down, so it doesn't jump
+    this.alt += ((up ? PLANE_UP.top : PLANE_UP.street) - this.alt) * Math.min(1, dt * 1.5);
+    if (this.flying) this.plane.position.set(this.planeX, toY(level, skaterY) + this.alt, PLANE_Z);
   }
 }

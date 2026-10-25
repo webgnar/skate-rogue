@@ -619,6 +619,9 @@ and listed it here for review. Any of these can be flipped in the morning.
   boards and a clerestory. Calder's Flamingo and the Chicago Picasso are new landmarks (landmarks.py). The city's
   plain Chicago quarters (all but the first, which is under the L) take them in turn, with the other worlds'
   landmarks still in their quarters.
+  Follow-up (zack: "above the power lines"): the airliner now flies over the wires, 5.6 tiles over the skater on
+  the street and 3.2 over them up on the top route, easing between the two. The camera shows little sky, so on the
+  street that puts it in the strip just under the HUD.
 
 ## HUD thread: ui1-hud (zack's HUD mockup)
 
