@@ -504,6 +504,11 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- **Hair and loose cloth trail the motion (2026-10-25, zack: "trail the direction the players falling or going").**
+  Spring bone chains, per the hair and clothes physics plan: Webster, Roxy and Goldie's long hair is five clumps on
+  3-bone chains off Head, and Keanu's hoodie has two drawstrings off Spine1 (art/skaters.py). src/render/springs.ts
+  swings them with verlet particles in world space (gravity, a pull back to the pose, head and chest colliders),
+  sharing a slow frame's move across its steps so nothing flings ahead. Lou has nothing loose yet. Hems and flares next.
 - **Fixed the jittery 180s (2026-10-25, zack).** The PR #156 re-bake recorded every other frame of fs180/bs180 from
   the switch twin: replaying a 180 each frame settled its spin and flipped the rig to fakie. bake_clips.cjs now resets
   the rig to regular stance before every frame; re-baked lou-gnar.glb.

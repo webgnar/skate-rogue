@@ -504,6 +504,7 @@ Test on the iPhone in landscape, both ways round (notch on the left, then on the
 Quickest way in for most of these: `?debug&seed=7` and play floor 1 (it starts up on the roofs, so stairs, rails,
 banks and drops come fast). Add `?skater=roxy` to see any item on another skater.
 
+- [ ] Play as Roxy, Webster or Goldie (`?skater=roxy`): the hair streams back while you roll, flicks up as you fall and settles down your back when you stop. Keanu's hoodie strings swing.
 - [ ] Hop off a car roof: Lou does a boneless (front foot steps down onto the roof, back hand grabs the deck, the foot comes back on at the top). Riding fakie it's the mirrored switch boneless. Tune it in ?editor as `boneless (car hop)`.
 
 **Animation editor** (`npm run dev`, then http://localhost:5173/?editor)
