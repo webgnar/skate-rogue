@@ -62,6 +62,21 @@ describe('level edits', () => {
     expect(sectionNotes(b).some((n) => n.text === 'cable car ↑30')).toBe(true);
   });
 
+  it('moves the top route\'s power line and spaces its rooftops', () => {
+    useLevelEdits(none);
+    const a = buildFloor(2026, 7, PIECES, opts);
+    const firstWire = (L: typeof a) => L.rails.find((r) => r.top)!.x0;
+    useLevelEdits({ floors: { '7': { topStart: 0.1, roofGap: [5, 5], flocks: 0 } } });
+    const b = buildFloor(2026, 7, PIECES, opts);
+    expect(firstWire(b)).toBeLessThan(firstWire(a));
+    expect(b.flocks ?? []).toHaveLength(0);
+    const roofs = b.surfaces.filter((s) => s.top).sort((x, y) => x.x0 - y.x0);
+    const gaps = roofs.slice(1).map((r, i) => r.x0 - roofs[i].x1).filter((g) => g < 6 * TILE);
+    expect(gaps.length).toBeGreaterThan(0);
+    expect(gaps.every((g) => g === 5 * TILE)).toBe(true);
+    expect(floorSVG(b, 0.3)).toContain('TOP ROUTE');
+  });
+
   it('reads dials over the code', () => {
     useLevelEdits({ floors: { '6': { grade: 0.33, run: [10, 12] } } });
     const d = hillDials(6);

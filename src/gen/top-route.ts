@@ -11,6 +11,8 @@ import { polyRail, isStreetAt, surfaceY, type CurvedRail, type Level, type Surfa
 import { PICKUPS } from './descent';
 import { makeRng, type Rng } from './rng';
 import { SKY, type FlockSite } from '../sim/sky';
+import { editFloor } from './hills';
+import { floorEdit } from './level-edits';
 
 export const TOP = {
   height: 5 * TILE, // the rooftops' and the gate's height over the street: over an L train's roof, past a flip
@@ -25,6 +27,12 @@ export const TOP = {
   flocks: 0.35, // chance of a flock of pigeons on a rooftop, or along a wire's stretch (src/sim/sky.ts)
   heatPerSec: 2.5, // the helicopter's Heat while you're up there, where clean skating and grinding don't cool it; tricks still do (src/heat/heat.ts)
 };
+
+// a floor's top route dials: its edits (the level editor) over TOP's
+export function topDials(floor: number) {
+  const e = floorEdit(editFloor(floor));
+  return { topStart: e.topStart ?? TOP.start, roofGap: e.roofGap ?? TOP.gap, flocks: e.flocks ?? TOP.flocks };
+}
 
 const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo + 1));
 
@@ -43,7 +51,7 @@ function groundAt(level: Level, x: number): number | undefined {
 // one stretch of hill [a, b]: from its peak down, a line no lower than `entry` over the ground, falling straight to
 // the rooftops' height at the foot, and never rising (a grind doesn't climb); smoothed, it's one long grind (the
 // poles it hangs from are scenery: a wire per span between them kicked you off at every pole)
-function wire(level: Level, a: number, b: number): CurvedRail | null {
+function wire(level: Level, a: number, b: number, start = TOP.start): CurvedRail | null {
   const xs: number[] = [];
   const gs: number[] = [];
   for (let x = a; x <= b; x += TILE / 2) {
@@ -59,7 +67,7 @@ function wire(level: Level, a: number, b: number): CurvedRail | null {
   //it starts partway down, not at the crest (zack, 2026-10-25: "it should start higher than the street and the
   //beginning of where you can get to the high part can start like halfway down the hill"): over the first edge
   //past that, where the street falls away, ollie off it to catch the wire (roll off and you're on the street below)
-  const half = xs[p] + TOP.start * (b - xs[p]);
+  const half = xs[p] + start * (b - xs[p]);
   let q = xs.findIndex((x) => x >= half);
   if (q < 0) return null;
   const edge = (i: number) => gs.slice(i + 1, i + 5).some((g) => g >= gs[i] + TILE / 2);
@@ -100,7 +108,7 @@ function busy(level: Level, x0: number, x1: number, y: number): boolean {
 }
 
 // rooftop ledges at the top route's height over the street from x0 to x1, with gaps to ollie between
-function roofs(level: Level, x0: number, x1: number, rng: Rng): Surface[] {
+function roofs(level: Level, x0: number, x1: number, rng: Rng, gaps = TOP.gap): Surface[] {
   const y = level.streetY - TOP.height;
   const out: Surface[] = [];
   for (let x = x0; x < x1 - 3 * TILE; ) {
@@ -108,7 +116,7 @@ function roofs(level: Level, x0: number, x1: number, rng: Rng): Surface[] {
     if (!busy(level, x, x + w, y)) {
       out.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, top: true });
       for (let c = x + TILE; c < x + w - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y - PICKUPS.ride });
-      const gap = range(rng, TOP.gap) * TILE;
+      const gap = range(rng, gaps) * TILE;
       if (rng() < TOP.stoken) level.pickups.push({ kind: 'stoken', x: x + w + gap / 2, y: y - PICKUPS.arc });
       x += w + gap;
     } else x += 2 * TILE;
@@ -123,15 +131,16 @@ export function addTopRoute(level: Level, seed: number): void {
   if (!spans?.length) return;
   const rng = makeRng(seed * 97 + level.layout.floor * 7333);
   const birds = makeRng(seed * 89 + level.layout.floor * 4211); // its own, so the pigeons don't move the rooftops
+  const t = topDials(level.layout.floor);
   const rails: CurvedRail[] = [];
   const surfaces: Surface[] = [];
   const flocks: FlockSite[] = [];
   spans.forEach(([a, b], i) => {
-    const w = wire(level, a, b);
+    const w = wire(level, a, b, t.topStart);
     if (w) {
       rails.push(w);
       //pigeons sitting on the wire, halfway down
-      if (birds() < TOP.flocks) {
+      if (birds() < t.flocks) {
         const m = w.at(w.length / 2);
         flocks.push({ x: m.x, y: m.y - SKY.perch, rail: level.rails.length + rails.length - 1 });
       }
@@ -142,9 +151,9 @@ export function addTopRoute(level: Level, seed: number): void {
     }
     //then the street to the next stretch's climb, or to the overpass
     const end = i + 1 < spans.length ? spans[i + 1][0] : (level.fork?.x0 ?? level.exitX);
-    const rs = roofs(level, b, end - 2 * TILE, rng);
+    const rs = roofs(level, b, end - 2 * TILE, rng, t.roofGap);
     //and on the far end of a long rooftop, past where an ollie onto it lands
-    for (const r of rs) if (r.x1 - r.x0 >= 10 * TILE && birds() < TOP.flocks) flocks.push({ x: r.x1 - 2.5 * TILE, y: r.y - SKY.perch });
+    for (const r of rs) if (r.x1 - r.x0 >= 10 * TILE && birds() < t.flocks) flocks.push({ x: r.x1 - 2.5 * TILE, y: r.y - SKY.perch });
     surfaces.push(...rs);
   });
   level.rails.push(...rails);

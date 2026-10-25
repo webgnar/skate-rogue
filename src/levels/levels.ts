@@ -5,7 +5,8 @@
 // Save writes that file through the dev server (npm run dev). Without one (the phone, the deployed site) it copies
 // the edits as text instead, to paste to Claude. Unsaved edits stay in this browser, and ?leveldrafts plays them.
 import { FIRST_ROAD, rollFork, type Road } from '../gen/roads';
-import { floorRecipe, hillDials, recipe, type Beat } from '../gen/hills';
+import { floorRecipe, hillDials as hillOnly, recipe, type Beat } from '../gen/hills';
+import { topDials } from '../gen/top-route';
 import { SAVED_EDITS, floorEdit, useLevelEdits, type FloorEdit, type LevelEdits } from '../gen/level-edits';
 import { buildFloor, type FloorOptions } from '../gen/descent';
 import { validatedFloor } from '../gen/validate';
@@ -71,8 +72,14 @@ const DIALS: Dial[] = [
   { key: 'finalSet', name: 'last stairway', help: 'the most steps in the floor\'s last (biggest) stairway', min: 4, max: 24, step: 1 },
   { key: 'chasePieces', name: 'chase length', help: 'street pieces in each flat chase between hills', min: 1, max: 8, step: 1 },
   { key: 'climbTop', name: 'cable car climb', help: 'tiles the cable car takes you up after a chase', min: 4, max: 40, step: 1 },
+  { key: 'topStart', name: 'power line start', help: 'top route: how far down each hill the power line starts (0 = the crest, 1 = the foot)', min: 0, max: 0.9, step: 0.05 },
+  { key: 'roofGap', name: 'rooftop gaps', help: 'top route: tiles to ollie between rooftops', min: 1, max: 6, step: 1, pair: true },
+  { key: 'flocks', name: 'pigeons', help: 'top route: chance of pigeons on each wire and long rooftop', min: 0, max: 1, step: 0.05 },
   { key: 'street', name: 'last street', help: 'street pieces after the last hill, up to the fork', min: 1, max: 8, step: 1 },
 ];
+
+// the hill's dials and the top route's, as the editor shows them
+const hillDials = (f: number) => ({ ...hillOnly(f), ...topDials(f) });
 
 interface Built {
   level: Level;

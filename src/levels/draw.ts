@@ -30,6 +30,7 @@ const C = {
   cable: '#c8a2ff',
   kicker: '#ff9a3d',
   wire: '#d8d2e6',
+  up: '#5fa8ff', // the top route (sky blue: the side line has pink)
 };
 
 const MONO = 'font-family="JetBrains Mono, ui-monospace, Menlo, monospace"';
@@ -146,7 +147,7 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
       g.push(`<polygon points="${f(X(s.x0))},${f(Y(s.y))} ${f(X(s.x1))},${f(Y(y1))} ${f(X(s.x1))},${f(Y(s.y))}" fill="${C.kicker}"/>`);
       text(X((s.x0 + s.x1) / 2), Y(y1) - 6, 'L kicker', C.kicker, 'text-anchor="middle"');
     } else if (s.kind === 'ledge' || (fin && s.kind === 'roof')) {
-      g.push(`<rect x="${f(X(s.x0))}" y="${f(Y(s.y))}" width="${f((s.x1 - s.x0) * scale)}" height="${f(Math.max(2, 10 * scale))}" fill="${s.side ? C.side : C.ledge}"/>`);
+      g.push(`<rect x="${f(X(s.x0))}" y="${f(Y(s.y))}" width="${f((s.x1 - s.x0) * scale)}" height="${f(Math.max(2, 10 * scale))}" fill="${s.top ? C.up : s.side ? C.side : C.ledge}"/>`);
     } else if (s.kind === 'rail') {
       g.push(`<line x1="${f(X(s.x0))}" y1="${f(Y(s.y))}" x2="${f(X(s.x1))}" y2="${f(Y(s.y))}" stroke="${C.rail}" stroke-width="2"/>`);
     } else if (s.kind === 'overpass') {
@@ -158,7 +159,9 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
     for (let i = 0; i < r.xs.length; i += 2) pts += `${f(X(r.xs[i]))},${f(Y(r.ys[i]))} `;
     pts += `${f(X(r.xs[r.xs.length - 1]))},${f(Y(r.ys[r.ys.length - 1]))}`;
     //a power line strung over the hill is a thin wire; the rest are tubes
-    g.push(r.wire
+    g.push(r.top
+      ? `<polyline points="${pts}" fill="none" stroke="${C.up}" stroke-width="1.8" stroke-dasharray="6 3"/>`
+      : r.wire
       ? `<polyline points="${pts}" fill="none" stroke="${C.wire}" stroke-width="1.2" stroke-dasharray="4 2"/>`
       : `<polyline points="${pts}" fill="none" stroke="${C.rail}" stroke-width="2.2"/>`);
   }
@@ -173,6 +176,10 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
       g.push(`<polygon points="${f(cx)},${f(cy - r)} ${f(cx + r)},${f(cy)} ${f(cx)},${f(cy + r)} ${f(cx - r)},${f(cy)}" fill="${C.stoken}" stroke="#000"/>`);
     } else g.push(`<circle cx="${f(X(p.x))}" cy="${f(Y(p.y))}" r="${f(Math.max(1.4, 5 * scale))}" fill="${C.cash}"/>`);
   }
+  // the top route: pigeons in the way, and its name over the first stretch of it
+  for (const k of L.flocks ?? []) text(X(k.x), Y(k.y) - 2, 'ᵛᵛᵛ pigeons', C.up, 'text-anchor="middle"');
+  const firstUp = L.rails.find((r) => r.top) ?? L.surfaces.find((s) => s.top);
+  if (firstUp) text(X(firstUp.x0), Y('y0' in firstUp ? firstUp.y0 : firstUp.y) - 10, 'TOP ROUTE ↘', C.up);
   // traffic: where vehicles are set off, cross streets, bus stops
   const lane = L.streetY + 30;
   for (const s of opts.spawns ?? []) text(X(s.at), Y(lane), `${s.kind === 'oncoming' ? '◀' : '▶'} ${s.kind}`, s.kind === 'oncoming' ? C.slam : C.text);
@@ -228,7 +235,8 @@ export function silhouetteSVG(L: Level, scale: number, maxW: number, top: number
       g.push(`<polygon points="${X(s.x0)},${Y(s.y)} ${X(s.x1)},${Y(s.y1 ?? s.y)} ${X(s.x1)},${h} ${X(s.x0)},${h}" fill="${s.tow ? C.cable : C.hill}"/>`);
     }
   }
-  for (const r of L.rails) if (inHill(L, r.x0)) g.push(`<line x1="${X(r.x0)}" y1="${Y(r.y0)}" x2="${X(r.x1)}" y2="${Y(r.y1)}" stroke="${r.wire ? C.wire : C.rail}" stroke-width="${r.wire ? 1 : 1.5}"/>`);
+  for (const r of L.rails) if (inHill(L, r.x0)) g.push(`<line x1="${X(r.x0)}" y1="${Y(r.y0)}" x2="${X(r.x1)}" y2="${Y(r.y1)}" stroke="${r.top ? C.up : r.wire ? C.wire : C.rail}" stroke-width="${r.wire ? 1 : 1.5}"/>`);
+  for (const s of L.surfaces) if (s.top) g.push(`<rect x="${X(s.x0)}" y="${Y(s.y)}" width="${X(s.x1 - s.x0)}" height="1.5" fill="${C.up}"/>`);
   for (const [a, b] of streetSpans(L)) g.push(`<rect x="${X(a)}" y="${Y(L.streetY)}" width="${X(b - a)}" height="4" fill="#4a4262"/>`);
   if (L.fork) g.push(`<rect x="${X(L.fork.x0)}" y="${Y(L.fork.y)}" width="${X(L.fork.x1 - L.fork.x0)}" height="2" fill="${C.cash}"/>`);
   g.push(`<rect x="${X(L.exitX)}" y="${Y(L.streetY - 60)}" width="2" height="${(60 * scale).toFixed(1)}" fill="${C.gate}"/>`);
