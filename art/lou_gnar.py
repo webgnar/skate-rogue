@@ -221,6 +221,22 @@ def box(name, size, at, mat, bevel=0.0):
     return link(name, bm, [mat])
 
 
+BALL_Y = -0.12  # the ball of the foot: the ToeBase bone's head
+
+
+def shoe_parts(name, side, size, at, mat, bevel=0.0):
+    """A shoe box split at the ball of the foot: the heel part rides {side}Foot, the toe cap {side}ToeBase, so the
+    toes bend with the bone and a heel lift doesn't push the toe through the deck. The halves overlap a little at
+    the seam so a bend never opens a gap."""
+    w, length, h = size
+    x, y, z = at
+    front, back = y - length / 2, y + length / 2
+    heel_y0, toe_y1 = BALL_Y - 0.006, BALL_Y + 0.006
+    heel = box(f'{name}Heel', (w, back - heel_y0, h), (x, (back + heel_y0) / 2, z), mat, bevel)
+    toe = box(f'{name}Toe', (w, toe_y1 - front, h), (x, (toe_y1 + front) / 2, z), mat, bevel)
+    return [(heel, f'{side}Foot'), (toe, f'{side}ToeBase')]
+
+
 def gear(mats):
     parts = [
         (box('pack', (0.34, 0.14, 0.42), (0, 0.18, SPINE + 0.3), mats['suitShade'], 0.03), 'Spine1'),
@@ -240,9 +256,8 @@ def gear(mats):
         parts.append((link(f'glove{side}', bm, [mats['suitShade']]), f'{side}Hand'))
         # shoe: toes toward the camera (-Y), ankle over the heel
         sole_y = -0.05
-        shoe = box(f'shoe{side}', (0.12, 0.27, 0.1), (s * HIP_X, sole_y - 0.01, ANKLE_Z - 0.075 + 0.06), mats['shoe'], 0.015)
-        sole = box(f'sole{side}', (0.128, 0.285, 0.022), (s * HIP_X, sole_y - 0.01, ANKLE_Z - 0.075 + 0.011), mats['sole'])
-        parts += [(shoe, f'{side}Foot'), (sole, f'{side}Foot')]
+        parts += shoe_parts(f'shoe{side}', side, (0.12, 0.27, 0.1), (s * HIP_X, sole_y - 0.01, ANKLE_Z - 0.075 + 0.06), mats['shoe'], 0.015)
+        parts += shoe_parts(f'sole{side}', side, (0.128, 0.285, 0.022), (s * HIP_X, sole_y - 0.01, ANKLE_Z - 0.075 + 0.011), mats['sole'])
     # flag patch on the outside of the lead upper arm, turned a little toward the camera
     bm = bmesh.new()
     bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=0.5)
@@ -265,7 +280,7 @@ def wear_decals(shoe_w=0.12, shoe_y=-0.06):
     mid = ANKLE_Z - 0.075 + 0.055
     scuff = box('WearScuff', (0.006, 0.1, 0.05), (side + 0.002, shoe_y - 0.075, mid), material('WearScuff', 0x8E8C90), 0.002)
     hole = box('WearHole', (0.008, 0.045, 0.024), (side + 0.003, shoe_y - 0.085, mid + 0.004), material('WearHole', 0xE8E4DA))
-    return [(scuff, 'LeftFoot'), (hole, 'LeftFoot')]
+    return [(scuff, 'LeftFoot'), (hole, 'LeftToeBase')]  # the hole is worn through the toe cap
 
 
 def rigid(ob, bone):

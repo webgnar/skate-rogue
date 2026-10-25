@@ -147,9 +147,8 @@ def feet(spec, mats):
         parts.append((sphere(f'hand{side}', 0.045, (s * ARM_X, 0, HAND_Z), mats['skin'], (0.9, 1, 1.3), seg=(8, 6)), f'{side}Hand'))
         # sneakers: the same box as Lou's shoes, a touch slimmer
         y = -0.06
-        shoe = lg.box(f'shoe{side}', (0.11, 0.26, 0.095), (s * HIP_X, y, ANKLE_Z - 0.075 + 0.058), mats['shoe'], 0.015)
-        sole = lg.box(f'sole{side}', (0.118, 0.272, 0.024), (s * HIP_X, y, ANKLE_Z - 0.075 + 0.012), mats['sole'])
-        parts += [(shoe, f'{side}Foot'), (sole, f'{side}Foot')]
+        parts += lg.shoe_parts(f'shoe{side}', side, (0.11, 0.26, 0.095), (s * HIP_X, y, ANKLE_Z - 0.075 + 0.058), mats['shoe'], 0.015)
+        parts += lg.shoe_parts(f'sole{side}', side, (0.118, 0.272, 0.024), (s * HIP_X, y, ANKLE_Z - 0.075 + 0.012), mats['sole'])
     return parts
 
 
