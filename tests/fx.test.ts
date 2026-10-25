@@ -6,6 +6,7 @@ import { EscapeFx } from '../src/render/escape-fx';
 import { SirenFx, SIREN } from '../src/render/siren-fx';
 import { PhoneFx, PHONE, flashAt } from '../src/render/phone-fx';
 import { GateFx, GATE_FX } from '../src/render/gate-fx';
+import { CruiserJets, JETS, jetState } from '../src/render/cruiser-jets';
 import { chrome, railHeights, railTint, railUv, RAIL_METAL } from '../src/render/rail-metal';
 import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
@@ -536,6 +537,36 @@ describe('rail steel', () => {
   it('dims toward the night tint with the neon', () => {
     expect(railTint(0).getHex()).toBe(0xffffff);
     expect(railTint(1).getHex()).toBe(RAIL_METAL.night);
+  });
+});
+
+describe('cruiser jump jets', () => {
+  it('fold out fast when it leaves the bank, fire hardest going up, and fold away after it lands', () => {
+    let s = jetState(0, 0.5, 3, JETS.deploy / 2);
+    expect(s.out).toBeCloseTo(0.5);
+    s = jetState(s.out, 1, 3, JETS.deploy);
+    expect(s.out).toBe(1);
+    expect(s.thrust).toBe(JETS.lift);
+    expect(jetState(1, 1, -3, 0.016).thrust).toBe(1);
+    const down = jetState(1, 0, -3, 0.1);
+    expect(down.thrust).toBe(0);
+    expect(down.out).toBeGreaterThan(0); // still folding away
+    expect(jetState(down.out, 0, 0, JETS.stow).out).toBe(0);
+    expect(jetState(0, 0, 0, 1)).toEqual({ out: 0, thrust: 0 }); // stays stowed on the street
+  });
+  it('are hidden on the street and shown in the air, and spot the touchdown', () => {
+    const jets = new CruiserJets();
+    jets.update(0, 0.016);
+    expect(jets.group.children.every((c) => !c.visible)).toBe(true);
+    jets.update(0.5, 0.2);
+    expect(jets.group.children.every((c) => c.visible)).toBe(true);
+    expect(jets.thrust).toBeGreaterThan(0);
+    jets.update(0, 0.016);
+    expect(jets.landed).toBe(true);
+    jets.update(0, 0.016);
+    expect(jets.landed).toBe(false);
+    jets.reset();
+    expect(jets.out).toBe(0);
   });
 });
 

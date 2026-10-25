@@ -424,6 +424,11 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 - [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
 
+**Cruiser jump jets**
+
+- [ ] Get Heat up near a canal (`?floor=3` has some). As the cop car jumps the water, two thrusters fold out under
+      its side and fire flames and smoke. It lands with a dust puff and the thrusters fold away.
+
 **Rail steel**
 
 - [ ] Every rail you can grind looks like polished chrome, with a bright top, a white line through the middle, a
