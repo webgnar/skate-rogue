@@ -68,6 +68,7 @@ import { FloorChecks, type Finding } from '../bot/checks';
 import { reproQuery } from '../bot/repro';
 import { makeRng } from '../gen/rng';
 import { landDust, landKick } from '../render/land-fx';
+import { CollisionDebug } from '../render/collision-debug';
 
 export interface PickInfo {
   title: string;
@@ -276,6 +277,7 @@ export class Game {
   private botRng = makeRng(1);
   private floorFrames = 0;
   timeScale = 1; // ?bot&turbo=N runs the game N times faster
+  private colDebug: CollisionDebug | null = null; // the collision overlay (?debug=collision, C), made on first use
   readonly playtest: PlaytestState;
 
   constructor(
@@ -316,6 +318,16 @@ export class Game {
     this.view.scene.add(this.smashFx.group);
     this.playtest = { seed, floor: 0, label: '', district: this.biome, state: '', sim: '', x: 0, y: 0, mode: '', speed: 0, clip: '', boons: [], findings: [], floors: [], runs: [] };
     this.startFloor();
+  }
+
+  // the collision debug overlay (src/render/collision-debug.ts): on, off, or flipped
+  toggleCollision(on = !this.colDebug?.on): void {
+    if (on && !this.colDebug) this.colDebug = new CollisionDebug(document.getElementById('app')!, this.view.canvas);
+    this.colDebug?.show(on);
+  }
+
+  get collision(): CollisionDebug | null {
+    return this.colDebug?.on ? this.colDebug : null;
   }
 
   // hand the button to the playtest bot: 'ref' skates the validator's line, 'mash' presses at random
@@ -479,6 +491,7 @@ export class Game {
     this.state = 'skate';
     this.finished = false;
     this.pending = null;
+    this.colDebug?.reset();
     if (!from) {
       this.warp.reset();
       this.particles.clear();
@@ -931,8 +944,11 @@ export class Game {
       return;
     }
     //game time: frozen on a slam's hit-stop, then slow motion
-    const dt = realDt * this.warp.scale * this.timeScale;
-    this.warp.update(realDt * this.timeScale);
+    //the collision overlay's slow motion (0: frozen, stepped a frame at a time)
+    const col = this.collision;
+    const scale = this.timeScale * (col?.timeScale ?? 1);
+    const dt = realDt * this.warp.scale * scale;
+    this.warp.update(realDt * scale);
     if (this.autopilot && this.state !== 'skate' && this.state !== 'caught') this.botMenu(now);
 
     if (this.state === 'pick') {
@@ -952,7 +968,7 @@ export class Game {
         this.endRun(now, true);
       }
     } else {
-      this.loop.advance(dt, () => {
+      const step = () => {
         this.prev = { x: this.skater.x, y: this.skater.y };
         this.fallSpeed = this.skater.mode === 'air' ? this.skater.vsp : 0;
         //the gnar state: faster cruising, slams cost no Heat
@@ -966,11 +982,16 @@ export class Game {
           this.sim.step(this.autopilot.input(this.sim));
           this.checks?.after();
         } else this.sim.step(this.input.sample());
+        col?.afterStep(this.skater);
         this.run.step(this.skater.mode);
         for (const e of this.sim.events) this.handle(e);
         //rolled off the end of the floor: the next one carries on from here
         if (this.finished && this.pending && this.skater.x >= this.level.width) this.cross();
-      }, 5 * this.timeScale);
+      };
+      if (col?.frozen) {
+        if (col.takeStep()) step();
+        this.loop.alpha = 1; // show exactly where the sim is
+      } else this.loop.advance(dt, step, 5 * this.timeScale);
     }
     if (this.state !== 'over') {
       this.showAhead();
@@ -1092,6 +1113,7 @@ export class Game {
     this.view.adapt(realDt * 1000);
     this.view.render();
     this.perf(realDt);
+    if (this.colDebug?.on) this.colDebug.draw(this.level, this.skater, this.view.camera, realDt, this.perfText);
     this.updatePlaytest();
   }
 
