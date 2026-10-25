@@ -647,3 +647,37 @@ describe('tucked in the air, the board is what lands (zack, 2026-10-25)', () => 
     expect(sk.y).toBe(street);
   });
 });
+
+// zack (2026-10-25): Lou Gnar's rule, no ollie while the impact animation plays (IMPACT_DURATION 350 ms)
+describe('no ollie during the impact', () => {
+  // ollie on the flat, land, then press `after` frames after touching down
+  function pressAfterLanding(after: number): { ollied: boolean } {
+    const sk = new Skater(levelOf(FLAT));
+    run(sk, 1, pressAt(0));
+    let landed = -1;
+    let ollied = false;
+    for (let f = 1; f < 200; f++) {
+      const press = landed >= 0 && f === landed + after;
+      sk.step({ pressed: press, held: press });
+      if (landed < 0 && lands(sk).length) landed = f;
+      //(the skater's events pile up until the sim takes them: the first ollie is one)
+      else if (landed >= 0 && sk.events.filter((e) => e.type === 'ollie').length > 1) ollied = true;
+    }
+    return { ollied };
+  }
+
+  it('a press while the knees take the landing is lost', () => {
+    expect(pressAfterLanding(1).ollied).toBe(false);
+    expect(pressAfterLanding(PHYS.impactFrames - 1).ollied).toBe(false);
+  });
+
+  it('once the impact is over, the ollie pops at once', () => {
+    expect(pressAfterLanding(PHYS.impactFrames + 1).ollied).toBe(true);
+  });
+
+  it('lasts as long as the landing clip', () => {
+    const len = CLIPS.land.keys[CLIPS.land.keys.length - 1].t;
+    expect(PHYS.impactFrames / 60).toBeCloseTo(len, 1);
+  });
+
+});
