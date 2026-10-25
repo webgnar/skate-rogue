@@ -1045,8 +1045,16 @@ html, body {
   color: #fff;
   font: 11px/1.35 ui-monospace, monospace;
   white-space: pre-wrap;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
   border-radius: 4px;
+}
+.coldebug-panel:not(.full) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; }
+/* a small phone: smaller type, the full width, smaller buttons */
+@media (max-width: 500px), (max-height: 500px) {
+  .coldebug-panel { font-size: 9px; max-width: calc(100% - 16px); }
+  .devbar { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px); }
+  .devbar button { padding: 4px 7px; font-size: 10px; }
 }
 .coldebug-panel i { font-style: normal; margin-left: 6px; }
 .devbar {
@@ -1074,7 +1082,6 @@ html, body {
 #paused .settings.dev .jump b { flex: 1; white-space: nowrap; }
 #paused .settings.dev .jump button { all: unset; cursor: pointer; padding: 2px 8px; background: #3a3050; border: 2px solid #000; color: #fff; }
 #paused .settings.dev .jump [data-dev='go'] { background: var(--trick); color: #1a1028; }
-@media (max-height: 500px) { .coldebug-panel { font-size: 9px; padding: 4px 6px; } }
 /* the shop's setup has to fit an iPhone SE across: the gear tiles share the room left by the board */
 #shop .board { flex: 0 1 auto; min-width: 0; }
 #shop .gearrow { flex: 0 1 auto; min-width: 0; }
