@@ -7,7 +7,7 @@ import { PHYS, TILE } from '../physics/constants';
 import { FEEL } from '../physics/feel';
 import { isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
 import type { Mode, Skater } from '../physics/skater';
-import { devSpeed } from '../ui/dev';
+import { DEV, devSpeed, saveDev } from '../ui/dev';
 
 // one colour per kind of thing the sim collides with (the readout's legend shows them)
 export const COLLIDER = {
@@ -84,6 +84,13 @@ export class CollisionDebug {
     this.canvas.className = 'coldebug';
     gameCanvas.after(this.canvas);
     this.panel.className = 'coldebug-panel';
+    //a tap opens the full readout (position, speeds, the legend) or shrinks it back to one line; the tap never ollies
+    this.panel.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      DEV.full = !DEV.full;
+      saveDev();
+    });
     app.append(this.panel);
     this.show(false);
   }
@@ -168,10 +175,14 @@ export class CollisionDebug {
       pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
       ctx.stroke();
     };
+    //labels never stack on each other: one that would cover another is left out (a train's cars, a stair set's flights)
+    const placed: [number, number, number][] = [];
     const label = (text: string, [x, y]: [number, number], color: string) => {
       if (!labels) return;
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
       const tw = ctx.measureText(text).width;
+      if (placed.some(([px, py, pw]) => x < px + pw && px < x + tw && Math.abs(py - y) < 12)) return;
+      placed.push([x, y, tw]);
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
       ctx.fillRect(x - 1, y - 10, tw + 3, 12);
       ctx.fillStyle = color;
       ctx.fillText(text, x, y);
@@ -296,7 +307,7 @@ export class CollisionDebug {
           line([Pc(l.x0, l.y), Pc(l.x1, l.y)], '#fff', 8);
           line([Pc(l.x0, l.y), Pc(l.x1, l.y)], COLLIDER.rail, 3);
         }
-        label('train roof (grind, pass-through)', [tl[0] + 2, tl[1] - 5], COLLIDER.rail);
+        label('train roof', [tl[0] + 2, tl[1] - 5], COLLIDER.rail);
         continue;
       }
       if (wrecked) {
@@ -426,6 +437,17 @@ export class CollisionDebug {
       `pitch ${deg(sk.feel.pitch)}` + (below ? ` · ray ${below.depth.toFixed(0)}px to ${deg(below.angle)}` : sk.mode === 'air' ? ' · ray: nothing below' : '') + (sk.slamT ? ` · slam ${sk.slamT}f` : ''),
       `${devSpeed() === 0 ? 'FROZEN (. or STEP: one frame)' : `speed ${devSpeed()}×`} · [ ] slow/fast · C off`,
     ];
+    const speed = devSpeed();
+    const slow = speed === 0 ? ' · FROZEN' : speed !== 1 ? ` · ${speed}×` : '';
+    this.panel.classList.toggle('full', DEV.full);
+    if (!DEV.full) {
+      //one line: fps and worst frame, what you're on, speed; tap for the rest
+      const fps = perf.split(' · ').slice(0, 2).join(' ');
+      const hsp = sk.mode === 'rail' ? sk.railV : sk.hsp;
+      this.panel.textContent = `${fps} · ${sk.mode.toUpperCase()} ${sk.mode === 'rail' && sk.rail ? (sk.rail.wire ? 'wire' : 'rail') : s ? s.kind : sk.grounded ? 'street' : ''} · ${hsp.toFixed(1)} px/f${slow} ▸`;
+      return;
+    }
+    lines[lines.length - 1] += ' · tap to shrink';
     const key = (c: string, t: string) => `<i style="color:${c}">■</i>${t}`;
     this.panel.innerHTML =
       lines.join('\n') +

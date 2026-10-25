@@ -11,6 +11,7 @@ export const DEV = {
   collision: false, // the collision overlay (src/render/collision-debug.ts)
   fps: false, // the fps / draws / triangles line
   speed: 0, // index into SPEEDS
+  full: false, // the overlay's full readout (tap it), else one line
 };
 
 let stepAsk = false;
@@ -39,9 +40,10 @@ export function takeStep(): boolean {
 
 export function loadDev(): void {
   try {
-    const d = JSON.parse(localStorage.getItem(KEY) ?? '{}') as { collision?: unknown; fps?: unknown; momentum?: unknown };
+    const d = JSON.parse(localStorage.getItem(KEY) ?? '{}') as { collision?: unknown; fps?: unknown; full?: unknown; momentum?: unknown };
     DEV.collision = d.collision === true;
     DEV.fps = d.fps === true;
+    DEV.full = d.full === true;
     if (MOMENTUM_MODES.includes(d.momentum as MomentumMode)) MOMENTUM.mode = d.momentum as MomentumMode;
   } catch {
     //blocked storage: all off
@@ -50,7 +52,7 @@ export function loadDev(): void {
 
 export function saveDev(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ collision: DEV.collision, fps: DEV.fps, momentum: MOMENTUM.mode }));
+    localStorage.setItem(KEY, JSON.stringify({ collision: DEV.collision, fps: DEV.fps, full: DEV.full, momentum: MOMENTUM.mode }));
   } catch {
     //not remembered in a private window
   }
