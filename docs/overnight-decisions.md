@@ -538,6 +538,11 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- **Hanging on to the cable car, and the firecracker (2026-10-26).** zack: the arm should reach and grab the car while
+  it tows you, regular or switch. New `towed` clip; the game passes the car's back pole (cable-view.ts grab, the car
+  now runs 0.45 tiles ahead instead of 1.4) and SkaterRig.reach (arm IK, shared with the editor) pins the leading hand
+  to it. `switchTowed` is keyed by hand: switch, the car is in front of his chest, so he reaches forward. Firecracker
+  clip for the gameplay thread's boon: tail-down manual, restarted on each 'clack'.
 - **Nollie, fakie ollie, nosegrind and nose manual (2026-10-26, zack).** `nollie` is the ollie's keys popped off the
   nose (poses.ts nosePop); its switch twin is the fakie ollie. Popping out of a nose clip (crooked, noseGrind,
   noseManual) plays it, and so does rolling off the end of one. Manual pads take turns: manual, then nose manual

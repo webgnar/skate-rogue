@@ -18,6 +18,10 @@ import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
 const SCALE_V = new THREE.Vector3();
+const ARM_FIELDS = [
+  ['armLRaise', 'armLFwd', 'armLElbow'],
+  ['armRRaise', 'armRFwd', 'armRElbow'],
+] as const;
 export const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
 const THIGH = 0.4;
 const SHIN = 0.4;
@@ -42,7 +46,7 @@ const COLORS = {
 };
 
 const GRINDS = new Set(Object.keys(GRIND_NAMES).filter((n) => !isSwitch(n)));
-const ON_GROUND = new Set(['push', 'ride', ...GRINDS]); // clips that make no sense in the air
+const ON_GROUND = new Set(['push', 'ride', 'towed', ...GRINDS]); // clips that make no sense in the air
 const DOWN = new THREE.Vector3(0, -1, 0);
 const ONE = new THREE.Vector3(1, 1, 1);
 const FWD = new THREE.Vector3(0, 0, 1); // a foot's long axis, heel to toes
@@ -100,6 +104,8 @@ export class SkaterRig {
   private ledgeGrinds = 0;
   private railGrinds = 0;
   private manuals = 0; // manual pads take turns: a manual, then a nose manual
+  // where the hand grabs while towed (world space: the cable car's back pole, src/render/cable-view.ts), or null
+  grab: THREE.Vector3 | null = null;
   private sk: Skater | null = null; // the skater as of the last update, for what an event landed on
   private fakie = false; // shown riding fakie: the whole skater and board turned half round
   private shown = ''; // the clip on screen: clipName's switch twin while riding fakie (back to the camera), or clipName
@@ -658,6 +664,9 @@ export class SkaterRig {
       case 'firecracker': // rolled into a stair set: down it in a manual, tail first (the models thread's clip when it's in)
         this.play('firecracker' in CLIPS ? 'firecracker' : 'manual', 0.08);
         break;
+      case 'clack': // the tail hit the next step: slap it down again
+        if (this.clipName === 'firecracker') this.t = 0;
+        break;
       case 'grind': // flat bars are rails; a parked car's roof (row -1, physics roofLedge) is not
         if (this.sk?.surface?.row === -1) this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
         else this.play(RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length]);
@@ -694,6 +703,51 @@ export class SkaterRig {
     return this.mesh.worldToLocal(this.head.getWorldPosition(new THREE.Vector3()));
   }
 
+  // Arm IK: the shoulder raise and swing and the elbow bend that put the hand at `goal` (rig space), found by a few
+  // damped least-squares steps from the pose's angles. Shared by the editor's hand handles and the cable car grab.
+  reach(pose: Pose, arm: 0 | 1, goal: THREE.Vector3, iterations = 40): Partial<Pose> {
+    const fields = ARM_FIELDS[arm];
+    const q = { ...pose };
+    const err = () => goal.clone().sub(this.handFor(q, arm));
+    for (let it = 0; it < iterations; it++) {
+      const e = err();
+      if (e.lengthSq() < 1e-8) break;
+      const J = fields.map((f) => {
+        const v = q[f];
+        q[f] = v + 1e-4;
+        const d = this.handFor(q, arm).sub(goal).add(e).multiplyScalar(1e4); // d(hand)/d(angle)
+        q[f] = v;
+        return d;
+      });
+      // solve (JᵀJ + λI) dθ = Jᵀe
+      const A = new THREE.Matrix3().set(
+        J[0].dot(J[0]) + 0.01, J[0].dot(J[1]), J[0].dot(J[2]),
+        J[1].dot(J[0]), J[1].dot(J[1]) + 0.01, J[1].dot(J[2]),
+        J[2].dot(J[0]), J[2].dot(J[1]), J[2].dot(J[2]) + 0.01,
+      );
+      const step = new THREE.Vector3(J[0].dot(e), J[1].dot(e), J[2].dot(e)).applyMatrix3(A.invert());
+      fields.forEach((f, k) => (q[f] += Math.max(-0.3, Math.min(0.3, step.getComponent(k)))));
+      q[fields[2]] = Math.max(0, Math.min(2.6, q[fields[2]])); // elbows only bend one way
+    }
+    return Object.fromEntries(fields.map((f) => [f, q[f]]));
+  }
+
+  // the towed pose with the leading hand on the cable car's pole: whichever arm is on the car's end (the front arm
+  // riding regular, the back arm switch, the rig being turned round)
+  private grabPose(pose: Pose): Pose {
+    const q = { ...pose };
+    const turned = new THREE.Matrix4().compose(this.mesh.position, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, this.fakie ? Math.PI : 0, 0)), this.mesh.scale);
+    if (this.mesh.parent) turned.premultiply(this.mesh.parent.matrixWorld);
+    const goal = this.grab!.clone().applyMatrix4(turned.invert());
+    const arm = goal.x >= 0 ? 0 : 1;
+    // start from last frame's answer, so a few steps a frame keep up
+    const from = this.grabArm?.arm === arm ? { ...q, ...this.grabArm.angles } : q;
+    const angles = this.reach(from, arm, goal, 6);
+    this.grabArm = { arm, angles };
+    return { ...q, ...angles };
+  }
+  private grabArm: { arm: 0 | 1; angles: Partial<Pose> } | null = null;
+
   // the animation editor's arm IK: where a hand ends up for a pose (rig space), without posing the rig
   handFor(p: Pose, arm: 0 | 1): THREE.Vector3 {
     const m = (pos: THREE.Vector3, e: THREE.Euler) => new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromEuler(e), ONE);
@@ -728,11 +782,14 @@ export class SkaterRig {
       //riding a stair set down in a manual: the clip runs while the tail clacks each step
       const want = 'firecracker' in CLIPS ? 'firecracker' : 'manual';
       if (this.clipName !== want) this.play(want, 0.08);
+    } else if (sk.mode === 'roll' && (sk.surface?.tow ?? 0) > 0) {
+      //towed up a hill by the cable car, hanging on to it
+      if (this.clipName !== 'towed') this.play('towed', 0.2);
     } else if (sk.manualing) {
       //a manual pad: on the back wheels or the front ones, taking turns
       if (this.clipName !== 'manual' && this.clipName !== 'noseManual') this.play(this.nextManual(), 0.1);
     } else if (sk.mode === 'roll') {
-      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || this.clipName === 'firecracker' || GRINDS.has(this.clipName)) {
+      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || this.clipName === 'firecracker' || this.clipName === 'towed' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
       } else if (this.clipName === 'push') {
         // finish the stroke, with the back foot back near the board, before rolling
@@ -765,7 +822,10 @@ export class SkaterRig {
     let pose = sample(this.clip, this.t);
     const k = this.fade > 0 ? 1 - (this.fade = Math.max(0, this.fade - dt)) / this.fadeLen : 1;
     // a clip edited since the GLB was baked plays from its keys
-    const baked = EDITED.has(this.shown) ? undefined : this.baked.get(this.shown);
+    // hanging on to the cable car: the hand pinned to its pole, so the clip plays from its keys with the arm solved
+    const grabbing = this.clipName === 'towed' && this.grab !== null;
+    if (grabbing) pose = this.grabPose(pose);
+    const baked = EDITED.has(this.shown) || grabbing ? undefined : this.baked.get(this.shown);
     if (this.bound.length) {
       // the skinned model: pose it from the Blender clip or the code clip, then crossfade bone by bone
       this.pose = pose;

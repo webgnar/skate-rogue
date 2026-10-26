@@ -155,6 +155,14 @@ describe('rig poses', () => {
     expect(['fiveO', 'manual', 'grind1', 'switchFiveO'].some(onNose)).toBe(false);
   });
 
+  it('firecracker rides the tail down the steps; towed reaches for the car, forward when switch', () => {
+    const f = sample(CLIPS.firecracker, 0);
+    expect(f.boardPitch).toBeGreaterThan(0.2); // nose up, on the tail
+    expect(CLIPS.firecracker.loop).toBe(true);
+    expect(sample(CLIPS.towed, 0).armLFwd).toBeLessThan(0); // regular: back, toward the lane behind
+    expect(sample(CLIPS.switchTowed, 0).armRFwd).toBeGreaterThan(0); // switch: the car is in front of his chest
+  });
+
   it('switch twins: every clip but the held poses has one, mirrored along the board', () => {
     for (const name of ['push', 'ride', 'ollie', 'kickflip', 'grind1', 'grind2', 'fiveO', 'manual', 'land', 'bs180']) {
       expect(CLIPS[switchName(name)], name).toBeTruthy();

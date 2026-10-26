@@ -31,7 +31,7 @@ function deckTop() {
 function modeFor(name) {
   name = name.replace(/^switch([A-Z])/, (_, c) => c.toLowerCase()); // a switch twin shows in its clip's mode
   if (/^(grind\d|crooked|smith|feeble|fiveO|noseGrind|fsBoardslide)$/.test(name)) return 'grind';
-  if (/^(push|ride|land|slam|manual|noseManual)$/.test(name)) return 'roll';
+  if (/^(push|ride|land|slam|manual|noseManual|firecracker|towed)$/.test(name)) return 'roll';
   return 'air';
 }
 

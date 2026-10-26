@@ -1182,6 +1182,7 @@ export class Game {
     this.sprite.mesh.position.y = toY(this.level, y + this.skater.feel.drop);
     const sk = this.skater;
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
+    this.sprite.grab = this.cableView.grab(sk.surface);
     this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
     this.sprite.setGear(this.sim.gear);
     //stood still on the board under a menu, hands up when busted
