@@ -6,8 +6,8 @@ import type { Level } from '../physics/level';
 import type { Traffic, Vehicle, VehicleKind } from '../traffic/traffic';
 import { STREET_Z, TRAFFIC } from '../traffic/traffic';
 import { CROSS, type CrossCar } from '../traffic/cross';
-import { STOP, type CarDoor } from '../traffic/street';
-import { makeBus, makeCar, makeTruck, parkedPaint, toX, toY } from './kit';
+import { DOOR, STOP, type CarDoor } from '../traffic/street';
+import { makeBus, makeCar, makeTruck, toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 import { headlights } from './night';
@@ -28,7 +28,9 @@ const PAINTS: Record<VehicleKind, number[]> = {
   car: [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a], // the cross streets' cars, the same as their own paints
 };
 const BACK_LANE_Z = STREET_Z.back;
-const DOOR_OPEN = (40 * Math.PI) / 180; // how far an open door swings
+const DOOR_PAINTS = [0xf2c230, 0x2fb8c8, 0x3a7be8, 0x48b86a]; // door cars: bright against the brick, never the cones' orange
+const DOOR_OPEN = (64 * Math.PI) / 180; // how far an open door swings: flung wide, across your lane
+const DOOR_SIZE = [1.75, 1.15, 1.8]; // the door drawn bigger than life so it reads (zack: "exaggerate the door")
 const CRUISER_Z = STREET_Z.back; // the back lane, behind the skate lane
 
 export class TrafficView {
@@ -40,7 +42,7 @@ export class TrafficView {
   private rotors: THREE.Mesh[] = [];
   private crossings: { car: THREE.Group; post: THREE.Group; red: THREE.Mesh; green: THREE.Mesh }[] = [];
   private stopSigns: THREE.Group[] = [];
-  private doorMeshes: { door: CarDoor; mesh: THREE.Group }[] = [];
+  private doorMeshes: { door: CarDoor; mesh: THREE.Group; pivot: THREE.Group; bang: THREE.Sprite }[] = [];
   private blinkers = new Map<number, THREE.Mesh>();
   private stages = new Map<number, Stage>(); // car-hop damage by vehicle id (car-damage.ts)
   private cruiserGap = 10; // tiles behind the skater
@@ -285,12 +287,22 @@ export class TrafficView {
   // bus stops and car doors (src/traffic/street.ts): the stop signs, a bus's blinker as it pulls in, open doors
   syncStreet(level: Level, traffic: Traffic): void {
     if (this.stopSigns.length !== level.busStops.length) this.stopSigns = level.busStops.map((s) => this.makeStopSign(level, s.x));
-    if (this.doorMeshes.length !== traffic.doors.length) this.doorMeshes = traffic.doors.map((d) => ({ door: d, mesh: this.makeDoor(level, d) }));
-    for (const { door, mesh } of this.doorMeshes) {
+    if (this.doorMeshes.length !== traffic.doors.length) this.doorMeshes = traffic.doors.map((d) => this.makeDoor(level, d));
+    for (const { door, pivot, bang } of this.doorMeshes) {
       const open = at(door, 'open');
-      mesh.visible = open > 0.05;
-      //hinged at the car's back corner, its free edge swinging out behind the car and toward the camera
-      mesh.rotation.y = -DOOR_OPEN * open;
+      pivot.visible = open > 0.02;
+      //hinged at the front of the driver's door, the back edge flung out toward the camera, across your lane, with a
+      //little overshoot and settle so it slams open
+      const k = open - 1;
+      pivot.rotation.y = DOOR_OPEN * (1 + 2.70158 * k * k * k + 1.70158 * k * k);
+      //the "!" over the car: it pops up big, bobs while you're warned, and stays a moment once the door's open
+      bang.visible = door.warn > 0 && open < 1;
+      if (bang.visible) {
+        const pop = Math.min(1, door.warn / 6);
+        const s = 2.2 * (pop < 1 ? pop * 1.3 : 1 + 0.12 * Math.sin(this.t / 70));
+        bang.scale.set(s * 0.6, s, 1);
+        bang.position.y = 1.0 + 0.2 * Math.abs(Math.sin(this.t / 140));
+      }
     }
     //the blinker on a bus pulling in: amber on the back corner, toward the camera, at about 2.5 flashes a second
     const on = Math.floor(this.t / 200) % 2 === 0;
@@ -340,17 +352,31 @@ export class TrafficView {
     g.add(pole, sign, band, bench);
   }
 
-  private makeDoor(level: Level, d: CarDoor): THREE.Group {
+  // a door car (src/traffic/street.ts): parked in the back lane facing your way, its driver's door and the "!" over it
+  private makeDoor(level: Level, d: CarDoor): { door: CarDoor; mesh: THREE.Group; pivot: THREE.Group; bang: THREE.Sprite } {
     const g = new THREE.Group();
-    //the Blender door (art/cars.py), hinged at its origin, in its car's paint
-    const door3d = model('CarDoor', parkedPaint(level, level.cars.indexOf(d.car)));
-    if (door3d) g.add(door3d);
-    else this.doorPrims(g);
-    inkify(g);
-    g.position.set(toX(d.car.x0) + 0.05, toY(level, d.car.bottom), 0.9);
-    g.visible = false;
+    const paint = DOOR_PAINTS[Math.floor(d.car.x0 / TILE) % DOOR_PAINTS.length];
+    const car = makeCar(toX(d.car.x0), toX(d.car.x1), toY(level, d.car.bottom), toY(level, d.car.roof), paint, 'Sedan');
+    inkify(car);
+    car.position.z = BACK_LANE_Z;
+    //the Blender door (art/cars.py), hinged at its origin, in its car's paint, on the car's camera side
+    const pivot = new THREE.Group();
+    const door3d = model('CarDoor', paint);
+    if (door3d) pivot.add(door3d);
+    else this.doorPrims(pivot);
+    pivot.scale.set(DOOR_SIZE[0], DOOR_SIZE[1], DOOR_SIZE[2]);
+    inkify(pivot);
+    pivot.position.set(toX(d.car.x0 + DOOR.hinge), toY(level, d.car.bottom), BACK_LANE_Z + 0.8);
+    pivot.visible = false;
+    const bang = new THREE.Sprite(new THREE.SpriteMaterial({ map: bangTexture(), depthTest: false, transparent: true }));
+    bang.renderOrder = 10;
+    bang.visible = false;
+    const over = new THREE.Group(); // over the roof
+    over.position.set(toX((d.car.x0 + d.car.x1) / 2), toY(level, d.car.roof) + 0.5, BACK_LANE_Z);
+    over.add(bang);
+    g.add(car, pivot, over);
     this.group.add(g);
-    return g;
+    return { door: d, mesh: g, pivot, bang };
   }
 
   private doorPrims(g: THREE.Group): void {
@@ -423,4 +449,34 @@ export class TrafficView {
     this.beams.searchlight(from, toX(skaterX), ground, heat, caught, dtMs / 1000);
     this.beams.droneScan(this.drone.visible ? this.eyeAt.copy(this.drone.position).add(DRONE_EYE) : null, this.droneY);
   }
+}
+
+// the warning over a door car: a comic "!", yellow in a thick ink outline
+let bangTex: THREE.CanvasTexture | null = null;
+function bangTexture(): THREE.CanvasTexture {
+  if (bangTex) return bangTex;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 128;
+  const g = c.getContext('2d')!;
+  g.lineJoin = 'round';
+  g.fillStyle = '#ffd23f';
+  g.strokeStyle = '#111';
+  g.lineWidth = 9;
+  //the bar, wider at the top, and the dot
+  g.beginPath();
+  g.moveTo(14, 8);
+  g.lineTo(50, 8);
+  g.lineTo(40, 82);
+  g.lineTo(24, 82);
+  g.closePath();
+  g.stroke();
+  g.fill();
+  g.beginPath();
+  g.arc(32, 106, 12, 0, Math.PI * 2);
+  g.stroke();
+  g.fill();
+  bangTex = new THREE.CanvasTexture(c);
+  bangTex.colorSpace = THREE.SRGBColorSpace;
+  return bangTex;
 }

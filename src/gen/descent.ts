@@ -292,7 +292,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);
-  level.doors = doorPlan(level, level.layout.seed);
+  level.doors = doorPlan(level, level.layout.seed, level.busStops);
   const bounty = bountyPlan(level, level.layout.seed);
   if (bounty && !opts.short) level.bounty = bounty;
   level.props = placeProps(level);

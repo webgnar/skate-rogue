@@ -662,6 +662,15 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] After the third continue there are no hearts, and the next fall ends the run. The summary says "3 continues used".
 - [ ] A new run gives you three hearts again.
 
+## Car doors
+
+- [ ] From floor 2, some cars are parked in the back lane, behind Lou. Skate-lane parked cars never open a door.
+- [ ] When you're about 14 tiles away, a big yellow "!" pops up over the back-lane car and bobs.
+- [ ] About half a second later, the door flies wide open toward the camera, across your lane, with a little bounce.
+- [ ] Rolling into the open door slams you, and landing on its top edge pops you up.
+- [ ] Even at full speed, the door is already open before you reach it.
+- [ ] No cones or barrels block the view of the door.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

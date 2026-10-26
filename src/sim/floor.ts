@@ -250,8 +250,9 @@ export class FloorSim {
     if (!sk.hopped || !events.some((e) => e.type === 'hop')) return;
     const car = sk.hopped;
     sk.hopped = null;
-    //an open door is its parked car's
-    const parked = this.traffic.doors.find((d) => d.box === car)?.car ?? car;
+    //an open door takes hops but no damage: its car is back in the other lane
+    if (this.traffic.doors.some((d) => d.box === car)) return;
+    const parked = car;
     const p = this.level.cars.indexOf(parked);
     const v: Vehicle | undefined = p < 0 ? this.traffic.vehicles.find((t) => t === car) : undefined;
     //cross cars mid-turn, the L's trains and the swarm's drones take hops but no damage
@@ -263,7 +264,6 @@ export class FloorSim {
     const stage = stageOf(hits, health);
     if (stage === 3) {
       sk.wrecked.add(parked);
-      for (const d of this.traffic.doors) if (d.car === parked) sk.wrecked.add(d.box);
       if (v) {
         v.wrecked = true;
         v.leaving = true;

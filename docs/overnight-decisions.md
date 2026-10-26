@@ -509,6 +509,14 @@ and listed it here for review. Any of these can be flipped in the morning.
   - It's three per run, shown as hearts in the HUD.
   - The playtest bot gives up at the card, so its stats still count each fall as a run's end.
 
+- **Car doors move to the back lane, with a "!" (zack, 2026-10-26).** zack said "cars in the lane behind the player are the ones that should open their car doors", and that the door should be exaggerated with a "!" over the car first. Here's how it works now:
+  - Skate-lane parked cars no longer open doors.
+  - From floor 2, up to 3 cars a floor park in the back lane, at most one every 24 tiles, with a 30% chance at each spot. Each spot needs a clear run up in your lane: no parked car, cross street, bus stop or glass, and props stay off it.
+  - At 14 tiles away a yellow "!" pops up over the car and bobs for 0.6 s. Then the driver's door flies open across your lane over 12 frames, with an overshoot.
+  - The door is drawn 1.75 times long and swings 64 degrees toward the camera. The car is painted bright (yellow, teal, blue or green) so it reads against the brick.
+  - The hitbox is a thin slab 36 px tall at the hinge. Rolling into it slams you, and landing on top of it pops you like a car hop.
+  - The car itself is only scenery, and a hop on the door does no damage.
+
 ## Models thread: animation
 
 - **Nollie, fakie ollie, nosegrind and nose manual (2026-10-26, zack).** `nollie` is the ollie's keys popped off the
