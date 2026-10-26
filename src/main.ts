@@ -259,6 +259,7 @@ function makeHud(): Hud {
       re.disabled = v.shop.cash < v.restockPrice;
     },
     gear: (g) => view.gear(g),
+    gearTick: (p) => view.gearTick(p),
     pause: (on) => {
       pausedEl.hidden = !on;
       if (on) pausedEl.querySelector('.held')!.innerHTML = held.length ? held.map(chip).join('') : '<span class="none">no boons yet</span>';

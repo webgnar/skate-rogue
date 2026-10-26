@@ -511,6 +511,9 @@ html, body {
 #gearbars .part[data-wear='worn'] { --wear: #ffe23a; }
 #gearbars .part[data-wear='busted'] { --wear: #ff3048; border-color: #ff3048; animation: blink 0.6s steps(2) infinite; }
 #app.calm #gearbars .part[data-wear='busted'], #app.noflash #gearbars .part[data-wear='busted'] { animation: none; }
+#gearbars .part.tick .icon { animation: soak 0.6s ease-out; }
+@keyframes soak { from { transform: scale(1.35); filter: drop-shadow(0 0 4px #6fd8ff) brightness(1.6); } }
+#app.noflash #gearbars .part.tick .icon { animation: none; }
 
 /* everything else that sits on the HUD */
 #boons { top: calc(var(--t) + var(--u) * 7.2); left: var(--l); right: auto; max-width: 26vw; }

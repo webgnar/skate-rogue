@@ -178,6 +178,15 @@ export class HudView {
     el.classList.add('fire');
   }
 
+  // a part just took a hit of wear (a puddle soaking the deck): its icon flashes
+  gearTick(part: GearPart): void {
+    const el = this.gearBars[part]?.box.el as HTMLElement | undefined;
+    if (!el) return;
+    el.classList.remove('tick');
+    void el.offsetWidth; // restart the flash
+    el.classList.add('tick');
+  }
+
   gear(g: Gear): void {
     for (const p of GEAR_ORDER) {
       const bar = this.gearBars[p]!;

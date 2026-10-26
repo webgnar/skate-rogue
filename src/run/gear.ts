@@ -14,6 +14,7 @@ export const GEAR = {
   // when a rail-catch bug stopped lifting the bot onto the top route's power line and its floors ran longer: 0.38,
   // 0.46 and 0.5 before)
   ollie: 0.35, // deck, per ollie
+  puddle: 1.2, // deck, per puddle rolled through: the water soaks into the wood (zack, 2026-10-26)
   flip: 0.42, // shoes, per flip trick
   grindSec: 0.46, // trucks, per second on a rail or ledge
   fastSec: 0.38, // wheels, per second going faster than fastOver x cruising speed (0.42 before the L's kicker sent you up
