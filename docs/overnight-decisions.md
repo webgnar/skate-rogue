@@ -530,6 +530,12 @@ and listed it here for review. Any of these can be flipped in the morning.
   - The rig plays a `firecracker` clip if CLIPS has one, else the manual. The models thread is making the clip.
 - **Ghost Rail fixed (PR #179).** It never spawned off curved rails, which are most rails now.
 
+- **Boon audit (zack, 2026-10-26: "make sure all the other boons are working").** I traced every mod to where it's read and added curved-rail tests for each GRIND boon (tests/boons-curved.test.ts). The existing tests only rode flat ledges.
+  - Broken: **Grease** did almost nothing on curved rails. It only raised the rail's minimum speed. Now catching a rail puts you straight at full grind speed (as on ledges), and friction along the rail is divided by grindScale. Webster's +15% and Moon Shoes' -30% now count on curved rails too.
+  - Already fixed: **Ghost Rail** (PR #179).
+  - Checked and working on curved rails: Rail Magnet, Rail Launch, Spare Change, Feeble Frenzy, Exit Wax, Slingshot and Rocket Grind.
+  - POP, FLOW, COOL, LUCK and STREET boons read their mods outside the rail code, and their existing tests pass.
+
 ## Models thread: animation
 
 - **Nollie, fakie ollie, nosegrind and nose manual (2026-10-26, zack).** `nollie` is the ollie's keys popped off the

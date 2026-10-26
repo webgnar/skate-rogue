@@ -754,6 +754,8 @@ export class Skater {
     this.railD = d;
     //speed along the rail: our velocity projected on its direction, always rolling forward
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.hsp * t.tx + this.vsp * t.ty));
+    //Grease: straight up to full grind speed, the same as on a flat ledge
+    if (this.mods.grindInstant) this.railV = Math.min(PHYS.railMax, Math.max(this.railV, PHYS.grindSpeed * this.mods.grindScale * this.gear.grind));
     this.feel.railEntry(Math.abs(this.vsp * t.tx - this.hsp * t.ty), rail.material, this.looseTrucks);
     this.trickCatch = 0;
     this.mode = 'rail';
@@ -772,7 +774,8 @@ export class Skater {
     //gravity pulls along the rail: downhill (ty > 0 in y-down) speeds you up (QFS player_rail_state)
     this.railV += this.grav * t.ty * PHYS.railGravMult;
     //and friction under the trucks, from how hard the rail pushes back (the cos of its angle)
-    this.railV -= this.grav * MATERIALS[rail.material].mu * t.tx;
+    //(Grease and anything else that grinds faster cuts it; Moon Shoes adds to it)
+    this.railV -= (this.grav * MATERIALS[rail.material].mu * t.tx) / this.mods.grindScale;
     //Feeble Frenzy: a little more speed every 30 frames on the same rail
     if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0) this.railV *= 1 + PHYS.frenzyStep;
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.railV));
