@@ -2,13 +2,14 @@ import { applyWeatherParams } from './render/atmosphere';
 import { MOMENTUM, MOMENTUM_MODES, type MomentumMode } from './physics/feel';
 import '@fontsource/bangers/latin-400.css';
 import './style.css';
-import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type Held } from './boons/defs';
+import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type BoonId, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
 import { GEAR, wornness } from './run/gear';
 import { modDef, type ModId } from './board/mods';
 import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
+import { boonArt, boonIcon, spotArt } from './ui/boon-art';
 import { gearArt, gearIcon, modArt, slotArt } from './ui/shop-art';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
@@ -46,17 +47,20 @@ function esc(text: string): string {
 function chip(h: Held): string {
   const b = boonById(h.id);
   const n = h.stacks > 1 ? ` ×${h.stacks}` : '';
-  return `<span class="chip" style="--type:${boonColor(b)}">${esc(b.name)}${n}</span>`;
+  return `<span class="chip" style="--type:${boonColor(b)}"><span class="ico">${boonIcon(b.id, b.type)}</span>${esc(b.name)}${n ? `<em>${n.trim()}</em>` : ''}</span>`;
 }
 
 // a boon card in QFS's layout: type label, name, effect, small line, stacks
 function card(b: Boon, i: number, held: Held[]): string {
   const have = stacksOf(held, b.id);
   const pips = Array.from({ length: b.max }, (_, k) => `<i class="${k < have ? 'on' : k === have ? 'new' : ''}"></i>`).join('');
-  const tag = b.cursed ? 'CURSED' : b.duo ? `DUO · ${b.duo.map((id) => boonById(id).name).join(' + ')}` : b.type;
+  const tag = b.cursed ? 'CURSED' : b.duo ? 'DUO' : b.type;
+  const duo = b.duo ? `<span class="duo">${b.duo.map((id) => esc(boonById(id).name)).join(' + ')}</span>` : '';
   return `<button class="card${b.cursed ? ' cursed' : ''}" data-pick="${i}" style="--type:${boonColor(b)}">
     <span class="type">${esc(tag)}</span>
     <b class="name">${esc(b.name)}</b>
+    ${duo}
+    ${boonArt(b.id, b.type)}
     <span class="effect">${esc(b.effect)}</span>
     ${b.note ? `<span class="note">${esc(b.note)}</span>` : ''}
     <span class="pips">${pips}</span>
@@ -66,9 +70,12 @@ function card(b: Boon, i: number, held: Held[]): string {
 
 // the underground spot's cards: a plain choice card, coloured, maybe greyed out
 function choice(key: string, color: string, tag: string, name: string, effect: string, note: string, off = false): string {
+  const [kind, id] = key.split(':');
+  const art = id ? boonArt(id as BoonId, boonById(id as BoonId).type) : spotArt(kind);
   return `<button class="card${off ? ' off' : ''}" data-under="${key}" ${off ? 'disabled' : ''} style="--type:${color}">
     <span class="type">${tag}</span>
     <b class="name">${esc(name)}</b>
+    ${art}
     <span class="effect">${esc(effect)}</span>
     <span class="note">${esc(note)}</span>
   </button>`;

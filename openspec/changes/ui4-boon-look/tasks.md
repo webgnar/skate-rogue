@@ -1,0 +1,7 @@
+- [x] Render the new card pictures from the game's models
+- [x] Map every boon to a picture and glyph (src/ui/boon-art.ts)
+- [x] Restyle the pick and underground cards and the held-boon chips
+- [x] Duo tag with the halves on their own line
+- [x] Portrait sizing
+- [x] Screenshots on iPhone SE and 14, both ways round
+- [x] Test checklist entries
