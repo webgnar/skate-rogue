@@ -543,6 +543,7 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 | Late Flip | POP | Air tricks give a full jump, not a smaller hop | 1 |
 | Pressure Flip | POP | Holding ollie longer than 0.5 s pops 40% higher but takes 0.2 s to charge | 1 |
 | Spare Change | POP | Every grind refills +0.25 jump charge above your max | 3 |
+| Strong Legs | POP | Normally a press during the landing's impact (350 ms) is lost. With this, a second tap during it ollies at once | 1 |
 | Rail Magnet | GRIND | Rails pull you in from 48 px further away | 2 |
 | Grease | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
 | Rail Launch | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |

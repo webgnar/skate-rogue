@@ -3,7 +3,7 @@
 export type BoonType = 'POP' | 'GRIND' | 'FLOW' | 'COOL' | 'LUCK' | 'STREET';
 
 export type BoonId =
-  | 'tripleThreat' | 'bigPop' | 'floatyFlip' | 'lateFlip' | 'pressureFlip' | 'spareChange'
+  | 'tripleThreat' | 'bigPop' | 'floatyFlip' | 'lateFlip' | 'pressureFlip' | 'spareChange' | 'strongLegs'
   | 'railMagnet' | 'grease' | 'railLaunch' | 'exitWax' | 'feebleFrenzy' | 'ghostRail'
   | 'newWheels' | 'bombHill' | 'butter' | 'kickerBoost' | 'slingshot' | 'firecracker'
   | 'lowProfile' | 'bubblePads' | 'tuckAndRoll' | 'slamStoke' | 'sirenSong' | 'decoy' | 'ghostMode'
@@ -52,6 +52,10 @@ export const BOONS: Boon[] = [
   { id: 'floatyFlip', type: 'POP', name: 'Floaty Flip', effect: 'Half gravity right after a flip trick', max: 1 },
   { id: 'lateFlip', type: 'POP', name: 'Late Flip', effect: 'Flip tricks always go full height', note: 'even on a quick tap', max: 1 },
   { id: 'pressureFlip', type: 'POP', name: 'Pressure Flip', effect: 'Keep holding after an ollie to float', note: '30% less gravity after 0.25 s', max: 1 },
+  {
+    id: 'strongLegs', type: 'POP', name: 'Strong Legs', effect: 'Tap twice as you land to ollie straight out of it',
+    note: 'no waiting for your knees', max: 1,
+  },
   { id: 'spareChange', type: 'POP', name: 'Spare Change', effect: 'Every grind banks 1/4 of a bonus jump', note: 'lost when you land', max: 3 },
   { id: 'railMagnet', type: 'GRIND', name: 'Rail Magnet', effect: 'Rails catch you from further away', note: '+48 px', max: 2 },
   { id: 'grease', type: 'GRIND', name: 'Grease', effect: 'Grind 25% faster', note: 'and hit full grind speed instantly', max: 2 },
