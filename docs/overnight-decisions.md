@@ -560,6 +560,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- 2026-10-26: Nollie flips are popped off the nose properly now. The nollie version of each flip swaps the whole foot set (position, angle, on-board), so the back foot does the flick off the tail corner while the front foot pops, and the board pitch, lean and slide flip with it. Shove-its and heelflip/kickflip spins are scooped by the front foot, so the board spins the other way. Nollie 180s keep their spin direction (the body turns, not the board). Edits in ?editor still win over these.
+
 - **Hanging on to the cable car, and the firecracker (2026-10-26).** zack: the arm should reach and grab the car while
   it tows you, regular or switch. New `towed` clip; the game passes the car's back pole (cable-view.ts grab, the car
   now runs 0.45 tiles ahead instead of 1.4) and SkaterRig.reach (arm IK, shared with the editor) pins the leading hand
