@@ -824,3 +824,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   leave, while it was still drawn in your lane, so you could drop straight through a robotaxi's roof. Now it's the
   same rule as a bus pulling in. That also means a leaving car can still hit you for about 10 frames, which matches
   what's on screen. The bot's 30-seed sweep finds no fall-throughs and its clear rate is unchanged (85% / 49%).
+
+## Ink outlines through the fisheye (2026-10-26)
+- zack: "the outline shader is still getting distorted". Two causes, both found headless at a phone's 844x390:
+  1. The fisheye pass bends the finished picture, swelling the middle about 1.5x (strength 0.75) and squeezing the
+     edges, so ink was fat around Lou and thin at the sides. It got worse the stronger the lens (zoom, ?lens).
+  2. The outline's screen direction ignored perspective, which is off at the ~89 degree view the fisheye widens to,
+     so shapes near the edges got lopsided ink as the camera turned.
+- Fix (toon.ts): the push is measured through the perspective divide, then pre-bent by the inverse of the lens at
+  that spot (setInkLens, fed by scene.render each frame), so the ink lands the same width everywhere. Off-screen
+  vertices hold the edge's bend so long floors can't blow the hull up.
