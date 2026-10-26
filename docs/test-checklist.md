@@ -708,3 +708,14 @@ Test URLs: `?floor=13&rain=rain` (night in rain), `?floor=10&clock=0.62` (dusk),
 - [ ] At dusk only some lamps are on; the ones about to switch flick on as you roll up to them
 - [ ] Pools are wide and land on the road where you skate, tilted with the hill
 - [ ] `?calm` or reduce flashing: lamps fade on with no stutter
+
+## Bullet time (src/game/bullet-time.ts)
+
+Rare slow-mo for sick moments, then an 8 s cooldown. `?bullet=0` turns it off to compare. Reduce motion skips it.
+
+- [ ] **Clutch catch:** land a flip just as the board comes round (the last ~4 frames): "CLUTCH!" with the points, and the game drops to about 30% speed, holds, then eases back. Caught any later is still SKETCHY, with no slow-mo.
+- [ ] **Flush:** land lined up with a hill or bank that falls away (coming down steep onto the slope, within about 20 degrees of it): "FLUSH!" and the same slow-mo. A floor 10 start (`?floor=10`) has a hill right away.
+- [ ] **Close call in a combo:** a close call at x3 or more is bullet time; on its own it's still the old quick slow beat.
+- [ ] **Big combo:** reaching x10 (and x20, ...) calls "x10 COMBO!" with a short slow-mo.
+- [ ] The longer the combo and the faster you're going, the deeper and longer the slow-mo.
+- [ ] Two moments within 8 s: only the first slows down. *Tuning:* too rare, too often?

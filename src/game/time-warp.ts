@@ -6,12 +6,12 @@ export class TimeWarp {
   private slowLen = 0;
   private slowFrom = 1;
 
-  // freeze for `freeze` s, then start at `slow` x speed and ease to 1x over `ease` s
-  hit(freeze: number, slow: number, ease: number): void {
+  // freeze for `freeze` s, then start at `slow` x speed, hold it for `hold` s and ease to 1x over `ease` s
+  hit(freeze: number, slow: number, ease: number, hold = 0): void {
     this.freeze = Math.max(this.freeze, freeze);
     this.slowFrom = Math.min(slow, this.scaleAfterFreeze());
     this.slowLen = ease;
-    this.slowT = ease;
+    this.slowT = ease + hold;
   }
 
   get scale(): number {
@@ -24,6 +24,7 @@ export class TimeWarp {
 
   private scaleAfterFreeze(): number {
     if (this.slowT <= 0) return 1;
+    if (this.slowT > this.slowLen) return this.slowFrom; // still holding
     const k = 1 - this.slowT / this.slowLen; // 0 at the start of the slow-mo, 1 at the end
     return this.slowFrom + (1 - this.slowFrom) * k * k;
   }

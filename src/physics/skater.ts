@@ -13,7 +13,7 @@ export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 export type SkaterEvent =
   | { type: 'ollie'; spin: 0 | 180; lip?: boolean } // lip: popped right at the edge of the ground (or just off it)
   | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean } // fakie: the stance it was thrown from
-  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; lined?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad; lined: 0..1, how lined up with a falling slope (?momentum=transfer)
+  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; lined?: number; spare?: number; flush?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad; lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one)
   | { type: 'grind' }
   | { type: 'rail' }
   | { type: 'hop' }
@@ -658,6 +658,7 @@ export class Skater {
     const m = s ? surfaceSlope(s) : 0;
     const impact = normalImpact(this.hsp, this.vsp, m);
     const caught = this.caught;
+    const spare = this.trickCatch > 0 && caught >= 1 ? this.trickT - this.trickCatch : -1;
     const vsp = this.vsp;
     this.trickCatch = 0;
     this.surface = s;
@@ -684,10 +685,12 @@ export class Skater {
       //on a slope you keep the speed along it: a bank that falls away turns the drop into speed
       //(cruising speed still holds: an uphill bank only eats flow speed)
       let lined = 0;
+      let flush = -1;
       if (m !== 0) {
         let along = alongSlope(this.hsp, vsp, m);
         const mo = MOMENTUM.mode;
         const uphill = m * (this.hsp < 0 ? -1 : 1) < 0;
+        if (!uphill) flush = misalign(this.hsp, vsp, m);
         //soften (being explored): coming down on the face of an up ramp keeps most of your speed; the rest of the
         //climb still slows you, as if you'd rolled up to there
         if (uphill && (mo === 'soften' || mo === 'both')) along = Math.max(along, this.hsp * MOMENTUM.keep);
@@ -707,7 +710,7 @@ export class Skater {
       if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
       this.feel.land(impact, quality, this.looseWheels);
       //a manual pad: you ride it in a manual (unless you slammed onto it)
-      this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}), ...(lined > 0 ? { lined } : {}) });
+      this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}) });
       if (!s?.manual || quality === 'slam') {
         this.impactT = PHYS.impactFrames;
         this.impactTaps = 0;

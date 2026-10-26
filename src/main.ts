@@ -16,6 +16,7 @@ import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { initCam } from './render/camera';
+import { initBullet } from './game/bullet-time';
 import { isBiome } from './render/biomes';
 import { props, propsFor } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
@@ -355,6 +356,7 @@ async function start() {
   if (MOMENTUM_MODES.includes(momentum as MomentumMode)) MOMENTUM.mode = momentum as MomentumMode;
   if (params.has('drafts')) applyClipEdits(loadDrafts());
   initCam(params);
+  initBullet(params);
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   loadSettings();
   if (params.has('gyro')) SETTINGS.tilt = params.get('gyro') !== '0'; //?gyro: gyro tilt on (?gyro=0 off)
