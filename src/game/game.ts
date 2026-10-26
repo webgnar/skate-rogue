@@ -1226,7 +1226,7 @@ export class Game {
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs, this.run.comboPoints * this.run.combo);
     this.hud.gear(this.sim.gear);
     this.view.zoom.update(dt, this.skater.mode);
-    this.view.follow(x, y, dt);
+    this.view.follow(x, y, dt, realDt * this.timeScale * devSpeed());
     this.view.adapt(realDt * 1000);
     this.view.render();
     this.perf(realDt);
