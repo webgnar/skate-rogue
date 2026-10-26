@@ -66,7 +66,7 @@ export class BoonFx {
     if (this.held.has('pressureFlip') && air && sk.holdT > 15) p.stream('pressure', x, y - 0.1, 40, dt, { n: 0, colors: POP, life: [0.2, 0.35], size: [0.08, 0.12], speed: [1.5, 3], angle: [DOWN - 0.3, DOWN + 0.3], jitter: 0.3, drag: 2 });
     //Ledge Butter: dark glossy drips off the trucks
     if (this.held.has('grease') && grinding) p.stream('grease', x, y, 22, dt, { n: 0, colors: GREASE, life: [0.4, 0.6], size: [0.07, 0.1], speed: [0.2, 0.6], angle: [DOWN - 0.4, DOWN + 0.4], jitter: 0.12, grav: 12, ink: true, floor: y - 2 });
-    //Feeble Frenzy: the sparks run hotter the longer you stay on one rail
+    //More Wax: the sparks run hotter the longer you stay on one rail
     if (this.held.has('feebleFrenzy') && grinding && sk.onRailT > 30) p.stream('frenzy', x, y, 15 * Math.min(4, sk.onRailT / 30), dt, { n: 0, colors: FRENZY, life: [0.2, 0.4], size: [0.1, 0.16], speed: [1.5, 3.5], angle: [UP - 1.2, UP + 0.4], grav: 10 });
     //Waxed Bearings: a wax streak off the wheels while rail speed lasts
     if (this.held.has('exitWax') && sk.mode === 'roll' && sk.carry > 0.3) p.stream('wax', x, y + 0.03, 25 * Math.min(1, sk.carry / 2), dt, { n: 0, colors: WAX, life: [0.3, 0.45], size: [0.08, 0.12], speed: [0.5, 1.5], angle: [Math.PI - 0.2, Math.PI + 0.2], drag: 3, alpha: 0.7 });

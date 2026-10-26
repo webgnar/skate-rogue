@@ -61,7 +61,7 @@ export const BOONS: Boon[] = [
   { id: 'grease', type: 'GRIND', name: 'Ledge Butter', effect: 'Grind 25% faster', note: 'and hit full grind speed instantly', max: 2 }, // id kept from its old name, Grease
   { id: 'railLaunch', type: 'GRIND', name: 'Full Sail', effect: 'Ollies off rails pop higher the faster you grind', max: 1 }, // id kept from its old name, Rail Launch
   { id: 'exitWax', type: 'GRIND', name: 'Waxed Bearings', effect: 'Speed from rails lasts 4x longer', max: 1 }, // id kept from its old name, Exit Wax
-  { id: 'feebleFrenzy', type: 'GRIND', name: 'Feeble Frenzy', effect: '+10% grind speed every 0.5 s on one rail', max: 1 },
+  { id: 'feebleFrenzy', type: 'GRIND', name: 'More Wax', effect: '+10% grind speed every 0.5 s on one flat ledge or rail', note: 'not down handrails', max: 1 }, // id kept from its old name, Feeble Frenzy
   {
     id: 'ghostRail', type: 'GRIND', name: 'Ghost Rail', effect: 'Rails keep going 4 tiles past their end',
     note: 'for 2 s after you leave', max: 1,

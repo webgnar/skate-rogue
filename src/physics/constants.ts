@@ -40,7 +40,8 @@ export const PHYS = {
   height: 48,
   // boons
   floatyFrames: 24, // Boostin
-  frenzyStep: 0.1, // Feeble Frenzy
+  frenzyStep: 0.1, // More Wax
+  frenzyFlat: 0.15, // More Wax only builds on a grind this flat (slope), not down a handrail (zack)
   pressureFrames: 15, // Mad Pop kicks in after holding this long
   ghostTiles: 4, // Ghost Rail
   ghostFrames: 120,

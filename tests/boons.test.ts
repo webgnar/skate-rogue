@@ -185,7 +185,7 @@ describe('GRIND boons', () => {
     expect(carryAfter('exitWax')).toBeGreaterThan(carryAfter() + 2);
   });
 
-  it('Feeble Frenzy: speed builds the longer you grind one rail', () => {
+  it('More Wax (feebleFrenzy): speed builds the longer you grind one flat rail', () => {
     const sk = skater(RAIL, 'feebleFrenzy', 'grease');
     sk.x = 16 * TILE + 1 * TILE;
     let f = 0;

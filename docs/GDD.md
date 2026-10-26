@@ -548,7 +548,7 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 | Ledge Butter | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
 | Full Sail | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |
 | Sparky | GRIND | Grinding leaves sparks that make cars swerve out of the skate lane | 1 |
-| Feeble Frenzy | GRIND | Each grind trick on one rail adds +10% speed until you leave it | 1 |
+| More Wax | GRIND | +10% grind speed every 0.5 s on one flat ledge, rail or power line, until you leave it. It doesn't build down handrails | 1 |
 | Ghost Rail | GRIND | Your last grind leaves a 2 s ghost rail behind you in the air | 1 |
 | New Wheels | FLOW | +20% base speed and +20% score (QFS New Wheels) | 2 |
 | Bomb Hill | FLOW | Flow speed bleeds off half as fast | 1 |

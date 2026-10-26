@@ -60,7 +60,7 @@ export class Skater {
   flipped = false; // last jump was a flip trick (Late Flip)
   holdT = 0; // frames the button has stayed held since the ollie (Mad Pop)
   spare = 0; // banked bonus jump (Spare Change)
-  onRailT = 0; // frames on the current rail (Feeble Frenzy)
+  onRailT = 0; // frames on the current rail (More Wax)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
   fakie = false; // riding with the other foot forward, after a 180
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
@@ -414,7 +414,9 @@ export class Skater {
       this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : cap;
     } else if (this.mode === 'grind') {
       this.onRailT++;
-      const frenzy = this.mods.feebleFrenzy ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
+      //More Wax: builds on a flat ledge, not a sloped one
+      const flat = !this.surface || Math.abs(surfaceSlope(this.surface)) < PHYS.frenzyFlat;
+      const frenzy = this.mods.feebleFrenzy && flat ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
       const mat = MATERIALS[this.material];
       //a High-Tech conveyor rail runs you faster, or holds you back
       const belt = this.surface?.conveyor ?? 0;
@@ -785,8 +787,9 @@ export class Skater {
     //and friction under the trucks, from how hard the rail pushes back (the cos of its angle)
     //(Ledge Butter and anything else that grinds faster cuts it; Moon Shoes adds to it)
     this.railV -= (this.grav * MATERIALS[rail.material].mu * t.tx) / this.mods.grindScale;
-    //Feeble Frenzy: a little more speed every 30 frames on the same rail
-    if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0) this.railV *= 1 + PHYS.frenzyStep;
+    //More Wax: a little more speed every 30 frames on the same rail, where it runs flat (a power line, the L), not down a
+    //handrail (zack, 2026-10-26)
+    if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0 && Math.abs(t.ty) < PHYS.frenzyFlat) this.railV *= 1 + PHYS.frenzyStep;
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.railV));
     this.railD += this.railV;
 
