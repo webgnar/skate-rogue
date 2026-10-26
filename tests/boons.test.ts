@@ -3,6 +3,7 @@ import { addBoon, BOONS, stacksOf, type BoonId, type Held } from '../src/boons/d
 import { skaterMods } from '../src/boons/mods';
 import { offerBoons } from '../src/boons/offer';
 import { PHYS, TILE } from '../src/physics/constants';
+import { CurvedRail } from '../src/physics/level';
 import { Skater, type StepInput } from '../src/physics/skater';
 import { FLAT, levelOf, pressAt, run } from './helpers';
 
@@ -207,6 +208,25 @@ describe('GRIND boons', () => {
     };
     expect(offEnd('ghostRail')).toBe('grind');
     expect(offEnd()).not.toBe('grind');
+  });
+
+  it('Ghost Rail: riding off the end of a handrail or power line keeps you grinding too', () => {
+    //a curved rail (handrails, power lines, the L) has no surface under you, and that used to stop the ghost spawning
+    const base = levelOf(FLAT);
+    const offEnd = (drop: number, ...ids: BoonId[]) => {
+      const rail = new CurvedRail(3 * TILE, base.streetY - 60, 12 * TILE, base.streetY - 60 + drop, 0);
+      const sk = new Skater({ ...base, rails: [rail], startX: 3 * TILE + 4, startY: base.streetY - 80 }, skaterMods(withBoons(...ids)));
+      sk.mode = 'air';
+      sk.vsp = 1;
+      for (let f = 0; f < 30 && (sk.mode as string) !== 'rail'; f++) sk.step({ pressed: false, held: false });
+      expect(sk.mode).toBe('rail');
+      while (sk.x < 12 * TILE + 20) sk.step({ pressed: false, held: false });
+      return sk.mode;
+    };
+    for (const drop of [0, 30]) {
+      expect(offEnd(drop, 'ghostRail')).toBe('grind');
+      expect(offEnd(drop)).not.toBe('grind');
+    }
   });
 });
 
