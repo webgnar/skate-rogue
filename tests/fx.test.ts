@@ -110,9 +110,12 @@ describe('time of day', () => {
     const floors = Array.from({ length: 200 }, (_, i) => rainsOn(1234, i + 1));
     expect(floors[0]).toBe(false);
     const share = floors.filter(Boolean).length / floors.length;
-    expect(share).toBeGreaterThan(0.12);
-    expect(share).toBeLessThan(0.4);
+    expect(share).toBeGreaterThan(0.05);
+    expect(share).toBeLessThan(0.18); // about one floor in eight
     expect(rainsOn(1234, 7)).toBe(rainsOn(1234, 7));
+  });
+  it('never rains two floors running', () => {
+    for (const seed of [1, 77, 1234, 99991]) for (let f = 2; f < 300; f++) expect(rainsOn(seed, f) && rainsOn(seed, f - 1)).toBe(false);
   });
 });
 
