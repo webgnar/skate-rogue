@@ -433,6 +433,7 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 **Smashing**
 
+- [ ] Smashing things doesn't shake the screen any more. Slamming into something still does.
 - [ ] Whatever you smash vanishes the moment it breaks, with nothing left standing. That includes the second and
       later floors of a run.
 - [ ] The debris looks like the thing you hit: a newspaper box breaks into chunks in its own colour, a planter into

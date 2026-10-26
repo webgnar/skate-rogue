@@ -33,6 +33,9 @@ export const SMASH = {
   grav: 18,
   bigFrom: 1.5, // speed over cruising where a roll-through counts as big
   kick: 0.18, // camera shake for a big smash, per unit of speed
+  //which hits shake the camera. zack (2026-10-26): no shake for plain smashing, for now; a slam or a car through
+  //something still does. Add 'roll', 'land', 'grind', 'hop' or 'bomb' back to bring it back for those
+  shakeOn: new Set<SmashHow>(['slam', 'car']),
 };
 
 // what a prop is made of, from its name
@@ -132,7 +135,7 @@ export class SmashFx {
     if (look.sparks) p.spray(hit.x, hit.y + 0.4, { z: hit.z, n: 10, colors: [hex(0xffffff), hex(0xffe08a), hex(0xffb040)], life: [0.2, 0.4], size: [0.1, 0.15], speed: [3, 6], angle: [0.2, Math.PI - 0.2], grav: 14 });
     if (big) {
       this.fx.word(hit.x, hit.y + 1.1, look.words[Math.floor(Math.random() * look.words.length)]);
-      this.fx.shake(SMASH.kick * k);
+      if (SMASH.shakeOn.has(hit.how)) this.fx.shake(SMASH.kick * k);
     }
   }
 
