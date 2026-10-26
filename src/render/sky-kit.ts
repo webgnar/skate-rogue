@@ -22,7 +22,7 @@ function adTexture(): THREE.Texture {
   const art: [string, string, string][] = [
     ['#e83a5a', '#ffe14a', 'GNAR COLA'],
     ['#2a6ad8', '#ffffff', 'DEEP DISH'],
-    ['#1a1424', '#5fe8ff', 'SKATE OR DIE'],
+    ['#1a1424', '#5fe8ff', 'SKATE OR CRY'],
     ['#ffb020', '#1a1424', 'CHI 99.1 FM'],
   ];
   art.forEach(([bg, fg, text], i) => {
