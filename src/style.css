@@ -1270,3 +1270,34 @@ html, body {
   #pick .cards, #under .cards { flex-wrap: wrap; justify-content: center; padding: 0 calc(var(--u) * 1); }
   #pick .card, #under .card { flex: 1 1 calc(var(--u) * 15); max-width: calc(var(--u) * 17); min-height: calc(var(--u) * 24); }
 }
+
+/* the run-over and continue headline: DUNZO (zack, 2026-10-26) in the shop's graffiti style, over a red spray */
+#over > b, #cont > b {
+  position: relative;
+  isolation: isolate;
+  font-family: 'Bangers', 'Arial Black', Impact, sans-serif;
+  font-size: clamp(48px, min(16vh, 14vw), 110px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  padding: 0.05em 0.35em;
+  color: #ff3b4e;
+  -webkit-text-stroke: 3px #120a16;
+  paint-order: stroke fill;
+  text-shadow: 4px 4px 0 #ffe23a, 7px 7px 0 #120a16;
+  transform: skewX(-8deg) rotate(-3deg);
+  animation: dunzo 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+#over > b::before, #cont > b::before {
+  content: '';
+  position: absolute;
+  inset: -10% -6%;
+  z-index: -1;
+  background:
+    radial-gradient(closest-side at 32% 55%, #5a0f2a 55%, transparent 100%),
+    radial-gradient(closest-side at 70% 45%, #7a1236 50%, transparent 100%);
+  background-size: 72% 125%, 62% 115%;
+  background-position: 0 50%, 100% 30%;
+  background-repeat: no-repeat;
+}
+@keyframes dunzo { from { scale: 1.8; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #over > b, #cont > b { animation: none; } }

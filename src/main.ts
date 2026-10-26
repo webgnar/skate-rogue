@@ -304,7 +304,7 @@ function makeHud(): Hud {
     cont: (v) => {
       contEl.hidden = !v;
       if (!v) return;
-      contEl.querySelector('b')!.textContent = v.caught ? 'BUSTED' : 'BAILED';
+      contEl.querySelector('b')!.textContent = v.caught ? 'BUSTED' : 'DUNZO';
       contEl.querySelector('.left')!.textContent = `${v.left} CONTINUE${v.left === 1 ? '' : 'S'} LEFT`;
     },
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
@@ -312,7 +312,7 @@ function makeHud(): Hud {
       overEl.hidden = !result;
       if (!result) return;
       overEl.classList.toggle('won', result.won);
-      overEl.querySelector('b')!.textContent = result.won ? 'YOU ESCAPED!' : result.caught ? 'BUSTED' : 'BAILED';
+      overEl.querySelector('b')!.textContent = result.won ? 'YOU ESCAPED!' : result.caught ? 'BUSTED' : 'DUNZO';
       overEl.querySelector('.reached')!.textContent = result.won
         ? `Out of the city in ${result.floor} floors · escape #${result.wins}`
         : `You made it to act ${result.act}, floor ${result.floor}`;

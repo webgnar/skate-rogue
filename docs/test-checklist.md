@@ -666,7 +666,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 ## Continues
 
 - [ ] The HUD shows three pink hearts beside the floor name at the start of a run.
-- [ ] Bail into a gap, or get busted: a BAILED or BUSTED card says "3 CONTINUES LEFT". Tap CONTINUE and you're back at the start of that floor, with the score, cash and gear you had when you got there, and one heart fewer.
+- [ ] Bail into a gap, or get busted: a DUNZO or BUSTED card says "3 CONTINUES LEFT". Tap CONTINUE and you're back at the start of that floor, with the score, cash and gear you had when you got there, and one heart fewer.
 - [ ] END RUN on the card goes straight to the run summary.
 - [ ] After the third continue there are no hearts, and the next fall ends the run. The summary says "3 continues used".
 - [ ] A new run gives you three hearts again.
