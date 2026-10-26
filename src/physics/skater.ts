@@ -354,7 +354,7 @@ export class Skater {
 
   // Ghost Rail: the rail we just left keeps going for a while
   private spawnGhost(y: number): void {
-    if (!this.mods.ghostRail || this.surface === this.ghost) return;
+    if (!this.mods.ghostRail || (this.ghost && this.surface === this.ghost)) return;
     this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.ghostTiles * TILE, y, row: -1, ttl: PHYS.ghostFrames };
   }
 
