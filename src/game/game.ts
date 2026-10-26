@@ -33,7 +33,7 @@ import { Particles, TRICK_TRAIL } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
-import { BulletTime, type Moment } from './bullet-time';
+import { BulletTime, landCall } from './bullet-time';
 import { Aura, inkify } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
 import { FX } from '../render/fx-settings';
@@ -1346,16 +1346,16 @@ export class Game {
     this.particles.debris(x, y, 1);
   }
 
-  // bullet time for a moment (src/game/bullet-time.ts), if it isn't cooling down: true if it started. Reduce motion
-  // skips it, like the slam's hit-stop
-  private bulletTime(moment: Moment | null, combo: number): boolean {
-    if (!moment || FX.reduceMotion) return false;
-    const s = this.bullet.fire(moment, combo, Math.abs(this.skater.hsp) / PHYS.baseSpeed);
-    if (!s) return false;
-    this.warp.hit(0, s.slow, s.ease, s.hold);
+  // bullet time (src/game/bullet-time.ts): a huge combo or a close call over a car glides the game into slow motion. Reduce motion skips it,
+  // like the slam's hit-stop
+  private bulletTime(combo: number, near = false): void {
+    const speed = Math.abs(this.skater.hsp) / PHYS.baseSpeed;
+    const s = near ? this.bullet.near(combo, speed) : this.bullet.combo(combo, speed);
+    if (!s) return;
+    if (!near) this.hud.callout(`x${combo} COMBO!`, 'trick');
+    if (FX.reduceMotion) return;
+    this.warp.glide(s.enter, s.slow, s.hold, s.ease);
     this.view.zoom.trick();
-    if (moment === 'combo') this.hud.callout(`x${combo} COMBO!`, 'trick');
-    return true;
   }
 
   // a board mod fired: the effects the sim can't do itself
@@ -1482,7 +1482,7 @@ export class Game {
     const wasGnar = this.run.gnar;
     const before = this.run.combo;
     const bank = this.run.onEvent(e, this.skater.hsp);
-    if (this.run.combo > before) this.bulletTime(this.bullet.combo(this.run.combo), this.run.combo);
+    if (this.run.combo > before) this.bulletTime(this.run.combo);
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
     if (e.type === 'ollie' || e.type === 'hop' || e.type === 'kicker') this.view.rhythm.popped();
     switch (e.type) {
@@ -1541,16 +1541,16 @@ export class Game {
         this.view.shake(0.2);
         break;
       case 'near':
-        //a slow-mo beat on a close call (GDD: Camera), bullet time in the middle of a combo
-        if (!this.bulletTime(this.bullet.near(this.run.combo), this.run.combo)) this.warp.hit(0, 0.6, 0.35);
+        //bullet time on a close call (GDD: Camera), gliding in
+        this.bulletTime(this.run.combo, true);
         this.hud.callout('CLOSE CALL!' + combo, 'good');
         break;
       case 'land': {
         this.visor.ping();
-        //a flip caught right before the wheels touch, or a landing flush into a falling slope: bullet time
-        const moment = this.bullet.land(e.quality, e.spare, e.flush);
+        //a flip caught right before the wheels touch, or a landing flush into a falling slope: a callout (slow-mo
+        //here felt like running into something, zack 2026-10-26)
+        const moment = landCall(e.quality, e.spare, e.flush);
         const called = moment === 'clutch' ? 'CLUTCH! ' : moment === 'flush' ? 'FLUSH! ' : '';
-        if (moment) this.bulletTime(moment, before);
         if (called && !bank) this.hud.callout(called.trim(), 'good');
         if (e.manual) this.hud.callout(this.sprite.manualName + combo, 'trick');
         if (bank) {
