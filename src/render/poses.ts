@@ -588,6 +588,29 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.7, pose: { ...CROOKED, hipX: 0.12, hipY: 0.88, bend: 0.2, lean: 0.1, nod: 0.3, footFX: 0.3, footBX: -0.3, armLRaise: 1.5, armRRaise: 1.55, armLElbow: 0.25, armRElbow: 0.3 } },
     ],
   },
+  // firecracker (the Firecracker boon): riding a stair set down in a manual, the tail clacking on each step. The board
+  // rides tipped back on its tail with the tail tip on the step; each clack (the sim's 'clack' event restarts the clip)
+  // slaps the tail down, the knees soak it up and the arms bounce, then it tips back up ready for the next step
+  firecracker: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { boardPivot: TAIL, boardPitch: 0.36, boardY: POP_Y, hipX: -0.12, hipY: 0.74, lean: -0.12, bend: 0.22, nod: 0.35, footBX: TAIL_FOOT, footFX: 0.18, armLRaise: 1.6, armRRaise: 1.45, armLElbow: 0.3, armRElbow: 0.35, armLFwd: 0.3, armRFwd: 0.2 } },
+      { t: 0.06, pose: { boardPivot: TAIL, boardPitch: 0.24, boardY: POP_Y, hipX: -0.1, hipY: 0.7, lean: -0.1, bend: 0.28, nod: 0.4, footBX: TAIL_FOOT, footFX: 0.18, armLRaise: 1.75, armRRaise: 1.6, armLElbow: 0.25, armRElbow: 0.3, armLFwd: 0.35, armRFwd: 0.25 } },
+      { t: 0.16, pose: { boardPivot: TAIL, boardPitch: 0.32, boardY: POP_Y, hipX: -0.12, hipY: 0.76, lean: -0.13, bend: 0.2, nod: 0.35, footBX: TAIL_FOOT, footFX: 0.18, armLRaise: 1.5, armRRaise: 1.4, armLElbow: 0.35, armRElbow: 0.4, armLFwd: 0.3, armRFwd: 0.2 } },
+      { t: 0.24, pose: { boardPivot: TAIL, boardPitch: 0.36, boardY: POP_Y, hipX: -0.12, hipY: 0.74, lean: -0.12, bend: 0.22, nod: 0.35, footBX: TAIL_FOOT, footFX: 0.18, armLRaise: 1.6, armRRaise: 1.45, armLElbow: 0.3, armRElbow: 0.35, armLFwd: 0.3, armRFwd: 0.2 } },
+    ],
+  },
+  // towed up a hill by the cable car (zack, 2026-10-26): crouched, hips shifted toward the car in the lane behind,
+  // the front arm reaching out to grab the pole at its back end (the game pins that hand to the pole with arm IK,
+  // src/render/skater-rig.ts reach), the back arm out for balance
+  towed: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { yaw: 0.7, hipY: 0.8, hipZ: -0.1, lean: 0.15, bend: 0.15, head: 0.2, nod: 0.05, armLRaise: 0.84, armLFwd: -1.84, armLElbow: 1.2, armRRaise: 0.9, armRFwd: 0.3, armRElbow: 0.5 } },
+      { t: 0.8, pose: { yaw: 0.7, hipY: 0.78, hipZ: -0.11, lean: 0.17, bend: 0.16, head: 0.2, nod: 0.05, armLRaise: 0.84, armLFwd: -1.84, armLElbow: 1.2, armRRaise: 1.0, armRFwd: 0.35, armRElbow: 0.45 } },
+      { t: 1.6, pose: { yaw: 0.7, hipY: 0.8, hipZ: -0.1, lean: 0.15, bend: 0.15, head: 0.2, nod: 0.05, armLRaise: 0.84, armLFwd: -1.84, armLElbow: 1.2, armRRaise: 0.9, armRFwd: 0.3, armRElbow: 0.5 } },
+    ],
+  },
   // airborne off a drop or after a trick: standing on the board, knees soft, arms up for balance
   air: {
     loop: true,
@@ -701,6 +724,19 @@ for (const name of Object.keys(CLIPS)) {
   const edited = (clipEdits as Record<string, Clip>)[name];
   CLIPS[switchName(name)] = mirrorClip(edited?.keys?.length ? edited : CLIPS[name]);
 }
+
+// Towed riding switch: Lou's back is to the camera, so the cable car in the lane behind is in front of his chest and
+// he reaches forward for it with his leading (right) arm, not back as the mirrored clip would
+CLIPS.switchTowed = {
+  loop: true,
+  keys: [0, 0.8, 1.6].map((t, i) => ({
+    t,
+    pose: {
+      yaw: 0, hipY: i === 1 ? 0.68 : 0.7, hipZ: 0.1, lean: -0.15, bend: 0.3, head: -0.2, nod: 0.05,
+      armRRaise: -0.17, armRFwd: 1.2, armRElbow: 1.16, armLRaise: i === 1 ? 1.0 : 0.9, armLFwd: 0.3, armLElbow: 0.5,
+    },
+  })),
+};
 
 // Clips keyed in the animation editor (?editor, src/editor) win over the ones above. It saves them to
 // clip-edits.json; the code clips stay as they were, so reverting a clip there brings the code one back.

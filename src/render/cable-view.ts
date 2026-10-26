@@ -14,7 +14,10 @@ import { flatGeometry } from './models';
 export const CABLE = {
   len: 4.2, // tiles
   z: -1.15, // the next lane back from the skate lane
-  lead: 1.4, // tiles its back runs ahead of you while it tows
+  lead: 0.45, // tiles its back runs ahead of you while it tows: near enough to hang on to (zack, 2026-10-26)
+  pole: 0.1, // the grab pole at its back end: in from the end, up from the rails, out at the near side (tiles)
+  grabY: 1.05,
+  half: 0.62,
 };
 
 function box(w: number, h: number, d: number, x: number, y: number, z: number, color: number): THREE.BufferGeometry {
@@ -64,6 +67,14 @@ export class CableView {
       this.cars.push({ s, mesh, d: 0 });
     }
     this.sync(level, -Infinity);
+  }
+
+  // where a towed skater holds on: the pole at the near corner of the back end of the car on `s`, world space
+  grab(s: Surface | null): THREE.Vector3 | null {
+    const c = s ? this.cars.find((car) => car.s === s) : undefined;
+    if (!c) return null;
+    c.mesh.updateWorldMatrix(true, false);
+    return new THREE.Vector3(-CABLE.len / 2 + CABLE.pole, CABLE.grabY, CABLE.half).applyMatrix4(c.mesh.matrixWorld);
   }
 
   // place each car: waiting at the foot, up the slot just ahead of the skater, or stopped at the top

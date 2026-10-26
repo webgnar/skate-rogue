@@ -131,10 +131,6 @@ const NOTES: Record<string, string> = {
 };
 const HEAD_UP = 0.2; // the head's dot sits this far above the neck pivot, in the helmet
 const OFF_DECK = 0.1; // lift a foot this far up off the deck and it steps off the board
-const ARM_FIELDS = [
-  ['armLRaise', 'armLFwd', 'armLElbow'],
-  ['armRRaise', 'armRFwd', 'armRElbow'],
-] as const;
 
 const VIEWS: Record<string, { pos: [number, number, number]; target: [number, number, number] }> = {
   side: { pos: [0, 1.2, 9], target: [0, 1, 0.25] }, // the game's camera: from the toe side
@@ -584,34 +580,8 @@ export async function startEditor(base: string): Promise<void> {
     }
   }
 
-  // Arm IK: the shoulder raise and swing and the elbow bend that put the hand at `goal` (rig space), found by a few
-  // damped least-squares steps from the current angles. The clip still stores the angles.
-  function reach(pose: Pose, arm: 0 | 1, goal: THREE.Vector3): Partial<Pose> {
-    const fields = ARM_FIELDS[arm];
-    const q = { ...pose };
-    const err = () => goal.clone().sub(rig.handFor(q, arm));
-    for (let it = 0; it < 40; it++) {
-      const e = err();
-      if (e.lengthSq() < 1e-8) break;
-      const J = fields.map((f) => {
-        const v = q[f];
-        q[f] = v + 1e-4;
-        const d = rig.handFor(q, arm).sub(goal).add(e).multiplyScalar(1e4); // d(hand)/d(angle)
-        q[f] = v;
-        return d;
-      });
-      // solve (JᵀJ + λI) dθ = Jᵀe
-      const A = new THREE.Matrix3().set(
-        J[0].dot(J[0]) + 0.01, J[0].dot(J[1]), J[0].dot(J[2]),
-        J[1].dot(J[0]), J[1].dot(J[1]) + 0.01, J[1].dot(J[2]),
-        J[2].dot(J[0]), J[2].dot(J[1]), J[2].dot(J[2]) + 0.01,
-      );
-      const step = new THREE.Vector3(J[0].dot(e), J[1].dot(e), J[2].dot(e)).applyMatrix3(A.invert());
-      fields.forEach((f, k) => (q[f] += Math.max(-0.3, Math.min(0.3, step.getComponent(k)))));
-      q[fields[2]] = Math.max(0, Math.min(2.6, q[fields[2]])); // elbows only bend one way
-    }
-    return Object.fromEntries(fields.map((f) => [f, q[f]]));
-  }
+  // Arm IK (SkaterRig.reach): the clip still stores the angles
+  const reach = (pose: Pose, arm: 0 | 1, goal: THREE.Vector3): Partial<Pose> => rig.reach(pose, arm, goal);
 
   function placeHandles(pose: Pose): void {
     const head = handles.get('head')!;
