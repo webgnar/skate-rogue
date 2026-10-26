@@ -60,7 +60,7 @@ export const BOONS: Boon[] = [
   { id: 'railMagnet', type: 'GRIND', name: 'Rail Magnet', effect: 'Rails catch you from further away', note: '+48 px', max: 2 },
   { id: 'grease', type: 'GRIND', name: 'Grease', effect: 'Grind 25% faster', note: 'and hit full grind speed instantly', max: 2 },
   { id: 'railLaunch', type: 'GRIND', name: 'Rail Launch', effect: 'Ollies off rails pop higher the faster you grind', max: 1 },
-  { id: 'exitWax', type: 'GRIND', name: 'Exit Wax', effect: 'Speed from rails lasts 4x longer', max: 1 },
+  { id: 'exitWax', type: 'GRIND', name: 'Waxed Bearings', effect: 'Speed from rails lasts 4x longer', max: 1 }, // id kept from its old name, Exit Wax
   { id: 'feebleFrenzy', type: 'GRIND', name: 'Feeble Frenzy', effect: '+10% grind speed every 0.5 s on one rail', max: 1 },
   {
     id: 'ghostRail', type: 'GRIND', name: 'Ghost Rail', effect: 'Rails keep going 4 tiles past their end',

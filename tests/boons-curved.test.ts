@@ -85,7 +85,7 @@ describe('GRIND boons on curved rails', () => {
       expect(v('feebleFrenzy')).toBeGreaterThan(v() * 1.1);
     });
 
-    it(`Exit Wax: the speed off the end of ${kind} lasts longer`, () => {
+    it(`Waxed Bearings: the speed off the end of ${kind} lasts longer`, () => {
       const carryAfter = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         while (sk.mode === 'rail' || sk.mode === 'air') sk.step(idle);
