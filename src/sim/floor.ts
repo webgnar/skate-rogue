@@ -31,6 +31,7 @@ export type FloorEvent =
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
+  | { type: 'puddle'; x: number; y: number } // rolled into a puddle: it soaks the deck
   | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' }
   // a car hop dented a car (src/traffic/damage.ts): x is its middle and y its roof, px; stage 3 is wrecked
   | { type: 'dent'; car: CarRef; kind: DamageKind; hits: number; health: number; stage: Stage; x: number; y: number };
@@ -82,8 +83,24 @@ export class FloorSim {
   private wasGrinding = false;
   private later: { effect: EffectId; slot: number; t: number }[] = []; // board effects waiting to fire
   combo = 0; // the run's live combo count, set by the game each step (Combo Only reads it)
+  // the puddle at (x, y), once it's formed enough to splash through (the view's own test: Puddles.at)
+  puddleAt(x: number, y: number): object | null {
+    const t = this.frames / 60;
+    for (const p of this.puddles) {
+      const g = Math.min(1, Math.max(0, (t - p.delay) / p.grow)) * p.k;
+      if (g > 0.3 && Math.abs(p.y - y) < 0.2 * TILE && Math.abs(x - p.x) < p.w * (0.15 + 0.75 * g)) return p;
+    }
+    return null;
+  }
+
   private readonly flip: () => number; // the board's coin flips, from the floor seed
   private slipT = 0; // frames drafting behind a car
+  // Rain puddles (the view's, src/render/puddles.ts, set by the game on a rainy floor): rolling through one soaks
+  // the deck. x, y: centre and surface (px); w: half width when full (px); delay: seconds before it starts to form,
+  // grow: seconds to form; k: how far it forms in a light rain (1 in a full one)
+  puddles: { x: number; y: number; w: number; delay: number; grow: number; k: number }[] = [];
+  private frames = 0; // steps this floor, for how formed the puddles are
+  private wading: object | null = null; // the puddle we're rolling through
   readonly broken: boolean[]; // props smashed
   private fall = 0; // how fast we were falling before this step
   readonly gear: Gear; // worn down as you skate; the run takes it to the next floor
@@ -126,6 +143,7 @@ export class FloorSim {
 
   step(input: StepInput): void {
     if (this.state !== 'skate' && !(this.state === 'exit' && this.skater.rollOn)) return;
+    this.frames++;
     this.traffic.step(this.skater.x);
     for (const t of this.trains) t.step(this.skater.x);
     this.swarm?.step(this.skater);
@@ -384,6 +402,13 @@ export class FloorSim {
     //(the top route's power line is a long, smooth grind: it wears your trucks and wheels a lot less)
     const soft = sk.rail?.top ? TOP.wear : 1;
     if (isGrind(sk.mode)) use.trucks += (GEAR.grindSec / 60) * soft;
+    //rolling into a puddle soaks the deck (zack: "rolling through puddles should wear out your deck")
+    const wet = sk.mode === 'roll' ? this.puddleAt(sk.x, sk.y) : null;
+    if (wet && wet !== this.wading) {
+      use.deck += GEAR.puddle;
+      this.events.push({ type: 'puddle', x: sk.x, y: sk.y });
+    }
+    this.wading = wet;
     const speed = Math.abs(sk.mode === 'rail' ? sk.railV : sk.hsp);
     if (speed > PHYS.baseSpeed * sk.mods.speedScale * GEAR.fastOver) use.wheels += (GEAR.fastSec / 60) * soft;
     let changed = false;

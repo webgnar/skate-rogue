@@ -558,6 +558,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - **Nollie flips (2026-10-26, zack):** an ollie out of a nose grind (crooked, nosegrind) or a nose manual is a nollie, and flips in that air are nollie flips: "NOLLIE KICKFLIP", scored half again like fakie (`SCORE.nollieMult` 1.5). Riding fakie, the nose pop is called a fakie flip. The sim now picks the grinds and manuals in turn (src/physics/tricks.ts), so it knows when Lou is on the nose; the rig plays the clip it names. Each flip has a first-pass `nollie<Trick>` clip (the flip popped off the nose) for the models thread to tune in ?editor.
 
+- **Puddles soak the deck (2026-10-26, zack):** rolling into a formed rain puddle takes 1.2 off the deck (`GEAR.puddle`; an ollie is 0.35), once per puddle. Ollie over them to keep it dry. The game hands the view's puddles to the floor sim (`Puddles.forSim`), and the sim tests them the same way the view does. Each one gives a splash, a SPLSH! word and a blue flash on the deck's gear icon. A rainy floor has 5 to 15 puddles, so rolling through every one costs about a floor's worth of ollies. The bot and balance runs have no rain, so they don't see puddles.
+
 ## Models thread: animation
 
 - 2026-10-26: Nollie flips are popped off the nose properly now. The nollie version of each flip swaps the whole foot set (position, angle, on-board), so the back foot does the flick off the tail corner while the front foot pops, and the board pitch, lean and slide flip with it. Shove-its and heelflip/kickflip spins are scooped by the front foot, so the board spins the other way. Nollie 180s keep their spin direction (the body turns, not the board). Edits in ?editor still win over these.

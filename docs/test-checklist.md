@@ -691,6 +691,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 - [ ] Nollie flips: get onto a nose grind or nose manual, ollie out and tap in the air. The callout says NOLLIE (trick) and the board pops off the nose. Riding fakie it says FAKIE.
 
+- [ ] Puddles: on a rainy floor (`?rain`), roll through a puddle once it has formed (after about 10 s). You get a splash, a SPLSH! and a blue flash on the deck icon, and the deck bar drops a little. Ollie over one and nothing happens.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

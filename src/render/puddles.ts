@@ -250,6 +250,12 @@ export class Puddles {
   }
 
   // the puddle the skater is in at (x, y), if any (only once it has formed enough to splash)
+  // the puddles for the floor sim (src/sim/floor.ts), which wears the deck rolling through them: world units, sized
+  // and formed as at() sees them
+  forSim(): { x: number; y: number; w: number; delay: number; grow: number; k: number }[] {
+    return this.spots.map((p) => ({ x: p.x, y: p.y, w: p.w * Math.max(1, this.scale), delay: p.delay, grow: PUDDLE.grow, k: Math.min(1, this.scale) }));
+  }
+
   at(x: number, y: number): Puddle | null {
     for (const p of this.spots) {
       const g = puddleGrowth(p, this.t) * Math.min(1, this.scale);

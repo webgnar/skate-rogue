@@ -165,6 +165,7 @@ export interface Hud {
   shop(view: ShopView | null): void; // null hides the shop
   under(view: UnderView | null): void; // the underground spot; null hides it
   gear(gear: Gear): void; // how worn your deck, shoes, trucks and wheels are
+  gearTick(part: GearPart): void; // a part just took a hit of wear (a puddle soaked the deck)
   cont(view: ContinueView | null): void; // the continue card after a bail or a bust; null hides it
   continues(left: number): void; // continues left this run
 }
@@ -580,6 +581,8 @@ export class Game {
     if (!from) this.view.setLevel(this.level, this.seed, this.floor);
     const rain = this.applyMood(!!from);
     this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
+    //the sim wears the deck rolling through them, so it needs them in its own units
+    this.sim.puddles = this.view.puddles.forSim().map((p) => ({ ...p, x: p.x * TILE, y: this.level.streetY - p.y * TILE, w: p.w * TILE }));
     this.dripEdges = this.level.surfaces
       .filter((s) => s.kind === 'roof' || s.kind === 'overpass')
       .flatMap((s) => [toX(s.x0), toX(s.x1)].map((x) => ({ x, y: toY(this.level, s.y) })))
@@ -1467,6 +1470,15 @@ export class Game {
     if (e.type === 'smash') return this.smashed(e);
     if (e.type === 'dent') return this.dented(e);
     if (e.type === 'wear') return this.worn(e.part, e.level);
+    if (e.type === 'puddle') {
+      //rolled through a puddle: a sheet of water off the wheels, and the deck's bar ticks down blue
+      const x = toX(e.x);
+      const y = toY(this.level, e.y);
+      this.particles.splash(x, y, 0.9);
+      this.words.spawn(x, y + 0.3, 'SPLSH!');
+      this.hud.gearTick('deck');
+      return;
+    }
     if (e.type === 'doorSlam') {
       //BAM: the door slams shut under the hop, a puff off its edge and a jolt
       this.hud.callout('DOOR SLAM!', 'good');
