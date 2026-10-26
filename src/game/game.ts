@@ -1451,6 +1451,13 @@ export class Game {
     if (e.type === 'smash') return this.smashed(e);
     if (e.type === 'dent') return this.dented(e);
     if (e.type === 'wear') return this.worn(e.part, e.level);
+    if (e.type === 'doorSlam') {
+      //BAM: the door slams shut under the hop, a puff off its edge and a jolt
+      this.hud.callout('DOOR SLAM!', 'good');
+      this.particles.dust(toX(e.x), toY(this.level, e.y), 0.6);
+      this.view.shake(0.12);
+      return;
+    }
     if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip' && e.type !== 'birds') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;

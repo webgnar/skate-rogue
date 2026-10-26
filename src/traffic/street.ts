@@ -35,6 +35,7 @@ export const DOOR = {
   range: 14 * TILE, // the "!" pops up when the skater is this far behind the car
   warnFrames: 36, // the "!" alone, before the door moves
   swingFrames: 12,
+  slamFrames: 5, // hop on it and it slams shut this fast
   reach: 0.5 * TILE, // how far the open door stands back from its hinge, as you come at it
   h: 36, // its top edge, px above the street (a car roof is 40)
 };
@@ -95,6 +96,7 @@ export function doorPlan(level: Level, seed: number, stops: BusStop[] = []): num
 export class CarDoor {
   warn = 0; // frames the "!" has been up
   open = 0; // 0 shut, 1 wide open
+  slammed = false; // hopped on: slammed shut, and stays shut (zack, 2026-10-26)
   readonly car: Car; // parked in the back lane: scenery, never in your way
   readonly box: Car; // the open door, across your lane
 
@@ -106,10 +108,19 @@ export class CarDoor {
 
   // something you can hit or land on once it's half open
   get solid(): boolean {
-    return this.open >= 0.5;
+    return this.open >= 0.5 && !this.slammed;
+  }
+
+  // a car hop off its top edge slams it shut
+  slam(): void {
+    this.slammed = true;
   }
 
   step(skaterX: number): void {
+    if (this.slammed) {
+      this.open = Math.max(0, this.open - 1 / DOOR.slamFrames);
+      return;
+    }
     if (this.warn === 0 && skaterX < this.car.x0 - DOOR.range) return;
     if (this.warn < DOOR.warnFrames) this.warn++;
     else this.open = Math.min(1, this.open + 1 / DOOR.swingFrames);

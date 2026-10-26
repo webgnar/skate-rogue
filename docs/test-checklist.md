@@ -678,6 +678,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Rolling into the open door slams you, and landing on its top edge pops you up.
 - [ ] Even at full speed, the door is already open before you reach it.
 - [ ] No cones or barrels block the view of the door.
+- [ ] Land on top of an open door. You pop up, the door slams shut with a bang and a "DOOR SLAM!", and it stays shut.
 
 ## Firecracker and Ghost Rail
 

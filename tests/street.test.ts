@@ -111,11 +111,20 @@ describe('car doors', () => {
     door.open = 1;
     Object.assign(sim.skater, { x: door.box.x0 + 6, y: door.box.roof - 20, surface: null, mode: 'air', vsp: 2, hsp: 0.5 });
     let hop = false;
+    let slammed = false;
     for (let f = 0; f < 12; f++) {
       sim.step(idle);
       hop ||= sim.events.some((e) => e.type === 'hop');
+      slammed ||= sim.events.some((e) => e.type === 'doorSlam');
     }
     expect(hop).toBe(true);
+    //and the hop slams it shut: it closes and is out of your way for good (zack, 2026-10-26)
+    expect(slammed).toBe(true);
+    for (let f = 0; f < DOOR.slamFrames; f++) sim.traffic.step(sim.skater.x);
+    expect(door.open).toBe(0);
+    expect(sim.traffic.doorBoxes).not.toContain(door.box);
+    for (let f = 0; f < 60; f++) sim.traffic.step(sim.skater.x);
+    expect(door.open).toBe(0);
   });
 
   it('the no-boon bot still gets through floors with doors and bus stops', () => {
