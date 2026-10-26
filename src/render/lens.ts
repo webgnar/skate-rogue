@@ -10,7 +10,8 @@
 import * as THREE from 'three';
 
 export const LENS = {
-  fov: 30, // degrees the camera's field of view opens at full strength (dollying in to keep Lou's size)
+  fov: 20, // degrees the camera's field of view opens at full strength (dollying in to keep Lou's size)
+  sharp: 1.2, // the texture is drawn this much bigger than the screen, so the swollen middle stays crisp
 };
 
 const VERT = /* glsl */ `
@@ -86,13 +87,15 @@ export class Lens {
     this.scene.add(tri);
   }
 
-  // draw() renders the view; with strength over 0 it goes into the texture and comes out bent
-  render(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera, k: number, chunky: boolean, draw: () => void): void {
+  // draw() renders the view; with strength over 0 it goes into the texture and comes out bent. sharp: draw the
+  // texture LENS.sharp times the screen's size, so the swell in the middle doesn't blow up its pixels
+  render(renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera, k: number, chunky: boolean, sharp: boolean, draw: () => void): void {
     if (k <= 0.001) {
       draw();
       return;
     }
     renderer.getDrawingBufferSize(this.size);
+    if (sharp && !chunky) this.size.multiplyScalar(LENS.sharp).round();
     const filter = chunky ? THREE.NearestFilter : THREE.LinearFilter;
     if (!this.target || this.target.width !== this.size.x || this.target.height !== this.size.y || this.target.texture.magFilter !== filter) {
       this.target?.dispose();
