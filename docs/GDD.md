@@ -539,9 +539,9 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 | --- | --- | --- | --- |
 | Triple Threat | POP | +1 jump (QFS Triple Jump) | 1 |
 | Big Pop | POP | +20% ollie height | 3 |
-| Floaty Flip | POP | Gravity is halved while a flip trick animates | 1 |
+| Boostin | POP | Gravity is halved while a flip trick animates | 1 |
 | Late Flip | POP | Air tricks give a full jump, not a smaller hop | 1 |
-| Pressure Flip | POP | Holding ollie longer than 0.5 s pops 40% higher but takes 0.2 s to charge | 1 |
+| Mad Pop | POP | Keep holding after an ollie and gravity drops 30% after 0.25 s, so you float | 1 |
 | Spare Change | POP | Every grind refills +0.25 jump charge above your max | 3 |
 | Strong Legs | POP | Normally a press during the landing's impact (350 ms) is lost. With this, a second tap during it ollies at once | 1 |
 | Rail Magnet | GRIND | Rails pull you in from 48 px further away | 2 |

@@ -56,9 +56,9 @@ export class Skater {
   hitGlass = new Set<number>();
   events: SkaterEvent[] = [];
   // boon state
-  floatT = 0; // Floaty Flip frames left
+  floatT = 0; // Boostin frames left
   flipped = false; // last jump was a flip trick (Late Flip)
-  holdT = 0; // frames the button has stayed held since the ollie (Pressure Flip)
+  holdT = 0; // frames the button has stayed held since the ollie (Mad Pop)
   spare = 0; // banked bonus jump (Spare Change)
   onRailT = 0; // frames on the current rail (Feeble Frenzy)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
@@ -427,8 +427,8 @@ export class Skater {
     //vertical speed
     if (this.mode === 'air') {
       let grav = this.grav;
-      if (this.floatT > 0) grav *= 0.5; // Floaty Flip
-      if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Pressure Flip
+      if (this.floatT > 0) grav *= 0.5; // Boostin
+      if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Mad Pop
       //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
       if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - this.grav));
       else this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);

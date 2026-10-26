@@ -60,9 +60,9 @@ export class BoonFx {
     const p = this.particles;
     const air = sk.mode === 'air';
     const grinding = sk.mode === 'grind' || sk.mode === 'rail';
-    //Floaty Flip: pale feathers drift off the board while gravity is halved
+    //Boostin: pale feathers drift off the board while gravity is halved
     if (this.held.has('floatyFlip') && air && sk.floatT > 0) p.stream('floaty', x, y, 30, dt, { n: 0, colors: POP, life: [0.5, 0.8], size: [0.1, 0.14], speed: [0.3, 0.8], angle: [DOWN - 0.8, DOWN + 0.8], jitter: 0.25, grav: 0.6, drag: 2, fadeFrom: 0.3 });
-    //Pressure Flip: an updraft pushing under the board while it floats (after 0.25 s held)
+    //Mad Pop: an updraft pushing under the board while it floats (after 0.25 s held)
     if (this.held.has('pressureFlip') && air && sk.holdT > 15) p.stream('pressure', x, y - 0.1, 40, dt, { n: 0, colors: POP, life: [0.2, 0.35], size: [0.08, 0.12], speed: [1.5, 3], angle: [DOWN - 0.3, DOWN + 0.3], jitter: 0.3, drag: 2 });
     //Grease: dark glossy drips off the trucks
     if (this.held.has('grease') && grinding) p.stream('grease', x, y, 22, dt, { n: 0, colors: GREASE, life: [0.4, 0.6], size: [0.07, 0.1], speed: [0.2, 0.6], angle: [DOWN - 0.4, DOWN + 0.4], jitter: 0.12, grav: 12, ink: true, floor: y - 2 });
