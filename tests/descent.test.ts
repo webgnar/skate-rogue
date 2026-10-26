@@ -3,6 +3,8 @@ import { buildFloor, startHeight } from '../src/gen/descent';
 import { TILE } from '../src/physics/constants';
 import type { Level, Surface } from '../src/physics/level';
 import { Skater } from '../src/physics/skater';
+import { skaterMods } from '../src/boons/mods';
+import { addBoon } from '../src/boons/defs';
 import { FLAT, levelOf } from './helpers';
 
 const idle = { pressed: false, held: false };
@@ -65,6 +67,39 @@ describe('stairs and banks', () => {
     expect(sk.mode).toBe('roll');
     expect(sk.y).toBe(top + 8 * 16);
     expect(sk.x).toBeGreaterThan(14 * TILE);
+  });
+
+  it('Firecracker: rolling off the top of a stair set rides it down, the tail clacking each step, no slam', () => {
+    const set = () =>
+      withSurfaces([
+        { kind: 'roof', x0: 0, x1: 6 * TILE, y: top, row: -1 },
+        { kind: 'stairs', x0: 6 * TILE, x1: 14 * TILE, y: top, y1: top + 8 * 16, row: -1 },
+        { kind: 'roof', x0: 14 * TILE, x1: 40 * TILE, y: top + 8 * 16, row: -1 },
+      ], top);
+    const sk = new Skater(set(), skaterMods(addBoon([], 'firecracker')));
+    const events: string[] = [];
+    let cracking = 0;
+    for (let f = 0; f < 240; f++) {
+      sk.step(idle);
+      if (sk.firecracking) cracking++;
+      events.push(...sk.events.map((e) => e.type));
+      sk.events.length = 0;
+    }
+    expect(events).not.toContain('slam');
+    expect(events.filter((e) => e === 'firecracker')).toHaveLength(1);
+    expect(events.filter((e) => e === 'clack')).toHaveLength(8); // one a step
+    expect(cracking).toBeGreaterThan(10);
+    expect(sk.firecracking).toBe(false); // off the bottom, rolling on
+    expect(sk.y).toBe(top + 8 * 16);
+
+    //and you can ollie out of it halfway down
+    const out = new Skater(set(), skaterMods(addBoon([], 'firecracker')));
+    let f = 0;
+    while (!(out.firecracking && out.x > 9 * TILE) && f++ < 240) out.step(idle);
+    out.step({ pressed: true, held: true });
+    expect(out.mode).toBe('air');
+    expect(out.vsp).toBeLessThan(0);
+    expect(out.firecracking).toBe(false);
   });
 
   it('a bank that ends in open air kicks you upward', () => {

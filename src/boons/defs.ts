@@ -5,7 +5,7 @@ export type BoonType = 'POP' | 'GRIND' | 'FLOW' | 'COOL' | 'LUCK' | 'STREET';
 export type BoonId =
   | 'tripleThreat' | 'bigPop' | 'floatyFlip' | 'lateFlip' | 'pressureFlip' | 'spareChange'
   | 'railMagnet' | 'grease' | 'railLaunch' | 'exitWax' | 'feebleFrenzy' | 'ghostRail'
-  | 'newWheels' | 'bombHill' | 'butter' | 'kickerBoost' | 'slingshot'
+  | 'newWheels' | 'bombHill' | 'butter' | 'kickerBoost' | 'slingshot' | 'firecracker'
   | 'lowProfile' | 'bubblePads' | 'tuckAndRoll' | 'slamStoke' | 'sirenSong' | 'decoy' | 'ghostMode'
   | 'stokenMagnet' | 'doubleStoken' | 'hustler' | 'luckyReroll'
   | 'roofRider' | 'slipstream' | 'hoodPop' | 'spoofedPlate' | 'jaywalker'
@@ -68,6 +68,10 @@ export const BOONS: Boon[] = [
   {
     id: 'kickerBoost', type: 'FLOW', name: 'Kicker Boost', effect: 'Kickers launch 30% harder', note: 'and bomb harder',
     max: 1, when: (r) => r.floor >= 3, // box trucks come in on floor 4
+  },
+  {
+    id: 'firecracker', type: 'FLOW', name: 'Firecracker', effect: 'Roll into a stair set and you firecracker down it',
+    note: 'no slam; ollie out any time', max: 1,
   },
   { id: 'slingshot', type: 'FLOW', name: 'Slingshot', effect: 'Riding off the end of a rail launches you 50% harder', max: 2 },
   { id: 'lowProfile', type: 'COOL', name: 'Low Profile', effect: 'Heat rises 25% slower', max: 3 },

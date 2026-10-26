@@ -1484,6 +1484,19 @@ export class Game {
         this.hud.callout('TUCK AND ROLL!', 'good');
         this.view.shake(0.15);
         break;
+      case 'firecracker':
+        this.hud.callout('FIRECRACKER!' + combo, 'trick');
+        this.view.zoom.trick();
+        break;
+      case 'clack': {
+        //the tail hits the step: concrete sparks and a puff off the edge, behind the feet
+        const tail = toX(this.skater.x) - 0.4;
+        const at = toY(this.level, this.skater.y);
+        this.particles.grind(tail, at, -1, 720, 1 / 60, 'concrete');
+        this.particles.dust(tail, at, 0.25);
+        this.view.shake(0.04);
+        break;
+      }
       case 'slip':
         this.hud.callout('SLIPSTREAM!', 'trick');
         this.view.zoom.trick();

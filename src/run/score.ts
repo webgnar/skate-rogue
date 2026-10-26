@@ -41,7 +41,8 @@ export const SCORE = {
   sketchy: 0.5, // share of the combo a sketchy landing banks
   bigDrop: 100, // a heavy landing: a big drop, landed
   lip: 30, // an ollie popped right at the edge
-  manual: 120, // landing into a manual on a manual pad: a trick, and the combo carries on
+  manual: 120,
+  clack: 15, // each step a firecracker's tail hits // landing into a manual on a manual pad: a trick, and the combo carries on
 };
 
 export interface Bank {
@@ -110,6 +111,12 @@ export class RunScore {
         break;
       case 'kicker':
         this.add(SCORE.kicker);
+        break;
+      case 'firecracker':
+        this.add(SCORE.manual);
+        break;
+      case 'clack':
+        this.add(SCORE.clack);
         break;
       case 'near':
         this.add(SCORE.nearMiss * this.nearScale);

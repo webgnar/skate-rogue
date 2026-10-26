@@ -672,6 +672,12 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Even at full speed, the door is already open before you reach it.
 - [ ] No cones or barrels block the view of the door.
 
+## Firecracker and Ghost Rail
+
+- [ ] Open `?boons=firecracker` and roll off the top of a stair set without popping. You get "FIRECRACKER!" and Lou rides down in a manual, with sparks and a clack on every step, and no slam.
+- [ ] Ollie halfway down the firecracker. Lou pops out of it.
+- [ ] Open `?boons=ghostRail` and ride off the end of a handrail or a power line. A faint rail carries on about 4 tiles and Lou keeps grinding.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

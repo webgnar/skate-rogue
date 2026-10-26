@@ -655,6 +655,9 @@ export class SkaterRig {
       case 'land':
         this.play(e.manual ? this.nextManual() : 'land');
         break;
+      case 'firecracker': // rolled into a stair set: down it in a manual, tail first (the models thread's clip when it's in)
+        this.play('firecracker' in CLIPS ? 'firecracker' : 'manual', 0.08);
+        break;
       case 'grind': // flat bars are rails; a parked car's roof (row -1, physics roofLedge) is not
         if (this.sk?.surface?.row === -1) this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
         else this.play(RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length]);
@@ -721,11 +724,15 @@ export class SkaterRig {
       if (this.clipName !== this.held) this.play(this.held, 0.25);
     } else if (this.clipName === 'idle' || this.clipName === 'busted') {
       this.play(sk.mode === 'air' ? 'air' : 'ride', 0.2);
+    } else if (sk.firecracking) {
+      //riding a stair set down in a manual: the clip runs while the tail clacks each step
+      const want = 'firecracker' in CLIPS ? 'firecracker' : 'manual';
+      if (this.clipName !== want) this.play(want, 0.08);
     } else if (sk.manualing) {
       //a manual pad: on the back wheels or the front ones, taking turns
       if (this.clipName !== 'manual' && this.clipName !== 'noseManual') this.play(this.nextManual(), 0.1);
     } else if (sk.mode === 'roll') {
-      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || GRINDS.has(this.clipName)) {
+      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || this.clipName === 'firecracker' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
       } else if (this.clipName === 'push') {
         // finish the stroke, with the back foot back near the board, before rolling
