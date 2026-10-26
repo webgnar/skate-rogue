@@ -131,18 +131,31 @@ const pop: Key = {
 // The nollie is the ollie popped off the nose: the front foot snaps the nose down and the back foot drags forward up
 // the grip, so the board pivots on the nose and rises tail first. Same body, the feet's jobs and the board's tip
 // swapped end for end. Its switch twin (switchNollie) is the fakie ollie: the same pop off the end that leads.
-function nosePop(k: Key): Key {
+function nosePop(k: Key, spinBoard = false): Key {
   const out: Key = { ...k };
-  const f = k.footFX ?? BASE.footFX;
-  const b = k.footBX ?? BASE.footBX;
-  out.footFX = -b;
-  out.footBX = -f;
+  // the feet trade jobs end for end: everything the front foot did (step off, kick out, flick) the back foot does
+  // at the tail, and the other way round
+  for (const [f, b] of FOOT_PAIRS) {
+    delete out[f];
+    delete out[b];
+    const sign = f === 'footFX' ? -1 : 1;
+    const fv = k[f] ?? (f === 'footFX' ? BASE.footFX : undefined);
+    const bv = k[b] ?? (b === 'footBX' ? BASE.footBX : undefined);
+    if (bv !== undefined) out[f] = sign * bv;
+    if (fv !== undefined) out[b] = sign * fv;
+  }
   if (k.boardPivot !== undefined) out.boardPivot = -k.boardPivot;
   if (k.boardPitch !== undefined) out.boardPitch = -k.boardPitch;
   if (k.boardX !== undefined) out.boardX = -k.boardX;
   if (k.lean !== undefined) out.lean = -k.lean;
+  // a shove-it scooped from the nose: the nose goes round the way the tail would have, so the board spins the other
+  // way under the body (not for the 180s, where the board turns with the body)
+  if (spinBoard && k.boardYaw !== undefined) out.boardYaw = -k.boardYaw;
   return out;
 }
+const FOOT_PAIRS = (['X', 'Y', 'Z', 'On', 'Turn', 'Pitch', 'Toe', 'Roll'] as const).map(
+  (n) => [`footF${n}`, `footB${n}`] as [keyof Pose, keyof Pose],
+);
 // both feet off, knees up, for flips and shove-its
 // hangers on the rail (their underside 0.09 below the deck), wheels hanging just below its top
 const HANGER_Y = -(BOARD.deckTop - 0.09);
@@ -715,11 +728,14 @@ export function mirrorClip(c: Clip): Clip {
   const ollie = (clipEdits as Record<string, Clip>).ollie?.keys?.length ? (clipEdits as Record<string, Clip>).ollie : CLIPS.ollie;
   CLIPS.nollie.keys = ollie.keys.map((k) => ({ t: k.t, pose: nosePop(k.pose) }));
 }
-// Nollie flip tricks (nollieKickflip, nollieBs180, ...): a first pass, each flip's keys (as edited) popped off the
-// nose like the nollie. The models thread tunes them in ?editor, and an edit there wins.
+// Nollie flip tricks (nollieKickflip, nollieBs180, ...): each flip's keys (as edited) popped off the nose. The back
+// foot does the flicking off the tail's corner while the front foot rides the nose up, the flip turning the same way
+// under the rider; shove-its are scooped by the front foot, so their board spin turns the other way. An edit in
+// ?editor wins.
 for (const id of Object.keys(TRICK_CATCH) as TrickId[]) {
   const flip = (clipEdits as Record<string, Clip>)[id]?.keys?.length ? (clipEdits as Record<string, Clip>)[id] : CLIPS[id];
-  if (flip) CLIPS[nollieClip(id)] = { loop: flip.loop, keys: flip.keys.map((k) => ({ t: k.t, pose: nosePop(k.pose) })) };
+  const spinBoard = id !== 'bs180' && id !== 'fs180';
+  if (flip) CLIPS[nollieClip(id)] = { loop: flip.loop, keys: flip.keys.map((k) => ({ t: k.t, pose: nosePop(k.pose, spinBoard) })) };
 }
 // clips that ride the nose (switch twins included): popping out of them is a nollie (a fakie ollie riding switch)
 export const onNose = (name: string): boolean => NOSE_STANCES.has(name.replace(/^switch([A-Z])/, (_, c: string) => c.toLowerCase()));
