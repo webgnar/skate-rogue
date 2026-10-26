@@ -203,6 +203,10 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Less rain (zack's ask).** A floor's chance of rain is down from 1 in 4 to about 1 in 8 (`RAIN_CHANCE` 0.13),
   and it never rains on two floors in a row, so a shower passes over one floor and clears. Across a 15-floor run
   that's about 12% of floors, down from about 25%. `?seed=7&floor=12` is still a rainy night for testing.
+- **No screen shake for plain smashing, for now (zack's ask).** Rolling through, landing on, grinding or hopping
+  something still gets the break, the pieces and the comic word, but the camera holds still. A slam into a prop,
+  or a car smashing through one, still shakes. To bring it back, add the hit kinds to `SMASH.shakeOn` in
+  src/render/smash.ts. Slams, car hops and heavy landings keep their own shakes.
 - **Landmarks get no extra night treatment.** I checked all seven at floor 13. They already carry their own glowing
   materials and read fine against the night sky, so I left them alone.
 

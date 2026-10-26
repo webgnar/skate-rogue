@@ -255,15 +255,19 @@ describe('smashables', () => {
     expect(stuffOf('Cone')).toBe('plastic');
     expect(stuffOf('Planter')).toBe('stone');
   });
-  it('a big smash gets a word and a kick; a cruising roll-through does not', () => {
+  it('a big smash gets a word; only a slam or a car through it shakes the camera', () => {
     const words: string[] = [];
     let kicks = 0;
     const fx = new SmashFx(fakeParticles, { word: (_x, _y, w) => words.push(w), shake: () => kicks++ });
     fx.smash(hit());
     expect(words).toEqual([]);
     fx.smash(hit({ how: 'land' }));
-    expect(words.length).toBe(1);
-    expect(kicks).toBe(1);
+    fx.smash(hit({ how: 'roll', speed: 2 }));
+    expect(words.length).toBe(2);
+    expect(kicks).toBe(0); // plain smashing: no shake, for now
+    fx.smash(hit({ how: 'slam' }));
+    fx.smash(hit({ how: 'car', speed: 2 }));
+    expect(kicks).toBe(2);
     expect(isBig(hit({ speed: 2 }))).toBe(true);
   });
   it('hides the prop, flings its pieces, and clears them after their life', () => {
