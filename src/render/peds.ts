@@ -14,7 +14,7 @@ import { STOP } from '../traffic/street';
 import { STREET_Z } from '../traffic/traffic';
 import { makeRng, randInt, type Rng } from '../gen/rng';
 import { model } from './models';
-import { props } from './props';
+import { propsFor } from './props';
 import { toX, toY } from './kit';
 import type { BiomeId } from './biomes';
 import { inkify } from './toon';
@@ -214,7 +214,7 @@ export class PedView {
       [...gaps, ...stops, ...esc].some(([a, b]) => x > a && x < b) ||
       !level.street[Math.floor(x)] ||
       !level.street[Math.min(cols - 1, Math.floor(x) + 1)] ||
-      props.placements.some((p) => Math.abs(p.x - x) < 0.9 && p.z < -1.5);
+      propsFor(level).placements.some((p) => Math.abs(p.x - x) < 0.9 && p.z < -1.5);
     const end = level.fork ? toX(level.fork.x0) - 3 : cols - 4; // clear of the fork's doors
     for (let x = toX(level.finaleX) + 4 + rng() * 4; x < end; x += 3 + rng() * 6) {
       if (blocked(x)) continue;

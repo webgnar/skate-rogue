@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SmashFx, isBig, stuffOf, type SmashHit } from '../src/render/smash';
+import { SmashFx, isBig, palette, shatter, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
 import { BoonFx } from '../src/render/boon-fx';
 import { EscapeFx } from '../src/render/escape-fx';
@@ -567,6 +567,40 @@ describe('cruiser jump jets', () => {
     expect(jets.landed).toBe(false);
     jets.reset();
     expect(jets.out).toBe(0);
+  });
+});
+
+describe('smash debris from the prop itself', () => {
+  // a two-coloured box standing on the ground: red below, white on top
+  const prop = () => {
+    const g = new THREE.BoxGeometry(0.6, 1, 0.6, 2, 2, 2).toNonIndexed().translate(0, 0.5, 0);
+    const pos = g.getAttribute('position');
+    const col = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) col.set(pos.getY(i) > 0.5 ? [1, 1, 1] : [0.8, 0.05, 0.05], i * 3);
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    return g;
+  };
+  it('cuts the model into chunks that keep its colours and add back up to it', () => {
+    const g = prop();
+    const pieces = shatter(g);
+    expect(pieces.length).toBeGreaterThan(4);
+    const tris = pieces.reduce((n, p) => n + p.geometry.getAttribute('position').count, 0);
+    expect(tris).toBe(g.getAttribute('position').count);
+    expect(pieces.every((p) => p.geometry.getAttribute('color'))).toBe(true);
+    expect(pieces.some((p) => p.offset.y > 0.5) && pieces.some((p) => p.offset.y < 0.5)).toBe(true); // high and low
+  });
+  it('throws chips in the prop\'s own colours', () => {
+    const cols = palette(prop());
+    expect(cols).toHaveLength(2);
+    expect(cols.some(([r, g]) => r > 0.8 && g < 0.4)).toBe(true); // the red
+  });
+  it('breaks a prop with no pieces of its own into its model, and hides it', () => {
+    const hidden: number[] = [];
+    const fx = new SmashFx(new Particles(), { word: () => {}, shake: () => {}, hide: (i) => hidden.push(i), pieces: () => [], geometry: () => prop() });
+    fx.smash({ prop: 'NewsBoxRed', index: 3, x: 0, y: 0, how: 'roll', speed: 1 });
+    expect(hidden).toEqual([3]);
+    expect(fx.group.children.length).toBeGreaterThan(4);
+    expect(fx.group.children.every((m) => ((m as THREE.Mesh).material as THREE.MeshToonMaterial).vertexColors)).toBe(true);
   });
 });
 
