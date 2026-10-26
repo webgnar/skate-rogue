@@ -81,11 +81,19 @@ export function mixMood(a: Mood, b: Mood, t: number): Mood {
   return out;
 }
 
-// rain on a floor: from floor 2, about one floor in four, fixed by the run seed
-export function rainsOn(seed: number, floor: number): boolean {
-  if (floor < 2) return false;
+export const RAIN_CHANCE = 0.13; // a floor's chance of rain (was 0.25; zack: "reduce the time it spends raining")
+
+// the seed's roll for a floor, 0..1
+function rainRoll(seed: number, floor: number): number {
   const h = Math.sin(seed * 12.9898 + floor * 78.233) * 43758.5453;
-  return h - Math.floor(h) < 0.25;
+  return h - Math.floor(h);
+}
+
+// rain on a floor: from floor 2, about one floor in eight, fixed by the run seed. Never two floors running: a
+// shower passes over one floor and clears for the next
+export function rainsOn(seed: number, floor: number): boolean {
+  if (floor < 2 || rainRoll(seed, floor) >= RAIN_CHANCE) return false;
+  return !rainsOn(seed, floor - 1);
 }
 
 export const RAIN = { drizzle: 0.5, rain: 1, downpour: 1.6 };

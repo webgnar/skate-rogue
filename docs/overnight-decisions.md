@@ -200,6 +200,9 @@ and listed it here for review. Any of these can be flipped in the morning.
   - **The debris:** a prop without Blender break pieces now has its own model cut into chunks (`shatter`), so the
     debris carries its colours and shapes. Chips take the prop's main colours, plus its material's: glass glints,
     wood dust, metal sparks.
+- **Less rain (zack's ask).** A floor's chance of rain is down from 1 in 4 to about 1 in 8 (`RAIN_CHANCE` 0.13),
+  and it never rains on two floors in a row, so a shower passes over one floor and clears. Across a 15-floor run
+  that's about 12% of floors, down from about 25%. `?seed=7&floor=12` is still a rainy night for testing.
 - **Landmarks get no extra night treatment.** I checked all seven at floor 13. They already carry their own glowing
   materials and read fine against the night sky, so I left them alone.
 

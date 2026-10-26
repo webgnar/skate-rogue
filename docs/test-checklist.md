@@ -423,6 +423,7 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 **Weather by district**
 
+- [ ] Rain comes round less often, about one floor in eight, and never two floors in a row.
 - [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
 
 **Smashing**
