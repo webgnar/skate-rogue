@@ -128,6 +128,7 @@ export class StreetView {
   readonly rhythm = new Rhythm();
   private readonly lens = new Lens();
   private lensK = 0; // the fisheye's strength this frame (lens.ts)
+  private lensLevel = 2; // 2: the lens drawn sharp (bigger texture), 1: at screen size, 0: off. Slow frames step it down first
   private readonly smooth = { zoom: new Spring(1), fov: new Spring(0), lens: new Spring(CAM.lens), yaw: new Spring(0), roll: new Spring(0), tilt: new Spring(0) };
   private camX = 0;
   private camY = 2;
@@ -460,7 +461,7 @@ export class StreetView {
     const zoom = ease(this.smooth.zoom, trick * this.drift.pull * (1 + this.drift.kick * 0.18) * (1 + this.punchAmt * 0.5) * (rhythm ? this.rhythm.zoom : 1), SMOOTH.zoom);
     //the fisheye: its resting strength plus the rhythm's. A stronger lens also dollies in with a wider field of
     //view (Lou keeps their size), so there's more round the edges for it to bend
-    this.lensK = THREE.MathUtils.clamp(ease(this.smooth.lens, FX.tier === 'low' ? 0 : Math.min(1, CAM.lens + (rhythm ? this.rhythm.lens : 0)), SMOOTH.lens), 0, 1);
+    this.lensK = THREE.MathUtils.clamp(ease(this.smooth.lens, FX.tier === 'low' || this.lensLevel === 0 ? 0 : Math.min(1, CAM.lens + (rhythm ? this.rhythm.lens : 0)), SMOOTH.lens), 0, 1);
     const fov = f.fov + (zoom - 1) * (zoom > 1 ? DYN_CAM.zoomFov : DYN_CAM.zoomOutFov) + ease(this.smooth.fov, this.drift.fovAdd + this.punchAmt * 16, SMOOTH.fov) + this.lensK * LENS.fov;
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
     const viewH = f.viewH / zoom;
@@ -574,7 +575,11 @@ export class StreetView {
   // low effects tier (unless the tier was chosen by hand)
   adapt(frameMs: number): void {
     this.slowMs = frameMs > 20 ? this.slowMs + frameMs : 0;
-    if (this.slowMs > 2000 && FX.quality === 'auto' && FX.tier === 'high' && this.pixelRatio * 0.8 < 1) {
+    //the fisheye goes first (its sharp texture, then the lens), so the picture keeps its resolution
+    if (this.slowMs > 2000 && this.lensLevel > 0 && CAM.lens > 0) {
+      this.lensLevel--;
+      this.slowMs = 0;
+    } else if (this.slowMs > 2000 && FX.quality === 'auto' && FX.tier === 'high' && this.pixelRatio * 0.8 < 1) {
       this.setTier('low');
       this.slowMs = 0;
     } else if (this.slowMs > 2000 && this.autoRatio > 0.6) {
@@ -637,7 +642,7 @@ export class StreetView {
 
   render(): void {
     this.renderer.info.reset(); // count both passes
-    this.lens.render(this.renderer, this.camera, this.lensK, FX.pixel > 1, () => {
+    this.lens.render(this.renderer, this.camera, this.lensK, FX.pixel > 1, this.lensLevel > 1, () => {
       this.renderer.clear();
       this.renderer.render(this.scene, this.camera);
       this.renderer.clearDepth();

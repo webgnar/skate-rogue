@@ -165,7 +165,7 @@ export function viewHeight(aspect: number): number {
 //   and lets it all go when the combo banks or slams
 // - speed bends the lens (the fisheye of a filmer running alongside)
 // CAM sets the lens's resting strength and whether the rhythm runs; ?lens=0..1 and ?rhythm=0 set them from the URL.
-export const CAM = { lens: 1, rhythm: true }; // full fisheye by default (zack, 2026-10-26)
+export const CAM = { lens: 0.5, rhythm: true }; // fisheye strength (zack, 2026-10-26: full, then "tone down the fisheye a bit")
 
 export function initCam(params: URLSearchParams): void {
   const lens = Number(params.get('lens'));
