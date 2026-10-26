@@ -11,21 +11,22 @@ import { surface } from './surfaces';
 const X = (px: number) => px / TILE;
 const LEG_Z = -1.3; // the legs stand behind the lane, as the top route's rooftops' do
 
+const ADS: [string, string, string][] = [
+  ['#e83a5a', '#ffe14a', 'GNAR COLA'],
+  ['#2a6ad8', '#ffffff', 'DEEP DISH'],
+  ['#1a1424', '#5fe8ff', 'SKATE OR CRY'],
+  ['#ffb020', '#1a1424', 'CHI 99.1 FM'],
+  ['#f2eef8', '#e83a5a', 'GOD IS GNAR'],
+];
 let ads: THREE.Texture | null = null;
-// the billboards' faces: four ads side by side on one canvas, each board shows one
+// the billboards' faces: the ads side by side on one canvas, each board shows one (zack wrote the last two)
 function adTexture(): THREE.Texture {
   if (ads) return ads;
   const c = document.createElement('canvas');
-  c.width = 256;
+  c.width = 64 * ADS.length;
   c.height = 48;
   const g = c.getContext('2d')!;
-  const art: [string, string, string][] = [
-    ['#e83a5a', '#ffe14a', 'GNAR COLA'],
-    ['#2a6ad8', '#ffffff', 'DEEP DISH'],
-    ['#1a1424', '#5fe8ff', 'SKATE OR CRY'],
-    ['#ffb020', '#1a1424', 'CHI 99.1 FM'],
-  ];
-  art.forEach(([bg, fg, text], i) => {
+  ADS.forEach(([bg, fg, text], i) => {
     const x = i * 64;
     g.fillStyle = bg;
     g.fillRect(x, 0, 64, 48);
@@ -87,8 +88,8 @@ export function buildSkyBeats(level: Level): THREE.Group {
       //the board under its catwalk rail, ad side out, on two posts
       const face = box(w, 2.2, 0.15, cx, y - 1.25, -0.6, board);
       const uv = face.geometry.getAttribute('uv') as THREE.BufferAttribute;
-      const k = i % 4;
-      for (let v = 0; v < uv.count; v++) uv.setX(v, (k + uv.getX(v)) / 4);
+      const k = i % ADS.length;
+      for (let v = 0; v < uv.count; v++) uv.setX(v, (k + uv.getX(v)) / ADS.length);
       box(w, 0.08, 0.08, cx, y - 0.04, 0, steel); // the rail you grind
       for (let lx = x0 + 0.4; lx < x1; lx += Math.max(1, w - 0.8)) box(0.06, 0.1, 0.6, lx, y - 0.1, -0.3, steel);
       for (const lx of [x0 + w * 0.25, x0 + w * 0.75]) leg(lx, y - 2.35, -0.6, 0.16);
