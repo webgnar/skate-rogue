@@ -8,6 +8,7 @@ export interface Mods {
   lateFlip: boolean;
   pressureFlip: boolean;
   spareChange: number; // bonus jump banked per grind
+  strongLegs: boolean; // a second press during the landing's impact ollies anyway
   railMagnet: number; // px
   grindScale: number;
   grindInstant: boolean;
@@ -57,6 +58,7 @@ export const NO_MODS: Mods = {
   lateFlip: false,
   pressureFlip: false,
   spareChange: 0,
+  strongLegs: false,
   railMagnet: 0,
   grindScale: 1,
   grindInstant: false,
@@ -102,6 +104,7 @@ export function skaterMods(boons: Held[]): Mods {
     lateFlip: s('lateFlip') > 0,
     pressureFlip: s('pressureFlip') > 0,
     spareChange: 0.25 * s('spareChange'),
+    strongLegs: s('strongLegs') > 0,
     railMagnet: 48 * s('railMagnet'),
     grindScale: (1 + 0.25 * s('grease')) * (s('moonShoes') ? 0.7 : 1),
     grindInstant: s('grease') > 0,

@@ -542,6 +542,11 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - **Hop a car door and it slams shut (zack, 2026-10-26).** Landing on top of an open door still pops you up like a car hop, and now the door also slams shut. It closes in 5 frames, bounces once off the frame and stays shut, so it's no longer a hazard. You get a "DOOR SLAM!" callout, a puff of dust, a jolt and a low impact sound.
 
+- **Strong Legs boon (zack, 2026-10-26).** zack: "if player taps twice because they are panicking because it didnt jump, we give it to them".
+  - It's a POP boon with max 1. Its card art is the shoe with sparks.
+  - Normally the 350 ms landing impact (PR #169) still eats a press. With Strong Legs, the second press during the impact ends it and pops the ollie on that frame.
+  - A single tap still waits, so normal play keeps the lock.
+
 ## Models thread: animation
 
 - **Hanging on to the cable car, and the firecracker (2026-10-26).** zack: the arm should reach and grab the car while

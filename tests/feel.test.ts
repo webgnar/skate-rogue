@@ -8,6 +8,8 @@ import { SCALE } from '../src/render/skater-rig';
 import { TRICK_CATCH, TRICK_ROLL } from '../src/physics/tricks';
 import { CLIPS, sample } from '../src/render/poses';
 import { FLAT, levelOf, pressAt, run } from './helpers';
+import { addBoon } from '../src/boons/defs';
+import { NO_MODS, skaterMods } from '../src/boons/mods';
 
 type Land = Extract<SkaterEvent, { type: 'land' }>;
 const lands = (sk: Skater) => sk.events.filter((e): e is Land => e.type === 'land');
@@ -678,6 +680,30 @@ describe('no ollie during the impact', () => {
   it('lasts as long as the landing clip', () => {
     const len = CLIPS.land.keys[CLIPS.land.keys.length - 1].t;
     expect(PHYS.impactFrames / 60).toBeCloseTo(len, 1);
+  });
+
+  // zack (2026-10-26): the Strong Legs boon gives a panicked second tap its ollie
+  function tapsAfterLanding(taps: number[], mods = NO_MODS): { ollied: boolean; at: number } {
+    const sk = new Skater(levelOf(FLAT), mods);
+    run(sk, 1, pressAt(0));
+    let landed = -1;
+    let at = -1;
+    for (let f = 1; f < 200; f++) {
+      const press = landed >= 0 && taps.includes(f - landed);
+      sk.step({ pressed: press, held: press });
+      if (landed < 0 && lands(sk).length) landed = f;
+      else if (landed >= 0 && at < 0 && sk.events.filter((e) => e.type === 'ollie').length > 1) at = f - landed;
+    }
+    return { ollied: at >= 0, at };
+  }
+
+  it('Strong Legs: a second tap during the impact ollies right then; one tap still waits', () => {
+    const legs = skaterMods(addBoon([], 'strongLegs'));
+    expect(tapsAfterLanding([2, 5]).ollied).toBe(false);
+    const twice = tapsAfterLanding([2, 5], legs);
+    expect(twice.ollied).toBe(true);
+    expect(twice.at).toBe(5);
+    expect(tapsAfterLanding([2], legs).ollied).toBe(false);
   });
 
 });

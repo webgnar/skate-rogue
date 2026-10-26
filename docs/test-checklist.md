@@ -685,6 +685,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 - [ ] Open `?boons=firecracker` and roll off the top of a stair set without popping. You get "FIRECRACKER!" and Lou rides down in a manual, with sparks and a clack on every step, and no slam.
 - [ ] Ollie halfway down the firecracker. Lou pops out of it.
+- [ ] Open `?boons=strongLegs`, land, and quickly tap twice. The second tap ollies straight away. A single tap during the landing still does nothing.
 - [ ] Open `?boons=ghostRail` and ride off the end of a handrail or a power line. A faint rail carries on about 4 tiles and Lou keeps grinding.
 
 ## Performance

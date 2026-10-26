@@ -13,6 +13,7 @@ const BOON_ART: Partial<Record<BoonId, [Pic, Glyph?]>> = {
   lateFlip: ['flip', 'clock'],
   pressureFlip: ['pop', 'waves'],
   spareChange: ['coin', '¼'],
+  strongLegs: ['shoe', 'sparks'],
   railMagnet: ['grind', 'magnet'],
   grease: ['grind', 'speed'],
   railLaunch: ['grind', 'up'],
