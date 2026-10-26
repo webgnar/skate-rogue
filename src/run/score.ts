@@ -15,6 +15,7 @@ import type { FloorEvent } from '../sim/floor';
 export const SCORE = {
   trick: 100,
   fakieMult: 1.5,
+  nollieMult: 1.5, // popped off the nose: as hard as fakie
   spin: 25,
   grindStart: 50,
   railStart: 75,
@@ -94,8 +95,8 @@ export class RunScore {
   onEvent(e: FloorEvent, hsp: number): Bank | null {
     switch (e.type) {
       case 'trick':
-        //fakie tricks are harder: half again; a 180 adds a little for the spin
-        this.add(SCORE.trick * (e.fakie ? SCORE.fakieMult : 1) + (e.spin ? SCORE.spin : 0));
+        //fakie and nollie tricks are harder: half again; a 180 adds a little for the spin
+        this.add(SCORE.trick * (e.fakie ? SCORE.fakieMult : e.nollie ? SCORE.nollieMult : 1) + (e.spin ? SCORE.spin : 0));
         break;
       case 'grind':
         this.add(SCORE.grindStart);

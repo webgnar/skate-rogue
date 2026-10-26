@@ -5,17 +5,17 @@ import { NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { Tuck } from './tuck';
-import { rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
+import { LEDGE_GRINDS, MANUALS, NOSE_STANCES, RAIL_GRINDS, rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
 import { ceilingAt, currentAt, isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
 export type SkaterEvent =
-  | { type: 'ollie'; spin: 0 | 180; lip?: boolean } // lip: popped right at the edge of the ground (or just off it)
-  | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean } // fakie: the stance it was thrown from
-  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; lined?: number; spare?: number; flush?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad; lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one)
-  | { type: 'grind' }
-  | { type: 'rail' }
+  | { type: 'ollie'; spin: 0 | 180; lip?: boolean; nose?: boolean } // lip: popped right at the edge of the ground (or just off it); nose: off a nose grind or nose manual
+  | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean; nollie?: boolean } // fakie: the stance it was thrown from; nollie: in the air off the nose
+  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; lined?: number; spare?: number; flush?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one)
+  | { type: 'grind'; name: string } // name: the grind (its clip), LEDGE_GRINDS or RAIL_GRINDS
+  | { type: 'rail'; name: string }
   | { type: 'hop' }
   | { type: 'kicker' } // launched off a box truck's tailgate
   | { type: 'pad' } // a slam the Bubble Pads took
@@ -63,6 +63,11 @@ export class Skater {
   onRailT = 0; // frames on the current rail (More Wax)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
   fakie = false; // riding with the other foot forward, after a 180
+  stance = ''; // the grind or manual being ridden (its clip name), '' for none
+  nose = false; // in the air off the nose (a nose grind or nose manual): flips up here are nollie flips
+  ledgeGrinds = 0; // grinds and manuals so far, to take turns
+  railGrinds = 0;
+  manuals = 0;
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   pads = 0; // Bubble Pads slams left this floor
   tucks = 0; // Tuck and Roll saves left this floor
@@ -180,6 +185,12 @@ export class Skater {
     else this.stepMove(input.held);
     if ((this.mode as Mode) !== 'bail') this.feel.step(this.grounded, this.groundPitch(), this.mode === 'rail' ? this.railV : this.hsp, this.mode === 'air' ? this.below() : null);
 
+    //off the end of a nose grind or nose manual, you're up off the nose; rolled off a manual pad, the manual's done
+    if (this.stance && (this.mode as Mode) === 'air') {
+      if (NOSE_STANCES.has(this.stance)) this.nose = true;
+      this.stance = '';
+    } else if (this.stance && (this.mode as Mode) === 'roll' && !this.surface?.manual) this.stance = '';
+
     if (this.x >= this.level.exitX && (this.mode as Mode) !== 'bail' && !this.exited) {
       if (this.rollOn) this.exited = true;
       else this.mode = 'exit';
@@ -208,6 +219,11 @@ export class Skater {
     this.holdT = from.holdT;
     this.spare = from.spare;
     this.fakie = from.fakie;
+    this.stance = from.stance;
+    this.nose = from.nose;
+    this.ledgeGrinds = from.ledgeGrinds;
+    this.railGrinds = from.railGrinds;
+    this.manuals = from.manuals;
     this.gravFlipT = from.gravFlipT;
     this.rocket = from.rocket;
     this.kicked = from.kicked;
@@ -243,6 +259,9 @@ export class Skater {
     //the pop adds to the way the ground was already carrying you: up off a bank, down off a handrail
     const carried = this.groundVsp();
     const lip = this.coyote > 0 || (this.mode === 'roll' && this.nearEdge());
+    const nose = NOSE_STANCES.has(this.stance);
+    this.stance = '';
+    this.nose = nose;
     this.leaveGround();
     this.jumps = Math.max(0, this.jumps - 1);
     this.vsp = PHYS.ollie * this.mods.ollieScale * this.gear.ollie - grindSpeed * this.mods.railLaunch + carried;
@@ -256,7 +275,7 @@ export class Skater {
     this.coyote = 0;
     this.flipped = false;
     this.holdT = 1;
-    this.events.push({ type: 'ollie', spin: 0, lip });
+    this.events.push({ type: 'ollie', spin: 0, lip, ...(nose ? { nose } : {}) });
   }
 
   // vertical speed the ground gives you: rolling a slope, or riding a rail
@@ -356,7 +375,8 @@ export class Skater {
     const spin = SPIN[name];
     this.trickT = 0;
     this.trickCatch = Math.round(TRICK_CATCH[name] * 60);
-    this.events.push({ type: 'trick', index: this.tricks++, name, spin, fakie: this.fakie });
+    //off the nose it's a nollie flip; riding fakie, the nose pop is a fakie flip (the callout says fakie)
+    this.events.push({ type: 'trick', index: this.tricks++, name, spin, fakie: this.fakie, ...(this.nose && !this.fakie ? { nollie: true } : {}) });
     //a 180 lands you riding the other way round
     if (spin === 180) this.fakie = !this.fakie;
     //Sky Line: a ghost rail under your feet to come down on
@@ -669,6 +689,7 @@ export class Skater {
     this.coyote = 0;
     this.flipped = false;
     this.floatT = 0;
+    this.nose = false;
     if (s?.kind === 'rail') {
       this.mode = 'grind';
       this.onRailT = 0;
@@ -676,7 +697,8 @@ export class Skater {
       this.hsp = Math.max(this.hsp, enter);
       this.bankSpare();
       this.feel.railEntry(impact, surfaceMaterial(s), this.looseTrucks);
-      this.events.push({ type: 'grind' });
+      this.stance = s.row === -1 ? LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length] : RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length];
+      this.events.push({ type: 'grind', name: this.stance });
     } else {
       this.spare = 0;
       this.mode = 'roll';
@@ -712,7 +734,9 @@ export class Skater {
       if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
       this.feel.land(impact, quality, this.looseWheels);
       //a manual pad: you ride it in a manual (unless you slammed onto it)
-      this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}) });
+      const manual = !!s?.manual && quality !== 'slam';
+      this.stance = manual ? MANUALS[this.manuals++ % MANUALS.length] : '';
+      this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : {}), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}) });
       if (!s?.manual || quality === 'slam') {
         this.impactT = PHYS.impactFrames;
         this.impactTaps = 0;
@@ -757,6 +781,7 @@ export class Skater {
     this.vsp = PHYS.carHop * this.mods.hopScale;
     this.jumps = this.maxJumps;
     this.flipped = false;
+    this.nose = false;
     this.mode = 'air';
     this.events.push({ type: 'hop' });
   }
@@ -779,7 +804,9 @@ export class Skater {
     this.bankSpare();
     this.jumps = this.maxJumps;
     this.vsp = 0;
-    this.events.push({ type: 'rail' });
+    this.nose = false;
+    this.stance = RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length];
+    this.events.push({ type: 'rail', name: this.stance });
   }
 
   private stepRail(): void {
@@ -864,6 +891,7 @@ export class Skater {
     this.carry = Math.max(this.carry, PHYS.bombSpeed * this.mods.kickerScale);
     this.jumps = this.maxJumps;
     this.flipped = false;
+    this.nose = false;
     this.events.push({ type: 'kicker' });
   }
 

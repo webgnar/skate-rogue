@@ -10,6 +10,7 @@
 // the grip levels it. Flips and shove-its happen with both feet off; the feet then catch it back first.
 
 import clipEdits from './clip-edits.json';
+import { NOSE_STANCES, nollieClip, TRICK_CATCH, type TrickId } from '../physics/tricks';
 
 export const BOARD = {
   length: 0.95,
@@ -714,9 +715,14 @@ export function mirrorClip(c: Clip): Clip {
   const ollie = (clipEdits as Record<string, Clip>).ollie?.keys?.length ? (clipEdits as Record<string, Clip>).ollie : CLIPS.ollie;
   CLIPS.nollie.keys = ollie.keys.map((k) => ({ t: k.t, pose: nosePop(k.pose) }));
 }
+// Nollie flip tricks (nollieKickflip, nollieBs180, ...): a first pass, each flip's keys (as edited) popped off the
+// nose like the nollie. The models thread tunes them in ?editor, and an edit there wins.
+for (const id of Object.keys(TRICK_CATCH) as TrickId[]) {
+  const flip = (clipEdits as Record<string, Clip>)[id]?.keys?.length ? (clipEdits as Record<string, Clip>)[id] : CLIPS[id];
+  if (flip) CLIPS[nollieClip(id)] = { loop: flip.loop, keys: flip.keys.map((k) => ({ t: k.t, pose: nosePop(k.pose) })) };
+}
 // clips that ride the nose (switch twins included): popping out of them is a nollie (a fakie ollie riding switch)
-const NOSE = new Set(['crooked', 'noseGrind', 'noseManual']);
-export const onNose = (name: string): boolean => NOSE.has(name.replace(/^switch([A-Z])/, (_, c: string) => c.toLowerCase()));
+export const onNose = (name: string): boolean => NOSE_STANCES.has(name.replace(/^switch([A-Z])/, (_, c: string) => c.toLowerCase()));
 
 // the twins come from the regular clips as edited, unless a twin is edited itself (applyClipEdits, below)
 for (const name of Object.keys(CLIPS)) {
@@ -757,10 +763,8 @@ export function clipLength(clip: Clip): number {
   return clip.keys[clip.keys.length - 1].t;
 }
 
-// Grinds take turns. Rails (flat bars and handrails) get every grind, both boardslides among them; anything that
-// isn't a rail (a parked car's roof) gets every grind but the boardslides, which only work across a rail (zack).
-export const LEDGE_GRINDS = ['grind1', 'crooked', 'fiveO', 'noseGrind', 'smith', 'feeble'] as const;
-export const RAIL_GRINDS = ['grind2', 'grind1', 'fsBoardslide', 'fiveO', 'smith', 'grind2', 'crooked', 'fsBoardslide', 'noseGrind', 'feeble'] as const;
+// the grinds take turns in the sim (src/physics/tricks.ts), which knows from them when it's on the nose
+export { LEDGE_GRINDS, RAIL_GRINDS } from '../physics/tricks';
 export const GRIND_NAMES: Record<string, string> = {
   grind1: '50-50',
   crooked: 'CROOKED GRIND',
@@ -774,6 +778,11 @@ export const GRIND_NAMES: Record<string, string> = {
 for (const [name, call] of Object.entries(GRIND_NAMES)) GRIND_NAMES[switchName(name)] = `SWITCH ${call}`;
 // spins that leave the skater riding the other way round (fakie): the clip ends turned this far
 export const SPINS: Record<string, number> = { bs180: -Math.PI, fs180: Math.PI, switchBs180: Math.PI, switchFs180: -Math.PI };
+for (const id of ['bs180', 'fs180'] as const) {
+  const n = nollieClip(id);
+  SPINS[n] = SPINS[id];
+  SPINS[switchName(n)] = SPINS[switchName(id)];
+}
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 

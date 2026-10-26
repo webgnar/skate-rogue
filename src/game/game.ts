@@ -1490,7 +1490,7 @@ export class Game {
         this.visor.ping();
         this.view.zoom.trick();
         this.flip = { rgb: TRICK_TRAIL[e.name] ?? TRICK_TRAIL.kickflip, left: FLIP_TRAIL_SECS, at: this.clock };
-        this.hud.callout(trickName(e.name, e.fakie) + combo, 'trick');
+        this.hud.callout(trickName(e.name, e.fakie, e.nollie) + combo, 'trick');
         break;
       case 'grind':
         this.particles.grindStart(...this.backTruck(), 1);

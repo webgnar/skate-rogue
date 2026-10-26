@@ -688,6 +688,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Open `?boons=strongLegs`, land, and quickly tap twice. The second tap ollies straight away. A single tap during the landing still does nothing.
 - [ ] Open `?boons=ghostRail` and ride off the end of a handrail or a power line. A faint rail carries on about 4 tiles and Lou keeps grinding.
 
+- [ ] Nollie flips: get onto a nose grind or nose manual, ollie out and tap in the air. The callout says NOLLIE (trick) and the board pops off the nose. Riding fakie it says FAKIE.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

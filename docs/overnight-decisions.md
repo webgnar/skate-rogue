@@ -556,6 +556,8 @@ and listed it here for review. Any of these can be flipped in the morning.
   - Feeble Frenzy → **More Wax** (`feebleFrenzy`)
 - **More Wax only builds on flat grinds.** It works on ledges, flat rails, power lines and the L, but not down stairway handrails. "Flat" means a slope under 0.15 (PHYS.frenzyFlat).
 
+- **Nollie flips (2026-10-26, zack):** an ollie out of a nose grind (crooked, nosegrind) or a nose manual is a nollie, and flips in that air are nollie flips: "NOLLIE KICKFLIP", scored half again like fakie (`SCORE.nollieMult` 1.5). Riding fakie, the nose pop is called a fakie flip. The sim now picks the grinds and manuals in turn (src/physics/tricks.ts), so it knows when Lou is on the nose; the rig plays the clip it names. Each flip has a first-pass `nollie<Trick>` clip (the flip popped off the nose) for the models thread to tune in ?editor.
+
 ## Models thread: animation
 
 - **Hanging on to the cable car, and the firecracker (2026-10-26).** zack: the arm should reach and grab the car while

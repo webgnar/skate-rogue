@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildFloor } from '../src/gen/descent';
-import { rollTrick, SPIN, trickName, TRICK_ROLL } from '../src/physics/tricks';
+import { LEDGE_GRINDS, MANUALS, nollieClip, NOSE_STANCES, RAIL_GRINDS, rollTrick, SPIN, trickName, TRICK_ROLL } from '../src/physics/tricks';
+import { CLIPS, SPINS } from '../src/render/poses';
 import { RunScore, SCORE } from '../src/run/score';
 import { FloorSim } from '../src/sim/floor';
 
@@ -10,6 +11,43 @@ describe('stance', () => {
     expect(SPIN.shuv1 + SPIN.shuv2 + SPIN.kickflip + SPIN.heelflip).toBe(0);
     expect(rollTrick(2)).toBe('bs180');
     expect(trickName('kickflip', true)).toBe('FAKIE KICKFLIP');
+    expect(trickName('heelflip', false, true)).toBe('NOLLIE HEELFLIP');
+    expect(trickName('bs180', true, true)).toBe('FAKIE BS 180'); // riding fakie, the nose pop is a fakie flip
+    expect(nollieClip('varialHeel')).toBe('nollieVarialHeel');
+  });
+
+  it('an ollie out of a nose grind or nose manual makes the next flip a nollie flip, and only that air', () => {
+    const flips = (stance: string, fakie = false) => {
+      const sim = new FloorSim(buildFloor(9, 1));
+      sim.traffic.vehicles.length = 0;
+      const sk = sim.skater;
+      sk.fakie = fakie;
+      sk.stance = stance;
+      sim.step({ pressed: true, held: true }); // the ollie, off the ground
+      const ollie = sim.events.find((e) => e.type === 'ollie');
+      const out: (boolean | undefined)[] = [];
+      for (let i = 0; i < 2; i++) {
+        Object.assign(sk, { mode: 'air', jumps: 2, vsp: -2, y: sk.level.streetY - 60, surface: null });
+        sim.step({ pressed: true, held: true });
+        for (const e of sim.events) if (e.type === 'trick') out.push(e.nollie);
+        sk.nose = false; // landed between
+      }
+      return { ollie: ollie?.type === 'ollie' ? ollie.nose : undefined, first: out[0] };
+    };
+    for (const nose of ['noseGrind', 'crooked', 'noseManual']) expect(flips(nose)).toEqual({ ollie: true, first: true });
+    expect(flips('fiveO')).toEqual({ ollie: undefined, first: undefined });
+    expect(flips('manual')).toEqual({ ollie: undefined, first: undefined });
+    expect(flips('noseGrind', true).first).toBeUndefined(); // fakie: called a fakie flip
+  });
+
+  it('the sim takes the grinds and manuals in turn, so it knows the nose ones', () => {
+    for (const n of NOSE_STANCES) expect([...LEDGE_GRINDS, ...RAIL_GRINDS, ...MANUALS]).toContain(n);
+  });
+
+  it('every flip has a nollie clip popped off the nose, and the nollie 180s turn you round', () => {
+    for (const id of new Set(TRICK_ROLL)) expect(CLIPS[nollieClip(id)]?.keys.length).toBeGreaterThan(0);
+    expect(SPINS.nollieBs180).toBe(SPINS.bs180);
+    expect(SPINS.nollieFs180).toBe(SPINS.fs180);
   });
 
   it('a 180 lands you fakie, the next 180 brings you back, and a slam puts you back regular', () => {
@@ -38,5 +76,8 @@ describe('stance', () => {
     const b = new RunScore();
     b.onEvent({ type: 'trick', index: 0, name: 'bs180', spin: 180, fakie: false }, 0);
     expect(b.comboPoints).toBe(SCORE.trick + SCORE.spin);
+    const c = new RunScore();
+    c.onEvent({ type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false, nollie: true }, 0);
+    expect(c.comboPoints).toBe(SCORE.trick * SCORE.nollieMult);
   });
 });

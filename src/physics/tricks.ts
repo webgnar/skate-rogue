@@ -55,10 +55,24 @@ const NAMES: Record<TrickId, string> = {
   fsShuv: 'FS SHUVIT',
 };
 
-// the callout: tricks thrown riding fakie say so ("FAKIE KICKFLIP", "FAKIE FS 180" back to regular)
-export function trickName(id: TrickId, fakie: boolean): string {
-  return (fakie ? 'FAKIE ' : '') + NAMES[id];
+// the callout: tricks thrown riding fakie say so ("FAKIE KICKFLIP", "FAKIE FS 180" back to regular), and so do
+// tricks popped off the nose ("NOLLIE HEELFLIP")
+export function trickName(id: TrickId, fakie: boolean, nollie = false): string {
+  return (fakie ? 'FAKIE ' : nollie ? 'NOLLIE ' : '') + NAMES[id];
 }
+
+// the nollie version of a trick's clip (src/render/poses.ts): nollieKickflip, nollieBs180, ...
+export const nollieClip = (id: TrickId): string => 'nollie' + id[0].toUpperCase() + id.slice(1);
+
+// Grinds take turns. Rails (flat bars and handrails) get every grind, both boardslides among them; anything that
+// isn't a rail (a parked car's roof) gets every grind but the boardslides, which only work across a rail (zack).
+// The sim picks them, so it knows when it's on the nose; the rig plays the clip of the same name.
+export const LEDGE_GRINDS = ['grind1', 'crooked', 'fiveO', 'noseGrind', 'smith', 'feeble'] as const;
+export const RAIL_GRINDS = ['grind2', 'grind1', 'fsBoardslide', 'fiveO', 'smith', 'grind2', 'crooked', 'fsBoardslide', 'noseGrind', 'feeble'] as const;
+// manual pads take turns too: a manual, then a nose manual
+export const MANUALS = ['manual', 'noseManual'] as const;
+// riding these, the weight's on the nose: an ollie out of them is a nollie
+export const NOSE_STANCES = new Set<string>(['crooked', 'noseGrind', 'noseManual']);
 
 export function rollTrick(n: number): TrickId {
   return TRICK_ROLL[n % TRICK_ROLL.length];
