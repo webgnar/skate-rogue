@@ -59,15 +59,7 @@ html, body {
 }
 #debug { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 16px); }
 #seed { bottom: max(12px, env(safe-area-inset-bottom)); }
-#loading {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #120c1e;
-  font-size: 20px;
-}
+/* the loading screen is styled inline in index.html, so it shows before this file loads */
 
 [hidden] { display: none !important; }
 #boons {

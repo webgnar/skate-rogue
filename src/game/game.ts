@@ -280,6 +280,9 @@ export class Game {
   private readonly heatCue = new HeatCue(document.getElementById('app') ?? document.body);
   private perfT = 0;
   private perfWorst = 0;
+  private perfCpu = 0; // ms the game spent on its frames this second, and how many
+  private perfFrames = 0;
+  private frameAt = 0;
   private perfText = '';
   private readonly aura: Aura;
   private readonly visor: VisorGlint;
@@ -346,7 +349,7 @@ export class Game {
     );
     this.ghostMesh.visible = false;
     this.view.scene.add(this.ghostMesh);
-    this.view.scene.add(this.smashFx.group);
+    this.view.scene.add(this.smashFx.group, this.smashFx.warm);
     this.playtest = { seed, floor: 0, label: '', district: this.biome, state: '', sim: '', x: 0, y: 0, mode: '', speed: 0, clip: '', boons: [], findings: [], floors: [], runs: [] };
     this.startFloor();
   }
@@ -1046,6 +1049,7 @@ export class Game {
   }
 
   frame(now: number): void {
+    this.frameAt = performance.now();
     //never negative: a frame's timestamp can come from before the game was made, and a negative step would
     //poison the time warp (and through it the camera and the physics clock) with NaN
     const realDt = Math.max(0, Math.min(0.1, (now - this.last) / 1000));
@@ -1251,9 +1255,17 @@ export class Game {
   private perf(realDt: number): void {
     this.perfWorst = Math.max(this.perfWorst, realDt);
     this.perfT += realDt;
+    //the game's own time on this frame (the GPU's share of a slow frame is the rest of it)
+    this.perfCpu += performance.now() - this.frameAt;
+    this.perfFrames++;
     if (this.perfT >= 1 || !this.perfText) {
       const info = this.view.renderer.info.render;
-      this.perfText = `${Math.round(1 / Math.max(realDt, 1e-3))} fps · worst ${Math.round(this.perfWorst * 1000)} ms · ${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris · res ${this.view.resolution.toFixed(2)} · fx ${FX.tier}`;
+      //a shader compiled mid-run is a hitch: the loading screen should have made them all (StreetView.warm)
+      const shaders = this.view.compiled ? ` · ${this.view.compiled} new shader${this.view.compiled > 1 ? 's' : ''}` : '';
+      this.view.compiled = 0;
+      const cpu = this.perfCpu / Math.max(1, this.perfFrames);
+      this.perfCpu = this.perfFrames = 0;
+      this.perfText = `${Math.round(1 / Math.max(realDt, 1e-3))} fps · worst ${Math.round(this.perfWorst * 1000)} ms · cpu ${cpu.toFixed(1)} ms · ${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris · res ${this.view.resolution.toFixed(2)} · fx ${FX.tier}${shaders}`;
       this.perfT = 0;
       this.perfWorst = 0;
     }

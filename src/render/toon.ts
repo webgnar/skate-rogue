@@ -2,6 +2,7 @@
 // drawn per mesh as an inverted hull (the back faces pushed out along smoothed normals, a constant width in
 // screen pixels). No full-screen pass, so it stays cheap on older phones.
 import * as THREE from 'three';
+import { run, sliceDone } from './slice';
 
 export const INK = {
   color: 0x120a16,
@@ -192,9 +193,28 @@ export function setInkResolution(width: number, height: number, pixelRatio: numb
   inkUniforms.uWidth.value = Math.max(1, INK.width * pixelRatio); // at least a whole pixel in the chunky look
 }
 
+// an xyz attribute as one flat array of numbers (copied out only when it isn't one already)
+function flat3(a: THREE.BufferAttribute | THREE.InterleavedBufferAttribute): ArrayLike<number> {
+  const b = a as THREE.BufferAttribute;
+  if (!(a as THREE.InterleavedBufferAttribute).isInterleavedBufferAttribute && b.itemSize === 3 && !b.normalized) return b.array;
+  const out = new Float32Array(a.count * 3);
+  for (let i = 0; i < a.count; i++) {
+    out[i * 3] = a.getX(i);
+    out[i * 3 + 1] = a.getY(i);
+    out[i * 3 + 2] = a.getZ(i);
+  }
+  return out;
+}
+
 // smoothed normals: every vertex at the same spot gets the average of their normals, so the hull of a box has no
 // gaps at its corners
 export function inkNormals(geo: THREE.BufferGeometry): void {
+  run(inkNormalSteps(geo));
+}
+
+// inkNormals in blocks of vertices, yielding when the frame's slice is spent (slice.ts): a floor's big merged
+// meshes took a tenth of a second each
+export function* inkNormalSteps(geo: THREE.BufferGeometry): Generator<void, void> {
   if (geo.getAttribute('inkNormal')) return;
   if (!geo.getAttribute('normal')) geo.computeVertexNormals();
   const pos = geo.getAttribute('position');
@@ -202,17 +222,58 @@ export function inkNormals(geo: THREE.BufferGeometry): void {
   //vertices are matched on their position rounded to 1e-4, in an open-addressed hash table (a Map of string keys
   //took most of a floor's build time on the hillside's big meshes)
   const n = pos.count;
+  //read the arrays straight (getX per vertex was most of the cost on the big merged meshes)
+  const pa = flat3(pos);
+  const na = flat3(nor);
   let size = 1;
   while (size < n * 2) size <<= 1;
   const mask = size - 1;
-  const keys = new Int32Array(size * 3);
-  const used = new Uint8Array(size);
-  const sums = new Float32Array(size * 3);
-  const slotOf = new Int32Array(n);
+  //the table's arrays are kept between calls (allocating tens of megabytes for each big mesh cost more than the
+  //sums), unless another call is still using them between its yields
+  const mine = !scratch.busy;
+  if (mine && (scratch.used.length < size || scratch.slotOf.length < n)) grow(size, n);
+  const { keys, used, sums, slotOf } = mine ? scratch : fresh(size, n);
+  if (mine) scratch.busy = true;
+  used.fill(0, 0, size);
+  try {
+    yield* hashNormals(n, pa, na, mask, keys, used, sums, slotOf);
+    const out = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      if ((i & 8191) === 8191 && sliceDone()) yield;
+      const h = slotOf[i] * 3;
+      const sx = sums[h];
+      const sy = sums[h + 1];
+      const sz = sums[h + 2];
+      const len = Math.hypot(sx, sy, sz) || 1;
+      out[i * 3] = sx / len;
+      out[i * 3 + 1] = sy / len;
+      out[i * 3 + 2] = sz / len;
+    }
+    geo.setAttribute('inkNormal', new THREE.BufferAttribute(out, 3));
+  } finally {
+    if (mine) scratch.busy = false;
+  }
+}
+
+interface Table {
+  keys: Int32Array;
+  used: Uint8Array;
+  sums: Float32Array;
+  slotOf: Int32Array;
+}
+const fresh = (size: number, n: number): Table => ({ keys: new Int32Array(size * 3), used: new Uint8Array(size), sums: new Float32Array(size * 3), slotOf: new Int32Array(n) });
+const scratch: Table & { busy: boolean } = { ...fresh(1, 1), busy: false };
+function grow(size: number, n: number): void {
+  Object.assign(scratch, fresh(Math.max(size, scratch.used.length), Math.max(n, scratch.slotOf.length)));
+}
+
+// sum each vertex's normal into its position's slot
+function* hashNormals(n: number, pa: ArrayLike<number>, na: ArrayLike<number>, mask: number, keys: Int32Array, used: Uint8Array, sums: Float32Array, slotOf: Int32Array): Generator<void, void> {
   for (let i = 0; i < n; i++) {
-    const x = Math.round(pos.getX(i) * 1e4);
-    const y = Math.round(pos.getY(i) * 1e4);
-    const z = Math.round(pos.getZ(i) * 1e4);
+    if ((i & 4095) === 4095 && sliceDone()) yield;
+    const x = Math.round(pa[i * 3] * 1e4);
+    const y = Math.round(pa[i * 3 + 1] * 1e4);
+    const z = Math.round(pa[i * 3 + 2] * 1e4);
     //rounded positions are often multiples of a power of two: scramble the bits so the low ones vary too
     let h = Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791);
     h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
@@ -223,24 +284,13 @@ export function inkNormals(geo: THREE.BufferGeometry): void {
       keys[h * 3] = x;
       keys[h * 3 + 1] = y;
       keys[h * 3 + 2] = z;
+      sums[h * 3] = sums[h * 3 + 1] = sums[h * 3 + 2] = 0;
     }
-    sums[h * 3] += nor.getX(i);
-    sums[h * 3 + 1] += nor.getY(i);
-    sums[h * 3 + 2] += nor.getZ(i);
+    sums[h * 3] += na[i * 3];
+    sums[h * 3 + 1] += na[i * 3 + 1];
+    sums[h * 3 + 2] += na[i * 3 + 2];
     slotOf[i] = h;
   }
-  const out = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    const h = slotOf[i] * 3;
-    const sx = sums[h];
-    const sy = sums[h + 1];
-    const sz = sums[h + 2];
-    const len = Math.hypot(sx, sy, sz) || 1;
-    out[i * 3] = sx / len;
-    out[i * 3 + 1] = sy / len;
-    out[i * 3 + 2] = sz / len;
-  }
-  geo.setAttribute('inkNormal', new THREE.BufferAttribute(out, 3));
 }
 
 export interface InkOptions {
@@ -255,17 +305,23 @@ export const solid = (mesh: THREE.Mesh) =>
 
 // give a model the ink look: toon materials and outlines. Safe to call again; meshes are only done once.
 export function inkify(root: THREE.Object3D, opts: InkOptions = {}): void {
+  run(inkSteps(root, opts));
+}
+
+// inkify a mesh at a time, yielding when the frame's slice is spent (slice.ts)
+export function* inkSteps(root: THREE.Object3D, opts: InkOptions = {}): Generator<void, void> {
   const meshes: THREE.Mesh[] = [];
   root.traverse((o) => {
     if (o instanceof THREE.Mesh && !o.userData.ink && !o.userData.inked) meshes.push(o);
   });
   for (const mesh of meshes) {
+    if (sliceDone()) yield;
     mesh.userData.inked = true;
     if (opts.toon !== false) {
       mesh.material = Array.isArray(mesh.material) ? mesh.material.map(toToon) : toToon(mesh.material);
     }
     if (!(opts.outline ?? solid)(mesh)) continue;
-    inkNormals(mesh.geometry);
+    yield* inkNormalSteps(mesh.geometry);
     let hull: THREE.Mesh;
     if (mesh instanceof THREE.InstancedMesh) {
       const inst = new THREE.InstancedMesh(mesh.geometry, outlineMaterial(), mesh.count);

@@ -11,6 +11,7 @@
 // Draw budget: the whole lot is four meshes (road, sidewalk, concrete, and the houses off one painted atlas), so
 // a floor costs four draws plus its share of the kit's one merged outline.
 import * as THREE from 'three';
+import { run, sliceDone } from './slice';
 import { TOP } from '../gen/top-route';
 import { TILE } from '../physics/constants';
 import { inHill, type Level, type Surface } from '../physics/level';
@@ -440,8 +441,14 @@ export class Mesher {
   }
 
   build(group: THREE.Group): void {
+    run(this.buildSteps(group));
+  }
+
+  // build a mesh at a time, yielding when the frame's slice is spent (slice.ts)
+  *buildSteps(group: THREE.Group): Generator<void, void> {
     const m = materials();
     for (const [key, part] of this.parts) {
+      if (sliceDone()) yield;
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(part.pos, 3));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(part.nor, 3));
@@ -677,9 +684,13 @@ function house(m: Mesher, o: HouseOpts): void {
   }
 }
 
-// a row of houses from x0 to x1 (tiles), each stood at `street(xa, xb)`, skipping the cut ranges; a shrub by some doors
-function houseRow(m: Mesher, rng: () => number, x0: number, x1: number, z0: number, z1: number, street: (xa: number, xb: number) => number, foot: (xa: number, xb: number) => number, cut: (xa: number, xb: number) => boolean, extras: { bay: number; chimney: number; hip: boolean; shrub: number }): void {
+type RowArgs = [m: Mesher, rng: () => number, x0: number, x1: number, z0: number, z1: number, street: (xa: number, xb: number) => number, foot: (xa: number, xb: number) => number, cut: (xa: number, xb: number) => boolean, extras: { bay: number; chimney: number; hip: boolean; shrub: number }];
+
+// a row of houses from x0 to x1 (tiles), each stood at `street(xa, xb)`, skipping the cut ranges; a shrub by some
+// doors. A house at a time, yielding when the frame's slice is spent (slice.ts)
+function* houseRowSteps(...[m, rng, x0, x1, z0, z1, street, foot, cut, extras]: RowArgs): Generator<void, void> {
   for (let x = x0; x < x1; ) {
+    if (sliceDone()) yield;
     const w = 3 + randInt(rng, 3) * 0.75;
     if (cut(x, x + w)) {
       x += 0.5;
@@ -706,6 +717,11 @@ function hillStretches(level: Level): [number, number][] {
 // the descent as solid hill: road, sidewalks and stairways on ground that goes all the way down, row houses behind,
 // cross streets back into the city at the crests and under the crest jumps, power lines and trees along the back
 export function buildHill(level: Level, group: THREE.Group): void {
+  run(buildHillSteps(level, group));
+}
+
+// buildHill a piece at a time, yielding when the frame's slice is spent (slice.ts)
+export function* buildHillSteps(level: Level, group: THREE.Group): Generator<void, void> {
   const m = new Mesher();
   const ground = descentGround(level);
   const hill = onHill(level);
@@ -754,7 +770,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
   //T's in the background to suggest a continuation of where they go"): the back street running off both ways behind
   //the rows, its far sidewalk, and a row of houses along it facing down the cross street
   const rngT = makeRng(level.layout.seed * 61 + level.layout.floor * 13);
-  const tee = (x0: number, x1: number, t: number) => {
+  const tee = function* (x0: number, x1: number, t: number): Generator<void, void> {
     const T = HILLSIDE.tee;
     const [a, b] = [x0 - T.arm, x1 + T.arm];
     const z1 = HILLSIDE.crossFar;
@@ -763,7 +779,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
     //its near sidewalk, broken by the cross street's mouth, and the far one
     for (const [w0, w1] of [[a, x0 - 0.7], [x1 + 0.7, b]]) m.box(w0, w1, B, t + c, t + c, z1, z1 + T.walk, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
     m.box(a, b, B, t + c, t + c, z0 - T.walk, z0, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf] });
-    houseRow(m, rngT, a, b, z0 - T.walk - T.depth, z0 - T.walk, () => t + c, () => t - 0.5, () => false, { bay: 0.7, chimney: 0.3, hip: true, shrub: 0.4 });
+    yield* houseRowSteps(m, rngT, a, b, z0 - T.walk - T.depth, z0 - T.walk, () => t + c, () => t - 0.5, () => false, { bay: 0.7, chimney: 0.3, hip: true, shrub: 0.4 });
   };
   //the cross streets: flat roads back into the city with their kerbs, and crosswalk lines over the hill's road
   const paint = rectUv(SWATCH.trim);
@@ -771,7 +787,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
     m.box(x0, x1, B, t, t, HILLSIDE.crossFar, back, { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]], left: ['concrete', cs], right: ['concrete', cs] });
     for (const [a, b] of [[x0 - 0.7, x0], [x1, x1 + 0.7]]) m.box(a, b, B, t + c, t + c, HILLSIDE.crossFar, back, { top: ['walk', UV.top(1, 1)] });
     for (const lx of [x0 - 0.75, x0 - 0.05, x1 + 0.05, x1 + 0.75]) m.quad('house', [lx - 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz0], [lx - 0.06, t + 0.01, rz0], paint);
-    tee(x0, x1, t);
+    yield* tee(x0, x1, t);
   }
   //the cable car's slot up each climb, between its two running rails (cable-view.ts runs the car on it)
   const steel = rectUv(SWATCH.grey);
@@ -809,7 +825,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
   for (const [x0, x1, t] of holes) {
     const low = t - 3.5;
     m.box(x0, x1, B, low, low, HILLSIDE.crossFar, HILLSIDE.rowB[1], { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]] });
-    tee(x0, x1, low);
+    yield* tee(x0, x1, low);
   }
   const cut = (xa: number, xb: number) => [...crossings, ...holes].some(([a, b]) => xb > a - 0.1 && xa < b + 0.1);
   //the tunnels' mouths at the feet of the hill (src/traffic/tunnel.ts): the back row of houses makes way for them
@@ -824,8 +840,8 @@ export function buildHill(level: Level, group: THREE.Group): void {
   const [bz0, bz1] = HILLSIDE.backRow;
   const [uz1, uz0, up] = HILLSIDE.upRow;
   for (const [s0, s1] of stretches) {
-    houseRow(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, (a, b) => cut(a, b) || atPortal(a, b), { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
-    houseRow(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
+    yield* houseRowSteps(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, (a, b) => cut(a, b) || atPortal(a, b), { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
+    yield* houseRowSteps(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
     //cypresses between the rows, standing over the back row's roofs now and then
     for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
   }
@@ -878,7 +894,7 @@ export function buildHill(level: Level, group: THREE.Group): void {
   }
   //where the night city bolts street lights onto the poles (street-lights.ts): under the wires, over the road
   group.userData.poleLamps = poles.map(([x, top]) => ({ x, y: top - 1.9, z: P.z, ground: lane(x), slope: (lane(x + 1) - lane(x - 1)) / 2 }));
-  m.build(group);
+  yield* m.buildSteps(group);
 }
 
 // a tunnel's mouth from x0 to x1 (tiles) at the back of the road, the ground there `base` high: a board-formed
@@ -940,6 +956,11 @@ function portal(m: Mesher, x0: number, x1: number, base: number): void {
 // the near side for a whole floor (descent and street): the near sidewalk and its low wall, then two rows of houses
 // below the lane stepping down toward the camera
 export function buildForeground(level: Level, group: THREE.Group): void {
+  run(buildForegroundSteps(level, group));
+}
+
+// buildForeground a piece at a time, yielding when the frame's slice is spent (slice.ts)
+export function* buildForegroundSteps(level: Level, group: THREE.Group): Generator<void, void> {
   const m = new Mesher();
   const ground = level.hills ? descentGround(level) : [];
   const finale = tx(level.finaleX);
@@ -994,7 +1015,7 @@ export function buildForeground(level: Level, group: THREE.Group): void {
   const [az0, az1, adrop] = HILLSIDE.rowA;
   const [bz0, bz1, bdrop] = HILLSIDE.rowB;
   const storeys = 3 * HILLSIDE.storey;
-  houseRow(m, rng, -10, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, open, { bay: 0.7, chimney: 0.35, hip: false, shrub: 0.25 });
-  houseRow(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, open, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
-  m.build(group);
+  yield* houseRowSteps(m, rng, -10, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, open, { bay: 0.7, chimney: 0.35, hip: false, shrub: 0.25 });
+  yield* houseRowSteps(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, open, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
+  yield* m.buildSteps(group);
 }

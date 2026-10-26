@@ -29,7 +29,8 @@ import { loadSave, writeSave } from './run/save';
 import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
 import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
-import { loadLater, loadModels, missingModels } from './render/models';
+import { MODEL_FILES, loadModels, missingModels } from './render/models';
+import { Loading } from './ui/loading';
 import { parseBoons } from './bot/repro';
 import { ACTS, FLOORS_PER_ACT } from './gen/escape';
 import { DEV, loadDev, saveDev, slower, stepFrame } from './ui/dev';
@@ -328,17 +329,21 @@ function makeHud(): Hud {
   };
 }
 
+const loading = new Loading(document.getElementById('loading')!);
+
 async function start() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
   applyWeatherParams(params);
   if (params.has('editor')) {
     // the animation editor (src/editor): keyframe the skater's clips on the rig
+    loading.remove();
     const { startEditor } = await import('./editor/editor');
     return startEditor(base);
   }
   if (params.has('levels')) {
     // the level editor (src/levels): see and shape the generated floors
+    loading.remove();
     const { startLevels } = await import('./levels/levels');
     return startLevels();
   }
@@ -375,15 +380,19 @@ async function start() {
   const fixedSeed = daily ? dailySeed() : Number(params.get('seed')) || 0;
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 
-  await Promise.all([loadCityTiles(`${base}tex/chicago_tiles.png`), loadModels(base)]);
-  void loadLater(base);
-  const view = new StreetView(canvas, buildFloor(seed, 1));
-  await view.loadBackdrop(base);
   //?skater=webster (keanu, roxy, goldie) rides one without unlocking it
   const urlSkater = params.get('skater');
   const skater = isSkater(urlSkater) ? urlSkater : owns(save.skater) ? save.skater : 'lou-gnar';
   const deck = owns(save.deck) ? save.deck : 'popsicle';
-  const sprite = await SkaterRig.create(base, skater);
+  //the loading screen (src/ui/loading.ts): every model (the car-hop damage too), tile sheet and the skater, all at once
+  const rig = loading.track(SkaterRig.create(base, skater));
+  await Promise.all([loading.track(loadCityTiles(`${base}tex/chicago_tiles.png`)), loadModels(base, MODEL_FILES, loading.add(MODEL_FILES.length))]);
+  const view = new StreetView(canvas, buildFloor(seed, 1));
+  await loading.track(view.loadBackdrop(base));
+  const sprite = await rig;
+  const built = loading.add(2);
+  loading.say('BUILDING THE CITY');
+  await loading.paint();
   const input = new OneButton(document.getElementById('app')!);
   //test URLs (src/bot/repro.ts): ?escape=2 starts on act 2's escape, ?boons=bigPop,grease holds those, ?danger=3 is rush-hour traffic
   const escape = Math.min(ACTS, Math.max(0, Math.floor(Number(params.get('escape')) || 0)));
@@ -407,6 +416,7 @@ async function start() {
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
+  built();
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
   const bot = params.get('bot');
   if (bot !== null) {
@@ -555,7 +565,15 @@ async function start() {
   resize();
   document.getElementById('seed')!.textContent = (daily ? `daily · seed ${seed}` : `seed ${seed}`) + (gnar ? ` · gnar ${gnar}` : '');
   document.querySelector('#paused .seed')!.textContent = `seed ${seed}` + (gnar ? ` · gnar ${gnar}: ${GNAR_RULES.slice(0, gnar).map((r) => r.name).join(', ')}` : '');
-  document.getElementById('loading')!.remove();
+  //every shader compiled and every texture on the GPU before the first frame (StreetView.warm), after one frame
+  //behind the loading screen so what's made on the first frame (the people on the sidewalk) is there to compile
+  loading.say('WARMING UP');
+  await loading.paint();
+  game.frame(performance.now());
+  await view.warm();
+  view.render();
+  built();
+  loading.finish();
 
   const tick = (now: number) => {
     game.frame(now);
@@ -565,6 +583,6 @@ async function start() {
 }
 
 start().catch((err) => {
-  document.getElementById('loading')!.textContent = `Couldn't start: ${err}`;
+  loading.fail(err);
   console.error(err);
 });

@@ -248,6 +248,7 @@ export class NightCity {
 
   // lamps, cameras and billboards for a floor, and the window masks on its kit
   build(level: Level, kit: THREE.Object3D, seed: number, floor: number): void {
+    this.dispose();
     for (const c of [...this.group.children]) this.group.remove(c);
     this.watchers = [];
     const r = rng(seed * 4241 + floor * 613);
@@ -377,6 +378,23 @@ export class NightCity {
       //a sign or two with a tired tube
       for (let k = 0; k < signs.length; k += 3) this.neonFlicker.push({ sign: k, t: r() * 5 });
     }
+  }
+
+  // free what the last build made: its geometry (not the street lights' shared shapes) and the window masks it
+  // gave the kit's facades (a floor left behind kept them on the GPU for the rest of the run)
+  dispose(): void {
+    for (const m of this.windowMats) m.emissiveMap?.dispose();
+    for (const w of this.watchers) {
+      w.screen?.map?.dispose();
+      w.screen?.dispose();
+    }
+    const shared = new Set<THREE.Object3D>();
+    this.lights.group.traverse((o) => {
+      if (!o.userData.own) shared.add(o);
+    });
+    this.group.traverse((o) => {
+      if (o instanceof THREE.Mesh && !shared.has(o)) o.geometry.dispose();
+    });
   }
 
   // night 0..1 (from the mood)

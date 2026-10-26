@@ -18,6 +18,7 @@ import { propsFor } from './props';
 import { toX, toY } from './kit';
 import type { BiomeId } from './biomes';
 import { inkify } from './toon';
+import { sliceDone, sliceEnd, sliceStart } from './slice';
 import type { Phone } from './phone-fx';
 
 // art/pedestrians.py's joints
@@ -197,6 +198,10 @@ export class PedView {
   // stand people along the floor's street sidewalk: not in the cross streets, the canals, at bus stops or on props
   private biome: BiomeId = 'chicago';
 
+  private job: Generator<void, void> | null = null; // the floor's people still being made, a few a frame
+
+  // a new floor's people are made over its first frames, nearest the start first, 2 ms a frame (making them all
+  // at once held up the frame a new floor took over)
   private populate(level: Level, biome: BiomeId): void {
     for (const p of this.people) {
       this.group.remove(p.mesh);
@@ -205,6 +210,10 @@ export class PedView {
     this.people = [];
     this.level = level;
     this.biome = biome;
+    this.job = this.populateSteps(level, biome);
+  }
+
+  private *populateSteps(level: Level, biome: BiomeId): Generator<void, void> {
     const rng = makeRng(level.width * 7 + level.layout.floor * 131 + level.props.length);
     const cols = level.width / TILE;
     const gaps = level.crossings.map((c) => toX(c.x + CROSS.w / 2)).map((cx) => [cx - CROSS.street - 0.6, cx + CROSS.street + 0.6]);
@@ -218,6 +227,7 @@ export class PedView {
     const end = level.fork ? toX(level.fork.x0) - 3 : cols - 4; // clear of the fork's doors
     for (let x = toX(level.finaleX) + 4 + rng() * 4; x < end; x += 3 + rng() * 6) {
       if (blocked(x)) continue;
+      if (sliceDone()) yield;
       const made = makePerson(rng, biome);
       if (!made) return; // peds.glb didn't load: an empty sidewalk
       const walker = rng() < 0.4;
@@ -244,6 +254,14 @@ export class PedView {
 
   update(level: Level, sk: Skater, dt: number, camX: number, biome: BiomeId = 'chicago'): void {
     if (level !== this.level || biome !== this.biome) this.populate(level, biome);
+    if (this.job) {
+      sliceStart(2);
+      try {
+        while (this.job && !sliceDone()) if (this.job.next().done) this.job = null;
+      } finally {
+        sliceEnd();
+      }
+    }
     this.t += dt;
     const street = toY(level, level.streetY);
     this.group.position.y = street;

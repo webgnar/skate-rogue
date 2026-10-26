@@ -57,6 +57,13 @@ export class SoundWords {
   readonly group = new THREE.Group();
   private words: Word[] = [];
 
+  constructor() {
+    //a hidden word, so the loading screen compiles the words' shader
+    const warm = new THREE.Sprite(new THREE.SpriteMaterial({ map: wordTexture(SLAM_WORDS[0]).tex, depthTest: false, depthWrite: false, transparent: true }));
+    warm.visible = false;
+    this.group.add(warm);
+  }
+
   spawn(x: number, y: number, word = SLAM_WORDS[Math.floor(Math.random() * SLAM_WORDS.length)]): void {
     //one word at a time: a new hit replaces the last
     for (const w of this.words) w.age = LIFE;

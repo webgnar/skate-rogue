@@ -2,6 +2,7 @@
 // shader as a jagged ink-outlined burst (white core, yellow, red tips, halftone dots and speed lines). Over its life
 // the cylinder gets shorter and its top flares wide, and it dissolves dot by dot.
 import * as THREE from 'three';
+import { warmMesh } from './shader-keep';
 
 const LIFE = 0.55; // seconds
 
@@ -74,17 +75,23 @@ export class Impacts {
   private readonly geo = new THREE.CylinderGeometry(1, 1, 1, 48, 1, true).translate(0, 0.5, 0);
   private bursts: Burst[] = [];
 
-  constructor(private readonly pixelRatio: () => number) {}
+  constructor(private readonly pixelRatio: () => number) {
+    this.group.add(warmMesh(this.material(1)));
+  }
 
-  // a burst at (x, y) in world units; size 1 for a slam
-  spawn(x: number, y: number, size = 1): void {
-    const mat = new THREE.ShaderMaterial({
+  private material(size: number): THREE.ShaderMaterial {
+    return new THREE.ShaderMaterial({
       vertexShader: vertex,
       fragmentShader: fragment,
       uniforms: { uT: { value: 0 }, uSize: { value: size }, uSeed: { value: Math.random() * 100 }, uPx: { value: this.pixelRatio() } },
       side: THREE.DoubleSide,
       depthWrite: false,
     });
+  }
+
+  // a burst at (x, y) in world units; size 1 for a slam
+  spawn(x: number, y: number, size = 1): void {
+    const mat = this.material(size);
     const mesh = new THREE.Mesh(this.geo, mat);
     mesh.position.set(x, y - 0.05, 0.25);
     mesh.rotation.y = Math.random() * Math.PI;
