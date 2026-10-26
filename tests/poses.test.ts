@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BASE, BOARD, CLIPS, clipLength, deckPoint, footTarget, kneePoint, mix, sample, type Pose } from '../src/render/poses';
-import { mirrorPose, switchName } from '../src/render/poses';
+import { mirrorPose, onNose, switchName } from '../src/render/poses';
 
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
@@ -142,6 +142,17 @@ describe('rig poses', () => {
     expect(sample(CLIPS.boneless, 0.12).footFOn).toBe(0);
     expect(sample(CLIPS.boneless, 0.36).footFOn).toBe(1);
     expect(CLIPS.switchBoneless).toBeTruthy();
+  });
+
+  it('nollie: the ollie popped off the nose, with a fakie ollie twin; nose clips pop out with it', () => {
+    const o = sample(CLIPS.ollie, 0.27);
+    const n = sample(CLIPS.nollie, 0.27);
+    expect(n.boardPitch).toBeCloseTo(-o.boardPitch, 5);
+    expect(n.boardPivot).toBeCloseTo(-o.boardPivot, 5);
+    expect(n.footFX).toBeCloseTo(-o.footBX, 5);
+    expect(CLIPS.switchNollie).toBeTruthy();
+    expect(['crooked', 'noseGrind', 'noseManual', 'switchCrooked', 'switchNoseManual'].every(onNose)).toBe(true);
+    expect(['fiveO', 'manual', 'grind1', 'switchFiveO'].some(onNose)).toBe(false);
   });
 
   it('switch twins: every clip but the held poses has one, mirrored along the board', () => {

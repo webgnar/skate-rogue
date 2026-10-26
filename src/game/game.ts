@@ -1500,7 +1500,7 @@ export class Game {
         break;
       case 'land':
         this.visor.ping();
-        if (e.manual) this.hud.callout('MANUAL' + combo, 'trick');
+        if (e.manual) this.hud.callout(this.sprite.manualName + combo, 'trick');
         if (bank) {
           const how = bank.how === 'sketchy' ? 'SKETCHY ' : bank.how === 'big' ? 'BIG DROP ' : '';
           this.hud.callout(`${how}+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), bank.how === 'sketchy' ? 'bad' : 'good');

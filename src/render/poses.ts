@@ -127,6 +127,21 @@ const pop: Key = {
   hipY: 0.9, bend: 0.22, boardPivot: TAIL, boardPitch: 0.58, boardY: POP_Y, footBX: TAIL_FOOT, footFX: 0.22,
   armLRaise: 0.9, armLFwd: 0.4, armRRaise: 1.7, armRElbow: 0.4,
 };
+// The nollie is the ollie popped off the nose: the front foot snaps the nose down and the back foot drags forward up
+// the grip, so the board pivots on the nose and rises tail first. Same body, the feet's jobs and the board's tip
+// swapped end for end. Its switch twin (switchNollie) is the fakie ollie: the same pop off the end that leads.
+function nosePop(k: Key): Key {
+  const out: Key = { ...k };
+  const f = k.footFX ?? BASE.footFX;
+  const b = k.footBX ?? BASE.footBX;
+  out.footFX = -b;
+  out.footBX = -f;
+  if (k.boardPivot !== undefined) out.boardPivot = -k.boardPivot;
+  if (k.boardPitch !== undefined) out.boardPitch = -k.boardPitch;
+  if (k.boardX !== undefined) out.boardX = -k.boardX;
+  if (k.lean !== undefined) out.lean = -k.lean;
+  return out;
+}
 // both feet off, knees up, for flips and shove-its
 // hangers on the rail (their underside 0.09 below the deck), wheels hanging just below its top
 const HANGER_Y = -(BOARD.deckTop - 0.09);
@@ -148,6 +163,8 @@ const FEEBLE: Key = {
 };
 // 5-0: back truck grinding, nose held up off the rail
 const FIVE_O: Key = { boardY: HANGER_Y, boardPivot: -BOARD.bolts, boardPitch: 0.2 };
+// nosegrind: front truck grinding, tail held up off the rail (a 5-0 the other way round)
+const NOSEGRIND: Key = { boardY: HANGER_Y, boardPivot: BOARD.bolts, boardPitch: -0.2 };
 // front truck locked, nose pressed on the rail, tail up and swung out toward the toe side
 const CROOK_YAW = 0.35;
 const CROOKED: Key = {
@@ -259,6 +276,12 @@ export const CLIPS: Record<string, Clip> = {
       },
       { t: 0.68, pose: { hipY: 0.94, bend: 0.22, boardY: 0.08, armLRaise: 1.2, armRRaise: 1.1 } },
     ],
+  },
+  // Nollie: the ollie off the nose (see nosePop). Lou pops out of nose grinds and nose manuals with it, and riding
+  // switch it's the fakie ollie (zack, 2026-10-26)
+  nollie: {
+    loop: false,
+    keys: [], // filled from the ollie below the table
   },
   // Boneless, for car hops (zack, 2026-10-25; a rough first pass for zack to tune in ?editor): crouched on the roof,
   // the back hand grabs the toe edge of the deck by the front bolts, the front foot steps off and plants on the
@@ -526,6 +549,16 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.7, pose: { ...FIVE_O, hipX: -0.14, hipY: 0.8, bend: 0.16, lean: -0.12, nod: 0.3, footBX: -0.34, footFX: 0.22, armLRaise: 1.5, armRRaise: 1.3, armLElbow: 0.3, armRElbow: 0.4 } },
     ],
   },
+  // nosegrind: grinding on the front truck with the tail held up; weight forward over the nose, back foot light over
+  // the back bolts, arms out
+  noseGrind: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { ...NOSEGRIND, hipX: 0.14, hipY: 0.8, bend: 0.24, lean: 0.12, nod: 0.35, footFX: 0.34, footBX: -0.22, armLRaise: 1.3, armRRaise: 1.5, armLElbow: 0.4, armRElbow: 0.3 } },
+      { t: 0.35, pose: { ...NOSEGRIND, boardPitch: -0.24, hipX: 0.16, hipY: 0.78, bend: 0.26, lean: 0.15, nod: 0.35, footFX: 0.34, footBX: -0.22, armLRaise: 1.2, armRRaise: 1.6, armLElbow: 0.35, armRElbow: 0.35 } },
+      { t: 0.7, pose: { ...NOSEGRIND, hipX: 0.14, hipY: 0.8, bend: 0.24, lean: 0.12, nod: 0.35, footFX: 0.34, footBX: -0.22, armLRaise: 1.3, armRRaise: 1.5, armLElbow: 0.4, armRElbow: 0.3 } },
+    ],
+  },
   // manual: rolling on the back wheels, nose up, weight over the tail, arms out balancing (bus roofs). The board
   // tips about the back axle, so the back wheels stay on the ground.
   manual: {
@@ -653,6 +686,15 @@ export function mirrorClip(c: Clip): Clip {
   return { loop: c.loop, keys: c.keys.map((k) => ({ t: k.t, pose: mirrorKey(k.pose) })) };
 }
 
+// the nollie: the ollie's keys (as edited) popped off the nose
+{
+  const ollie = (clipEdits as Record<string, Clip>).ollie?.keys?.length ? (clipEdits as Record<string, Clip>).ollie : CLIPS.ollie;
+  CLIPS.nollie.keys = ollie.keys.map((k) => ({ t: k.t, pose: nosePop(k.pose) }));
+}
+// clips that ride the nose (switch twins included): popping out of them is a nollie (a fakie ollie riding switch)
+const NOSE = new Set(['crooked', 'noseGrind', 'noseManual']);
+export const onNose = (name: string): boolean => NOSE.has(name.replace(/^switch([A-Z])/, (_, c: string) => c.toLowerCase()));
+
 // the twins come from the regular clips as edited, unless a twin is edited itself (applyClipEdits, below)
 for (const name of Object.keys(CLIPS)) {
   if (NO_SWITCH.has(name)) continue;
@@ -681,12 +723,13 @@ export function clipLength(clip: Clip): number {
 
 // Grinds take turns. Rails (flat bars and handrails) get every grind, both boardslides among them; anything that
 // isn't a rail (a parked car's roof) gets every grind but the boardslides, which only work across a rail (zack).
-export const LEDGE_GRINDS = ['grind1', 'crooked', 'fiveO', 'smith', 'feeble'] as const;
-export const RAIL_GRINDS = ['grind2', 'grind1', 'fsBoardslide', 'fiveO', 'smith', 'grind2', 'crooked', 'fsBoardslide', 'feeble'] as const;
+export const LEDGE_GRINDS = ['grind1', 'crooked', 'fiveO', 'noseGrind', 'smith', 'feeble'] as const;
+export const RAIL_GRINDS = ['grind2', 'grind1', 'fsBoardslide', 'fiveO', 'smith', 'grind2', 'crooked', 'fsBoardslide', 'noseGrind', 'feeble'] as const;
 export const GRIND_NAMES: Record<string, string> = {
   grind1: '50-50',
   crooked: 'CROOKED GRIND',
   fiveO: '5-0',
+  noseGrind: 'NOSEGRIND',
   smith: 'BS SMITH',
   feeble: 'BS FEEBLE',
   grind2: 'BS BOARDSLIDE',
