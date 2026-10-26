@@ -11,7 +11,7 @@ import * as THREE from 'three';
 
 export const LENS = {
   fov: 20, // degrees the camera's field of view opens at full strength (dollying in to keep Lou's size)
-  sharp: 1.2, // the texture is drawn this much bigger than the screen, so the swollen middle stays crisp
+  sharp: 1.3, // the texture is drawn this much bigger than the screen, so the swollen middle stays crisp
 };
 
 const VERT = /* glsl */ `
