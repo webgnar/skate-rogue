@@ -13,7 +13,8 @@ import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { Springs, bodyColliders } from './springs';
-import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, LEDGE_GRINDS, RAIL_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { nollieClip } from '../physics/tricks';
 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
@@ -101,12 +102,8 @@ export class SkaterRig {
   private flash = 0;
   private pushes = 0;
   private rideT = 0;
-  private ledgeGrinds = 0;
-  private railGrinds = 0;
-  private manuals = 0; // manual pads take turns: a manual, then a nose manual
   // where the hand grabs while towed (world space: the cable car's back pole, src/render/cable-view.ts), or null
   grab: THREE.Vector3 | null = null;
-  private sk: Skater | null = null; // the skater as of the last update, for what an event landed on
   private fakie = false; // shown riding fakie: the whole skater and board turned half round
   private shown = ''; // the clip on screen: clipName's switch twin while riding fakie (back to the camera), or clipName
 
@@ -629,10 +626,6 @@ export class SkaterRig {
     return this.clipName;
   }
 
-  private nextManual(): 'manual' | 'noseManual' {
-    return this.manuals++ % 2 ? 'noseManual' : 'manual';
-  }
-
   // what the HUD calls the manual being shown
   get manualName(): string {
     return onNose(this.shown) ? 'NOSE MANUAL' : 'MANUAL';
@@ -646,7 +639,7 @@ export class SkaterRig {
   onEvent(e: SkaterEvent): void {
     switch (e.type) {
       case 'ollie': // off a nose grind or a nose manual it's a nollie (riding switch, a fakie ollie)
-        this.play(onNose(this.shown) ? 'nollie' : 'ollie');
+        this.play(e.nose ? 'nollie' : 'ollie');
         break;
       case 'kicker':
         this.play('ollie');
@@ -654,12 +647,14 @@ export class SkaterRig {
       case 'hop': // off a car roof (or a train's, or a drone)
         this.play('boneless');
         break;
-      case 'trick':
-        //180s have no clip of their own yet: they read as an ollie until the models thread adds them
-        this.play(e.name in CLIPS ? e.name : 'ollie');
+      case 'trick': { // off the nose, the nollie version of the flip
+        const nollie = e.nollie ? nollieClip(e.name) : '';
+        this.play(nollie in CLIPS ? nollie : e.name in CLIPS ? e.name : 'ollie');
+        break;
+      }
         break;
       case 'land':
-        this.play(e.manual ? this.nextManual() : 'land');
+        this.play(e.manual ? (e.pad ?? 'manual') : 'land');
         break;
       case 'firecracker': // rolled into a stair set: down it in a manual, tail first (the models thread's clip when it's in)
         this.play('firecracker' in CLIPS ? 'firecracker' : 'manual', 0.08);
@@ -668,11 +663,8 @@ export class SkaterRig {
         if (this.clipName === 'firecracker') this.t = 0;
         break;
       case 'grind': // flat bars are rails; a parked car's roof (row -1, physics roofLedge) is not
-        if (this.sk?.surface?.row === -1) this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
-        else this.play(RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length]);
-        break;
-      case 'rail': // handrails
-        this.play(RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length]);
+      case 'rail': // handrails; the sim takes the grinds in turn (it needs to know when it's on the nose)
+        this.play(e.name);
         break;
       case 'slam':
         this.flash = 0.6;
@@ -768,7 +760,6 @@ export class SkaterRig {
   }
 
   update(dtMs: number, sk: Skater, angle: number): void {
-    this.sk = sk;
     const dt = dtMs / 1000;
     const len = clipLength(this.clip);
     const done = !this.clip.loop && this.t >= len;
@@ -786,8 +777,8 @@ export class SkaterRig {
       //towed up a hill by the cable car, hanging on to it
       if (this.clipName !== 'towed') this.play('towed', 0.2);
     } else if (sk.manualing) {
-      //a manual pad: on the back wheels or the front ones, taking turns
-      if (this.clipName !== 'manual' && this.clipName !== 'noseManual') this.play(this.nextManual(), 0.1);
+      //a manual pad: on the back wheels or the front ones, taking turns (the sim's pick)
+      if (this.clipName !== 'manual' && this.clipName !== 'noseManual') this.play(sk.stance || 'manual', 0.1);
     } else if (sk.mode === 'roll') {
       if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || this.clipName === 'firecracker' || this.clipName === 'towed' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
