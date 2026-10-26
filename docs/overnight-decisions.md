@@ -504,6 +504,11 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- **Nollie, fakie ollie, nosegrind and nose manual (2026-10-26, zack).** `nollie` is the ollie's keys popped off the
+  nose (poses.ts nosePop); its switch twin is the fakie ollie. Popping out of a nose clip (crooked, noseGrind,
+  noseManual) plays it, and so does rolling off the end of one. Manual pads take turns: manual, then nose manual
+  (callout NOSE MANUAL). New noseGrind clip in the ledge and rail grind rotations. All visual: tricks.ts untouched.
+  Nollie and fakie flip tricks come later.
 - **Hair and loose cloth trail the motion (2026-10-25, zack: "trail the direction the players falling or going").**
   Spring bone chains, per the hair and clothes physics plan: Webster, Roxy and Goldie's long hair is five clumps on
   3-bone chains off Head, and Keanu's hoodie has two drawstrings off Spine1 (art/skaters.py). src/render/springs.ts

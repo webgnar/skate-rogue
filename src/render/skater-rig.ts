@@ -13,7 +13,7 @@ import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { Springs, bodyColliders } from './springs';
-import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, isSwitch, switchName, LEDGE_GRINDS, RAIL_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, LEDGE_GRINDS, RAIL_GRINDS, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
@@ -99,6 +99,7 @@ export class SkaterRig {
   private rideT = 0;
   private ledgeGrinds = 0;
   private railGrinds = 0;
+  private manuals = 0; // manual pads take turns: a manual, then a nose manual
   private sk: Skater | null = null; // the skater as of the last update, for what an event landed on
   private fakie = false; // shown riding fakie: the whole skater and board turned half round
   private shown = ''; // the clip on screen: clipName's switch twin while riding fakie (back to the camera), or clipName
@@ -622,6 +623,15 @@ export class SkaterRig {
     return this.clipName;
   }
 
+  private nextManual(): 'manual' | 'noseManual' {
+    return this.manuals++ % 2 ? 'noseManual' : 'manual';
+  }
+
+  // what the HUD calls the manual being shown
+  get manualName(): string {
+    return onNose(this.shown) ? 'NOSE MANUAL' : 'MANUAL';
+  }
+
   // what the HUD calls the grind being shown
   get grindName(): string {
     return GRIND_NAMES[this.shown] ?? '50-50';
@@ -629,7 +639,9 @@ export class SkaterRig {
 
   onEvent(e: SkaterEvent): void {
     switch (e.type) {
-      case 'ollie':
+      case 'ollie': // off a nose grind or a nose manual it's a nollie (riding switch, a fakie ollie)
+        this.play(onNose(this.shown) ? 'nollie' : 'ollie');
+        break;
       case 'kicker':
         this.play('ollie');
         break;
@@ -641,7 +653,7 @@ export class SkaterRig {
         this.play(e.name in CLIPS ? e.name : 'ollie');
         break;
       case 'land':
-        this.play(e.manual ? 'manual' : 'land');
+        this.play(e.manual ? this.nextManual() : 'land');
         break;
       case 'grind': // flat bars are rails; a parked car's roof (row -1, physics roofLedge) is not
         if (this.sk?.surface?.row === -1) this.play(LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length]);
@@ -710,10 +722,10 @@ export class SkaterRig {
     } else if (this.clipName === 'idle' || this.clipName === 'busted') {
       this.play(sk.mode === 'air' ? 'air' : 'ride', 0.2);
     } else if (sk.manualing) {
-      //a manual pad: back wheels, nose up, the 5-0 look
-      if (this.clipName !== 'manual') this.play('manual', 0.1);
+      //a manual pad: on the back wheels or the front ones, taking turns
+      if (this.clipName !== 'manual' && this.clipName !== 'noseManual') this.play(this.nextManual(), 0.1);
     } else if (sk.mode === 'roll') {
-      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || GRINDS.has(this.clipName)) {
+      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
       } else if (this.clipName === 'push') {
         // finish the stroke, with the back foot back near the board, before rolling
@@ -727,6 +739,9 @@ export class SkaterRig {
         this.rideT += dt;
         if (this.wantsPush(sk) && this.rideT > RIDE_FOR) this.play('push', PUSH_FADE);
       }
+    } else if (sk.mode === 'air' && (GRINDS.has(this.clipName) || this.clipName === 'noseManual') && onNose(this.shown)) {
+      // off the end of a nose grind or nose manual: always popped out of, with a nollie (zack, 2026-10-26)
+      this.play('nollie');
     } else if (sk.mode === 'air' && (done || ON_GROUND.has(this.clipName))) {
       this.play('air', 0.15);
     } else if (grinding && !GRINDS.has(this.clipName)) {
