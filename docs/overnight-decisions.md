@@ -550,7 +550,7 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Boon renames (zack, 2026-10-26).** Only the display names changed. The ids stay, so saves and `?boons=` links keep working:
   - Floaty Flip → **Boostin** (`floatyFlip`)
   - Pressure Flip → **Mad Pop** (`pressureFlip`)
-  - Exit Wax → **Waxed Bearings** (`exitWax`)
+  - Exit Wax → Waxed Bearings → **Speed Cream** (`exitWax`)
   - Grease → **Ledge Butter** (`grease`)
   - Rail Launch → **Full Sail** (`railLaunch`)
   - Feeble Frenzy → **More Wax** (`feebleFrenzy`)
