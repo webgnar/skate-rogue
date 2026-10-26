@@ -247,5 +247,6 @@ export const SMOOTH = {
   lens: 7,
   yaw: 4, // the speed swing is slow and heavy
   roll: 10,
+  tilt: 14, // gyro tilt: quick enough to follow the hand, soft enough to blend the jump when the screen flips
   frame: 3, // turning the phone: the framing glides over about a second and a half
 };

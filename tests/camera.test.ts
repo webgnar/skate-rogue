@@ -115,3 +115,17 @@ describe('camera springs', () => {
     expect(Number.isFinite(s.x) && s.x > 0.9 && s.x < 1.5).toBe(true);
   });
 });
+
+describe('gyro tilt', () => {
+  it('reads the lean from beta and gamma, against the screen turn', async () => {
+    const { leanOf, counterRoll } = await import('../src/render/tilt');
+    const deg = Math.PI / 180;
+    expect(leanOf(90, 0, 0)).toBeCloseTo(0); // upright portrait
+    expect(leanOf(80, 90, 0)).toBeCloseTo(10 * deg); // rolled 10 degrees clockwise (right edge down)
+    expect(leanOf(80, -90, 0)).toBeCloseTo(-10 * deg);
+    expect(leanOf(0, -90, Math.PI / 2)).toBeCloseTo(0); // turned to landscape with the screen flipped to match
+    expect(leanOf(0, 0, 0)).toBe(0); // flat on a table: no up
+    expect(counterRoll(0.05)).toBe(0); // inside the dead zone
+    expect(counterRoll(0.6)).toBeCloseTo(0.5);
+  });
+});
