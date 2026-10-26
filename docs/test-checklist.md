@@ -425,6 +425,13 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 - [ ] It never rains in Atlantis, the museum or space (try `?seed=7&floor=12&biome=space`).
 
+**Smashing**
+
+- [ ] Whatever you smash vanishes the moment it breaks, with nothing left standing. That includes the second and
+      later floors of a run.
+- [ ] The debris looks like the thing you hit: a newspaper box breaks into chunks in its own colour, a planter into
+      pot and plant, a box into cardboard. The chips match its colours too.
+
 **Cruiser jump jets**
 
 - [ ] Get Heat up near a canal (`?floor=3` has some). As the cop car jumps the water, two thrusters fold out under

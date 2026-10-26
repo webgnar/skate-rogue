@@ -96,15 +96,31 @@ export function propSize(name: string): { w: number; h: number } {
 }
 
 // the current floor's props, for the effects
-export const props: { mesh: THREE.Mesh | null; placements: PropPlacement[]; biome: BiomeId } = { mesh: null, placements: [], biome: 'chicago' };
+export interface FloorProps {
+  mesh: THREE.Mesh | null;
+  placements: PropPlacement[];
+  biome: BiomeId;
+}
 
-// hide a smashed prop: its vertices drop far below the street
-export function hideProp(i: number): void {
-  const p = props.placements[i];
-  const pos = props.mesh?.geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
+// the last floor built. Floors ahead are built before you reach them, so this is usually NOT the floor you're on:
+// look a floor's own props up with propsFor(level)
+export const props: FloorProps = { mesh: null, placements: [], biome: 'chicago' };
+const byLevel = new WeakMap<Level, FloorProps>();
+
+// a floor's props, as buildProps made them for it
+export function propsFor(level: Level): FloorProps {
+  return byLevel.get(level) ?? { mesh: null, placements: [], biome: 'chicago' };
+}
+
+// hide a smashed prop on its floor: its vertices drop far below the street (its outline shares them, so it goes too)
+export function hideProp(level: Level, i: number): void {
+  const f = propsFor(level);
+  const p = f.placements[i];
+  const pos = f.mesh?.geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
   if (!p || !pos) return;
   for (let v = p.start; v < p.start + p.count; v++) pos.setY(v, -100);
   pos.needsUpdate = true;
+  f.mesh!.geometry.computeBoundingSphere();
 }
 
 function scenery(level: Level): { name: string; x: number; y: number; z: number }[] {
@@ -140,6 +156,7 @@ export function buildProps(level: Level, biome: BiomeId = 'chicago'): THREE.Mesh
   props.mesh = null;
   props.placements = [];
   props.biome = biome;
+  byLevel.set(level, { mesh: null, placements: props.placements, biome });
   const sim = (level as Level & { props?: SimProp[] }).props;
   const spots = sim
     ? sim.map((p) => ({ name: p.name, x: p.x / TILE, y: (level.streetY - p.y) / TILE, z: p.z ?? 0 }))
@@ -169,5 +186,6 @@ export function buildProps(level: Level, biome: BiomeId = 'chicago'): THREE.Mesh
   mesh.name = 'props';
   mesh.userData.keep = true; // its own mesh: batchStatic must not merge it away (hideProp needs the vertex ranges)
   props.mesh = mesh;
+  byLevel.get(level)!.mesh = mesh;
   return mesh;
 }

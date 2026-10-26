@@ -40,8 +40,8 @@ import { HeatCue } from '../render/heat-cue';
 import { BoonFx } from '../render/boon-fx';
 import { SmashFx, type SmashHit } from '../render/smash';
 import { VisorGlint, VISOR_TINT } from '../render/visor-glint';
-import { propPieces } from '../render/models';
-import { hideProp, props, restyle } from '../render/props';
+import { flatGeometry, propPieces } from '../render/models';
+import { hideProp, propsFor, restyle } from '../render/props';
 import { BIOMES, biomeMood, type BiomeId } from '../render/biomes';
 import { clockFor, mixMood, moodAt, rainLevel, rainy, type Mood } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
@@ -264,7 +264,8 @@ export class Game {
     word: (x, y, w) => this.words.spawn(x, y, w),
     shake: (a) => this.view.shake(a),
     pieces: (prop) => propPieces(prop), // the Blender break pieces (art/props.py)
-    hide: (index) => hideProp(index),
+    hide: (index) => hideProp(this.level, index),
+    geometry: (prop) => flatGeometry(prop), // the prop's own model, to break into pieces when it has none of its own
   });
   private readonly carFx = new CarHopFx(this.particles, this.smashFx, {
     word: (x, y, w) => this.words.spawn(x, y, w),
@@ -478,7 +479,8 @@ export class Game {
   // a prop breaks (or rings, if it can't): the sim's smash events come through here
   smash(hit: SmashHit): void {
     //as the city shows it: an amphora in the old town breaks like pottery, not like the barrel the sim placed
-    this.smashFx.smash({ ...hit, prop: props.placements[hit.index]?.shown ?? restyle(hit.prop, props.biome) ?? hit.prop });
+    const own = propsFor(this.level);
+    this.smashFx.smash({ ...hit, prop: own.placements[hit.index]?.shown ?? restyle(hit.prop, own.biome) ?? hit.prop });
   }
 
   // ?biome= previews one district's look (one fused world otherwise: the run never changes it)

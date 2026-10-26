@@ -193,6 +193,13 @@ and listed it here for review. Any of these can be flipped in the morning.
   in length only, never in brightness, so nothing strobes. The pods fold away about half a second after the
   landing, which kicks up dust. They're only drawn while they're out, so the cruiser costs nothing extra on the
   street.
+- **Smashed props disappear, and the debris is the prop (zack's ask).**
+  - **The bug:** the next floor is built before you reach it, and building its props overwrote the one shared props
+    record. So a smash hid that index on the floor ahead, not the prop you hit, and the intact model stayed put.
+    Each floor now keeps its own props (`propsFor(level)`), and a headless run hid 6 of 6 smashed props.
+  - **The debris:** a prop without Blender break pieces now has its own model cut into chunks (`shatter`), so the
+    debris carries its colours and shapes. Chips take the prop's main colours, plus its material's: glass glints,
+    wood dust, metal sparks.
 - **Landmarks get no extra night treatment.** I checked all seven at floor 13. They already carry their own glowing
   materials and read fine against the night sky, so I left them alone.
 

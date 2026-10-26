@@ -15,7 +15,7 @@ import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { initCam } from './render/camera';
 import { isBiome } from './render/biomes';
-import { props } from './render/props';
+import { props, propsFor } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
 import { applyClipEdits } from './render/poses';
 import { loadDrafts } from './editor/drafts';
@@ -399,7 +399,7 @@ async function start() {
     game.timeScale = Math.min(8, Math.max(1, Number(params.get('turbo')) || 1));
   }
   //?debug (and ?bot) expose the game for headless checks: the playtest runner reads game.playtest and window.rig
-  if (params.has('debug') || bot !== null) Object.assign(window, { game, props, rig: sprite, missingModels });
+  if (params.has('debug') || bot !== null) Object.assign(window, { game, props, propsFor, rig: sprite, missingModels });
   const biome = params.get('biome');
   if (isBiome(biome)) game.setBiome(biome);
   //pause: the button, Esc or P, and whenever the page is hidden. The buttons stop their press reaching the one
