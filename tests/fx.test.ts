@@ -1,3 +1,5 @@
+import { inkLens } from '../src/render/toon';
+import { lensSource } from '../src/render/lens';
 import * as THREE from 'three';
 import { SmashFx, isBig, palette, shatter, stuffOf, type SmashHit } from '../src/render/smash';
 import { biomeMood, isBiome } from '../src/render/biomes';
@@ -608,6 +610,33 @@ describe('smash debris from the prop itself', () => {
     expect(hidden).toEqual([3]);
     expect(fx.group.children.length).toBeGreaterThan(4);
     expect(fx.group.children.every((m) => ((m as THREE.Mesh).material as THREE.MeshToonMaterial).vertexColors)).toBe(true);
+  });
+});
+
+describe('ink through the fisheye', () => {
+  const [k, tx, ty] = [0.75, 2.11, 0.976]; // a landscape phone at the game's lens
+  it('is untouched with the lens off', () => {
+    expect(inkLens(0, tx, ty, 0.5, 0.5, 0.6, 0.8)).toEqual([0.6, 0.8]);
+  });
+  it('pre-bends each push by exactly the inverse of the lens, so it lands the same width on screen', () => {
+    for (const [sx, sy] of [[0, 0], [0.3, 0.1], [0.8, -0.4], [-0.95, 0.9], [0.1, 0.95]]) {
+      for (const ang of [0, 0.7, 1.6, 2.5]) {
+        const [dx, dy] = [Math.cos(ang), Math.sin(ang)]; // a unit push on screen, in the picture's square units
+        const [qx, qy] = lensSource(k, tx, ty, sx, sy);
+        const e = 1e-4;
+        const [px, py] = lensSource(k, tx, ty, sx + (e * dx) / tx, sy + (e * dy) / ty);
+        const want = [(px - qx) / e, (py - qy) / e]; // the flat picture's move for that screen move
+        const got = inkLens(k, tx, ty, qx / tx, qy / ty, dx, dy);
+        expect(got[0]).toBeCloseTo(want[0], 2);
+        expect(got[1]).toBeCloseTo(want[1], 2);
+      }
+    }
+  });
+  it('thins the ink in the swollen middle and thickens it at the squeezed edges', () => {
+    const mid = Math.hypot(...inkLens(k, tx, ty, 0, 0, 1, 0));
+    expect(mid).toBeLessThan(0.8);
+    const edge = inkLens(k, tx, ty, 0.95, 0, 1, 0)[0];
+    expect(edge).toBeGreaterThan(1);
   });
 });
 

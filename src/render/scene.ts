@@ -15,7 +15,7 @@ import { Ambience, BACKDROP_SPAN, BACKDROPS, type BiomeId } from './biomes';
 import { loadSheet, loadWorlds } from './skins';
 import { WORLDS } from './quarters';
 import { loadImage, pixelTexture } from './textures';
-import { inkify, setInkResolution, solid } from './toon';
+import { inkify, setInkLens, setInkResolution, solid } from './toon';
 import { mergeInk, splitSlabs } from './kit-merge';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
@@ -642,6 +642,9 @@ export class StreetView {
 
   render(): void {
     this.renderer.info.reset(); // count both passes
+    //the ink pre-corrects for the fisheye's bend (toon.ts inkLens), with the same strength and angles the lens uses
+    const tanY = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
+    setInkLens(this.lensK > 0.001 ? Math.min(1, this.lensK) : 0, tanY * this.camera.aspect, tanY);
     this.lens.render(this.renderer, this.camera, this.lensK, FX.pixel > 1, this.lensLevel > 1, () => {
       this.renderer.clear();
       this.renderer.render(this.scene, this.camera);

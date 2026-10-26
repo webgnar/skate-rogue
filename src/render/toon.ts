@@ -46,6 +46,45 @@ function toToon(m: THREE.Material): THREE.Material {
   return t;
 }
 
+// The outline's push-out is measured on screen, and two things bent it out of shape (zack, 2026-10-26: "the outline
+// shader is still getting distorted"):
+//  - The wide lens. The direction a normal points on screen was taken from the projected normal alone, ignoring the
+//    perspective divide. Near the middle that's close enough, but toward the edges of the camera's ~90 degree view
+//    (the fisheye's widened FOV) it points the wrong way, so one side of a shape got thick ink and the other thin.
+//    Now it's the real screen-space difference between the vertex and a point a little way along its normal.
+//  - The fisheye pass (lens.ts) bends the finished picture: it swells the middle (about 1.5x at strength 0.75) and
+//    squeezes the edges, and the ink got bent with it, fat round Lou and hairline at the sides. The hull is drawn
+//    on the flat picture before the bend, so it now pre-shrinks or pre-grows each push by the inverse of the bend
+//    at that spot (inkLens), separately along and across the bend, and lands the same width everywhere on screen.
+const inkLensGlsl = /* glsl */ `
+  uniform vec3 uLens; // the fisheye: strength, and the flat picture's tan half-angles across and up (0 strength: none)
+  // how far to push on the flat picture, at ndc, for a push of unit length along d on the bent screen
+  vec2 inkLens(vec2 ndc, vec2 d) {
+    float k = uLens.x;
+    if (k <= 0.001) return d;
+    //off screen (long floors and walls run well past the edges, or behind the camera) the bend is held at the
+    //edge's, so the push stays sane where the lens's sums would blow up
+    vec2 q = clamp(ndc, -1.2, 1.2) * uLens.yz;
+    float R = length(q);
+    float rc = length(uLens.yz);
+    float a = 2.0 * tan(atan(rc) * 0.5) / rc;
+    //the screen radius r that the lens shows at flat radius R: solve R = (1 - k) r + k tan(2 atan(r a / 2))
+    float r = R;
+    float dR = 1.0;
+    for (int i = 0; i < 5; i++) {
+      float h = r * a * 0.5;
+      float t = tan(2.0 * atan(h));
+      dR = (1.0 - k) + k * (1.0 + t * t) * a / (1.0 + h * h);
+      r = clamp(r - ((1.0 - k) * r + k * t - R) / dR, 0.0, 1.8 / a);
+    }
+    dR = clamp(dR, 0.25, 4.0);
+    if (R < 1e-5) return d * ((1.0 - k) + k * a);
+    vec2 radial = q / R;
+    float along = dot(d, radial);
+    return radial * along * dR + (d - radial * along) * clamp(R / max(r, 1e-5), 0.25, 4.0);
+  }
+`;
+
 const outlineVertex = /* glsl */ `
   attribute vec3 inkNormal;
   uniform float uWidth; // pixels
@@ -54,6 +93,7 @@ const outlineVertex = /* glsl */ `
   #include <skinning_pars_vertex>
   #include <fog_pars_vertex>
   #include <clipping_planes_pars_vertex>
+  ${inkLensGlsl}
   void main() {
     vec3 transformed = position;
     vec3 objectNormal = inkNormal;
@@ -69,9 +109,12 @@ const outlineVertex = /* glsl */ `
     vec4 mvPosition = modelViewMatrix * local;
     vec4 clip = projectionMatrix * mvPosition;
     vec3 vn = normalize(normalMatrix * n);
-    vec2 dir = (projectionMatrix * vec4(vn, 0.0)).xy;
+    //the normal's direction on screen, in pixels: through the perspective divide, not just the projected direction
+    vec2 ndc = clip.xy / clip.w;
+    vec4 ahead = projectionMatrix * vec4(mvPosition.xyz + vn * 0.01 * max(0.1, -mvPosition.z), 1.0);
+    vec2 dir = ahead.w > 1e-5 ? (ahead.xy / ahead.w - ndc) * uRes : (projectionMatrix * vec4(vn, 0.0)).xy * uRes;
     float len = length(dir);
-    if (len > 1e-5) clip.xy += dir / len * uWidth * 2.0 / uRes * clip.w;
+    if (len > 1e-5) clip.xy += (clip.w > 1e-3 ? inkLens(ndc, dir / len) : dir / len) * uWidth * 2.0 / uRes * clip.w;
     clip.z += uDepth * clip.w;
     gl_Position = clip;
     #include <clipping_planes_vertex>
@@ -96,6 +139,7 @@ const inkUniforms = {
   uRes: { value: new THREE.Vector2(1, 1) },
   uColor: { value: new THREE.Color(INK.color) },
   uDepth: { value: 0 },
+  uLens: { value: new THREE.Vector3(0, 1, 1) },
 };
 let inkMat: THREE.ShaderMaterial | null = null;
 
@@ -110,6 +154,36 @@ export function outlineMaterial(): THREE.ShaderMaterial {
   });
   Object.assign(inkMat.uniforms, inkUniforms);
   return inkMat;
+}
+
+// the fisheye this frame (lens.ts): its strength and the flat picture's tan half-angles; strength 0 when it's off
+export function setInkLens(k: number, tanX: number, tanY: number): void {
+  inkUniforms.uLens.value.set(k, tanX, tanY);
+}
+
+// the shader's inkLens, for tests: the push on the flat picture for a unit push along (dx, dy) on screen at ndc
+export function inkLens(k: number, tanX: number, tanY: number, nx: number, ny: number, dx: number, dy: number): [number, number] {
+  if (k <= 0.001) return [dx, dy];
+  const clamp = (v: number) => Math.min(1.2, Math.max(-1.2, v));
+  const qx = clamp(nx) * tanX;
+  const qy = clamp(ny) * tanY;
+  const R = Math.hypot(qx, qy);
+  const rc = Math.hypot(tanX, tanY);
+  const a = (2 * Math.tan(Math.atan(rc) / 2)) / rc;
+  let r = R;
+  let dR = 1;
+  for (let i = 0; i < 5; i++) {
+    const h = (r * a) / 2;
+    const t = Math.tan(2 * Math.atan(h));
+    dR = 1 - k + (k * (1 + t * t) * a) / (1 + h * h);
+    r = Math.min(1.8 / a, Math.max(0, r - ((1 - k) * r + k * t - R) / dR));
+  }
+  dR = Math.min(4, Math.max(0.25, dR));
+  if (R < 1e-5) return [dx * (1 - k + k * a), dy * (1 - k + k * a)];
+  const [ux, uy] = [qx / R, qy / R];
+  const along = dx * ux + dy * uy;
+  const tang = Math.min(4, Math.max(0.25, R / Math.max(r, 1e-5)));
+  return [ux * along * dR + (dx - ux * along) * tang, uy * along * dR + (dy - uy * along) * tang];
 }
 
 // keep the outline width in pixels as the canvas resizes; pixelRatio scales CSS px to buffer px

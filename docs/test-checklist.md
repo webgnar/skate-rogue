@@ -724,3 +724,8 @@ off to compare. Reduce motion skips it.
 - [ ] The slow-mo never feels like running into something: it eases in over about a third of a second.
 - [ ] **No slow-mo** on a clutch catch ("CLUTCH!", a flip caught in the last few frames) or a flush bank landing ("FLUSH!"): just the callout with the points.
 - [ ] Two within 8 s: only the first slows down. *Tuning:* x12 too high or too low?
+
+## Ink outlines (2026-10-26)
+- [ ] With the fisheye on, the ink round Lou is the same thickness as on coins and buildings at the screen's edges.
+- [ ] Turning the camera and dolly zoom don't make outlines swell or thin out.
+- [ ] No black slabs or streaks along the street edge (hull blow-up) at any lens setting.
