@@ -14,20 +14,20 @@ export function missingModels(): { files: string[]; parts: string[] } {
   return { files: [...FILES.filter((f) => !loaded.includes(f)), ...failed.filter((f) => LATER.includes(f))], parts: [...missing] };
 }
 
-export function loadLater(base: string): Promise<void> {
-  return loadModels(base, LATER);
-}
-
 const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb', 'airliner.glb'];
 // materials that glow instead of taking light
 const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen', 'elCarSign', 'elCarLamp']); // the sheriff gold is reflective livery
 
-// models the game can start without, loaded once it's running: car-hop damage (art/car_damage.py). Until they're
-// in, a dented car just shows its clean model
+// models the game can start without: car-hop damage (art/car_damage.py). The loading screen loads them with the
+// rest now (a model loading mid-run was a hitch); if they fail, a dented car just shows its clean model
 const LATER = ['cars-damage.glb'];
 const failed: string[] = [];
 
-export async function loadModels(base: string, files = FILES): Promise<void> {
+// every model file, the late ones too (the loading screen loads them all up front)
+export const MODEL_FILES = [...FILES, ...LATER];
+
+// onFile: called as each file is in (or failed), for the loading screen's meter
+export async function loadModels(base: string, files = FILES, onFile?: () => void): Promise<void> {
   const loader = new GLTFLoader();
   await Promise.all(
     files.map(async (file) => {
@@ -39,6 +39,7 @@ export async function loadModels(base: string, files = FILES): Promise<void> {
         console.warn(`${file} failed to load, using the built-in version`, err);
         failed.push(file);
       }
+      onFile?.();
     }),
   );
 }

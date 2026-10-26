@@ -112,6 +112,11 @@ export class Lens {
     renderer.render(this.scene, this.cam);
   }
 
+  // compile the bend's shader ahead of time (the loading screen)
+  warm(renderer: THREE.WebGLRenderer): Promise<unknown> {
+    return renderer.compileAsync(this.scene, this.cam);
+  }
+
   dispose(): void {
     this.target?.dispose();
     this.mat.dispose();

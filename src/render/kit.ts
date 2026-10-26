@@ -1,6 +1,7 @@
 // Builds a floor's 3D kit from the physics level: street slabs, canals, buildings under rooftops, ledges, rails,
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
+import { run, sliceDone } from './slice';
 import { railBar, railMetal, railUv } from './rail-metal';
 import { BOON_COLORS } from '../boons/defs';
 import { hasModel, model } from './models';
@@ -17,7 +18,7 @@ import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, u
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
 import { buildSkyBeats } from './sky-kit';
-import { buildForeground, buildHill } from './hillside';
+import { buildForegroundSteps, buildHillSteps } from './hillside';
 import { buildElTrack, elCuts, setColumn } from './el-view';
 import { quarters, type Quarter } from './quarters';
 import { projectSurfaces, surface } from './surfaces';
@@ -51,17 +52,29 @@ function slab(w: number, h: number, d: number, front: THREE.Material, top: THREE
 // a floor's kit in a biome (skins.ts): Chicago's street by default; another biome's tiles come from its sheet. The
 // one city (Chicago) mixes in the other worlds' quarters (quarters.ts) once their sheets are loaded (`worlds`).
 export function buildKit(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null, worlds: Map<BiomeId, HTMLImageElement> = new Map()): THREE.Group {
+  return run(buildKitSteps(level, biome, sheet, worlds));
+}
+
+// buildKit a piece at a time, yielding when the frame's slice is spent (slice.ts). The biome's tile sheet is only
+// in use while a piece builds, so nothing else drawing tiles between frames picks it up
+export function* buildKitSteps(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null, worlds: Map<BiomeId, HTMLImageElement> = new Map()): Generator<void, THREE.Group> {
   const skin = SKINS[biome];
   const city = skin.sheet === 'chicago' || !sheet;
-  useSheet(city ? null : sheet);
-  try {
-    return build(level, city ? SKINS.chicago : skin, city, city ? 'chicago' : biome, biome === 'chicago' ? worlds : new Map());
-  } finally {
-    useSheet(null);
+  const job = build(level, city ? SKINS.chicago : skin, city, city ? 'chicago' : biome, biome === 'chicago' ? worlds : new Map());
+  for (;;) {
+    useSheet(city ? null : sheet);
+    let step: IteratorResult<void, THREE.Group>;
+    try {
+      step = job.next();
+    } finally {
+      useSheet(null);
+    }
+    if (step.done) return step.value;
+    yield;
   }
 }
 
-function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: Map<BiomeId, HTMLImageElement>): THREE.Group {
+function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: Map<BiomeId, HTMLImageElement>): Generator<void, THREE.Group> {
   const kit = new THREE.Group();
   //the city's quarters that lean on another world, with that world's tiles to hand
   const quarter = (q: Quarter) => (q.world !== 'chicago' && worlds.has(q.world) ? { ...q, skin: SKINS[q.world], sheet: worlds.get(q.world)! } : null);
@@ -75,8 +88,10 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //--- the alley far below the descent: you only see it if you fall ---------------------------
   const first = Math.round(toX(level.finaleX));
   //act 1's hillside and the near side of the street (hillside.ts)
-  if (level.hills) buildHill(level, kit);
-  if (city) buildForeground(level, kit);
+  if (level.hills) yield* buildHillSteps(level, kit);
+  if (sliceDone()) yield;
+  if (city) yield* buildForegroundSteps(level, kit);
+  if (sliceDone()) yield;
   if (first > 0 && !level.hills) {
     const alley = slab(first, 3, STREET_DEPTH, surface('concrete', 0x18121f), surface('asphalt', 0x221a2c), sideMat);
     alley.position.set(first / 2, -2.5, STREET_BACK + STREET_DEPTH / 2);
@@ -86,6 +101,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //--- street slabs and canals -------------------------------------------------------------
   let c = first;
   while (c < cols) {
+    if (sliceDone()) yield;
     const isStreet = level.street[c];
     let end = c;
     while (end + 1 < cols && level.street[end + 1] === isStreet) end++;
@@ -167,6 +183,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
     //split where a quarter's own wall takes over (its block tiles)
+    if (sliceDone()) yield;
     const cutsAt = [a0, ...fused.flatMap((q) => [q.x0, q.x1]).filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
     for (let k = 0; k + 1 < cutsAt.length; k++) {
       const [b0, b1] = [cutsAt[k], cutsAt[k + 1]];
@@ -180,10 +197,12 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     w0 = g1;
   }
   for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
+  if (sliceDone()) yield;
   const props = buildProps(level, biome); // hydrants, benches, newspaper boxes... along the back of the sidewalk
   if (props) kit.add(props);
   const cards = !city ? scenery([{ skin, sheet: null, x0: first, x1: cols }], rng, inGap) : scenery(fused.map((q) => ({ skin: q.skin, sheet: q.sheet, x0: Math.max(first, q.x0), x1: Math.min(cols, q.x1) })), rng, inGap);
   if (cards) kit.add(cards);
+  if (sliceDone()) yield;
 
   //the world's landmark stands in for a building every few screens, the first one soon after the start
   //(in the one city, each quarter's own landmark, in the middle of it)
@@ -207,6 +226,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
       mark = marks.length ? marks[0].x : worlds.size ? Infinity : bx + 26 + randInt(rng, 20);
       continue;
     }
+    if (sliceDone()) yield;
     const w = 4 + randInt(rng, 5);
     const h = 5 + randInt(rng, 9);
     const t = CITY.facade[randInt(rng, CITY.facade.length)];
@@ -230,6 +250,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
   //rails up on the roofs stand on the roof, not on the street
   const postH = (px: number, y: number) => (inHill(level, px) ? Math.min(y, 0.75) : y);
   for (const s of level.surfaces) {
+    if (sliceDone()) yield;
     const w = toX(s.x1 - s.x0);
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
@@ -365,6 +386,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
 
   //--- curved rails ---------------------------------------------------------------------------
   for (const rail of level.rails) {
+    if (sliceDone()) yield;
     if (rail.wire || rail.sky) continue; // a power line: the hillside draws it with its poles; a crane: sky-kit.ts
     const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
     const curve = new THREE.CatmullRomCurve3(pts);
@@ -382,7 +404,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
 
   //--- parked cars ----------------------------------------------------------------------------
   //merged into one mesh (two with the lit lamps), so a car hop can swap one for its dented model (car-damage.ts)
+  if (sliceDone()) yield;
   kit.add(buildParkedCars(level));
+  if (sliceDone()) yield;
 
   //--- broken glass ----------------------------------------------------------------------------
   const glassMat = new THREE.MeshLambertMaterial({ color: 0xbfe8ff, emissive: 0x204050 });
@@ -397,6 +421,7 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
 
   //--- the L over Chicago's street, round its bends into the city (el-view.ts) -----------------
   buildElTrack(level, kit);
+  if (sliceDone()) yield;
 
   //--- the L: elevated train tracks over the street on a helicopter escape (you hide under them) ------
   if (level.escape?.covers.length && model('ElSpan')) {
@@ -504,7 +529,9 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
     kit.add(top, bottom);
   }
 
+  if (sliceDone()) yield;
   projectSurfaces(kit);
+  if (sliceDone()) yield;
   kit.add(buildSkyBeats(level));
   return kit;
 }

@@ -4,19 +4,21 @@ import type { Level } from '../physics/level';
 import { CAM, CamDrift, DYN_CAM, LouZoom, Rhythm, SMOOTH, Spring, framing, type Framing } from './camera';
 import { LENS, Lens, lensSource, lensWiden } from './lens';
 import { tilt } from './tilt';
-import { buildKit, toX, toY } from './kit';
+import { buildKitSteps, toX, toY } from './kit';
 import { NightCity } from './night';
 import { FX } from './fx-settings';
 import { railTint } from './rail-metal';
-import { batchStatic } from './batch';
+import { batchSteps } from './batch';
 import { GateFx } from './gate-fx';
 import { SirenFx } from './siren-fx';
 import { Ambience, BACKDROP_SPAN, BACKDROPS, type BiomeId } from './biomes';
 import { loadSheet, loadWorlds } from './skins';
 import { WORLDS } from './quarters';
 import { loadImage, pixelTexture } from './textures';
-import { inkify, setInkLens, setInkResolution, solid } from './toon';
-import { mergeInk, splitSlabs } from './kit-merge';
+import { inkSteps, setInkLens, setInkResolution, solid } from './toon';
+import { mergeInkSteps, splitSteps } from './kit-merge';
+import { run, sliceDone, sliceEnd, sliceStart } from './slice';
+import { ShaderKeep } from './shader-keep';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
 
@@ -39,6 +41,7 @@ interface Ahead {
   sirens: SirenFx;
   cut: THREE.Plane[]; // its kit's clipping planes: [start, end]
   at: THREE.Vector2; // where its origin is, in world units
+  uploads: THREE.Texture[]; // its textures still to send to the GPU
 }
 
 // a floor's kit is cut at its ends where another floor joins, so their margins (the city past each end) never
@@ -83,12 +86,20 @@ function disposeKit(kit: THREE.Object3D): void {
   });
 }
 
-// run a generator to its end
-function run<T>(job: Generator<void, T>): T {
-  for (;;) {
-    const step = job.next();
-    if (step.done) return step.value;
-  }
+
+// every texture the meshes under root draw with
+function textures(root: THREE.Object3D): THREE.Texture[] {
+  const out = new Set<THREE.Texture>();
+  root.traverse((o) => {
+    const m = (o as THREE.Mesh).material;
+    if (!m) return;
+    for (const mat of [m].flat()) {
+      for (const v of Object.values(mat)) if (v instanceof THREE.Texture) out.add(v);
+      const u = (mat as THREE.ShaderMaterial).uniforms;
+      if (u) for (const { value } of Object.values(u)) if (value instanceof THREE.Texture) out.add(value);
+    }
+  });
+  return [...out];
 }
 
 export class StreetView {
@@ -100,7 +111,7 @@ export class StreetView {
   private kit: THREE.Group | null = null;
   private cut = cutPlanes(); // the kit's clipping planes: [start, end]
   private aheads = new Map<string, Ahead>();
-  private behind: { root: THREE.Group; kit: THREE.Group } | null = null;
+  private behind: { root: THREE.Group; kit: THREE.Group; night: NightCity } | null = null;
   private skyDrop = 0; // world units the backdrop still sits above its place after a floor joined on (eases to 0)
   private biome: BiomeId = 'chicago';
   private sheet: HTMLImageElement | null = null; // the biome's tile sheet (skins.ts)
@@ -146,12 +157,17 @@ export class StreetView {
   private punchAmt = 0;
   private punchRoll = 1;
   private readonly buf = new THREE.Vector2();
+  private readonly keep: ShaderKeep;
+  compiled = 0; // shader programs made since the debug line last read it (StreetView.warm should leave none to make)
 
   constructor(
     readonly canvas: HTMLCanvasElement,
     private level: Level,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    //checking a shader for errors waits for it to finish compiling: only in development
+    this.renderer.debug.checkShaderErrors = !import.meta.env.PROD;
+    this.keep = new ShaderKeep(this.renderer);
     this.autoRatio = this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     this.applyPixel();
     this.renderer.info.autoReset = false;
@@ -179,12 +195,11 @@ export class StreetView {
     //the sky is a gradient drawn per mood (QFS's Chicago sky is a plain blue gradient, the afternoon mood);
     //behind the street, the district's far cards (Chicago's pink skyline)
     this.scene.background = null;
-    //the other worlds' tiles for the city's quarters: the floor is rebuilt in them once they're in
-    void loadWorlds(base, WORLDS).then((w) => {
-      this.worlds = w;
-      if (this.kit) this.setLevel(this.level, this.seed, this.floor);
-    });
-    await this.buildBackdrop(this.biome);
+    //the other worlds' tiles for the city's quarters, in before the first floor is built (the loading screen), so
+    //it's built once and not again a moment into the run
+    const [worlds] = await Promise.all([loadWorlds(base, WORLDS), this.buildBackdrop(this.biome)]);
+    this.worlds = worlds;
+    if (this.kit) this.setLevel(this.level, this.seed, this.floor);
   }
 
   // the district's far cards (biomes.ts BACKDROPS); a layer that fails to load is left out
@@ -296,14 +311,12 @@ export class StreetView {
 
   // a floor's kit, a step at a time: the generator yields between the slow parts
   private *kitSteps(level: Level, cut: THREE.Plane[]): Generator<void, THREE.Group> {
-    const kit = buildKit(level, this.biome, this.sheet, this.worlds);
-    yield;
-    const slabs = splitSlabs(kit);
-    batchStatic(kit);
-    yield;
-    inkify(kit, { outline: (m) => !m.userData.noInk && solid(m) });
-    yield;
-    mergeInk(kit, slabs);
+    const kit = yield* buildKitSteps(level, this.biome, this.sheet, this.worlds);
+    const slabs = yield* splitSteps(kit);
+    yield* batchSteps(kit);
+    yield* inkSteps(kit, { outline: (m) => !m.userData.noInk && solid(m) });
+    yield* mergeInkSteps(kit, slabs);
+    if (sliceDone()) yield;
     clipKit(kit, cut);
     this.kitInk(kit);
     this.wetKit(kit);
@@ -319,7 +332,7 @@ export class StreetView {
     root.visible = false;
     const cut = cutPlanes();
     cut[0].constant = -x; // its kit keeps x >= the join
-    const a: Ahead = { root, level, seed, floor, kit: null, job: null, night: new NightCity(), gates: new GateFx(), sirens: new SirenFx(), cut, at: new THREE.Vector2(x, y) };
+    const a: Ahead = { root, level, seed, floor, kit: null, job: null, night: new NightCity(), gates: new GateFx(), sirens: new SirenFx(), cut, at: new THREE.Vector2(x, y), uploads: [] };
     a.job = this.kitSteps(level, cut);
     this.aheads.set(key, a);
     this.scene.add(root);
@@ -333,8 +346,10 @@ export class StreetView {
   dropAheads(keep: string[]): void {
     for (const [key, a] of this.aheads) {
       if (keep.includes(key)) continue;
+      a.job?.return(new THREE.Group()); // ends its build (and lets go of what the build was using)
       this.scene.remove(a.root);
       if (a.kit) disposeKit(a.kit);
+      a.night.dispose();
       this.aheads.delete(key);
     }
   }
@@ -351,12 +366,21 @@ export class StreetView {
     this.cut[1].constant = shown && a ? a.at.x : NO_CUT;
   }
 
-  // one step of the next floor's build, once a frame
+  // the next floor's build, a few milliseconds of it a frame (slice.ts): its scenery, then its textures sent to the
+  // GPU one at a time, so the frame it comes into view uploads nothing
   tick(): void {
     for (const a of this.aheads.values()) {
-      if (!a.job) continue;
-      const step = a.job.next();
-      if (step.done) this.finishAhead(a, step.value);
+      if (!a.job && !a.uploads.length) continue;
+      sliceStart();
+      try {
+        while (a.job && !sliceDone()) {
+          const step = a.job.next();
+          if (step.done) this.finishAhead(a, step.value);
+        }
+        while (!a.job && a.uploads.length && !sliceDone()) this.renderer.initTexture(a.uploads.pop()!);
+      } finally {
+        sliceEnd();
+      }
       return;
     }
   }
@@ -370,11 +394,8 @@ export class StreetView {
     a.sirens.setNight(this.mood?.neon ?? 0);
     a.gates.build(kit);
     a.sirens.build(kit);
-    //upload its textures now, not on the frame it first comes into view
-    kit.traverse((o) => {
-      if (!(o instanceof THREE.Mesh)) return;
-      for (const m of [o.material].flat() as THREE.MeshToonMaterial[]) for (const t of [m.map, m.emissiveMap]) if (t) this.renderer.initTexture(t);
-    });
+    //its textures go up over the next frames (tick), not on the frame it first comes into view
+    a.uploads = textures(a.root);
   }
 
   // the skater crossed into the floor ahead: it becomes this floor, at the world's origin, and everything moves
@@ -397,7 +418,7 @@ export class StreetView {
       root.add(this.kit, this.night.group, this.gates.group, this.sirens.group);
       this.scene.add(root);
       this.cut[1].constant = 0;
-      this.behind = { root, kit: this.kit };
+      this.behind = { root, kit: this.kit, night: this.night };
     }
     //and the next comes to the origin, cut where the last one ended
     this.scene.remove(a.root);
@@ -421,6 +442,7 @@ export class StreetView {
     if (!this.behind) return;
     this.scene.remove(this.behind.root);
     disposeKit(this.behind.kit);
+    this.behind.night.dispose();
     this.behind = null;
     this.cut[0].constant = NO_CUT;
   }
@@ -636,6 +658,32 @@ export class StreetView {
     });
   }
 
+  // the loading screen's last step: compile every shader the scene can draw with, both ways a frame is drawn (into
+  // the fisheye's texture or straight to the screen: three's programs differ by output colour space, so the lens
+  // stepping off used to recompile everything at once), and send every texture to the GPU. Kept for the session
+  // (shader-keep.ts), so the run never stops to compile.
+  async warm(): Promise<void> {
+    const r = this.renderer;
+    const target = new THREE.WebGLRenderTarget(4, 4);
+    const jobs: Promise<unknown>[] = [];
+    for (const t of [target, null]) {
+      r.setRenderTarget(t);
+      for (const s of [this.scene, this.front]) jobs.push(r.compileAsync(s, this.camera));
+    }
+    r.setRenderTarget(null);
+    jobs.push(this.lens.warm(r));
+    await Promise.all(jobs);
+    //drivers finish a compile lazily, on the program's first use: use each one now (its uniforms and attributes)
+    for (const p of (r.info.programs ?? []) as unknown as { getUniforms(): unknown; getAttributes(): unknown }[]) {
+      p.getUniforms();
+      p.getAttributes();
+    }
+    for (const t of [...textures(this.scene), ...textures(this.front)]) r.initTexture(t);
+    this.keep.pin();
+    target.dispose();
+    this.compiled = 0;
+  }
+
   get resolution(): number {
     return this.pixelRatio;
   }
@@ -651,5 +699,6 @@ export class StreetView {
       this.renderer.clearDepth();
       this.renderer.render(this.front, this.camera);
     });
+    this.compiled += this.keep.pin();
   }
 }

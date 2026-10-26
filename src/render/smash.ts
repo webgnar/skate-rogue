@@ -5,6 +5,7 @@
 // the debris is always the thing you hit: its colours, its shapes. The chips take the prop's colours too, with the
 // material's own (glass glints, wood dust, metal sparks) on top. The prop itself is hidden the moment it breaks.
 import * as THREE from 'three';
+import { warmMesh } from './shader-keep';
 import type { Particles, Spray } from './particles';
 import { FX } from './fx-settings';
 
@@ -85,6 +86,7 @@ const stand = [0, 1, 2, 3].map((k) => new THREE.BoxGeometry(0.14 + k * 0.03, 0.1
 
 export class SmashFx {
   readonly group = new THREE.Group();
+  readonly warm = new THREE.Group(); // hidden stand-ins for the loading screen's shader warm-up (goes in the same scene)
   private readonly live: Live[] = [];
   private readonly free: THREE.Mesh[] = [];
   private readonly mats = new Map<string, THREE.MeshToonMaterial>();
@@ -105,7 +107,10 @@ export class SmashFx {
       pieces?(prop: string): Piece[];
       geometry?(prop: string): THREE.BufferGeometry | null; // the prop's vertex-coloured model, for shatter
     },
-  ) {}
+  ) {
+    //both kinds of piece material, compiled on the loading screen
+    this.warm.add(warmMesh(this.material(-1)), warmMesh(this.material(0xffffff)));
+  }
 
   smash(hit: SmashHit): void {
     const stuff = stuffOf(hit.prop);
