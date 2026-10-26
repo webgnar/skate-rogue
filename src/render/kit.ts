@@ -8,7 +8,7 @@ import { buildParkedCars } from './car-damage';
 import { buildProps } from './props';
 import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
-import { STREET_Z } from '../traffic/traffic';
+import { ARCADE, STREET_Z, streetBuilding } from '../traffic/traffic';
 import { TURN_OFF, turnOff } from '../traffic/tunnel';
 import { inHill, type Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
@@ -246,9 +246,22 @@ function build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: 
         continue;
       }
       const t = CITY.facade[randInt(rng, CITY.facade.length)];
+      const onStreet = streetBuilding(level, s);
+      if (onStreet && y >= ARCADE.low) {
+        //out on the street: the upper floors on pillars over a glass lobby, traffic drives under (ARCADE)
+        const soffit = Math.min(ARCADE.soffit, y - ARCADE.deck);
+        const up = y - soffit;
+        const face = city ? facadeMat(Math.round(w), Math.max(1, Math.round(up)), t) : blockMat(Math.round(w), Math.max(1, Math.round(up)), skin);
+        const b = slab(w, up, BLOCK_DEPTH, face, surface('roof', city ? 0x6a6478 : skin.side), brickMat);
+        b.position.set(x, soffit + up / 2, BLOCK_Z);
+        kit.add(b, arcade(toX(s.x0), toX(s.x1), soffit));
+        continue;
+      }
+      //a kiosk out on the street stands in front of the back lane, so traffic pulls out behind it
+      const back = onStreet ? ARCADE.kioskBack : BLOCK_BACK;
       const face = city ? facadeMat(Math.round(w), Math.ceil(y), t) : blockMat(Math.round(w), Math.ceil(y), skin);
-      const b = slab(w, y, BLOCK_DEPTH, face, surface('roof', city ? 0x6a6478 : skin.side), brickMat);
-      b.position.set(x, y / 2, BLOCK_Z);
+      const b = slab(w, y, BLOCK_FRONT - back, face, surface('roof', city ? 0x6a6478 : skin.side), brickMat);
+      b.position.set(x, y / 2, (BLOCK_FRONT + back) / 2);
       kit.add(b);
     } else if (s.kind === 'overpass') {
       //a concrete deck over the street on pillars behind the lane, with a railing at the back
@@ -530,6 +543,52 @@ function crossStreet(x0: number, x1: number, sideMat: THREE.Material): THREE.Gro
     g.add(bar);
   }
   g.add(side, cut);
+  return g;
+}
+
+// A street building's open ground floor (zack's Daley and Federal Plaza photos): a glass lobby at the back of
+// the sidewalk, lit from inside, and steel pillars along the front and at the curb holding up the floors above,
+// with the road running between them. Shared materials, so the floor's batching merges every arcade.
+let lobby: THREE.MeshLambertMaterial | null = null;
+const steel = new THREE.MeshLambertMaterial({ color: 0x3a302c });
+function lobbyMat(): THREE.MeshLambertMaterial {
+  if (lobby) return lobby;
+  const tex = paintTexture(4, 3, (ctx, W, H) => {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#9af0e0');
+    g.addColorStop(1, '#2a9a94');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#e8fff8'; // the lights in the lobby's ceiling
+    for (let px = 4; px < W; px += 10) ctx.fillRect(px, 3, 4, 1);
+    ctx.fillStyle = '#1a2a2c'; // mullions and the transom
+    for (let px = 0; px < W; px += W / 8) ctx.fillRect(px, 0, 1.5, H);
+    ctx.fillRect(0, H * 0.72, W, 1.5);
+    ctx.fillRect(0, 0, W, 2);
+  });
+  tex.wrapS = THREE.RepeatWrapping;
+  lobby = new THREE.MeshLambertMaterial({ map: tex, emissive: 0x1a6a64, emissiveIntensity: 0.6 });
+  return lobby;
+}
+
+function arcade(x0: number, x1: number, soffit: number): THREE.Group {
+  const g = new THREE.Group();
+  const w = x1 - x0;
+  const geo = new THREE.PlaneGeometry(w - 0.2, soffit);
+  const uv = geo.getAttribute('uv') as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setX(i, (uv.getX(i) * (w - 0.2)) / 4);
+  const glass = new THREE.Mesh(geo, lobbyMat());
+  glass.position.set((x0 + x1) / 2, soffit / 2, BLOCK_BACK + 0.15);
+  g.add(glass);
+  const n = Math.max(1, Math.round(w / 3));
+  for (let i = 0; i <= n; i++) {
+    const px = x0 + 0.3 + ((w - 0.6) * i) / n;
+    for (const z of [BLOCK_FRONT - 0.3, STREET_Z.curb - 0.3]) {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(0.45, soffit, 0.45), steel);
+      p.position.set(px, soffit / 2, z);
+      g.add(p);
+    }
+  }
   return g;
 }
 

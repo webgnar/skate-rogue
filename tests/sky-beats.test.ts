@@ -54,7 +54,7 @@ describe('sky beats', () => {
       for (const f of [7, 12]) {
         const level = validatedFloor(seed, f, { twist: floorTwist(seed, f), hills: true, danger: 2 }).level;
         const sim = new FloorSim(level);
-        const pilot = new Pilot('high');
+        const pilot = new Pilot('ref'); // the reference bot the validator rolls floors for
         for (let n = 0; n < 7200 && sim.state === 'skate'; n++) sim.step(pilot.input(sim));
         expect(sim.state).toBe('exit');
       }

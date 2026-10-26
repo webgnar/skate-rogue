@@ -3,7 +3,7 @@
 // before canals, parked cars and glass, so they never sit where the street can't hold them.
 import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
-import { inHill, isStreetAt, type Car, type Level } from '../physics/level';
+import { inHill, isStreetAt, type Car, type Level, type Surface } from '../physics/level';
 import { CROSS, CrossCar, type Intersection } from './cross';
 import { CarDoor, STOP, type BusStop } from './street';
 import { TUNNEL, groundAt, mouthX, mouths } from './tunnel';
@@ -41,6 +41,27 @@ export const STREET_Z = {
   lamp: -2.45, // street lamps, signals and the L's columns, at the curb
   walk: -2.8, // where people stand and stroll, and the bus stops and wanted posters
 };
+
+// The buildings out on the street: a rooftop over street, off the hills. From ARCADE.low tiles up one stands on
+// pillars over a glass lobby at the back of the sidewalk, as Chicago's plazas do, and traffic drives under it
+// between the pillars (zack, 2026-10-26: "cuz cars are driving through them"). A lower one is a kiosk, too low to
+// drive under, so it stands in front of the back lane and vehicles pull out behind it.
+export const ARCADE = {
+  low: 2, // tiles: a rooftop this high or more stands on pillars
+  soffit: 2.6, // tiles: the underside of its upper floors, at most (a bus is 2.25)
+  deck: 0.7, // tiles: its upper floors are at least this thick
+  kioskBack: -0.6, // z: a kiosk's back face, just in front of the back lane
+};
+
+// a building out on the street (see ARCADE)
+export function streetBuilding(level: Level, s: Surface): boolean {
+  if (s.kind !== 'roof' || s.el || s.sky || s.top || level.streetY - s.y < TILE / 2 || inHill(level, s.x0)) return false;
+  for (let x = s.x0 + TILE / 2; x < s.x1; x += TILE) if (isStreetAt(level, x)) return true;
+  return false;
+}
+
+// one too low for traffic to drive under
+export const isKiosk = (level: Level, s: Surface) => streetBuilding(level, s) && level.streetY - s.y < ARCADE.low * TILE;
 
 export const TRAFFIC = {
   carW: 2 * TILE,
@@ -103,6 +124,7 @@ export class Traffic {
   noBrake = false; // Spoofed Plate: robotaxis don't brake for the skater
   readonly cross: CrossCar[]; // cars crossing at intersections
   readonly doors: CarDoor[]; // back-lane parked cars' doors
+  private readonly kiosks: Surface[]; // vehicles pull out behind these (ARCADE)
   private nextStop = 0;
   private next = 0;
   private ids = 0;
@@ -115,10 +137,12 @@ export class Traffic {
     doors: number[] = [],
   ) {
     this.cross = intersections.map((i) => new CrossCar(i, level.streetY));
+    this.kiosks = level.surfaces.filter((s) => isKiosk(level, s));
     this.doors = doors.map((x) => new CarDoor(x, level.streetY));
   }
 
   private blockedAt(x0: number, x1: number): boolean {
+    if (this.kiosks.some((k) => k.x1 > x0 && k.x0 < x1)) return true;
     for (let x = x0; x <= x1; x += TILE / 2) if (!isStreetAt(this.level, x)) return true;
     if (this.level.cars.some((c) => c.x1 > x0 && c.x0 < x1)) return true;
     if (this.level.glass.some((g) => g.x1 > x0 && g.x0 < x1)) return true;
