@@ -1,7 +1,8 @@
 // The 2.5D view: renderer, Lou Gnar's camera (see camera.ts), lights, sky and skyline.
 import * as THREE from 'three';
 import type { Level } from '../physics/level';
-import { CamDrift, DYN_CAM, LouZoom, framing, type Framing } from './camera';
+import { CAM, CamDrift, DYN_CAM, LouZoom, Rhythm, framing, type Framing } from './camera';
+import { LENS, Lens, lensSource, lensWiden } from './lens';
 import { buildKit, toX, toY } from './kit';
 import { NightCity } from './night';
 import { FX } from './fx-settings';
@@ -123,6 +124,9 @@ export class StreetView {
   private mood: Mood | null = null;
   readonly zoom = new LouZoom();
   readonly drift = new CamDrift();
+  readonly rhythm = new Rhythm();
+  private readonly lens = new Lens();
+  private lensK = 0; // the fisheye's strength this frame (lens.ts)
   private camX = 0;
   private camY = 2;
   private lagY = 0; // world units the camera trails the feet in y, easing to 0 (a soft follow on jumps and drops)
@@ -442,12 +446,18 @@ export class StreetView {
     //zoom is a dolly: the trick/grind zoom (scaled down on phones), the drift's air and speed pull-out and landing
     //kick, and a slam's punch. The lens widens as the camera rushes in and narrows as it backs off
     const trick = 1 + (this.zoom.zoom - 1) * f.punch;
-    const zoom = trick * this.drift.pull * (1 + this.drift.kick * 0.1) * (1 + this.punchAmt * 0.35);
-    const fov = f.fov + (zoom - 1) * DYN_CAM.zoomFov + this.drift.fovAdd + this.punchAmt * 10;
+    const rhythm = CAM.rhythm && !FX.reduceMotion;
+    const zoom = trick * this.drift.pull * (1 + this.drift.kick * 0.18) * (1 + this.punchAmt * 0.5) * (rhythm ? this.rhythm.zoom : 1);
+    //the fisheye: its resting strength plus the rhythm's. A stronger lens also dollies in with a wider field of
+    //view (Lou keeps their size), so there's more round the edges for it to bend
+    this.lensK = FX.tier === 'low' ? 0 : Math.min(1, CAM.lens + (rhythm ? this.rhythm.lens : 0));
+    const fov = f.fov + (zoom - 1) * DYN_CAM.zoomFov + this.drift.fovAdd + this.punchAmt * 16 + this.lensK * LENS.fov;
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
     const viewH = f.viewH / zoom;
     this.dist = Math.max(DYN_CAM.minDist, viewH / (2 * tanHalf));
-    this.camera.fov = (2 * Math.atan(viewH / (2 * this.dist)) * 180) / Math.PI;
+    //and the lens drawn wider still by its swell, so Lou keeps their size
+    const tanY = lensWiden(this.lensK, viewH / (2 * this.dist), this.camera.aspect);
+    this.camera.fov = (2 * Math.atan(tanY) * 180) / Math.PI;
     this.camera.updateProjectionMatrix();
     //a slam shakes the camera, dying off fast
     const sx = (Math.random() - 0.5) * this.shakeAmt;
@@ -455,11 +465,15 @@ export class StreetView {
     this.shakeAmt *= Math.pow(0.86, dt * 60);
     //a little above the skater looking down at them, so the street reads in depth. The whole view pans ahead and up
     //so Lou sits left of and below centre (framing): more street ahead, the wires and roofs above
-    const panX = f.lead * viewH * this.camera.aspect * 0.5;
-    const panY = f.low * viewH * 0.5 - this.lagY;
+    //(through the lens: pan so Lou lands on that spot of the bent picture)
+    const [lx, ly] = lensSource(this.lensK, tanY * this.camera.aspect, tanY, f.lead, f.low);
+    const panX = lx * this.dist;
+    const panY = ly * this.dist - this.lagY;
     const cx = this.camX + panX + sx;
     const cy = this.camY + panY + sy;
-    this.camera.position.set(cx, cy + this.dist * 0.18, this.dist);
+    //at speed the camera swings round behind Lou to look down the street ahead (the drift's yaw)
+    const yaw = this.drift.yaw;
+    this.camera.position.set(cx - this.dist * Math.sin(yaw), cy + this.dist * 0.18, 0.25 + (this.dist - 0.25) * Math.cos(yaw));
     this.camera.lookAt(cx - sx * 0.4, cy - sy * 0.4, 0.25);
     this.camera.rotateZ(this.punchAmt * this.punchRoll * 0.1);
     this.punchAmt *= Math.pow(0.91, dt * 60);
@@ -588,9 +602,11 @@ export class StreetView {
 
   render(): void {
     this.renderer.info.reset(); // count both passes
-    this.renderer.clear();
-    this.renderer.render(this.scene, this.camera);
-    this.renderer.clearDepth();
-    this.renderer.render(this.front, this.camera);
+    this.lens.render(this.renderer, this.camera, this.lensK, FX.pixel > 1, () => {
+      this.renderer.clear();
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.clearDepth();
+      this.renderer.render(this.front, this.camera);
+    });
   }
 }

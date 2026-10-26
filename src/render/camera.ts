@@ -43,7 +43,7 @@ export const PHONE_CAM = {
   portraitFov: 74, // tall screen, so a tall lens: about 40 degrees across
   lead: [0.22, 0.42], // landscape, portrait: Lou sits left of centre so more street ahead shows
   low: [0.12, 0.14], // landscape, portrait: Lou sits below centre, the roofs, wires and the L above in view
-  punch: 0.6, // trick and grind zooms at this share of their strength: the frame is tight already
+  punch: 1, // trick and grind zooms at this share of their strength (zack 2026-10-25: "zoom effects More")
 };
 
 export function framing(w: number, h: number): Framing {
@@ -57,13 +57,18 @@ export function framing(w: number, h: number): Framing {
 export const DYN_CAM = {
   airFrom: 0.35, // seconds in the air before the camera starts backing off
   airFull: 1.0, // and fully backed off by this long
-  airPull: 0.2, // zoom out this much in big air (shows where you'll land)
-  speedPull: 0.14, // and this much at full flow
-  speedFov: 9, // degrees the lens opens at full flow
-  zoomFov: 32, // degrees of lens per unit of zoom: punch in = wider, pull out = narrower (the dolly zoom)
+  airPull: 0.28, // zoom out this much in big air (shows where you'll land)
+  speedPull: 0.18, // and this much at full flow
+  speedFov: 12, // degrees the lens opens at full flow
+  zoomFov: 45, // degrees of lens per unit of zoom: punch in = wider, pull out = narrower (the dolly zoom)
   pullIn: 2.2, // easing rates
   pullOut: 1.2,
   kickDecay: 0.86, // a landing kick dies off by this per 60 Hz frame
+  yawFrom: 1.25, // times cruising speed where the camera starts swinging to look ahead (zack, 2026-10-25)
+  yawFull: 2.2, // fully swung by this
+  yaw: 0.24, // radians (about 14 degrees)
+  yawIn: 1.2, // easing rates: swing round slowly, come back a bit quicker
+  yawOut: 2,
   minDist: 6, // the camera never dollies closer than this (the foreground rows start at z 4.35)
 };
 
@@ -71,14 +76,18 @@ export class CamDrift {
   pull = 1; // multiplies the zoom: under 1 backs off
   fovAdd = 0; // degrees on top of the lens
   kick = 0; // 0..1 landing punch, decaying
+  yaw = 0; // radians the camera has swung round to look ahead, at speed
   private airT = 0;
 
   land(impact: number): void {
     this.kick = Math.max(this.kick, Math.min(1, impact));
   }
 
-  // flow 0..1 (speed over cruising, as the speed lines use)
-  update(dt: number, mode: Mode, flow: number): void {
+  // flow 0..1 (speed over cruising, as the speed lines use); speed: times cruising speed
+  update(dt: number, mode: Mode, flow: number, speed = 1): void {
+    const swing = Math.min(1, Math.max(0, (speed - DYN_CAM.yawFrom) / (DYN_CAM.yawFull - DYN_CAM.yawFrom)));
+    const yaw = DYN_CAM.yaw * swing * swing * (3 - 2 * swing);
+    this.yaw += (yaw - this.yaw) * (1 - Math.exp(-(yaw > this.yaw ? DYN_CAM.yawIn : DYN_CAM.yawOut) * dt));
     this.airT = mode === 'air' ? this.airT + dt : 0;
     const air = Math.min(1, Math.max(0, (this.airT - DYN_CAM.airFrom) / (DYN_CAM.airFull - DYN_CAM.airFrom)));
     const target = (1 - DYN_CAM.airPull * air) * (1 - DYN_CAM.speedPull * flow);
@@ -92,6 +101,7 @@ export class CamDrift {
     this.pull = 1;
     this.fovAdd = 0;
     this.kick = 0;
+    this.yaw = 0;
     this.airT = 0;
   }
 }
@@ -145,4 +155,65 @@ export class LouZoom {
 // tiles of height to show for a screen aspect at zoom 1: the full box height, or more when the screen is narrower
 export function viewHeight(aspect: number): number {
   return Math.max(LOU_CAM.viewH, (LOU_CAM.viewH * LOU_CAM.viewAspect) / aspect);
+}
+
+// The camera's rhythm (zack, 2026-10-25: "fisheye FOV and zoom to add to the rhythm of the game"). On top of the
+// framing and the drift, the camera breathes with what the player does:
+// - a pop bulges the lens and backs off a touch, so leaving the ground feels like a breath in
+// - a combo winds the camera in step by step (and bends the lens a little more each trick), the tension of a line,
+//   and lets it all go when the combo banks or slams
+// - speed bends the lens (the fisheye of a filmer running alongside)
+// CAM sets the lens's resting strength and whether the rhythm runs; ?lens=0..1 and ?rhythm=0 set them from the URL.
+export const CAM = { lens: 0.5, rhythm: true }; // half fisheye by default (camera thread pick, 2026-10-26)
+
+export function initCam(params: URLSearchParams): void {
+  const lens = Number(params.get('lens'));
+  if (params.has('lens') && Number.isFinite(lens)) CAM.lens = Math.min(1, Math.max(0, lens));
+  if (params.get('rhythm') === '0') CAM.rhythm = false;
+}
+
+export const RHYTHM = {
+  popLens: 0.45, // lens bulge on a pop, dying off
+  popZoom: 0.1, // and how far it backs off
+  popDecay: 5, // per second
+  comboSteps: 6, // a combo this long is fully wound
+  comboZoom: 0.2, // zoom in when fully wound
+  comboLens: 0.2,
+  windIn: 3, // easing rates: wind up fast, let go slower
+  letGo: 1.6,
+  speedLens: 0.3, // lens at full flow
+};
+
+export class Rhythm {
+  private pop = 0;
+  private wind = 0;
+  private windTarget = 0;
+  private flow = 0;
+
+  popped(): void {
+    this.pop = 1;
+  }
+
+  combo(n: number): void {
+    this.windTarget = Math.min(1, n / RHYTHM.comboSteps);
+  }
+
+  update(dt: number, flow: number): void {
+    this.pop *= Math.exp(-RHYTHM.popDecay * dt);
+    const rate = this.windTarget > this.wind ? RHYTHM.windIn : RHYTHM.letGo;
+    this.wind += (this.windTarget - this.wind) * (1 - Math.exp(-rate * dt));
+    this.flow += (flow - this.flow) * (1 - Math.exp(-2 * dt));
+  }
+
+  get zoom(): number {
+    return (1 - RHYTHM.popZoom * this.pop) * (1 + RHYTHM.comboZoom * this.wind);
+  }
+
+  get lens(): number {
+    return RHYTHM.popLens * this.pop + RHYTHM.comboLens * this.wind + RHYTHM.speedLens * this.flow;
+  }
+
+  reset(): void {
+    this.pop = this.wind = this.windTarget = this.flow = 0;
+  }
 }

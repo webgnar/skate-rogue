@@ -577,6 +577,7 @@ export class Game {
     if (!from) {
       this.view.zoom.reset();
       this.view.drift.reset();
+      this.view.rhythm.reset();
       this.view.follow(this.skater.x, this.skater.y);
       this.sprite.play('push');
     }
@@ -1260,7 +1261,9 @@ export class Game {
     }
     this.speedLines.update(dt, this.view.camera, FX.reduceMotion ? 0 : flow, gnar && !FX.reduceMotion);
     //the camera backs off in big air and at speed (reduce motion keeps the frame still)
-    this.view.drift.update(dt, FX.reduceMotion ? 'roll' : sk.mode, FX.reduceMotion ? 0 : flow);
+    this.view.drift.update(dt, FX.reduceMotion ? 'roll' : sk.mode, FX.reduceMotion ? 0 : flow, skating && !FX.reduceMotion ? speed / PHYS.baseSpeed : 1);
+    this.view.rhythm.combo(skating ? this.run.combo : 0);
+    this.view.rhythm.update(dt, skating ? flow : 0);
     this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
     if (gnar) {
@@ -1447,6 +1450,7 @@ export class Game {
     const wasGnar = this.run.gnar;
     const bank = this.run.onEvent(e, this.skater.hsp);
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
+    if (e.type === 'ollie' || e.type === 'hop' || e.type === 'kicker') this.view.rhythm.popped();
     switch (e.type) {
       case 'trick':
         this.visor.ping();
