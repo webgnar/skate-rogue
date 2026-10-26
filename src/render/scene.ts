@@ -133,7 +133,10 @@ export class StreetView {
   private lagY = 0; // world units the camera trails the feet in y, easing to 0 (a soft follow on jumps and drops)
   private lastY = 2;
   private dist = 22;
-  private frame: Framing = framing(16, 9);
+  private frame: Framing = framing(16, 9); // the framing on screen now, gliding to frameTo after a rotation
+  private frameTo: Framing = this.frame;
+  private readonly frameS = { viewH: new Spring(16), fov: new Spring(40), lead: new Spring(0), low: new Spring(0), punch: new Spring(1) };
+  private viewPx = 0; // the canvas's css height at the last resize (0: never sized)
   private pixelRatio: number; // what the renderer draws at: autoRatio, or coarser for the chunky look (FX.pixel)
   private autoRatio: number; // the device's ratio, lowered when frames stay slow
   private slowMs = 0;
@@ -443,7 +446,7 @@ export class StreetView {
     this.sirens.update(dt);
     this.camY = toY(this.level, py);
     //soft in y: the camera trails a jump or a drop a little and catches up fast, never letting the feet off screen
-    const f = this.frame;
+    const f = this.glideFrame(snap, cdt);
     this.lagY = snap ? 0 : this.lagY + (this.camY - this.lastY);
     this.lastY = this.camY;
     this.lagY *= Math.exp(-9 * cdt);
@@ -534,11 +537,34 @@ export class StreetView {
     const h = this.canvas.clientHeight;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    //desktop: Lou Gnar's 800 x 600 box. Phones: in close with a wide lens, upright or sideways (camera.ts framing)
-    this.frame = framing(w, h);
+    //desktop: Lou Gnar's 800 x 600 box. Phones: in close with a wide lens, upright or sideways (camera.ts framing).
+    //Turning the phone flips the page's shape in one go, so the camera keeps Lou the size they were on screen and
+    //glides from there to the new framing (glideFrame) instead of jumping to it
+    this.frameTo = framing(w, h);
+    if (this.viewPx > 0 && h > 0) this.frameS.viewH.x *= h / this.viewPx;
+    else this.snapFrame();
+    this.viewPx = h;
     this.camera.updateProjectionMatrix();
     const buf = this.renderer.getDrawingBufferSize(this.buf);
     setInkResolution(buf.x, buf.y, this.pixelRatio);
+  }
+
+  private snapFrame(): void {
+    const t = this.frameTo;
+    for (const k of ['viewH', 'fov', 'lead', 'low', 'punch'] as const) this.frameS[k].snap(t[k]);
+    this.frame = { ...t };
+  }
+
+  // the framing eased toward the screen's (a rotation's glide takes about a second and a half)
+  private glideFrame(snap: boolean, dt: number): Framing {
+    if (snap) {
+      this.snapFrame();
+      return this.frame;
+    }
+    const t = this.frameTo;
+    const f = this.frame;
+    for (const k of ['viewH', 'fov', 'lead', 'low', 'punch'] as const) f[k] = this.frameS[k].step(t[k], SMOOTH.frame, dt);
+    return f;
   }
 
   // when frames stay slow (over 20 ms for 2 s): lower the resolution, and before it drops below 1, switch to the
