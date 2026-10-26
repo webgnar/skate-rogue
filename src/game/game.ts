@@ -33,6 +33,7 @@ import { Particles, TRICK_TRAIL } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
+import { BulletTime, type Moment } from './bullet-time';
 import { Aura, inkify } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
 import { FX } from '../render/fx-settings';
@@ -259,6 +260,7 @@ export class Game {
   private readonly escapeFx = new EscapeFx(this.particles);
   private readonly words = new SoundWords();
   private readonly warp = new TimeWarp();
+  private readonly bullet = new BulletTime();
   private readonly speedLines = new SpeedLines();
   private readonly boonFx = new BoonFx(this.particles);
   readonly smashFx = new SmashFx(this.particles, {
@@ -540,6 +542,7 @@ export class Game {
     this.colDebug?.reset();
     if (!from) {
       this.warp.reset();
+      this.bullet.reset();
       this.particles.clear();
       this.smashFx.clear();
       this.input.clear();
@@ -1057,6 +1060,7 @@ export class Game {
     const scale = this.timeScale * devSpeed();
     const dt = realDt * this.warp.scale * scale;
     this.warp.update(realDt * scale);
+    this.bullet.update(realDt * scale);
     if (this.autopilot && this.state !== 'skate' && this.state !== 'caught') this.botMenu(now);
 
     if (this.state === 'pick') {
@@ -1342,6 +1346,18 @@ export class Game {
     this.particles.debris(x, y, 1);
   }
 
+  // bullet time for a moment (src/game/bullet-time.ts), if it isn't cooling down: true if it started. Reduce motion
+  // skips it, like the slam's hit-stop
+  private bulletTime(moment: Moment | null, combo: number): boolean {
+    if (!moment || FX.reduceMotion) return false;
+    const s = this.bullet.fire(moment, combo, Math.abs(this.skater.hsp) / PHYS.baseSpeed);
+    if (!s) return false;
+    this.warp.hit(0, s.slow, s.ease, s.hold);
+    this.view.zoom.trick();
+    if (moment === 'combo') this.hud.callout(`x${combo} COMBO!`, 'trick');
+    return true;
+  }
+
   // a board mod fired: the effects the sim can't do itself
   private fire(effect: EffectId, slot: number): void {
     this.hud.fire(slot);
@@ -1464,7 +1480,9 @@ export class Game {
       this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));
     }
     const wasGnar = this.run.gnar;
+    const before = this.run.combo;
     const bank = this.run.onEvent(e, this.skater.hsp);
+    if (this.run.combo > before) this.bulletTime(this.bullet.combo(this.run.combo), this.run.combo);
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
     if (e.type === 'ollie' || e.type === 'hop' || e.type === 'kicker') this.view.rhythm.popped();
     switch (e.type) {
@@ -1523,15 +1541,20 @@ export class Game {
         this.view.shake(0.2);
         break;
       case 'near':
-        //a slow-mo beat on a close call (GDD: Camera)
-        this.warp.hit(0, 0.6, 0.35);
+        //a slow-mo beat on a close call (GDD: Camera), bullet time in the middle of a combo
+        if (!this.bulletTime(this.bullet.near(this.run.combo), this.run.combo)) this.warp.hit(0, 0.6, 0.35);
         this.hud.callout('CLOSE CALL!' + combo, 'good');
         break;
-      case 'land':
+      case 'land': {
         this.visor.ping();
+        //a flip caught right before the wheels touch, or a landing flush into a falling slope: bullet time
+        const moment = this.bullet.land(e.quality, e.spare, e.flush);
+        const called = moment === 'clutch' ? 'CLUTCH! ' : moment === 'flush' ? 'FLUSH! ' : '';
+        if (moment) this.bulletTime(moment, before);
+        if (called && !bank) this.hud.callout(called.trim(), 'good');
         if (e.manual) this.hud.callout(this.sprite.manualName + combo, 'trick');
         if (bank) {
-          const how = bank.how === 'sketchy' ? 'SKETCHY ' : bank.how === 'big' ? 'BIG DROP ' : '';
+          const how = called || (bank.how === 'sketchy' ? 'SKETCHY ' : bank.how === 'big' ? 'BIG DROP ' : '');
           this.hud.callout(`${how}+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), bank.how === 'sketchy' ? 'bad' : 'good');
           this.hud.money(this.run.cash, this.run.stoken);
         }
@@ -1554,7 +1577,7 @@ export class Game {
         if (this.flip) {
           const x = toX(this.skater.x);
           const y = toY(this.level, this.skater.y);
-          if (this.clock - this.flip.at < SKETCHY_SECS) {
+          if (this.clock - this.flip.at < SKETCHY_SECS && moment !== 'clutch') {
             this.particles.sketchyLanding(x, y, 1);
             this.view.shake(0.12);
           } else this.particles.cleanLanding(x, y);
@@ -1571,6 +1594,7 @@ export class Game {
           }
         }
         break;
+      }
       case 'slam':
         this.flip = null;
         this.slam();
