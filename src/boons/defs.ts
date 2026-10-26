@@ -49,19 +49,19 @@ export const BOON_COLORS: Record<BoonType, string> = { POP: '#ffd23f', GRIND: '#
 export const BOONS: Boon[] = [
   { id: 'tripleThreat', type: 'POP', name: 'Triple Threat', effect: '+1 jump', max: 1 },
   { id: 'bigPop', type: 'POP', name: 'Big Pop', effect: 'Ollie 20% higher', max: 3 },
-  { id: 'floatyFlip', type: 'POP', name: 'Floaty Flip', effect: 'Half gravity right after a flip trick', max: 1 },
+  { id: 'floatyFlip', type: 'POP', name: 'Boostin', effect: 'Half gravity right after a flip trick', max: 1 }, // id kept from its old name, Floaty Flip (saves and ?boons= links use it)
   { id: 'lateFlip', type: 'POP', name: 'Late Flip', effect: 'Flip tricks always go full height', note: 'even on a quick tap', max: 1 },
-  { id: 'pressureFlip', type: 'POP', name: 'Pressure Flip', effect: 'Keep holding after an ollie to float', note: '30% less gravity after 0.25 s', max: 1 },
+  { id: 'pressureFlip', type: 'POP', name: 'Mad Pop', effect: 'Keep holding after an ollie to float', note: '30% less gravity after 0.25 s', max: 1 }, // id kept from its old name, Pressure Flip
   {
     id: 'strongLegs', type: 'POP', name: 'Strong Legs', effect: 'Tap twice as you land to ollie straight out of it',
     note: 'no waiting for your knees', max: 1,
   },
   { id: 'spareChange', type: 'POP', name: 'Spare Change', effect: 'Every grind banks 1/4 of a bonus jump', note: 'lost when you land', max: 3 },
   { id: 'railMagnet', type: 'GRIND', name: 'Rail Magnet', effect: 'Rails catch you from further away', note: '+48 px', max: 2 },
-  { id: 'grease', type: 'GRIND', name: 'Grease', effect: 'Grind 25% faster', note: 'and hit full grind speed instantly', max: 2 },
-  { id: 'railLaunch', type: 'GRIND', name: 'Rail Launch', effect: 'Ollies off rails pop higher the faster you grind', max: 1 },
-  { id: 'exitWax', type: 'GRIND', name: 'Exit Wax', effect: 'Speed from rails lasts 4x longer', max: 1 },
-  { id: 'feebleFrenzy', type: 'GRIND', name: 'Feeble Frenzy', effect: '+10% grind speed every 0.5 s on one rail', max: 1 },
+  { id: 'grease', type: 'GRIND', name: 'Ledge Butter', effect: 'Grind 25% faster', note: 'and hit full grind speed instantly', max: 2 }, // id kept from its old name, Grease
+  { id: 'railLaunch', type: 'GRIND', name: 'Full Sail', effect: 'Ollies off rails pop higher the faster you grind', max: 1 }, // id kept from its old name, Rail Launch
+  { id: 'exitWax', type: 'GRIND', name: 'Waxed Bearings', effect: 'Speed from rails lasts 4x longer', max: 1 }, // id kept from its old name, Exit Wax
+  { id: 'feebleFrenzy', type: 'GRIND', name: 'More Wax', effect: '+10% grind speed every 0.5 s on one flat ledge or rail', note: 'not down handrails', max: 1 }, // id kept from its old name, Feeble Frenzy
   {
     id: 'ghostRail', type: 'GRIND', name: 'Ghost Rail', effect: 'Rails keep going 4 tiles past their end',
     note: 'for 2 s after you leave', max: 1,

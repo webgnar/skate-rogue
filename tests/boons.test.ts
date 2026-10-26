@@ -94,7 +94,7 @@ describe('POP boons', () => {
     expect(flip(false, 2)).toBeLessThan(flip(false, 60) * 0.7);
   });
 
-  it('Floaty Flip: more hang time after a flip', () => {
+  it('Boostin (floatyFlip): more hang time after a flip', () => {
     const air = (...ids: BoonId[]) => {
       const sk = skater(FLAT, ...ids);
       let f = 0;
@@ -105,7 +105,7 @@ describe('POP boons', () => {
     expect(air('floatyFlip')).toBeGreaterThan(air() + 4);
   });
 
-  it('Pressure Flip: holding past 0.25 s floats, a short hold does not', () => {
+  it('Mad Pop (pressureFlip): holding past 0.25 s floats, a short hold does not', () => {
     const base = peak(skater(FLAT), 120, pressAt(0, 120));
     const pressure = peak(skater(FLAT, 'pressureFlip'), 120, pressAt(0, 120));
     expect(pressure).toBeGreaterThan(base);
@@ -150,7 +150,7 @@ describe('GRIND boons', () => {
     expect(magnet.events.some((e) => e.type === 'grind')).toBe(true);
   });
 
-  it('Grease: grind speed settles 25% higher, right away', () => {
+  it('Ledge Butter (grease): grind speed settles 25% higher, right away', () => {
     const speedAfter = (...ids: BoonId[]) => {
       const sk = skater(RAIL, ...ids);
       sk.x = 16 * TILE + 1 * TILE;
@@ -163,7 +163,7 @@ describe('GRIND boons', () => {
     expect(speedAfter()).toBeLessThan(PHYS.grindSpeed);
   });
 
-  it('Rail Launch: ollies off a rail pop higher', () => {
+  it('Full Sail (railLaunch): ollies off a rail pop higher', () => {
     const popOffRail = (...ids: BoonId[]) => {
       const sk = skater(RAIL, ...ids);
       sk.x = 16 * TILE + 1 * TILE;
@@ -175,7 +175,7 @@ describe('GRIND boons', () => {
     expect(popOffRail('railLaunch')).toBeLessThan(popOffRail() - 1);
   });
 
-  it('Exit Wax: rail speed lasts longer on the ground', () => {
+  it('Waxed Bearings (exitWax): rail speed lasts longer on the ground', () => {
     const carryAfter = (...ids: BoonId[]) => {
       const sk = skater(FLAT, ...ids);
       sk.carry = 8;
@@ -185,7 +185,7 @@ describe('GRIND boons', () => {
     expect(carryAfter('exitWax')).toBeGreaterThan(carryAfter() + 2);
   });
 
-  it('Feeble Frenzy: speed builds the longer you grind one rail', () => {
+  it('More Wax (feebleFrenzy): speed builds the longer you grind one flat rail', () => {
     const sk = skater(RAIL, 'feebleFrenzy', 'grease');
     sk.x = 16 * TILE + 1 * TILE;
     let f = 0;

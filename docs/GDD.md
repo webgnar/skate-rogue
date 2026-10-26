@@ -539,16 +539,16 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 | --- | --- | --- | --- |
 | Triple Threat | POP | +1 jump (QFS Triple Jump) | 1 |
 | Big Pop | POP | +20% ollie height | 3 |
-| Floaty Flip | POP | Gravity is halved while a flip trick animates | 1 |
+| Boostin | POP | Gravity is halved while a flip trick animates | 1 |
 | Late Flip | POP | Air tricks give a full jump, not a smaller hop | 1 |
-| Pressure Flip | POP | Holding ollie longer than 0.5 s pops 40% higher but takes 0.2 s to charge | 1 |
+| Mad Pop | POP | Keep holding after an ollie and gravity drops 30% after 0.25 s, so you float | 1 |
 | Spare Change | POP | Every grind refills +0.25 jump charge above your max | 3 |
 | Strong Legs | POP | Normally a press during the landing's impact (350 ms) is lost. With this, a second tap during it ollies at once | 1 |
 | Rail Magnet | GRIND | Rails pull you in from 48 px further away | 2 |
-| Grease | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
-| Rail Launch | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |
+| Ledge Butter | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
+| Full Sail | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |
 | Sparky | GRIND | Grinding leaves sparks that make cars swerve out of the skate lane | 1 |
-| Feeble Frenzy | GRIND | Each grind trick on one rail adds +10% speed until you leave it | 1 |
+| More Wax | GRIND | +10% grind speed every 0.5 s on one flat ledge, rail or power line, until you leave it. It doesn't build down handrails | 1 |
 | Ghost Rail | GRIND | Your last grind leaves a 2 s ghost rail behind you in the air | 1 |
 | New Wheels | FLOW | +20% base speed and +20% score (QFS New Wheels) | 2 |
 | Bomb Hill | FLOW | Flow speed bleeds off half as fast | 1 |
@@ -569,7 +569,7 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 When you hold two specific boons, a third, rarer card can appear that fuses them, in the spirit of Hades duo
 boons and Noita's spell interactions. Examples:
 
-- **Rail Launch + Big Pop → Rocket Grind:** ollie off a rail at max grind speed and you launch straight up, refilling all jumps at the top.
+- **Full Sail + Big Pop → Rocket Grind:** ollie off a rail at max grind speed and you launch straight up, refilling all jumps at the top.
 - **Ghost Rail + Triple Threat → Sky Line:** every air trick leaves a short ghost rail under you.
 - **Butter + Slingshot → Perpetual Motion:** flow speed never decays.
 

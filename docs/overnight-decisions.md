@@ -547,6 +547,15 @@ and listed it here for review. Any of these can be flipped in the morning.
   - Normally the 350 ms landing impact (PR #169) still eats a press. With Strong Legs, the second press during the impact ends it and pops the ollie on that frame.
   - A single tap still waits, so normal play keeps the lock.
 
+- **Boon renames (zack, 2026-10-26).** Only the display names changed. The ids stay, so saves and `?boons=` links keep working:
+  - Floaty Flip → **Boostin** (`floatyFlip`)
+  - Pressure Flip → **Mad Pop** (`pressureFlip`)
+  - Exit Wax → **Waxed Bearings** (`exitWax`)
+  - Grease → **Ledge Butter** (`grease`)
+  - Rail Launch → **Full Sail** (`railLaunch`)
+  - Feeble Frenzy → **More Wax** (`feebleFrenzy`)
+- **More Wax only builds on flat grinds.** It works on ledges, flat rails, power lines and the L, but not down stairway handrails. "Flat" means a slope under 0.15 (PHYS.frenzyFlat).
+
 ## Models thread: animation
 
 - **Hanging on to the cable car, and the firecracker (2026-10-26).** zack: the arm should reach and grab the car while

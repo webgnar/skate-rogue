@@ -24,11 +24,27 @@ function onRail(drop: number, ids: BoonId[], at = 3 * TILE + 4): Skater {
   return sk;
 }
 
+describe('More Wax (feebleFrenzy) only on flat grinds (zack, 2026-10-26)', () => {
+  const v = (drop: number, ...ids: BoonId[]) => {
+    const sk = onRail(drop, ids);
+    for (let f = 0; f < (drop ? 32 : 70); f++) sk.step(idle); // past the first 30-frame step, still on the rail
+    expect(sk.mode).toBe('rail');
+    return sk.railV;
+  };
+  it('builds speed along a flat power line', () => {
+    expect(v(0, 'feebleFrenzy')).toBeGreaterThan(v(0) * 1.1);
+  });
+  it('adds nothing down a stairway handrail', () => {
+    //a real handrail: half a tile down for every tile along
+    expect(v(272, 'feebleFrenzy')).toBeCloseTo(v(272), 5);
+  });
+});
+
 describe('GRIND boons on curved rails', () => {
   for (const drop of [0, 60]) {
     const kind = drop ? 'a handrail' : 'a power line';
 
-    it(`Grease: faster along ${kind}, from the moment you catch it`, () => {
+    it(`Ledge Butter: faster along ${kind}, from the moment you catch it`, () => {
       const speed = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         expect(sk.mode).toBe('rail');
@@ -57,7 +73,7 @@ describe('GRIND boons on curved rails', () => {
       expect(caught('railMagnet')).toBe(true);
     });
 
-    it(`Rail Launch: an ollie off ${kind} pops higher`, () => {
+    it(`Full Sail: an ollie off ${kind} pops higher`, () => {
       const pop = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         for (let f = 0; f < 20; f++) sk.step(idle);
@@ -75,17 +91,7 @@ describe('GRIND boons on curved rails', () => {
       expect(onRail(drop, []).spare).toBe(0);
     });
 
-    it(`Feeble Frenzy: speed builds along ${kind}`, () => {
-      const v = (...ids: BoonId[]) => {
-        const sk = onRail(drop, ids);
-        for (let f = 0; f < 70; f++) sk.step(idle);
-        expect(sk.mode).toBe('rail');
-        return sk.railV;
-      };
-      expect(v('feebleFrenzy')).toBeGreaterThan(v() * 1.1);
-    });
-
-    it(`Exit Wax: the speed off the end of ${kind} lasts longer`, () => {
+    it(`Waxed Bearings: the speed off the end of ${kind} lasts longer`, () => {
       const carryAfter = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         while (sk.mode === 'rail' || sk.mode === 'air') sk.step(idle);

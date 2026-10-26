@@ -39,9 +39,10 @@ export const PHYS = {
   width: 30, // the board's length, nose to tail (zack, 2026-10-25): what cars, drones and props hit
   height: 48,
   // boons
-  floatyFrames: 24, // Floaty Flip
-  frenzyStep: 0.1, // Feeble Frenzy
-  pressureFrames: 15, // Pressure Flip kicks in after holding this long
+  floatyFrames: 24, // Boostin
+  frenzyStep: 0.1, // More Wax
+  frenzyFlat: 0.15, // More Wax only builds on a grind this flat (slope), not down a handrail (zack)
+  pressureFrames: 15, // Mad Pop kicks in after holding this long
   ghostTiles: 4, // Ghost Rail
   ghostFrames: 120,
   wobbleOver: 1.3, // Speed Wobbles: land faster than this times cruising speed and you slam

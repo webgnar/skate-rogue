@@ -56,11 +56,11 @@ export class Skater {
   hitGlass = new Set<number>();
   events: SkaterEvent[] = [];
   // boon state
-  floatT = 0; // Floaty Flip frames left
+  floatT = 0; // Boostin frames left
   flipped = false; // last jump was a flip trick (Late Flip)
-  holdT = 0; // frames the button has stayed held since the ollie (Pressure Flip)
+  holdT = 0; // frames the button has stayed held since the ollie (Mad Pop)
   spare = 0; // banked bonus jump (Spare Change)
-  onRailT = 0; // frames on the current rail (Feeble Frenzy)
+  onRailT = 0; // frames on the current rail (More Wax)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
   fakie = false; // riding with the other foot forward, after a 180
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
@@ -238,7 +238,7 @@ export class Skater {
   }
 
   private ollie(): void {
-    //Rail Launch: grind speed adds to the pop
+    //Full Sail: grind speed adds to the pop
     const grindSpeed = this.mode === 'grind' ? Math.abs(this.hsp) : this.mode === 'rail' ? this.railV : 0;
     //the pop adds to the way the ground was already carrying you: up off a bank, down off a handrail
     const carried = this.groundVsp();
@@ -414,7 +414,9 @@ export class Skater {
       this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : cap;
     } else if (this.mode === 'grind') {
       this.onRailT++;
-      const frenzy = this.mods.feebleFrenzy ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
+      //More Wax: builds on a flat ledge, not a sloped one
+      const flat = !this.surface || Math.abs(surfaceSlope(this.surface)) < PHYS.frenzyFlat;
+      const frenzy = this.mods.feebleFrenzy && flat ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
       const mat = MATERIALS[this.material];
       //a High-Tech conveyor rail runs you faster, or holds you back
       const belt = this.surface?.conveyor ?? 0;
@@ -427,8 +429,8 @@ export class Skater {
     //vertical speed
     if (this.mode === 'air') {
       let grav = this.grav;
-      if (this.floatT > 0) grav *= 0.5; // Floaty Flip
-      if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Pressure Flip
+      if (this.floatT > 0) grav *= 0.5; // Boostin
+      if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Mad Pop
       //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
       if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - this.grav));
       else this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
@@ -766,7 +768,7 @@ export class Skater {
     this.railD = d;
     //speed along the rail: our velocity projected on its direction, always rolling forward
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.hsp * t.tx + this.vsp * t.ty));
-    //Grease: straight up to full grind speed, the same as on a flat ledge
+    //Ledge Butter: straight up to full grind speed, the same as on a flat ledge
     if (this.mods.grindInstant) this.railV = Math.min(PHYS.railMax, Math.max(this.railV, PHYS.grindSpeed * this.mods.grindScale * this.gear.grind));
     this.feel.railEntry(Math.abs(this.vsp * t.tx - this.hsp * t.ty), rail.material, this.looseTrucks);
     this.trickCatch = 0;
@@ -786,10 +788,11 @@ export class Skater {
     //gravity pulls along the rail: downhill (ty > 0 in y-down) speeds you up (QFS player_rail_state)
     this.railV += this.grav * t.ty * PHYS.railGravMult;
     //and friction under the trucks, from how hard the rail pushes back (the cos of its angle)
-    //(Grease and anything else that grinds faster cuts it; Moon Shoes adds to it)
+    //(Ledge Butter and anything else that grinds faster cuts it; Moon Shoes adds to it)
     this.railV -= (this.grav * MATERIALS[rail.material].mu * t.tx) / this.mods.grindScale;
-    //Feeble Frenzy: a little more speed every 30 frames on the same rail
-    if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0) this.railV *= 1 + PHYS.frenzyStep;
+    //More Wax: a little more speed every 30 frames on the same rail, where it runs flat (a power line, the L), not down a
+    //handrail (zack, 2026-10-26)
+    if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0 && Math.abs(t.ty) < PHYS.frenzyFlat) this.railV *= 1 + PHYS.frenzyStep;
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.railV));
     this.railD += this.railV;
 
