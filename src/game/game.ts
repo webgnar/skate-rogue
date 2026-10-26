@@ -43,7 +43,8 @@ import { VisorGlint, VISOR_TINT } from '../render/visor-glint';
 import { flatGeometry, propPieces } from '../render/models';
 import { hideProp, propsFor, restyle } from '../render/props';
 import { BIOMES, biomeMood, type BiomeId } from '../render/biomes';
-import { clockFor, mixMood, moodAt, rainLevel, rainy, type Mood } from '../render/atmosphere';
+import { SkaterLight } from '../render/skater-light';
+import { clockFor, mixMood, moodAt, rainLevel, rainy, WEATHER, type Mood } from '../render/atmosphere';
 import { puddleSpots } from '../render/puddles';
 import { FloorSim, type FloorEvent } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
@@ -279,6 +280,7 @@ export class Game {
   private perfText = '';
   private readonly aura: Aura;
   private readonly visor: VisorGlint;
+  private readonly skaterLight: SkaterLight;
   private gnarGlow = 0; // 0..1, eases with the gnar state
   private clock = 0;
   private readonly puddleRes = new THREE.Vector2();
@@ -327,6 +329,8 @@ export class Game {
     inkify(this.sprite.mesh, { toon: false });
     this.aura = new Aura(this.sprite.mesh);
     this.visor = new VisorGlint(this.sprite.mesh);
+    this.skaterLight = new SkaterLight(this.sprite.mesh);
+    this.view.front.add(this.skaterLight.group);
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
@@ -497,8 +501,8 @@ export class Game {
   //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level.
   //`blend`: ease into it from what's on screen (rolling on from the last floor) rather than switch
   private applyMood(blend = false): number {
-    const rain = BIOMES[this.biome].dry ? 0 : rainLevel(this.seed, this.floor); // no rain under the sea, indoors or in space
-    const mood = moodAt(clockFor(this.floor));
+    const rain = WEATHER.rain ?? (BIOMES[this.biome].dry ? 0 : rainLevel(this.seed, this.floor)); // no rain under the sea, indoors or in space
+    const mood = moodAt(WEATHER.clock ?? clockFor(this.floor));
     const look = biomeMood(rain > 0 ? rainy(mood) : mood, this.biome);
     if (blend && this.shown) this.moodBlend = { from: this.shown.mood, fromRain: this.shown.rain, to: look, toRain: rain, t: 0 };
     else {
@@ -515,6 +519,7 @@ export class Game {
     this.trafficView.beams.setNight(look.neon);
     this.visor.setNight(look.neon, VISOR_TINT[this.biome]);
     this.phoneFx.setNight(look.neon);
+    this.skaterLight.setNight(look.neon, rain);
   }
 
   private blendMood(dt: number): void {
@@ -1268,6 +1273,7 @@ export class Game {
     this.view.rhythm.update(dt, skating ? flow : 0);
     this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
+    this.skaterLight.update(dt, this.sprite.mesh.position, (x, y, out) => this.view.night.lights.lightAt(x, y, out), this.gnarGlow > 0.01, this.view.resolution);
     if (gnar) {
       const p = this.sprite.mesh.position;
       this.particles.trail(p.x - 0.2, p.y + 0.9, GNAR_TRAIL, dt, this.clock);

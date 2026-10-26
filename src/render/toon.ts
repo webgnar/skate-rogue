@@ -270,4 +270,13 @@ export class Aura {
     c.setHSL((0.13 + t * 0.35) % 1, 1, 0.6);
     c.lerp(this.ink, 1 - amount);
   }
+
+  // a steady outline: amount 0..1 fades it in, `width` CSS px past the ink at full (the night rim, skater-light.ts)
+  steady(amount: number, width: number, color: THREE.Color, pixelRatio: number): void {
+    const on = amount > 0.01;
+    for (const h of this.hulls) h.visible = on;
+    if (!on) return;
+    this.mat.uniforms.uWidth.value = (INK.width + width * amount) * pixelRatio;
+    (this.mat.uniforms.uColor.value as THREE.Color).copy(color).lerp(this.ink, 1 - amount);
+  }
 }

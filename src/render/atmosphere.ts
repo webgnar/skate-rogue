@@ -90,6 +90,16 @@ export function rainsOn(seed: number, floor: number): boolean {
 
 export const RAIN = { drizzle: 0.5, rain: 1, downpour: 1.6 };
 
+// test overrides from the URL: ?clock=0..1 sets the time of day (1 is night), ?rain=0|drizzle|rain|downpour (or a
+// number) the weather, on every floor
+export const WEATHER: { clock: number | null; rain: number | null } = { clock: null, rain: null };
+export function applyWeatherParams(params: URLSearchParams): void {
+  const c = params.get('clock');
+  if (c !== null && Number.isFinite(Number(c))) WEATHER.clock = Math.min(1, Math.max(0, Number(c)));
+  const r = params.get('rain');
+  if (r !== null) WEATHER.rain = r in RAIN ? RAIN[r as keyof typeof RAIN] : Math.min(2, Math.max(0, Number(r) || (r === '' ? RAIN.rain : 0)));
+}
+
 // how hard it rains on a floor: 0 (dry), drizzle, rain or downpour
 export function rainLevel(seed: number, floor: number): number {
   if (!rainsOn(seed, floor)) return 0;

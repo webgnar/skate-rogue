@@ -669,3 +669,16 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] If it stutters, does `?fx=low` fix it? That tier halves the particles, hides the lamp cones and drops the
       street kit's outlines.
 - [ ] Buildings keep their black outlines after the draw-call cut, and their windows still light at night.
+
+## Lighting at night and in rain
+
+Test URLs: `?floor=13&rain=rain` (night in rain), `?floor=10&clock=0.62` (dusk), `?clock=1&rain=0` (dry night on any floor).
+`?clock=0..1` sets the time of day and `?rain=0|drizzle|rain|downpour` the weather on every floor.
+
+- [ ] At night and in rain Lou reads clearly: a cool key light on his front and a thin pale rim outside the ink
+- [ ] Riding through a street lamp's pool tints Lou in that lamp's colour from above, and it fades as he rolls out
+- [ ] Street lights come in five kinds: curb post, tall cobra head reaching over the street, twin-globe acorn post,
+      wall light on the building fronts, and cobra arms on the hills' power poles
+- [ ] At dusk only some lamps are on; the ones about to switch flick on as you roll up to them
+- [ ] Pools are wide and land on the road where you skate, tilted with the hill
+- [ ] `?calm` or reduce flashing: lamps fade on with no stutter
