@@ -29,6 +29,7 @@ export type FloorEvent =
   | { type: 'decoy' } // the Decoy boon pulled the cruiser back
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
+  | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
   | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' }
   // a car hop dented a car (src/traffic/damage.ts): x is its middle and y its roof, px; stage 3 is wrecked
@@ -250,8 +251,13 @@ export class FloorSim {
     if (!sk.hopped || !events.some((e) => e.type === 'hop')) return;
     const car = sk.hopped;
     sk.hopped = null;
-    //an open door takes hops but no damage: its car is back in the other lane
-    if (this.traffic.doors.some((d) => d.box === car)) return;
+    //an open door takes hops but no damage (its car is back in the other lane): the hop slams it shut
+    const door = this.traffic.doors.find((d) => d.box === car);
+    if (door) {
+      door.slam();
+      this.events.push({ type: 'doorSlam', x: (car.x0 + car.x1) / 2, y: car.roof });
+      return;
+    }
     const parked = car;
     const p = this.level.cars.indexOf(parked);
     const v: Vehicle | undefined = p < 0 ? this.traffic.vehicles.find((t) => t === car) : undefined;

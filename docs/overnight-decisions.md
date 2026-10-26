@@ -536,6 +536,8 @@ and listed it here for review. Any of these can be flipped in the morning.
   - Checked and working on curved rails: Rail Magnet, Rail Launch, Spare Change, Feeble Frenzy, Exit Wax, Slingshot and Rocket Grind.
   - POP, FLOW, COOL, LUCK and STREET boons read their mods outside the rail code, and their existing tests pass.
 
+- **Hop a car door and it slams shut (zack, 2026-10-26).** Landing on top of an open door still pops you up like a car hop, and now the door also slams shut. It closes in 5 frames, bounces once off the frame and stays shut, so it's no longer a hazard. You get a "DOOR SLAM!" callout, a puff of dust, a jolt and a low impact sound.
+
 ## Models thread: animation
 
 - **Hanging on to the cable car, and the firecracker (2026-10-26).** zack: the arm should reach and grab the car while

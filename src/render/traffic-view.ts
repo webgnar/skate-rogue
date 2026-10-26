@@ -42,7 +42,7 @@ export class TrafficView {
   private rotors: THREE.Mesh[] = [];
   private crossings: { car: THREE.Group; post: THREE.Group; red: THREE.Mesh; green: THREE.Mesh }[] = [];
   private stopSigns: THREE.Group[] = [];
-  private doorMeshes: { door: CarDoor; mesh: THREE.Group; pivot: THREE.Group; bang: THREE.Sprite }[] = [];
+  private doorMeshes: { door: CarDoor; mesh: THREE.Group; pivot: THREE.Group; bang: THREE.Sprite; shutAt?: number }[] = [];
   private blinkers = new Map<number, THREE.Mesh>();
   private stages = new Map<number, Stage>(); // car-hop damage by vehicle id (car-damage.ts)
   private cruiserGap = 10; // tiles behind the skater
@@ -288,15 +288,25 @@ export class TrafficView {
   syncStreet(level: Level, traffic: Traffic): void {
     if (this.stopSigns.length !== level.busStops.length) this.stopSigns = level.busStops.map((s) => this.makeStopSign(level, s.x));
     if (this.doorMeshes.length !== traffic.doors.length) this.doorMeshes = traffic.doors.map((d) => this.makeDoor(level, d));
-    for (const { door, pivot, bang } of this.doorMeshes) {
+    for (const d of this.doorMeshes) {
+      const { door, pivot, bang } = d;
       const open = at(door, 'open');
-      pivot.visible = open > 0.02;
-      //hinged at the front of the driver's door, the back edge flung out toward the camera, across your lane, with a
-      //little overshoot and settle so it slams open
-      const k = open - 1;
-      pivot.rotation.y = DOOR_OPEN * (1 + 2.70158 * k * k * k + 1.70158 * k * k);
+      if (door.slammed) {
+        //hopped on: slammed straight shut, then it bounces off the frame once and settles
+        if (open <= 0 && d.shutAt === undefined) d.shutAt = this.t;
+        const since = d.shutAt === undefined ? 0 : (this.t - d.shutAt) / 1000;
+        const rebound = d.shutAt === undefined ? 0 : 0.14 * Math.exp(-since * 9) * Math.abs(Math.sin(since * 22));
+        pivot.rotation.y = DOOR_OPEN * Math.max(open, rebound);
+        pivot.visible = open > 0.02 || rebound > 0.005;
+      } else {
+        pivot.visible = open > 0.02;
+        //hinged at the front of the driver's door, the back edge flung out toward the camera, across your lane, with a
+        //little overshoot and settle so it slams open
+        const k = open - 1;
+        pivot.rotation.y = DOOR_OPEN * (1 + 2.70158 * k * k * k + 1.70158 * k * k);
+      }
       //the "!" over the car: it pops up big, bobs while you're warned, and stays a moment once the door's open
-      bang.visible = door.warn > 0 && open < 1;
+      bang.visible = door.warn > 0 && open < 1 && !door.slammed;
       if (bang.visible) {
         const pop = Math.min(1, door.warn / 6);
         const s = 2.2 * (pop < 1 ? pop * 1.3 : 1 + 0.12 * Math.sin(this.t / 70));
