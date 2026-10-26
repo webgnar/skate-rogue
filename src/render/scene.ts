@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { Level } from '../physics/level';
 import { CAM, CamDrift, DYN_CAM, LouZoom, Rhythm, SMOOTH, Spring, framing, type Framing } from './camera';
 import { LENS, Lens, lensSource, lensWiden } from './lens';
+import { tilt } from './tilt';
 import { buildKit, toX, toY } from './kit';
 import { NightCity } from './night';
 import { FX } from './fx-settings';
@@ -127,7 +128,7 @@ export class StreetView {
   readonly rhythm = new Rhythm();
   private readonly lens = new Lens();
   private lensK = 0; // the fisheye's strength this frame (lens.ts)
-  private readonly smooth = { zoom: new Spring(1), fov: new Spring(0), lens: new Spring(CAM.lens), yaw: new Spring(0), roll: new Spring(0) };
+  private readonly smooth = { zoom: new Spring(1), fov: new Spring(0), lens: new Spring(CAM.lens), yaw: new Spring(0), roll: new Spring(0), tilt: new Spring(0) };
   private camX = 0;
   private camY = 2;
   private lagY = 0; // world units the camera trails the feet in y, easing to 0 (a soft follow on jumps and drops)
@@ -460,7 +461,7 @@ export class StreetView {
     //the fisheye: its resting strength plus the rhythm's. A stronger lens also dollies in with a wider field of
     //view (Lou keeps their size), so there's more round the edges for it to bend
     this.lensK = THREE.MathUtils.clamp(ease(this.smooth.lens, FX.tier === 'low' ? 0 : Math.min(1, CAM.lens + (rhythm ? this.rhythm.lens : 0)), SMOOTH.lens), 0, 1);
-    const fov = f.fov + (zoom - 1) * DYN_CAM.zoomFov + ease(this.smooth.fov, this.drift.fovAdd + this.punchAmt * 16, SMOOTH.fov) + this.lensK * LENS.fov;
+    const fov = f.fov + (zoom - 1) * (zoom > 1 ? DYN_CAM.zoomFov : DYN_CAM.zoomOutFov) + ease(this.smooth.fov, this.drift.fovAdd + this.punchAmt * 16, SMOOTH.fov) + this.lensK * LENS.fov;
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
     const viewH = f.viewH / zoom;
     this.dist = Math.max(DYN_CAM.minDist, viewH / (2 * tanHalf));
@@ -485,6 +486,8 @@ export class StreetView {
     this.camera.position.set(cx - this.dist * Math.sin(yaw), cy + this.dist * 0.18, 0.25 + (this.dist - 0.25) * Math.cos(yaw));
     this.camera.lookAt(cx - sx * 0.4, cy - sy * 0.4, 0.25);
     this.camera.rotateZ(ease(this.smooth.roll, this.punchAmt * this.punchRoll * 0.1, SMOOTH.roll));
+    //gyro tilt: the world stays level with the real ground while the phone turns (tilt.ts)
+    this.camera.rotateZ(ease(this.smooth.tilt, tilt.roll, SMOOTH.tilt));
     this.punchAmt *= Math.pow(0.91, cdt * 60);
     //far away: barely moves. After a floor joins on, the skyline eases back down to where it sits
     this.skyDrop *= Math.exp(-dt / 5);

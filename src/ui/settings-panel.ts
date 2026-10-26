@@ -2,6 +2,7 @@
 // chunky pixel look and the three accessibility switches. Each change applies at once and is saved.
 import { FX, PIXEL_MAX, saveFx, type FxSettings } from '../render/fx-settings';
 import { SETTINGS, saveSettings, buzz } from './settings';
+import { tilt } from '../render/tilt';
 import { canFullscreen, isApp, isFull, isIPhone, setFullscreen, watchFullscreen } from './fullscreen';
 
 type Toggle = 'haptics' | 'reduceMotion' | 'reduceFlashing' | 'heatCue';
@@ -26,6 +27,7 @@ export class SettingsPanel {
       <button class="row" data-toggle="haptics"><span>VIBRATION</span><b></b></button>
       <button class="row" data-fullscreen hidden><span>FULL SCREEN</span><b></b></button>
       <div class="fshelp" hidden>On iPhone: tap Share <b>&#x2191;</b> then <b>Add to Home Screen</b>, and play from the Gnar Run icon. It opens with no browser bars.</div>
+      <button class="row" data-tilt hidden><span>GYRO TILT</span><b></b></button>
       <button class="row" data-quality><span>EFFECTS</span><b></b></button>
       <label class="row"><span>PIXELS</span><input type="range" min="1" max="${PIXEL_MAX}" step="1" data-pixel><b></b></label>
       <button class="row" data-toggle="reduceMotion"><span>REDUCE MOTION</span><b></b></button>
@@ -52,7 +54,9 @@ export class SettingsPanel {
       const b = (e.target as Element).closest<HTMLElement>('button');
       if (!b) return;
       const key = b.dataset.toggle as Toggle | undefined;
-      if (b.dataset.fullscreen !== undefined) {
+      if (b.dataset.tilt !== undefined) {
+        void tilt.toggle().then(() => this.render());
+      } else if (b.dataset.fullscreen !== undefined) {
         if (canFullscreen()) setFullscreen(!isFull());
         else this.el.querySelector<HTMLElement>('.fshelp')!.hidden = !this.el.querySelector<HTMLElement>('.fshelp')!.hidden;
       } else if (key === 'haptics') {
@@ -80,6 +84,11 @@ export class SettingsPanel {
     fs.hidden = isApp() || !(canFullscreen() || isIPhone());
     fs.classList.toggle('on', isFull());
     fs.querySelector('b')!.textContent = canFullscreen() ? (isFull() ? 'ON' : 'OFF') : 'HOW?';
+    //gyro tilt: on phones and tablets, where there's a gyro to read
+    const tl = this.el.querySelector<HTMLElement>('[data-tilt]')!;
+    tl.hidden = !(typeof DeviceOrientationEvent !== 'undefined' && matchMedia('(pointer: coarse)').matches);
+    tl.classList.toggle('on', SETTINGS.tilt);
+    tl.querySelector('b')!.textContent = SETTINGS.tilt ? 'ON' : 'OFF';
     for (const r of this.el.querySelectorAll<HTMLInputElement>('[data-vol]')) r.value = String(Math.round(SETTINGS[r.dataset.vol as 'sound' | 'music'] * 100));
     for (const b of this.el.querySelectorAll<HTMLElement>('[data-toggle]')) {
       const key = b.dataset.toggle as Toggle;

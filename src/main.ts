@@ -35,7 +35,8 @@ import { DEV, loadDev, saveDev, slower, stepFrame } from './ui/dev';
 import { DevPanel } from './ui/dev-panel';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
-import { buzz, loadSettings } from './ui/settings';
+import { SETTINGS, buzz, loadSettings } from './ui/settings';
+import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
 
 const base = import.meta.env.BASE_URL;
@@ -356,6 +357,8 @@ async function start() {
   initCam(params);
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   loadSettings();
+  if (params.has('gyro')) SETTINGS.tilt = params.get('gyro') !== '0'; //?gyro: gyro tilt on (?gyro=0 off)
+  tilt.start();
   const look = () => {
     document.getElementById('app')!.classList.toggle('noflash', FX.reduceFlashing);
     document.getElementById('app')!.classList.toggle('calm', FX.reduceMotion);
