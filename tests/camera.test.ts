@@ -96,3 +96,22 @@ describe('fisheye lens', () => {
     expect(lensWiden(1, 0.5, 2)).toBeGreaterThan(0.5); // drawn wider so the middle keeps its size
   });
 });
+
+describe('camera springs', () => {
+  it('glide to a jumped target with no snap, settle, and stay stable on a slow frame', async () => {
+    const { Spring } = await import('../src/render/camera');
+    const s = new Spring(1);
+    let last = 1;
+    let maxStep = 0;
+    for (let i = 0; i < 60; i++) {
+      const x = s.step(1.5, 9, 1 / 60);
+      maxStep = Math.max(maxStep, Math.abs(x - last));
+      last = x;
+    }
+    expect(maxStep).toBeLessThan(0.05); // a 0.5 jump spread over many frames
+    expect(s.x).toBeGreaterThan(1.48);
+    expect(s.x).toBeLessThanOrEqual(1.5 + 1e-3); // critically damped: no overshoot
+    s.step(1, 9, 0.25);
+    expect(Number.isFinite(s.x) && s.x > 0.9 && s.x < 1.5).toBe(true);
+  });
+});

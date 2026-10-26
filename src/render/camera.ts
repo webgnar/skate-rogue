@@ -64,9 +64,9 @@ export const DYN_CAM = {
   pullIn: 2.2, // easing rates
   pullOut: 1.2,
   kickDecay: 0.86, // a landing kick dies off by this per 60 Hz frame
-  yawFrom: 1.25, // times cruising speed where the camera starts swinging to look ahead (zack, 2026-10-25)
-  yawFull: 2.2, // fully swung by this
-  yaw: 0.24, // radians (about 14 degrees)
+  yawFrom: 1.1, // times cruising speed where the camera starts swinging to look ahead (zack, 2026-10-25; more, 10-26)
+  yawFull: 1.9, // fully swung by this
+  yaw: 0.42, // radians (about 24 degrees)
   yawIn: 1.2, // easing rates: swing round slowly, come back a bit quicker
   yawOut: 2,
   minDist: 6, // the camera never dollies closer than this (the foreground rows start at z 4.35)
@@ -164,7 +164,7 @@ export function viewHeight(aspect: number): number {
 //   and lets it all go when the combo banks or slams
 // - speed bends the lens (the fisheye of a filmer running alongside)
 // CAM sets the lens's resting strength and whether the rhythm runs; ?lens=0..1 and ?rhythm=0 set them from the URL.
-export const CAM = { lens: 0.5, rhythm: true }; // half fisheye by default (camera thread pick, 2026-10-26)
+export const CAM = { lens: 1, rhythm: true }; // full fisheye by default (zack, 2026-10-26)
 
 export function initCam(params: URLSearchParams): void {
   const lens = Number(params.get('lens'));
@@ -217,3 +217,34 @@ export class Rhythm {
     this.pop = this.wind = this.windTarget = this.flow = 0;
   }
 }
+
+// A critically damped spring (zack, 2026-10-26: "camera movement needs to be smooth... can't be jumping"). Every
+// camera value the effects push around (zoom, lens, field of view, the speed swing, a slam's roll) goes through one
+// of these, so a punch or a combo letting go glides in and out with no snap in position or speed. omega is how
+// stiff it is (rad/s): it settles in about 4 / omega seconds. Stepped in small slices so a slow frame stays stable.
+export class Spring {
+  v = 0;
+  constructor(public x = 0) {}
+
+  step(target: number, omega: number, dt: number): number {
+    for (let left = dt; left > 1e-6; left -= 1 / 120) {
+      const h = Math.min(left, 1 / 120);
+      this.v += (omega * omega * (target - this.x) - 2 * omega * this.v) * h;
+      this.x += this.v * h;
+    }
+    return this.x;
+  }
+
+  snap(x: number): number {
+    this.v = 0;
+    return (this.x = x);
+  }
+}
+
+export const SMOOTH = {
+  zoom: 9, // rad/s: a punch rises in about a fifth of a second and settles in under half
+  fov: 8,
+  lens: 7,
+  yaw: 4, // the speed swing is slow and heavy
+  roll: 10,
+};
