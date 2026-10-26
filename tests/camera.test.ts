@@ -83,3 +83,16 @@ describe('phone framing', () => {
     expect(d.kick).toBeLessThan(0.02);
   });
 });
+
+describe('fisheye lens', () => {
+  it('k 0 is flat; the corners stay put and the middle swells as k rises', async () => {
+    const { lensSource, lensSwell, lensWiden } = await import('../src/render/lens');
+    expect(lensSource(0, 1.2, 0.6, 0.5, 0.3)).toEqual([0.6, 0.18]);
+    const [cx, cy] = lensSource(1, 1.2, 0.6, 1, 1);
+    expect(cx).toBeCloseTo(1.2);
+    expect(cy).toBeCloseTo(0.6);
+    expect(lensSwell(0, 1.2, 0.6)).toBe(1);
+    expect(lensSwell(1, 1.2, 0.6)).toBeGreaterThan(1.2);
+    expect(lensWiden(1, 0.5, 2)).toBeGreaterThan(0.5); // drawn wider so the middle keeps its size
+  });
+});

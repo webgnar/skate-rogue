@@ -13,6 +13,7 @@ import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
+import { initCam } from './render/camera';
 import { isBiome } from './render/biomes';
 import { props } from './render/props';
 import { SkaterRig, isSkater } from './render/skater-rig';
@@ -343,6 +344,7 @@ async function start() {
   const momentum = params.get('momentum');
   if (MOMENTUM_MODES.includes(momentum as MomentumMode)) MOMENTUM.mode = momentum as MomentumMode;
   if (params.has('drafts')) applyClipEdits(loadDrafts());
+  initCam(params);
   initFx(params, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   loadSettings();
   const look = () => {

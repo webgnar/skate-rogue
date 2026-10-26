@@ -523,10 +523,16 @@ html, body {
 #callout { font-family: 'Bangers', 'Arial Black', sans-serif; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; letter-spacing: 0.06em; }
 #app.calm #combobox { transition: none; }
 
+/* phones: Lou is big on screen now, so the HUD gets out of the way (zack, 2026-10-25: "gameplay UI should shrink
+   if lou grows") */
+@media (max-height: 500px) and (orientation: landscape) {
+  #hud { --u: clamp(6px, min(1.9vh, 1vw), 10px); }
+}
+
 /* a phone held upright (zack, 2026-10-25: both ways round are first class). The top bar packs into two rows,
    the logo shrinks to the floor tag, the meters stack full width under it; board mods sit over the gear wear */
 @media (orientation: portrait) and (max-width: 700px) {
-  #hud { --u: clamp(7px, 2.3vw, 11px); }
+  #hud { --u: clamp(6px, 1.8vw, 9px); }
   #top { grid-template-columns: auto 1fr auto; row-gap: calc(var(--u) * 0.7); }
   #logo { grid-row: 1; }
   #logo .mark { font-size: calc(var(--u) * 2.6); }
