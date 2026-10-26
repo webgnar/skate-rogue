@@ -1,60 +1,67 @@
 import { describe, expect, it } from 'vitest';
-import { BULLET, BulletTime, intensity } from '../src/game/bullet-time';
+import { BULLET, BulletTime, intensity, landCall } from '../src/game/bullet-time';
 import { TimeWarp } from '../src/game/time-warp';
 import { FLAT, levelOf } from './helpers';
 import { Skater, type SkaterEvent } from '../src/physics/skater';
 
 describe('bullet time', () => {
-  it('reads a landing: a last-moment catch is a clutch, flush into a falling slope is flush, sketchy is neither', () => {
-    const b = new BulletTime();
-    expect(b.land('clean', 2, undefined)).toBe('clutch');
-    expect(b.land('heavy', BULLET.clutchFrames, undefined)).toBe('clutch');
-    expect(b.land('clean', BULLET.clutchFrames + 1, undefined)).toBeNull();
-    expect(b.land('clean', undefined, 0.2)).toBe('flush');
-    expect(b.land('clean', undefined, 0.6)).toBeNull();
-    expect(b.land('sketchy', 1, 0.1)).toBeNull();
-    expect(b.land('slam', 1, 0.1)).toBeNull();
+  it('calls a landing: a last-moment catch is a clutch, flush into a falling slope is flush, sketchy is neither', () => {
+    expect(landCall('clean', 2, undefined)).toBe('clutch');
+    expect(landCall('heavy', BULLET.clutchFrames, undefined)).toBe('clutch');
+    expect(landCall('clean', BULLET.clutchFrames + 1, undefined)).toBeNull();
+    expect(landCall('clean', undefined, 0.2)).toBe('flush');
+    expect(landCall('clean', undefined, 0.6)).toBeNull();
+    expect(landCall('sketchy', 1, 0.1)).toBeNull();
+    expect(landCall('slam', 1, 0.1)).toBeNull();
   });
 
-  it('marks combo milestones once each, and starts over with a new combo', () => {
+  it('only huge combos slow things down, once per milestone, and a new combo starts over', () => {
     const b = new BulletTime();
-    const hits = [];
-    for (let n = 1; n <= 21; n++) hits.push(b.combo(n));
-    expect(hits.filter(Boolean)).toHaveLength(2); // x10 and x20
-    expect(b.combo(1)).toBeNull();
-    for (let n = 2; n < 10; n++) b.combo(n);
-    expect(b.combo(10)).toBe('combo');
+    const at: number[] = [];
+    for (let n = 1; n <= 30; n++) {
+      if (b.combo(n, 1)) at.push(n);
+      b.update(BULLET.cooldown);
+    }
+    expect(at).toEqual([12, 18, 24, 30]);
+    expect(b.combo(1, 1)).toBeNull();
+    for (let n = 2; n < 12; n++) expect(b.combo(n, 1)).toBeNull();
+    expect(b.combo(12, 1)).not.toBeNull();
   });
 
-  it('only makes a close call bullet time inside a combo', () => {
+  it('a close call over a car is bullet time too, sharing the cooldown', () => {
     const b = new BulletTime();
-    expect(b.near(0)).toBeNull();
-    expect(b.near(BULLET.nearCombo)).toBe('near');
+    expect(b.near(0, 1)?.hold).toBeCloseTo(BULLET.nearHold);
+    expect(b.near(0, 1)).toBeNull();
+    expect(b.combo(12, 1)).toBeNull();
   });
 
-  it('cools down so it stays rare, and goes deeper the more intense the run', () => {
+  it('cools down so it stays rare, and goes deeper the bigger the combo', () => {
     const b = new BulletTime();
-    const calm = b.fire('clutch', 0, 1)!;
-    expect(calm.slow).toBeCloseTo(BULLET.moments.clutch.slow);
-    expect(b.fire('flush', 0, 1)).toBeNull();
-    b.update(BULLET.cooldown - 0.1);
-    expect(b.fire('flush', 0, 1)).toBeNull();
-    b.update(0.2);
-    const wild = b.fire('clutch', 20, 3)!;
-    expect(wild.slow).toBeLessThan(calm.slow);
-    expect(wild.hold).toBeGreaterThan(calm.hold);
-    expect(intensity(0, 1)).toBe(0);
+    const first = b.combo(12, 1)!;
+    expect(first.slow).toBeCloseTo(BULLET.slow);
+    expect(b.combo(18, 1)).toBeNull(); // cooling down
+    b.update(BULLET.cooldown);
+    b.combo(1, 1);
+    for (let n = 2; n < 24; n++) b.combo(n, 1);
+    const huge = b.combo(24, 3);
+    expect(huge).toBeNull(); // x12 and x18 were passed on the way: x24 only fires once cooled
+    expect(intensity(BULLET.comboFirst, 1)).toBe(0);
     expect(intensity(BULLET.comboFull, BULLET.speedFull)).toBe(1);
   });
 
-  it('holds the slow-mo before easing out', () => {
+  it('glides into the slow-mo instead of jolting, holds, then eases out', () => {
     const w = new TimeWarp();
-    w.hit(0, 0.3, 0.5, 0.4);
-    w.update(0.3);
-    expect(w.scale).toBeCloseTo(0.3);
-    w.update(0.2); // 0.1 s into the ease
-    expect(w.scale).toBeGreaterThan(0.3);
+    w.glide(0.3, 0.4, 0.5, 0.6);
+    expect(w.scale).toBe(1);
+    w.update(0.1);
     expect(w.scale).toBeLessThan(1);
+    expect(w.scale).toBeGreaterThan(0.8); // gentle at first
+    w.update(0.2);
+    expect(w.scale).toBeCloseTo(0.4);
+    w.update(0.4);
+    expect(w.scale).toBeCloseTo(0.4); // holding
+    w.update(0.3);
+    expect(w.scale).toBeGreaterThan(0.4);
     w.update(0.5);
     expect(w.scale).toBe(1);
   });

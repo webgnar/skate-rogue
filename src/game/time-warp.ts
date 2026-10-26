@@ -5,6 +5,9 @@ export class TimeWarp {
   private slowT = 0;
   private slowLen = 0;
   private slowFrom = 1;
+  private enterT = 0;
+  private enterLen = 0;
+  private enterFrom = 1;
 
   // freeze for `freeze` s, then start at `slow` x speed, hold it for `hold` s and ease to 1x over `ease` s
   hit(freeze: number, slow: number, ease: number, hold = 0): void {
@@ -12,6 +15,14 @@ export class TimeWarp {
     this.slowFrom = Math.min(slow, this.scaleAfterFreeze());
     this.slowLen = ease;
     this.slowT = ease + hold;
+    this.enterT = 0;
+  }
+
+  // glide down to `slow` x speed over `enter` s (no jolt, unlike a hit), hold it for `hold` s, ease to 1x over `ease` s
+  glide(enter: number, slow: number, hold: number, ease: number): void {
+    this.enterFrom = this.scaleAfterFreeze();
+    this.hit(0, slow, ease, hold);
+    this.enterT = this.enterLen = enter;
   }
 
   get scale(): number {
@@ -23,6 +34,10 @@ export class TimeWarp {
   }
 
   private scaleAfterFreeze(): number {
+    if (this.enterT > 0) {
+      const k = 1 - this.enterT / this.enterLen; // 0 at the start of the glide, 1 at the bottom
+      return this.enterFrom + (this.slowFrom - this.enterFrom) * k * k * (3 - 2 * k);
+    }
     if (this.slowT <= 0) return 1;
     if (this.slowT > this.slowLen) return this.slowFrom; // still holding
     const k = 1 - this.slowT / this.slowLen; // 0 at the start of the slow-mo, 1 at the end
@@ -35,6 +50,10 @@ export class TimeWarp {
       const spill = dt - this.freeze;
       this.freeze = Math.max(0, this.freeze - dt);
       if (spill > 0) this.slowT = Math.max(0, this.slowT - spill);
+    } else if (this.enterT > 0) {
+      const spill = dt - this.enterT;
+      this.enterT = Math.max(0, this.enterT - dt);
+      if (spill > 0) this.slowT = Math.max(0, this.slowT - spill);
     } else {
       this.slowT = Math.max(0, this.slowT - dt);
     }
@@ -43,5 +62,6 @@ export class TimeWarp {
   reset(): void {
     this.freeze = 0;
     this.slowT = 0;
+    this.enterT = 0;
   }
 }
