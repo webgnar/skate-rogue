@@ -200,7 +200,7 @@ export interface Level {
   crossings: Intersection[]; // cross streets with cross traffic (src/traffic/cross.ts)
   gravity?: number; // the district's gravity, a share of QFS's (BIOME_GRAVITY in src/physics/feel.ts); left out = 1
   busStops: BusStop[]; // where a bus pulls in (src/traffic/street.ts)
-  doors: number[]; // parked cars (by index) whose door swings open as you come up
+  doors: number[]; // cars parked in the back lane (their back end's x) whose door flies open across your lane as you come up
   bounty?: { x: number }; // a wanted poster's bounty (src/run/bounty.ts)
   tutorial?: { x: number; text: string }[]; // the tutorial floor's prompts (src/gen/tutorial.ts)
   currents?: { x0: number; x1: number; push: number }[]; // Atlantis: the water pushes you in the air (src/gen/twists.ts)

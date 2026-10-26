@@ -59,11 +59,15 @@ describe('bus stops', () => {
 });
 
 describe('car doors', () => {
-  it('open on some plain parked cars from floor 2', () => {
+  it('are on cars parked in the back lane from floor 2, with a clear run up in your lane', () => {
     for (const l of floors(1)) expect(l.doors).toHaveLength(0);
     const ls = floors(4, 12);
     expect(ls.filter((l) => l.doors.length).length).toBeGreaterThan(1);
-    for (const l of ls) for (const i of l.doors) expect(l.cars[i].model).toBeUndefined();
+    for (const l of ls)
+      for (const x of l.doors) {
+        expect(l.doors.length).toBeLessThanOrEqual(DOOR.most);
+        expect(l.cars.some((c) => c.x1 > x - 4 * TILE && c.x0 < x + DOOR.carW + TILE)).toBe(false);
+      }
   });
 
   const withDoor = () => {
@@ -73,13 +77,23 @@ describe('car doors', () => {
     return { l, sim, door: sim.traffic.doors[0] };
   };
 
-  it('swing open as you come up, and stay open', () => {
+  it('warn with a "!" as you come up, then swing open and stay open', () => {
     const { sim, door } = withDoor();
     sim.traffic.step(door.car.x0 - DOOR.range - TILE);
+    expect(door.warn).toBe(0);
+    for (let f = 0; f < DOOR.warnFrames; f++) sim.traffic.step(door.car.x0 - DOOR.range);
+    expect(door.warn).toBe(DOOR.warnFrames);
     expect(door.open).toBe(0);
     for (let f = 0; f < DOOR.swingFrames; f++) sim.traffic.step(door.car.x0 - DOOR.range);
     expect(door.open).toBe(1);
     expect(sim.traffic.doorBoxes).toContain(door.box);
+    //only the door is in your lane: the car behind it never is
+    expect(sim.traffic.doorBoxes).not.toContain(door.car);
+  });
+
+  it('is open before you get there, even coming in fast', () => {
+    const fast = PHYS.baseSpeed * 2;
+    expect((DOOR.warnFrames + DOOR.swingFrames / 2) * fast).toBeLessThan(DOOR.range - DOOR.carW);
   });
 
   it('rolling into an open door slams; landing on its edge pops you up', () => {

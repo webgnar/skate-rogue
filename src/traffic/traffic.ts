@@ -102,7 +102,7 @@ export class Traffic {
   vehicles: Vehicle[] = [];
   noBrake = false; // Spoofed Plate: robotaxis don't brake for the skater
   readonly cross: CrossCar[]; // cars crossing at intersections
-  readonly doors: CarDoor[]; // parked cars' doors
+  readonly doors: CarDoor[]; // back-lane parked cars' doors
   private nextStop = 0;
   private next = 0;
   private ids = 0;
@@ -115,7 +115,7 @@ export class Traffic {
     doors: number[] = [],
   ) {
     this.cross = intersections.map((i) => new CrossCar(i, level.streetY));
-    this.doors = doors.map((i) => new CarDoor(level.cars[i]));
+    this.doors = doors.map((x) => new CarDoor(x, level.streetY));
   }
 
   private blockedAt(x0: number, x1: number): boolean {
