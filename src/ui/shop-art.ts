@@ -6,8 +6,10 @@ import type { GearPart } from '../run/gear';
 
 const base = import.meta.env.BASE_URL;
 
-type Pic = 'board' | 'pop' | 'flip' | 'grind' | 'car' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe';
-type Glyph = 'up' | 'down' | 'right' | 'curl' | 'clock' | 'speed' | 'ring' | 'sparks' | 'plus' | 'flipv' | string;
+export type Pic =
+  | 'board' | 'pop' | 'flip' | 'grind' | 'car' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe'
+  | 'cruiser' | 'robotaxi' | 'bus' | 'boxtruck' | 'drone' | 'chopper' | 'wanted' | 'signal' | 'rocket';
+export type Glyph = 'up' | 'down' | 'right' | 'curl' | 'clock' | 'speed' | 'ring' | 'sparks' | 'plus' | 'flipv' | string;
 
 const MOD_ART: Record<ModId, [Pic, Glyph?]> = {
   onOllie: ['pop', 'up'],
@@ -49,16 +51,23 @@ const SVG_GLYPHS: Record<string, string> = {
   sparks: '<path d="M16 2l3 9 9-3-6 8 8 5-10 1 1 9-5-8-6 7 1-9-9-2 9-4-4-8 8 4z"/>',
   plus: '<path d="M12 3h8v9h9v8h-9v9h-8v-9H3v-8h9z"/>',
   flipv: '<path d="M11 3 3 13h5v6h6v-6h5zM21 29l8-10h-5v-6h-6v6h-5z"/>',
+  magnet: '<path d="M4 4h8v12a4 4 0 0 0 8 0V4h8v12a12 12 0 0 1-24 0z"/><path d="M4 4h8v5H4zM20 4h8v5h-8z" fill="#ff4a5a"/>',
+  ghost: '<path d="M6 29V14a10 10 0 0 1 20 0v15l-4-3-3 3-3-3-3 3-3-3z" fill="#e8f8ff"/><circle cx="12" cy="14" r="2" fill="#120a16"/><circle cx="20" cy="14" r="2" fill="#120a16"/>',
+  flame: '<path d="M16 2c2 6 9 8 9 17a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 2 4 3 4 0-4 1-7 2-10z" fill="#ff8a1f"/>',
+  shield: '<path d="M16 2 4 7v8c0 8 5 13 12 15 7-2 12-7 12-15V7z" fill="#7df0ff"/>',
+  note: '<path d="M12 4l16-3v20a4 4 0 1 1-3-4V8l-10 2v14a4 4 0 1 1-3-4z"/>',
+  skull: '<path d="M16 2C8 2 4 8 4 14c0 4 2 6 4 7v5h16v-5c2-1 4-3 4-7 0-6-4-12-12-12z" fill="#f4f0f6"/><circle cx="11" cy="14" r="3" fill="#120a16"/><circle cx="21" cy="14" r="3" fill="#120a16"/><path d="M13 26v3M16 26v3M19 26v3" stroke-width="2"/>',
+  waves: '<path d="M2 10q4-5 8 0t8 0 8 0 6-2M2 18q4-5 8 0t8 0 8 0 6-2M2 26q4-5 8 0t8 0 8 0 6-2" fill="none" stroke-width="3.5" stroke-linecap="round"/>',
 };
 
-function glyph(g: Glyph | undefined): string {
+export function glyph(g: Glyph | undefined): string {
   if (!g) return '';
   const svg = SVG_GLYPHS[g];
   if (svg) return `<svg class="glyph g-${g}" viewBox="0 0 32 32" aria-hidden="true">${svg}</svg>`;
   return `<span class="glyph word">${g}</span>`;
 }
 
-function pic(p: Pic): string {
+export function pic(p: Pic): string {
   return p === 'shoe' ? SHOE : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
 }
 

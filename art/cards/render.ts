@@ -102,6 +102,20 @@ async function main(): Promise<Record<string, string>> {
     pivot.add(rail);
   });
   out.car = shot(named(cars, 'Sedan'), [0.25, -0.6, 0], 0.85);
+  //for the boon cards (src/ui/boon-art.ts): the chase, the street and a landmark
+  const street = await load('street.glb');
+  const drone = await load('drone.glb');
+  const chopper = await load('chopper.glb');
+  const landmarks = await load('landmarks.glb');
+  out.cruiser = shot(named(cars, 'Cruiser'), [0.25, -0.6, 0], 0.85);
+  out.robotaxi = shot(named(cars, 'Robotaxi'), [0.25, -0.6, 0], 0.85);
+  out.bus = shot(named(cars, 'Bus'), [0.2, -0.5, 0], 0.9);
+  out.boxtruck = shot(named(cars, 'BoxTruck'), [0.2, 0.6, 0], 0.9);
+  out.drone = shot(drone.clone(true), [0.4, -0.5, 0], 0.85);
+  out.chopper = shot(chopper.clone(true), [0.2, -0.6, 0], 0.9);
+  out.wanted = shot(named(street, 'WantedBoard'), [0.1, -0.35, 0], 0.85);
+  out.signal = shot(named(street, 'TrafficSignal'), [0.1, -0.5, 0], 0.9);
+  out.rocket = shot(named(landmarks, 'Rocket'), [0.1, -0.4, 0], 0.9);
   out.coin = shot(named(pickups, 'Coin'), [0.2, -0.5, 0], 0.7);
   out.stoken = shot(named(pickups, 'Stoken'), [0.2, -0.5, 0], 0.7);
   return out;

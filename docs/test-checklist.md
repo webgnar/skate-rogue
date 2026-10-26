@@ -85,6 +85,11 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 - [ ] **Curses (from floor 6, about one offer in three):** a dashed purple card marked CURSED. Moon Shoes (ollies 60% higher, grinds 30% slower), Wanted (double Stoken, Heat rises twice as fast), Speed Wobbles (40% faster cruising, but landing well over cruising speed, e.g. off a kicker, slams you). *Tuning:* is Speed Wobbles too harsh?
 - [ ] **Duos:** pink cards that show up once you hold both halves. Rocket Grind (Rail Launch + Big Pop: ollie off a full-speed grind launches higher and gives every jump back at the top), Sky Line (Ghost Rail + Triple Threat: each flip leaves a rail under you), Perpetual Motion (Butter + Slingshot: extra speed never bleeds off).
 - [ ] **Remove a curse** at the underground spot lifts it off whole.
+- [ ] **Card look (openspec ui4-boon-look):** every boon card has a picture from the game (board, wheels, cruiser, bus, drone, chopper, rocket...) with a white or yellow glyph over a burst in its type colour. Tell me any picture that doesn't fit its boon.
+- [ ] A curse is a dashed purple card; a duo has a pink double edge, says DUO, and names both halves on a line under its name.
+- [ ] The underground spot's three cards (Lay Low, Swap a Boon, Remove a Curse) have pictures too.
+- [ ] The boons you hold show as small badges with a picture, top left and on the pause card.
+- [ ] Phone upright: the pick cards wrap into two rows and are big enough to read. Phone sideways: three in a row fit with REROLL under them.
 
 ## Traffic
 
