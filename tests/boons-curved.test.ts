@@ -91,7 +91,7 @@ describe('GRIND boons on curved rails', () => {
       expect(onRail(drop, []).spare).toBe(0);
     });
 
-    it(`Waxed Bearings: the speed off the end of ${kind} lasts longer`, () => {
+    it(`Speed Cream: the speed off the end of ${kind} lasts longer`, () => {
       const carryAfter = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         while (sk.mode === 'rail' || sk.mode === 'air') sk.step(idle);

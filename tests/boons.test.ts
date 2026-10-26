@@ -175,7 +175,7 @@ describe('GRIND boons', () => {
     expect(popOffRail('railLaunch')).toBeLessThan(popOffRail() - 1);
   });
 
-  it('Waxed Bearings (exitWax): rail speed lasts longer on the ground', () => {
+  it('Speed Cream (exitWax): rail speed lasts longer on the ground', () => {
     const carryAfter = (...ids: BoonId[]) => {
       const sk = skater(FLAT, ...ids);
       sk.carry = 8;
