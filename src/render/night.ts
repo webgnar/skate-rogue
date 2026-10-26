@@ -2,18 +2,22 @@
 // cameras that turn to watch the skater. Every light here is fake (additive meshes sharing a few materials), so
 // night costs a handful of draw calls and no real lights. How lit it all is follows the mood's neon value.
 import * as THREE from 'three';
-import type { Level } from '../physics/level';
+import { inHill, type Level } from '../physics/level';
 import { STREET_Z } from '../traffic/traffic';
 import { TURN_OFF } from '../traffic/tunnel';
 import { toX, toY } from './kit';
 import { cityTiles } from './textures';
 import { inkify, toon } from './toon';
 import { FX } from './fx-settings';
+import { StreetLights, type LampKind, type LampSpot } from './street-lights';
 
 export const NIGHT = {
   windowsLit: 0.42, // share of window cells lit
   windowGlow: 1.3, // emissive strength at full night
   lampEvery: 8, // tiles between street lamps
+  block: 3, // lamps in a row of the same kind
+  wallPacks: 0.45, // chance of a wall light on the building fronts between two lamps
+  wallZ: -3.42,
   roofLampEvery: 7,
   camEvery: 3, // a Flock camera on every third lamp
   billboards: 3, // per floor
@@ -120,19 +124,14 @@ export function beamMaterial(color: number): THREE.ShaderMaterial {
   });
 }
 
-const lampCone = beamMaterial(0xffc87a);
-const lampPool = beamMaterial(0xffc87a);
-lampPool.uniforms.uPool.value = 1;
 const headCone = beamMaterial(0xfff2c8);
 const headPool = beamMaterial(0xfff2c8);
 headPool.uniforms.uPool.value = 1;
 const tailGlow = beamMaterial(0xff2a3a);
 tailGlow.uniforms.uPool.value = 1;
-const BEAMS = [lampCone, lampPool, headCone, headPool, tailGlow];
+const BEAMS = [headCone, headPool, tailGlow];
 const tailGeo = new THREE.PlaneGeometry(1.8, 0.34);
 
-const coneGeo = new THREE.ConeGeometry(1.1, 2.6, 16, 1, true).translate(0, -1.3, 0); // tip at the origin
-const poolGeo = new THREE.PlaneGeometry(3, 3).rotateX(-Math.PI / 2);
 const headConeGeo = new THREE.ConeGeometry(1.1, 5, 12, 1, true).translate(0, -2.5, 0).rotateZ(Math.PI / 2); // along +x
 const headPoolGeo = new THREE.PlaneGeometry(5, 2.2).rotateX(-Math.PI / 2).translate(3, 0, 0);
 
@@ -239,7 +238,8 @@ export class NightCity {
   private amount = 0;
   private t = 0;
   private readonly poleMat = toon({ color: 0x2c2a34 });
-  private readonly headMat = toon({ color: 0x3a3844, emissive: 0x000000 });
+  readonly lights = new StreetLights();
+  private rain = 0;
   private readonly camMat = toon({ color: 0xd8dbe2 });
   private readonly eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2030 });
   private readonly neonMat = new THREE.MeshBasicMaterial({ map: neonTexture(), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -279,33 +279,34 @@ export class NightCity {
     for (let x = c + 3; x < level.street.length - TURN_OFF.back - TURN_OFF.half - 0.5; x += NIGHT.lampEvery) if (level.street[Math.floor(x)]) lamps.push({ x, y: 0, z: STREET_Z.lamp });
     for (const s of level.surfaces) {
       if (s.kind !== 'roof') continue;
+      if (kit.userData.poleLamps && inHill(level, s.x0)) continue; // the hill's ground: its power poles carry the lights
       const y = toY(level, s.y);
       if (y < 0.5) continue;
       for (let x = toX(s.x0) + 2; x < toX(s.x1) - 1.5; x += NIGHT.roofLampEvery) lamps.push({ x, y, z: -2.6 });
     }
-    const n = lamps.length;
-    if (n) {
-      const pole = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 3, 0.12).translate(0, 1.5, 0), this.poleMat, n);
-      const head = new THREE.InstancedMesh(new THREE.BoxGeometry(0.22, 0.12, 0.9).translate(0, 3, 0.35), this.headMat, n);
-      const cone = new THREE.InstancedMesh(coneGeo, lampCone, n);
-      const pool = new THREE.InstancedMesh(poolGeo, lampPool, n);
-      const m = new THREE.Matrix4();
-      lamps.forEach((l, i) => {
-        m.makeTranslation(l.x, l.y, l.z);
-        pole.setMatrixAt(i, m);
-        head.setMatrixAt(i, m);
-        m.makeTranslation(l.x, l.y + 2.94, l.z + 0.7);
-        cone.setMatrixAt(i, m);
-        m.makeTranslation(l.x, l.y + 0.03, l.z + 1.6);
-        pool.setMatrixAt(i, m);
-      });
-      for (const im of [cone, pool]) {
-        im.frustumCulled = false;
-        im.renderOrder = 3;
+    //the street lights themselves (street-lights.ts): a kind per block of the street, wall packs on the building
+    //fronts between them, and cobra arms on the hills' power poles
+    const lit: LampSpot[] = [];
+    let kind: LampKind = 'post';
+    let led = false;
+    lamps.forEach((l, i) => {
+      if (l.y > 0) return lit.push({ kind: 'post', ...l });
+      if (i % NIGHT.block === 0) {
+        const p = r();
+        kind = p < 0.4 ? 'cobra' : p < 0.7 ? 'acorn' : 'post';
+        led = kind === 'cobra' && r() < 0.35;
       }
-      inkify(pole, { toon: false });
-      inkify(head, { toon: false });
-      this.group.add(pole, head, cone, pool);
+      lit.push({ kind, led, ...l });
+      if (r() < NIGHT.wallPacks) lit.push({ kind: 'wall', x: l.x + NIGHT.lampEvery * (0.35 + r() * 0.3), y: 0, z: NIGHT.wallZ });
+    });
+    const poles = (kit.userData.poleLamps ?? []) as LampSpot[];
+    poles.forEach((p, i) => {
+      if (i % 2 === 0 || r() < 0.25) lit.push({ ...p, kind: 'arm', led: r() < 0.25 });
+    });
+    this.lights.build(lit, r);
+    this.lights.setNight(this.amount, this.rain);
+    this.group.add(this.lights.group);
+    if (lamps.length) {
       //Flock cameras on some poles: a white box with a red eye, turning to follow the skater
       lamps.forEach((l, i) => {
         if (i % NIGHT.camEvery !== 1) return;
@@ -379,17 +380,18 @@ export class NightCity {
   }
 
   // night 0..1 (from the mood)
-  setNight(amount: number): void {
+  setNight(amount: number, rain = 0): void {
     this.amount = amount;
+    this.rain = rain;
+    this.lights.setNight(amount, rain);
     for (const m of this.windowMats) m.emissiveIntensity = amount * NIGHT.windowGlow;
     //lamps and headlights come on from golden hour, not in the afternoon
     const beams = THREE.MathUtils.smoothstep(amount, 0.15, 0.6);
     for (const b of BEAMS) {
       b.uniforms.uAmt.value = beams;
       //low tier keeps the pools on the ground and drops the big additive cones
-      b.visible = beams > 0.02 && (FX.tier === 'high' || (b !== lampCone && b !== headCone));
+      b.visible = beams > 0.02 && (FX.tier === 'high' || b !== headCone);
     }
-    this.headMat.emissive.setRGB(amount, amount * 0.8, amount * 0.5);
     this.neonMat.color.setScalar(beams);
     this.neonMat.visible = beams > 0.02;
   }
@@ -397,6 +399,7 @@ export class NightCity {
   // skater x in world units; heat 0..100 brightens the billboards
   update(dt: number, skaterX: number, heat: number): void {
     this.t += dt;
+    this.lights.update(dt, skaterX);
     //a tired neon tube: now and then it dims for a moment and comes back (never with reduce flashing)
     if (this.neon && !FX.reduceFlashing) {
       const c = this.neon.geometry.getAttribute('color') as THREE.BufferAttribute;

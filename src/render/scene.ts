@@ -258,7 +258,7 @@ export class StreetView {
     this.wet = Math.min(1, rain);
     for (const kit of this.kits()) this.wetKit(kit);
     this.puddles.setSky(m.skyTop, m.skyBottom, m.neon);
-    for (const n of [this.night, ...[...this.aheads.values()].map((a) => a.night)]) n.setNight(m.neon);
+    for (const n of [this.night, ...[...this.aheads.values()].map((a) => a.night)]) n.setNight(m.neon, rain);
     for (const s of [this.sirens, ...[...this.aheads.values()].map((a) => a.sirens)]) s.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
     this.flash = 99;
@@ -361,7 +361,7 @@ export class StreetView {
     a.kit = kit;
     a.root.add(kit, a.night.group, a.gates.group, a.sirens.group);
     a.night.build(a.level, kit, a.seed, a.floor);
-    a.night.setNight(this.mood?.neon ?? 0);
+    a.night.setNight(this.mood?.neon ?? 0, this.rain.amount);
     a.sirens.setNight(this.mood?.neon ?? 0);
     a.gates.build(kit);
     a.sirens.build(kit);
@@ -571,7 +571,7 @@ export class StreetView {
   setTier(tier: 'high' | 'low'): void {
     FX.tier = tier;
     for (const kit of this.kits()) this.kitInk(kit);
-    for (const n of [this.night, ...[...this.aheads.values()].map((a) => a.night)]) n.setNight(this.mood?.neon ?? 0);
+    for (const n of [this.night, ...[...this.aheads.values()].map((a) => a.night)]) n.setNight(this.mood?.neon ?? 0, this.rain.amount);
   }
 
   // every floor kit there is: this floor's, the one behind, and the ones built ahead

@@ -876,6 +876,8 @@ export function buildHill(level: Level, group: THREE.Group): void {
     const x = (xa + xb) / 2 + (rng() - 0.5) * 2;
     if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2) && !atPortal(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
   }
+  //where the night city bolts street lights onto the poles (street-lights.ts): under the wires, over the road
+  group.userData.poleLamps = poles.map(([x, top]) => ({ x, y: top - 1.9, z: P.z, ground: lane(x), slope: (lane(x + 1) - lane(x - 1)) / 2 }));
   m.build(group);
 }
 

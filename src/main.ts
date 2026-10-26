@@ -1,3 +1,4 @@
+import { applyWeatherParams } from './render/atmosphere';
 import { MOMENTUM, MOMENTUM_MODES, type MomentumMode } from './physics/feel';
 import '@fontsource/bangers/latin-400.css';
 import './style.css';
@@ -320,6 +321,7 @@ function makeHud(): Hud {
 async function start() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
+  applyWeatherParams(params);
   if (params.has('editor')) {
     // the animation editor (src/editor): keyframe the skater's clips on the rig
     const { startEditor } = await import('./editor/editor');
