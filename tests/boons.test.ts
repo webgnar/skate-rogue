@@ -150,7 +150,7 @@ describe('GRIND boons', () => {
     expect(magnet.events.some((e) => e.type === 'grind')).toBe(true);
   });
 
-  it('Grease: grind speed settles 25% higher, right away', () => {
+  it('Ledge Butter (grease): grind speed settles 25% higher, right away', () => {
     const speedAfter = (...ids: BoonId[]) => {
       const sk = skater(RAIL, ...ids);
       sk.x = 16 * TILE + 1 * TILE;
@@ -163,7 +163,7 @@ describe('GRIND boons', () => {
     expect(speedAfter()).toBeLessThan(PHYS.grindSpeed);
   });
 
-  it('Rail Launch: ollies off a rail pop higher', () => {
+  it('Full Sail (railLaunch): ollies off a rail pop higher', () => {
     const popOffRail = (...ids: BoonId[]) => {
       const sk = skater(RAIL, ...ids);
       sk.x = 16 * TILE + 1 * TILE;

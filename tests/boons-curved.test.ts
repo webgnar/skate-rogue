@@ -28,7 +28,7 @@ describe('GRIND boons on curved rails', () => {
   for (const drop of [0, 60]) {
     const kind = drop ? 'a handrail' : 'a power line';
 
-    it(`Grease: faster along ${kind}, from the moment you catch it`, () => {
+    it(`Ledge Butter: faster along ${kind}, from the moment you catch it`, () => {
       const speed = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         expect(sk.mode).toBe('rail');
@@ -57,7 +57,7 @@ describe('GRIND boons on curved rails', () => {
       expect(caught('railMagnet')).toBe(true);
     });
 
-    it(`Rail Launch: an ollie off ${kind} pops higher`, () => {
+    it(`Full Sail: an ollie off ${kind} pops higher`, () => {
       const pop = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         for (let f = 0; f < 20; f++) sk.step(idle);

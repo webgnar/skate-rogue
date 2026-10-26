@@ -545,8 +545,8 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 | Spare Change | POP | Every grind refills +0.25 jump charge above your max | 3 |
 | Strong Legs | POP | Normally a press during the landing's impact (350 ms) is lost. With this, a second tap during it ollies at once | 1 |
 | Rail Magnet | GRIND | Rails pull you in from 48 px further away | 2 |
-| Grease | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
-| Rail Launch | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |
+| Ledge Butter | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
+| Full Sail | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |
 | Sparky | GRIND | Grinding leaves sparks that make cars swerve out of the skate lane | 1 |
 | Feeble Frenzy | GRIND | Each grind trick on one rail adds +10% speed until you leave it | 1 |
 | Ghost Rail | GRIND | Your last grind leaves a 2 s ghost rail behind you in the air | 1 |
@@ -569,7 +569,7 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 When you hold two specific boons, a third, rarer card can appear that fuses them, in the spirit of Hades duo
 boons and Noita's spell interactions. Examples:
 
-- **Rail Launch + Big Pop → Rocket Grind:** ollie off a rail at max grind speed and you launch straight up, refilling all jumps at the top.
+- **Full Sail + Big Pop → Rocket Grind:** ollie off a rail at max grind speed and you launch straight up, refilling all jumps at the top.
 - **Ghost Rail + Triple Threat → Sky Line:** every air trick leaves a short ghost rail under you.
 - **Butter + Slingshot → Perpetual Motion:** flow speed never decays.
 

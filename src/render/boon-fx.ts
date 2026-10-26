@@ -64,7 +64,7 @@ export class BoonFx {
     if (this.held.has('floatyFlip') && air && sk.floatT > 0) p.stream('floaty', x, y, 30, dt, { n: 0, colors: POP, life: [0.5, 0.8], size: [0.1, 0.14], speed: [0.3, 0.8], angle: [DOWN - 0.8, DOWN + 0.8], jitter: 0.25, grav: 0.6, drag: 2, fadeFrom: 0.3 });
     //Mad Pop: an updraft pushing under the board while it floats (after 0.25 s held)
     if (this.held.has('pressureFlip') && air && sk.holdT > 15) p.stream('pressure', x, y - 0.1, 40, dt, { n: 0, colors: POP, life: [0.2, 0.35], size: [0.08, 0.12], speed: [1.5, 3], angle: [DOWN - 0.3, DOWN + 0.3], jitter: 0.3, drag: 2 });
-    //Grease: dark glossy drips off the trucks
+    //Ledge Butter: dark glossy drips off the trucks
     if (this.held.has('grease') && grinding) p.stream('grease', x, y, 22, dt, { n: 0, colors: GREASE, life: [0.4, 0.6], size: [0.07, 0.1], speed: [0.2, 0.6], angle: [DOWN - 0.4, DOWN + 0.4], jitter: 0.12, grav: 12, ink: true, floor: y - 2 });
     //Feeble Frenzy: the sparks run hotter the longer you stay on one rail
     if (this.held.has('feebleFrenzy') && grinding && sk.onRailT > 30) p.stream('frenzy', x, y, 15 * Math.min(4, sk.onRailT / 30), dt, { n: 0, colors: FRENZY, life: [0.2, 0.4], size: [0.1, 0.16], speed: [1.5, 3.5], angle: [UP - 1.2, UP + 0.4], grav: 10 });
@@ -98,7 +98,7 @@ export class BoonFx {
         if (this.held.has('bigPop')) p.spray(x, y, ring(POP, 14, 3.5));
         //Moon Shoes (curse): a slow puff of pale moon dust hangs where you popped
         if (this.held.has('moonShoes')) p.spray(x, y, { ...ring(MOON, 12, 1.6), life: [0.6, 0.9], size: [0.14, 0.2], size1: 0.3, drag: 1.5, alpha: 0.8 });
-        //Rail Launch: off a rail, an orange plume that grows with grind speed
+        //Full Sail: off a rail, an orange plume that grows with grind speed
         if (this.held.has('railLaunch') && offRail) {
           const k = Math.min(2, speed / 5);
           p.spray(x, y, { n: Math.round(10 + 10 * k), colors: GRIND, life: [0.3, 0.5], size: [0.12, 0.18], speed: [2 + k, 4 + 2 * k], angle: [DOWN - 0.5, DOWN + 0.5], grav: -2, drag: 2 });
