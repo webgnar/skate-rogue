@@ -54,6 +54,8 @@ export function cueFor(e: FloorEvent): Cue | null {
     case 'pad':
     case 'tuck':
       return cue('impact', 0.5, 1.4);
+    case 'clack':
+      return cue('impact', 0.45, 2.2); // a firecracker's tail on the next step: a quick high clack
     case 'hop':
       return cue('impact', 0.7, 1.6); // the hollow bonk of a car roof
     case 'kicker':
@@ -112,6 +114,7 @@ export function buzzFor(e: FloorEvent): number | number[] | null {
   if (e.type === 'slam') return 60;
   if (e.type === 'tuck') return 40;
   if (e.type === 'hop') return 15;
+  if (e.type === 'clack') return 6;
   if (e.type === 'dent' && e.stage === 3) return [30, 40, 50];
   return null;
 }

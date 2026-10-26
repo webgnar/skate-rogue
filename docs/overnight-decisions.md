@@ -520,6 +520,16 @@ and listed it here for review. Any of these can be flipped in the morning.
   - The hitbox is a thin slab 36 px tall at the hinge. Rolling into it slams you, and landing on top of it pops you like a car hop.
   - The car itself is only scenery, and a hop on the door does no damage.
 
+- **Firecracker boon (zack, 2026-10-26).** zack described a firecracker as "a trick where you kinda manual down stair sets hitting the tail on each step", and wanted it as a boon that saves you from not ollieing before a stair set, with ollie out allowed. Here's how it works:
+  - It's a FLOW boon with max 1.
+  - Roll onto a stair set holding it and there's no slam. You ride the set down in a manual instead.
+  - Each step, one tile along, fires a `clack` event: 15 points, concrete sparks and a puff at the tail, a high clack sound, and a tiny shake.
+  - The firecracker itself scores like a manual (120).
+  - You can ollie out of it at any point.
+  - Landing on stairs from the air still slams. zack's ask was about rolling in.
+  - The rig plays a `firecracker` clip if CLIPS has one, else the manual. The models thread is making the clip.
+- **Ghost Rail fixed (PR #179).** It never spawned off curved rails, which are most rails now.
+
 ## Models thread: animation
 
 - **Nollie, fakie ollie, nosegrind and nose manual (2026-10-26, zack).** `nollie` is the ollie's keys popped off the

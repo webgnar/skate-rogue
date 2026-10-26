@@ -20,6 +20,8 @@ export type SkaterEvent =
   | { type: 'kicker' } // launched off a box truck's tailgate
   | { type: 'pad' } // a slam the Bubble Pads took
   | { type: 'tuck' } // Tuck and Roll: fell in a gap and bounced back out
+  | { type: 'firecracker' } // Firecracker: rolled into a stair set and rode it down instead of slamming
+  | { type: 'clack'; step: number } // a firecracker's tail hitting the next step down
   | { type: 'slam' }
   | { type: 'bail' }
   | { type: 'exit' };
@@ -63,6 +65,8 @@ export class Skater {
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   pads = 0; // Bubble Pads slams left this floor
   tucks = 0; // Tuck and Roll saves left this floor
+  cracker: Surface | null = null; // Firecracker: the stair set we're riding down
+  crackStep = -1; // the last step the tail clacked on
   rocket = false; // Rocket Grind: jumps come back at the top of this launch
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
@@ -109,6 +113,11 @@ export class Skater {
 
   get maxJumps(): number {
     return PHYS.jumps + this.mods.jumps;
+  }
+
+  // Firecracker: riding a stair set down in a manual, the tail clacking on each step
+  get firecracking(): boolean {
+    return this.mode === 'roll' && this.cracker !== null && this.surface === this.cracker;
   }
 
   // riding a manual pad in a manual
@@ -467,6 +476,7 @@ export class Skater {
       this.land(px, py);
     }
 
+    this.stepCracker();
     this.checkHazards();
 
     //in the canal
@@ -522,7 +532,7 @@ export class Skater {
       if (Math.abs(surfaceY(s, this.x) - this.y) > 8) continue;
       this.y = surfaceY(s, this.x);
       this.surface = s;
-      if (s.kind === 'stairs') this.slam();
+      if (s.kind === 'stairs') this.intoStairs(s);
       return true;
     }
     if (this.surface && isStreetAt(this.level, this.x) && Math.abs(this.level.streetY - this.y) <= 8) {
@@ -694,6 +704,33 @@ export class Skater {
       this.events.push({ type: 'land', impact, quality, ...(s?.manual && quality !== 'slam' ? { manual: true } : {}), ...(lined > 0 ? { lined } : {}) });
       if (!s?.manual || quality === 'slam') this.impactT = PHYS.impactFrames;
       if (quality === 'slam') this.slam();
+    }
+  }
+
+  // rolled into a stair set without popping: a slam, unless you've got Firecracker (zack, 2026-10-26: "a trick where you
+  // kinda manual down stair sets hitting the tail on each step")
+  private intoStairs(s: Surface): void {
+    if (!this.mods.firecracker) {
+      this.slam();
+      return;
+    }
+    this.cracker = s;
+    this.crackStep = -1;
+    this.events.push({ type: 'firecracker' });
+  }
+
+  // a firecracker: the tail clacks down onto each step as you pass its edge (a step is a tile along the set)
+  private stepCracker(): void {
+    if (!this.cracker) return;
+    if (!this.firecracking) {
+      this.cracker = null;
+      return;
+    }
+    const s = this.cracker;
+    const step = Math.floor((this.x - s.x0) / TILE);
+    if (step > this.crackStep && step < Math.round((s.x1 - s.x0) / TILE)) {
+      this.crackStep = step;
+      this.events.push({ type: 'clack', step });
     }
   }
 

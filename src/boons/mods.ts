@@ -25,6 +25,7 @@ export interface Mods {
   heatRise: number; // multiplier on Heat gained
   bubblePads: number; // slams per floor that cost nothing
   tuckAndRoll: number; // gap saves per floor
+  firecracker: boolean; // roll into a stair set and ride it down in a manual, the tail clacking each step
   slamStoke: boolean;
   hopCool: number; // extra Heat off per car hop
   decoy: boolean;
@@ -71,6 +72,7 @@ export const NO_MODS: Mods = {
   heatRise: 1,
   bubblePads: 0,
   tuckAndRoll: 0,
+  firecracker: false,
   slamStoke: false,
   hopCool: 0,
   decoy: false,
@@ -115,6 +117,7 @@ export function skaterMods(boons: Held[]): Mods {
     heatRise: (1 - 0.25 * s('lowProfile')) * (s('wanted') ? 2 : 1),
     bubblePads: s('bubblePads'),
     tuckAndRoll: s('tuckAndRoll'),
+    firecracker: s('firecracker') > 0,
     slamStoke: s('slamStoke') > 0,
     hopCool: 10 * s('sirenSong'),
     decoy: s('decoy') > 0,

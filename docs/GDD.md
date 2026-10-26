@@ -554,6 +554,7 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 | Butter | FLOW | Landing on flat ground keeps 100% of air speed | 1 |
 | Kicker Boost | FLOW | Kickers and ramps launch 30% harder and trigger a bomb | 1 |
 | Slingshot | FLOW | Curved-rail launches ×1.5 | 2 |
+| Firecracker | FLOW | Roll into a stair set without popping and you ride it down in a manual, the tail clacking on each step, instead of slamming. Ollie out any time | 1 |
 | Stoken Magnet | LUCK | Pickups fly to you (QFS) | 1 |
 | Double Stoken | LUCK | 2× Stoken (QFS) | 1 |
 | Hustler | LUCK | +1 card on every boon pick | 1 |
