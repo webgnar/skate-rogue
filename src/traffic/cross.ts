@@ -8,6 +8,7 @@
 import { makeRng } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
 import { isStreetAt, type Car, type Level } from '../physics/level';
+import { streetBuilding } from './traffic';
 
 export const CROSS = {
   from: 5, // floors with cross traffic
@@ -106,6 +107,7 @@ export function crossPlan(level: Level, seed: number): Intersection[] {
   const open = (x0: number, x1: number) => {
     for (let x = x0; x <= x1; x += TILE / 2) if (!isStreetAt(level, x)) return false;
     if (level.cars.some((c) => c.x1 > x0 && c.x0 < x1)) return false;
+    if (level.surfaces.some((s) => s.x1 > x0 && s.x0 < x1 && streetBuilding(level, s))) return false; // nor through a building
     return !level.glass.some((g) => g.x1 > x0 && g.x0 < x1);
   };
   const out: Intersection[] = [];
