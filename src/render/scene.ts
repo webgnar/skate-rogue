@@ -461,7 +461,7 @@ export class StreetView {
     //the fisheye: its resting strength plus the rhythm's. A stronger lens also dollies in with a wider field of
     //view (Lou keeps their size), so there's more round the edges for it to bend
     this.lensK = THREE.MathUtils.clamp(ease(this.smooth.lens, FX.tier === 'low' ? 0 : Math.min(1, CAM.lens + (rhythm ? this.rhythm.lens : 0)), SMOOTH.lens), 0, 1);
-    const fov = f.fov + (zoom - 1) * DYN_CAM.zoomFov + ease(this.smooth.fov, this.drift.fovAdd + this.punchAmt * 16, SMOOTH.fov) + this.lensK * LENS.fov;
+    const fov = f.fov + (zoom - 1) * (zoom > 1 ? DYN_CAM.zoomFov : DYN_CAM.zoomOutFov) + ease(this.smooth.fov, this.drift.fovAdd + this.punchAmt * 16, SMOOTH.fov) + this.lensK * LENS.fov;
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
     const viewH = f.viewH / zoom;
     this.dist = Math.max(DYN_CAM.minDist, viewH / (2 * tanHalf));

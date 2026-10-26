@@ -73,7 +73,7 @@ describe('phone framing', () => {
     expect(d.pull).toBeGreaterThan(0.99);
     for (let i = 0; i < 180; i++) d.update(1 / 60, 'roll', 1);
     expect(d.pull).toBeLessThan(0.9);
-    expect(d.fovAdd).toBeGreaterThan(5);
+    expect(d.fovAdd).toBe(0); // speed narrows the lens through the pull-out, never widens it
   });
 
   it('a landing kick dies off in well under a second', () => {

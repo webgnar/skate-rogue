@@ -59,8 +59,9 @@ export const DYN_CAM = {
   airFull: 1.0, // and fully backed off by this long
   airPull: 0.28, // zoom out this much in big air (shows where you'll land)
   speedPull: 0.18, // and this much at full flow
-  speedFov: 12, // degrees the lens opens at full flow
-  zoomFov: 45, // degrees of lens per unit of zoom: punch in = wider, pull out = narrower (the dolly zoom)
+  speedFov: 0, // degrees the lens opens at full flow (none: speed pulls out, and a pull-out narrows the lens)
+  zoomFov: 45, // degrees of lens per unit of zoom in: a punch-in widens it (the dolly zoom)
+  zoomOutFov: 75, // and per unit of zoom out: a pull-out narrows it hard as the camera backs off (zack, 2026-10-26)
   pullIn: 2.2, // easing rates
   pullOut: 1.2,
   kickDecay: 0.86, // a landing kick dies off by this per 60 Hz frame
