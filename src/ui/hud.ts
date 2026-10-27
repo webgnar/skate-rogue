@@ -8,6 +8,7 @@ import { modDef, type ModId, type Slots } from '../board/mods';
 import { actOf, FLOORS_PER_ACT } from '../gen/escape';
 import { label, type Road } from '../gen/roads';
 import { GEAR, type Gear, type GearPart } from '../run/gear';
+import { whole } from '../run/save';
 
 export const STOKE_SEGS = 10;
 export const HEAT_SEGS = 10;
@@ -134,7 +135,7 @@ export class HudView {
 
   money(cash: number, stoken: number): void {
     this.cash.text(`$${cash}`);
-    this.stoken.text(String(stoken));
+    this.stoken.text(String(whole(stoken)));
   }
 
   // stoke and gnar 0..1; pending is the live combo's points before the speed bonus

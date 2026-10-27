@@ -12,7 +12,7 @@ import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
-import { loadSave, writeSave } from '../run/save';
+import { loadSave, whole, writeSave } from '../run/save';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
@@ -622,7 +622,7 @@ export class Game {
     if (this.level.bounty) {
       const pay = bountyPay(this.run.stoken - this.floorStoken, this.sim.heat.value);
       this.run.stoken += pay;
-      this.hud.callout(pay ? `BOUNTY CLAIMED +◆${pay}` : 'BOUNTY MISSED', pay ? 'good' : 'bad');
+      this.hud.callout(pay ? `BOUNTY CLAIMED +◆${whole(pay)}` : 'BOUNTY MISSED', pay ? 'good' : 'bad');
       if (pay) this.escapeFx.bounty(this.sprite.mesh.position.x, this.sprite.mesh.position.y);
     }
     const fork = this.level.fork;
@@ -641,7 +641,7 @@ export class Game {
       const pay = ROADS.stashStoken(this.floor) * this.run.stokenScale;
       this.run.stoken += pay;
       this.advance();
-      this.hud.callout(`+${pay} STOKEN`, 'good');
+      this.hud.callout(`+${whole(pay)} STOKEN`, 'good');
     }
     if (road.kind !== 'cash' && road.kind !== 'stash') this.hud.callout(`FLOOR CLEAR +${pts}`, 'good');
   }
@@ -654,7 +654,7 @@ export class Game {
     this.run.score += this.run.clearFloor(this.floor) * 2;
     if (act >= ACTS) return this.endRun(now, false, true);
     this.advance();
-    this.hud.callout(`ACT ${act} CLEAR +$${cash} +◆${stoken}`, 'good');
+    this.hud.callout(`ACT ${act} CLEAR +$${cash} +◆${whole(stoken)}`, 'good');
   }
 
   private rerollCost(): number {
@@ -957,7 +957,7 @@ export class Game {
     const next = {
       ...save,
       best: Math.max(save.best, this.run.score),
-      stoken: save.stoken + this.run.stoken,
+      stoken: save.stoken + whole(this.run.stoken),
       wins: save.wins + (won ? 1 : 0),
       gnar: won ? Math.max(save.gnar, this.gnar) : save.gnar,
       daily: daily ? { day: today, best: daily.best } : save.daily,
@@ -973,7 +973,7 @@ export class Game {
       score: this.run.score,
       best: next.best,
       newBest,
-      stoken: this.run.stoken,
+      stoken: whole(this.run.stoken),
       bank: next.stoken,
       daily,
       continues: CONTINUES - this.continuesLeft,
