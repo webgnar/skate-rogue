@@ -25,6 +25,7 @@ export const SCORE = {
   kicker: 150, // off a box truck's tailgate
   nearMiss: 200, // a close call: over a vehicle with a few px to spare, or one passing right under you
   drone: 250, // stomping a drone out of the sky, on top of the hop
+  dodge: 150, // a guard's bullet went under you
   smash: 25, // a prop smashed: a little style, never worth more than skating well
   smashCash: 3, // a prop hiding coins
   stoken: 100,
@@ -121,6 +122,9 @@ export class RunScore {
         break;
       case 'near':
         this.add(SCORE.nearMiss * this.nearScale);
+        break;
+      case 'dodge':
+        this.add(SCORE.dodge);
         break;
       case 'ollie':
         if (e.lip) this.add(SCORE.lip);

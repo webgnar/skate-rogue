@@ -169,6 +169,11 @@ export class Pilot {
     if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
     //flip near the top of an arc if that's what reaches the top route
     if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, near, sk, sk.x, sk.y, sk.vsp) && landsTop(level, near, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true)) pressed = true;
+    //a guard's bullet coming up behind at waist height: ollie so it goes under (feet clear of it ~6-34 frames in)
+    if (sk.grounded && sim.shooter?.bullets.some((b) => {
+      const eta = (sk.x - PHYS.width / 2 - b.x) / Math.max(0.1, b.vx - Math.abs(sk.hsp));
+      return eta > 0 && eta < 10 && b.y > sk.y - PHYS.height && b.y < sk.y;
+    })) pressed = true;
     //pigeons sitting on the top route ahead: ollie over them
     if ((onSurface || sk.mode === 'rail') && sim.sky.flocks.some((f) => f.state === 'perch' && f.x - sk.x > 0 && f.x - sk.x < 8 * Math.max(sk.hsp, sk.railV) && Math.abs(f.y - sk.y) < 20)) pressed = true;
     // falling with no street ahead: flip for more air
