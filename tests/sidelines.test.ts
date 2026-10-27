@@ -9,9 +9,9 @@ const floors = (floor: number, n = 10) => Array.from({ length: n }, (_, s) => va
 describe('side lines', () => {
   it('turn up on most floors from floor 2, clear of anything tall, with a Stoken at the top', () => {
     for (const l of floors(1)) expect(l.surfaces.some((s) => s.side)).toBe(false);
-    const ls = floors(5, 12);
+    const ls = floors(5, 20); // (12 was too few: which roll of a floor validates shifts with the feel, 2026-10-27)
     const withLine = ls.filter((l) => l.surfaces.some((s) => s.side));
-    expect(withLine.length).toBeGreaterThan(4);
+    expect(withLine.length).toBeGreaterThan(6);
     for (const l of withLine) {
       const line = l.surfaces.filter((s) => s.side);
       expect(line).toHaveLength(SIDE.steps.length);

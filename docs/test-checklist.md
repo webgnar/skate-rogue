@@ -695,6 +695,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 - [ ] Puddles: on a rainy floor (`?rain`), roll through a puddle once it has formed (after about 10 s). You get a splash, a SPLSH! and a blue flash on the deck icon, and the deck bar drops a little. Ollie over one and nothing happens.
 
+- [ ] Impact by drop: after an ollie on flat you can pop again almost at once. After a stair set or a car drop there's a medium crouch. After a roof drop there's a deep crouch, and taps during it are lost until he stands up.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

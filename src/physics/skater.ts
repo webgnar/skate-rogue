@@ -13,7 +13,7 @@ export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 export type SkaterEvent =
   | { type: 'ollie'; spin: 0 | 180; lip?: boolean; nose?: boolean } // lip: popped right at the edge of the ground (or just off it); nose: off a nose grind or nose manual
   | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean; nollie?: boolean } // fakie: the stance it was thrown from; nollie: in the air off the nose
-  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; lined?: number; spare?: number; flush?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one)
+  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; drop?: ImpactTier; lock?: number; lined?: number; spare?: number; flush?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); drop: how big a drop it was, and lock: the frames of no-ollie it gave (not on a manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one)
   | { type: 'grind'; name: string } // name: the grind (its clip), LEDGE_GRINDS or RAIL_GRINDS
   | { type: 'rail'; name: string }
   | { type: 'hop' }
@@ -31,6 +31,12 @@ export interface StepInput {
   held: boolean;
 }
 
+export type ImpactTier = (typeof PHYS.impactTiers)[number]['drop'];
+// how big a landing was, from the px fallen since the top of the air
+export function impactTier(drop: number): (typeof PHYS.impactTiers)[number] {
+  return PHYS.impactTiers.find((t) => drop < t.under) ?? PHYS.impactTiers[PHYS.impactTiers.length - 1];
+}
+
 export class Skater {
   x: number;
   y: number; // feet
@@ -44,6 +50,7 @@ export class Skater {
   buffer = 0; // frames a press stays valid
   impactT = 0; // frames left of the landing's impact: no ollie, and a press then is lost (Lou Gnar's LANDING state)
   impactTaps = 0; // presses during this impact (Strong Legs: the second one ollies anyway)
+  topY = 0; // the highest point of this air (px; y points down), for how big the drop was
   coyote = 0;
   tricks = 0; // counts flip tricks, so the animation choice is deterministic
   surface: Surface | null = null; // what we're rolling or grinding on (null = the street)
@@ -165,6 +172,7 @@ export class Skater {
     this.stepRuins();
     this.holdT = input.held && this.holdT > 0 ? this.holdT + 1 : 0;
 
+    if (this.mode !== 'air') this.topY = this.y; // the drop is measured from the ground you left
     //the button: ollie from the ground (or just after leaving it), flip trick in the air
     if (this.mode !== 'roll') this.impactT = 0;
     if (this.impactT > 0) {
@@ -212,6 +220,7 @@ export class Skater {
     this.buffer = from.buffer;
     this.impactT = from.impactT;
     this.impactTaps = from.impactTaps;
+    this.topY = from.topY + dy;
     this.coyote = from.coyote;
     this.tricks = from.tricks;
     this.floatT = from.floatT;
@@ -464,6 +473,7 @@ export class Skater {
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
       if (this.trickCatch > 0) this.trickT++;
+      this.topY = Math.min(this.topY, this.y);
       //Atlantis: a current pushes you forward or back while you're off the ground
       const push = currentAt(this.level, this.x);
       if (push) this.hsp = Math.max(1, this.hsp + push);
@@ -736,9 +746,12 @@ export class Skater {
       //a manual pad: you ride it in a manual (unless you slammed onto it)
       const manual = !!s?.manual && quality !== 'slam';
       this.stance = manual ? MANUALS[this.manuals++ % MANUALS.length] : '';
-      this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : {}), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}) });
+      //the bigger the drop, the longer the knees take to come back up before you can pop again
+      const tier = impactTier(this.y - this.topY);
+      const lock = manual ? undefined : tier.frames;
+      this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : { drop: tier.drop, lock }), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}) });
       if (!s?.manual || quality === 'slam') {
-        this.impactT = PHYS.impactFrames;
+        this.impactT = tier.frames;
         this.impactTaps = 0;
       }
       if (quality === 'slam') this.slam();
@@ -779,6 +792,7 @@ export class Skater {
     this.trickCatch = 0;
     this.kicked = false;
     this.vsp = PHYS.carHop * this.mods.hopScale;
+    this.topY = this.y; // off the roof: the drop is from this bounce
     this.jumps = this.maxJumps;
     this.flipped = false;
     this.nose = false;
