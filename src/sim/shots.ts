@@ -15,8 +15,8 @@ export const SHOTS = {
   speed: 5, // px/frame faster than you're going: it closes the gap in about 0.75 s
   waist: 22, // px over the ground you're riding: a plain ollie gets your feet over it
   reach: 2.5 * TILE, // they only shoot while you're this close to street level (a roof or a high line is safe)
-  gun: 0.6 * TILE, // the gun, ahead of the chaser's position
-  gunY: 40, // and above the street
+  gun: 0.9 * TILE, // the muzzle, ahead of the chaser's position: the front guard's arm aimed out from the shoulder
+  gunY: 44, // and above the street (src/render/chaser-view.ts AIM: shoulder height less the aim's dip, plus the bob)
   life: 150, // frames before a bullet that never reached you is gone
   afterHit: 120, // frames of grace after a hit before they aim again
 };

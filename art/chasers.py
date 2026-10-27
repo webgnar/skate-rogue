@@ -13,6 +13,10 @@
 #   HorseLeg      one leg, origin at the hip (the game hangs four on each horse and swings them)
 #   Guard         a museum guard without legs, origin on the ground under them
 #   GuardLeg      one leg, origin at the hip
+#   GuardArm      one arm hanging straight down, origin at the shoulder (the game hangs two on each guard and swings
+#                 them, and the front guard raises the camera-side one to aim)
+#   GuardPistol   the front guard's pistol in that hand, barrel down along the arm; origin at the shoulder too, so it
+#                 turns with the arm
 import math
 import os
 import sys
@@ -215,18 +219,14 @@ def horse_leg(m):
 
 
 def guard(m):
-    """A museum guard in a navy uniform and peaked cap, gold badge, arms pumping, legs off (GuardLeg)."""
+    """A museum guard in a navy uniform and peaked cap, gold badge, legs and arms off (GuardLeg, GuardArm)."""
     parts = []
     bm = bmesh.new()
     box(bm, -0.17, 0.17, -0.25, 0.25, 0.75, 1.55)  # jacket
-    tilted(bm, (0.12, 0.12, 0.6), (0.18, -0.31, 1.25), -0.6)  # arms, one forward, one back
-    tilted(bm, (0.12, 0.12, 0.6), (-0.18, 0.31, 1.25), 0.6)
     parts.append(link('guardNavy', bm, m['guardNavy']))
     bm = bmesh.new()
     blob(bm, (0.16, 0.15, 0.18), (0.02, 0, 1.78), 10, 7)  # head
     box(bm, 0.16, 0.22, -0.03, 0.03, 1.72, 1.8)  # nose
-    blob(bm, (0.06, 0.06, 0.06), (0.36, -0.31, 1.0), 6, 4)  # hands
-    blob(bm, (0.06, 0.06, 0.06), (-0.36, 0.31, 1.0), 6, 4)
     box(bm, -0.05, 0.05, -0.06, 0.06, 1.55, 1.63)  # neck
     parts.append(link('skinTan', bm, m['skinTan']))
     bm = bmesh.new()
@@ -252,10 +252,29 @@ def guard_leg(m):
     return join(parts, 'GuardLeg')
 
 
+def guard_arm(m):
+    bm = bmesh.new()
+    box(bm, -0.06, 0.06, -0.06, 0.06, -0.6, 0.04)  # sleeve, from the shoulder down
+    parts = [link('guardNavy', bm, m['guardNavy'])]
+    bm = bmesh.new()
+    blob(bm, (0.06, 0.06, 0.06), (0, 0, -0.65), 6, 4)  # hand
+    parts.append(link('skinTan', bm, m['skinTan']))
+    return join(parts, 'GuardArm')
+
+
+def guard_pistol(m):
+    """A black service pistol in the hand: the slide runs on down the arm past the fist, the grip in the palm."""
+    bm = bmesh.new()
+    box(bm, -0.032, 0.032, -0.028, 0.028, -0.92, -0.64)  # slide and barrel
+    box(bm, -0.075, 0.0, -0.025, 0.025, -0.7, -0.62)  # grip, back from the slide
+    parts = [link('shoeBlack', bm, m['shoeBlack'])]
+    return join(parts, 'GuardPistol')
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     m = {k: material(k, v) for k, v in COLORS.items()}
-    obs = [wave(m), chariot(m), chariot_wheel(m), horse(m), horse_leg(m), guard(m), guard_leg(m)]
+    obs = [wave(m), chariot(m), chariot_wheel(m), horse(m), horse_leg(m), guard(m), guard_leg(m), guard_arm(m), guard_pistol(m)]
     for i, ob in enumerate(obs):  # in a row in the file; the game reads each from its origin
         ob.location.x = i * 6
     return obs
