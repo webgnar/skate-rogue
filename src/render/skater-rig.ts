@@ -15,6 +15,7 @@ import type { Skater, SkaterEvent } from '../physics/skater';
 import { Springs, bodyColliders } from './springs';
 import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 import { nollieClip } from '../physics/tricks';
+import { FEEL } from '../physics/feel';
 
 // the leg bones the playtest bot measures for stretch, hip to toe
 const LEG_BONES = (['Left', 'Right'] as const).flatMap((s) => [[`${s}UpLeg`, `${s}Leg`], [`${s}Leg`, `${s}Foot`], [`${s}Foot`, `${s}ToeBase`]] as const);
@@ -29,6 +30,12 @@ const SHIN = 0.4;
 const ANKLE = 0.075; // sole to ankle
 const HIP_W = 0.11;
 const FADE = 0.08; // crossfade between clips, seconds
+
+// a landing's impact animation by how far it dropped (zack, 2026-10-27); the sim names the drop on the land event
+type Drop = 'small' | 'medium' | 'big';
+const LAND_CLIPS: Record<Drop, string> = { small: 'landSmall', medium: 'land', big: 'landBig' };
+// before the sim names it: by how hard it came down
+const dropOf = (impact: number): Drop => (impact < FEEL.soft ? 'small' : impact >= FEEL.heavy ? 'big' : 'medium');
 const PUSH_FADE = 0.2;
 const PUSH_FOR = 2; // pushes before a rest
 const RIDE_FOR = 1.3; // seconds of rolling between pushes
@@ -97,6 +104,7 @@ export class SkaterRig {
   private t = 0;
   private from: Pose = { ...BASE };
   private fade = 0;
+  private rate = 1; // clip seconds per second: a landing runs exactly as long as its ollie lockout
   private fadeLen = FADE;
   private pose: Pose = { ...BASE };
   private flash = 0;
@@ -599,6 +607,7 @@ export class SkaterRig {
     this.clipName = name;
     this.pick();
     this.t = 0;
+    this.rate = 1;
     if (name === 'push') this.pushes = 0;
   }
 
@@ -653,9 +662,18 @@ export class SkaterRig {
         break;
       }
         break;
-      case 'land':
-        this.play(e.manual ? (e.pad ?? 'manual') : 'land');
+      case 'land': {
+        if (e.manual) {
+          this.play(e.pad ?? 'manual');
+          break;
+        }
+        // small, medium or big by the drop, stretched to that landing's ollie lockout (the sim's lock, in frames)
+        const { drop, lock } = e as { drop?: Drop; lock?: number };
+        this.play(LAND_CLIPS[drop ?? dropOf(e.impact ?? 0)]);
+        const len = clipLength(this.clip);
+        if (len > 0) this.rate = len / ((lock ?? PHYS.impactFrames) / 60);
         break;
+      }
       case 'firecracker': // rolled into a stair set: down it in a manual, tail first (the models thread's clip when it's in)
         this.play('firecracker' in CLIPS ? 'firecracker' : 'manual', 0.08);
         break;
@@ -809,7 +827,7 @@ export class SkaterRig {
       this.pick();
     }
 
-    this.t += dt;
+    this.t += dt * this.rate;
     let pose = sample(this.clip, this.t);
     const k = this.fade > 0 ? 1 - (this.fade = Math.max(0, this.fade - dt)) / this.fadeLen : 1;
     // a clip edited since the GLB was baked plays from its keys

@@ -524,6 +524,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Roll onto a cable car climb: Lou crouches and holds the pole at the back of the car all the way up. Same riding switch (he reaches forward with the other hand).
 - [ ] `?boons=firecracker`, roll off the top of a stair set: Lou rides it down on the tail, the tail slapping each step.
 - [ ] Nollie kickflip (hold the nose pop): the back foot flicks off the tail and the front foot pops off the nose; a nollie shove-it spins the board the opposite way from a regular one.
+- [ ] Landings match the drop: an ollie on flat is a quick knee dip, a medium drop is today's landing, and a roof drop is a deep squat that stands up slowly. You can ollie again just as the knees come back up.
 - [ ] Hop off a car roof: Lou does a boneless (front foot steps down onto the roof, back hand grabs the deck, the foot comes back on at the top). Riding fakie it's the mirrored switch boneless. Tune it in ?editor as `boneless (car hop)`.
 
 **Animation editor** (`npm run dev`, then http://localhost:5173/?editor)
