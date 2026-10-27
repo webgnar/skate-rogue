@@ -299,6 +299,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **The rules stack:** 1 heavier traffic, 2 Heat rises 20% faster, 3 three quarters of your Heat carries to the next floor, 4 one fewer boon card, 5 gear wears 50% faster.
 - [ ] **The payoff:** each level adds 15% to score and 20% to Stoken. On the leaderboard a Gnar run shows its level next to the floor (F12 · G3). Winning at a level opens the next. Daily runs are never at a Gnar level.
 - [ ] *Feel:* is level 1 noticeably harder? Is 5 brutal but fair?
+- [ ] On a Gnar level (Stoken pays 1.2 or more a pickup) the ◆ counter, the callouts and the run-over screen only ever show whole Stoken, never a long decimal like 10.7999999.
 
 ## Sound, vibration and settings
 

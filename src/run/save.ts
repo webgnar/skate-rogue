@@ -19,6 +19,10 @@ export interface Save {
   tutorialDone?: boolean; // the tutorial floor was cleared (or skipped by an old save)
 }
 
+// Stoken as a whole number: a Gnar level pays 1.2 a pickup, so the run's count carries fractions (and float sums
+// like 10.799999999999997); the HUD, the screens and the bank only ever see the whole Stoken
+export const whole = (n: number): number => Math.floor(n + 1e-6);
+
 export const EMPTY_SAVE: Save = { best: 0, stoken: 0, wins: 0, unlocked: [], skater: 'lou-gnar', deck: 'popsicle', daily: { day: '', best: 0 }, gnar: 0, gnarPick: 0 };
 
 export function loadSave(): Save {
@@ -27,7 +31,7 @@ export function loadSave(): Save {
     const s = raw ? (JSON.parse(raw) as Partial<Save>) : {};
     return {
       best: Number(s.best) || 0,
-      stoken: Number(s.stoken) || 0,
+      stoken: whole(Number(s.stoken) || 0),
       wins: Number(s.wins) || 0,
       unlocked: Array.isArray(s.unlocked) ? s.unlocked.filter(isUnlockId) : [],
       skater: isSkaterId(s.skater) ? s.skater : 'lou-gnar',
