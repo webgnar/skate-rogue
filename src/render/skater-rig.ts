@@ -116,7 +116,7 @@ export class SkaterRig {
   private shown = ''; // the clip on screen: clipName's switch twin while riding fakie (back to the camera), or clipName
 
   // skinned model bones and the joints they follow
-  private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4 }[] = [];
+  private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4; rest: { p: THREE.Vector3; q: THREE.Quaternion } }[] = [];
   private board: THREE.Object3D | null = null; // the Blender board, which shows gear wear
   private worn = '';
   private held: 'idle' | 'busted' | null = null; // the gear the wear was last drawn for, in steps of 5
@@ -421,7 +421,7 @@ export class SkaterRig {
         const driver = drivers[bone.name];
         const d = toRig.clone().multiply(driver.matrixWorld);
         const b = toRig.clone().multiply(bone.matrixWorld);
-        this.bound.push({ bone, driver, offset: d.invert().multiply(b), local: new THREE.Matrix4() });
+        this.bound.push({ bone, driver, offset: d.invert().multiply(b), local: new THREE.Matrix4(), rest: { p: bone.position.clone(), q: bone.quaternion.clone() } });
       }
     });
     const scale = this.mesh.getWorldScale(new THREE.Vector3()).x;
@@ -558,6 +558,7 @@ export class SkaterRig {
       placed.set(b.bone, target.clone());
       parentInv.copy(parentRig).invert();
       parentInv.multiply(target).decompose(b.bone.position, b.bone.quaternion, b.bone.scale);
+      b.bone.scale.setScalar(1); // bones never scale (see sane)
     }
   }
 
@@ -864,6 +865,7 @@ export class SkaterRig {
       this.mesh.rotation.set(0, this.fakie ? Math.PI : 0, angle, 'ZYX');
     }
 
+    this.sane();
     this.springs?.update(dt, this.mesh.getWorldScale(SCALE_V).x);
 
     if (this.flash > 0) this.flash -= dt;
@@ -936,7 +938,26 @@ export class SkaterRig {
   private setInRig(o: THREE.Object3D, m: THREE.Matrix4): void {
     const parent = o.parent && o.parent !== this.mesh ? this.inRig(o.parent) : new THREE.Matrix4();
     parent.invert().multiply(m).decompose(o.position, o.quaternion, o.scale);
+    if ((o as THREE.Bone).isBone) o.scale.setScalar(1);
   }
+
+  // The skinned model's bones only ever turn and move. A bone that picked up a scale, or a NaN, stretched a shoe out
+  // to a streak across the screen (zack, 2026-10-27: after a few bails, and it stayed through a restart till a
+  // reload): the clips and the frame's restore set position and rotation, so a scale was never put back. Every
+  // frame each bone gets its scale back to 1, and a bone with a broken transform goes back to its bind pose.
+  private sane(): void {
+    for (const { bone, rest } of this.bound) {
+      bone.scale.setScalar(1);
+      const p = bone.position;
+      const q = bone.quaternion;
+      if (Number.isFinite(p.x + p.y + p.z + q.x + q.y + q.z + q.w) && p.lengthSq() < 100) continue;
+      if (!this.warned) console.warn(`skater rig: ${bone.name} lost its pose, reset to bind`, p.toArray(), q.toArray());
+      this.warned = true;
+      p.copy(rest.p);
+      q.copy(rest.q);
+    }
+  }
+  private warned = false;
 
   // show how worn the deck, trucks, wheels and shoes are (wear.ts); redrawn only when a part crosses a step of 5
   setGear(g: Gear): void {

@@ -1210,7 +1210,7 @@ export class Game {
     this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
     this.skyView.update(this.level, this.sim.sky, x, y, this.sim.up, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
-    this.chaserView.update(this.level, this.sim.chaser, dt);
+    this.chaserView.update(this.level, this.sim.chaser, dt, (this.sim.shooter?.aimT ?? 0) > 0);
     this.shotsView.update(this.level, this.sim.shooter, this.chaserView.x + SHOTS.gun / TILE, this.sprite.mesh.position.x, dt);
     this.twistView.update(dt, this.skater);
     if (this.state === 'skate') {
@@ -1474,6 +1474,7 @@ export class Game {
         break;
       case 'shot':
         this.shotsView.fired();
+        this.chaserView.fired();
         this.view.shake(0.05);
         break;
       case 'shotHit':

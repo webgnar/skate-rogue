@@ -106,6 +106,15 @@ function makeGuards(): THREE.Group {
       leg.name = 'leg';
       guard.add(leg);
     }
+    for (const sz of [-0.3, 0.3]) {
+      const arm = new THREE.Group();
+      arm.add(box(0.12, 0.6, 0.12, navy, 0, -0.3));
+      arm.add(box(0.11, 0.11, 0.11, skin, 0, -0.65));
+      if (i === 0 && sz > 0) arm.add(box(0.06, 0.28, 0.06, cap, 0, -0.78)); // the pistol
+      arm.position.set(0, 1.5, sz);
+      arm.name = i === 0 && sz > 0 ? 'gunArm' : 'arm';
+      guard.add(arm);
+    }
     if (i === 0) guard.add(torchBeam());
     guard.position.set(x, 0, z);
     guard.name = 'guard';
@@ -174,6 +183,22 @@ function fromModels(look: ChaserLook): THREE.Group | null {
   for (const [i, [x, z]] of [[0, 0.4], [-0.9, -0.5], [-1.7, 0.7]].entries()) {
     const guard = legged('Guard', 'GuardLeg', [[0.1, 0.76, -0.1], [-0.1, 0.76, 0.1]]);
     if (!guard) return null;
+    //arms hung at the shoulders; the front guard's camera-side one holds the pistol
+    for (const z of [-SHOULDER.z, SHOULDER.z]) {
+      const arm = model('GuardArm');
+      if (!arm) return null;
+      const gun = i === 0 && z > 0;
+      if (gun) {
+        const pistol = model('GuardPistol');
+        if (!pistol) return null;
+        arm.add(pistol);
+      }
+      const shoulder = new THREE.Group();
+      shoulder.add(arm);
+      shoulder.position.set(0, SHOULDER.y, z);
+      shoulder.name = gun ? 'gunArm' : 'arm';
+      guard.add(shoulder);
+    }
     if (i === 0) guard.add(torchBeam());
     guard.position.set(x, 0, z);
     guard.name = 'guard';
@@ -182,6 +207,12 @@ function fromModels(look: ChaserLook): THREE.Group | null {
   return g;
 }
 
+// the guards' shoulders (art/chasers.py), and the front guard's aim: the arm out level from the shoulder, dipped a
+// little toward the skater, the pistol's muzzle 0.92 down the arm. Muzzle = shoulder + 0.92 * (cos dip, -sin dip):
+// 0.9 ahead and 1.32 up, which is SHOTS.gun and SHOTS.gunY (src/sim/shots.ts) less the running bob.
+const SHOULDER = { y: 1.5, z: 0.31 };
+const AIM = { dip: 0.2, raise: 10, recoil: 0.55, settle: 8 };
+
 export class ChaserView {
   readonly group = new THREE.Group();
   private body: THREE.Group | null = null;
@@ -189,8 +220,16 @@ export class ChaserView {
   x = 0; // where it's drawn, world units (eases after the sim)
   surging = false; // closing in faster than it settles
   private t = 0;
+  private aim = 0; // 0 arm swinging, 1 aimed
+  private kick = 0; // recoil, rad, easing out
 
-  update(level: Level, chaser: Chaser | null, dt: number): void {
+  // a shot: the pistol kicks up
+  fired(): void {
+    this.kick = AIM.recoil;
+  }
+
+  // aiming: the front guard holds the pistol on you (the sim's shooter.aimT > 0)
+  update(level: Level, chaser: Chaser | null, dt: number, aiming = false): void {
     this.group.visible = chaser !== null;
     if (!chaser) return;
     const look = chaserLook();
@@ -209,8 +248,16 @@ export class ChaserView {
     this.x += (target - this.x) * Math.min(1, dt * (target > this.x ? 6 : 2));
     this.group.position.set(this.x, toY(level, level.streetY), 0.2);
     const run = Math.sin(this.t * 14);
+    //raised to aim, held through the shot's recoil, then back to pumping
+    const up = aiming || this.kick > 0.05;
+    this.aim += ((up ? 1 : 0) - this.aim) * Math.min(1, dt * AIM.raise);
+    this.kick *= Math.max(0, 1 - dt * AIM.settle);
     this.body!.traverse((o) => {
       if (o.name === 'leg') o.rotation.z = run * 0.6 * (o.position.x > 0 ? 1 : -1);
+      if (o.name === 'arm' || o.name === 'gunArm') {
+        const swing = -run * 0.5 * (o.position.z > 0 ? 1 : -1); // opposite the leg on that side
+        o.rotation.z = o.name === 'gunArm' ? swing + (Math.PI / 2 - AIM.dip - swing) * this.aim + this.kick : swing;
+      }
       if (o.name === 'wheel') o.rotation.y += dt * 12;
       if (o.name === 'spin') o.rotation.z -= dt * 12; // the model's wheels turn about their axle, along z
       if (o.name === 'horse' || o.name === 'guard') o.position.y = Math.abs(run) * 0.12;
