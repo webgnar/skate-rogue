@@ -343,7 +343,7 @@ export class Game {
     this.view.front.add(this.skaterLight.group);
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
-    this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
+    this.view.front.add(this.impacts.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
@@ -1477,11 +1477,12 @@ export class Game {
         this.view.shake(0.05);
         break;
       case 'shotHit':
-        this.particles.grindStart(x, y, -1);
+        this.shotsView.hit(this.particles, x, y);
         this.words.spawn(x, y + 0.4, 'BLAM!');
         this.view.shake(0.25);
         break;
       case 'dodge':
+        this.shotsView.dodged(this.particles, x, y);
         this.hud.callout('DODGED!', 'good');
         break;
     }

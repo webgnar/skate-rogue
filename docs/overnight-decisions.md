@@ -840,3 +840,12 @@ and listed it here for review. Any of these can be flipped in the morning.
 - Fix (toon.ts): the push is measured through the perspective divide, then pre-bent by the inverse of the lens at
   that spot (setInkLens, fed by scene.render each frame), so the ink lands the same width everywhere. Off-screen
   vertices hold the edge's bend so long floors can't blow the hull up.
+
+## Guard gunshot effects (2026-10-27)
+- Polished the first pass from PR #208 (shots-view.ts). The muzzle flash is a spiky comic star with a warm glow. The
+  tracer is a white-hot head in a glow, with an orange streak tapering back and a faint wake toward the gun, and it
+  grows out of the muzzle instead of starting behind it. A hit throws sparks and a red impact star, and a dodge
+  leaves a white whip of air and a few puffs under Lou.
+- The hit and the whiff draw in the skater's pass (scene.ts front) so Lou can't hide them. Everything stays a local
+  spot: no whole-screen flash. Reduce-flashing shrinks and dims the glows. The aim tell (sight line, ring, "!") is
+  unchanged, because dodging depends on it.
