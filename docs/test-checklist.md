@@ -735,3 +735,8 @@ off to compare. Reduce motion skips it.
 - [ ] With the fisheye on, the ink round Lou is the same thickness as on coins and buildings at the screen's edges.
 - [ ] Turning the camera and dolly zoom don't make outlines swell or thin out.
 - [ ] No black slabs or streaks along the street edge (hull blow-up) at any lens setting.
+
+## Guard gunshots (2026-10-27)
+- [ ] On a chase floor in portrait, the shot reads at a glance: a star at the gun, then a bright tracer with a fading tail.
+- [ ] Getting hit shows a red spark burst over Lou; dodging shows a white whip of air under him.
+- [ ] With Reduce Flashing on, the glows are smaller and dimmer but the tracer still reads.
