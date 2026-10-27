@@ -56,6 +56,8 @@ import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
 import { PedView } from '../render/peds';
 import { PhoneFx } from '../render/phone-fx';
 import { CHASER } from '../sim/chaser';
+import { SHOTS, type ShotEvent } from '../sim/shots';
+import { ShotsView } from '../render/shots-view';
 import { TwistView } from '../render/twist-view';
 import { BountyView } from '../render/bounty-view';
 import { BOUNTY, bountyPay } from '../run/bounty';
@@ -239,6 +241,8 @@ export class Game {
   private readonly skyView = new SkyView();
   private readonly droneView = new DroneView();
   private readonly chaserView = new ChaserView();
+  private readonly shotsView = new ShotsView();
+  private shotsCalled = false; // told the player this floor that the guards shoot
   private readonly pedView = new PedView();
   private readonly phoneFx = new PhoneFx();
   private readonly bountyView = new BountyView();
@@ -340,7 +344,7 @@ export class Game {
     this.view.front.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.front.add(this.impacts.group, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
+    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.ghostMesh = new THREE.Mesh(
@@ -580,6 +584,7 @@ export class Game {
     this.floorStoken = this.run.stoken;
     this.bountySeen = false;
     this.lesson = 0;
+    this.shotsCalled = false;
     this.prev = from ? { x: this.prev.x + from.dx, y: this.prev.y + from.dy } : { x: this.skater.x, y: this.skater.y };
     if (!from) this.view.setLevel(this.level, this.seed, this.floor);
     const rain = this.applyMood(!!from);
@@ -1206,6 +1211,7 @@ export class Game {
     this.skyView.update(this.level, this.sim.sky, x, y, this.sim.up, dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, dt);
+    this.shotsView.update(this.level, this.sim.shooter, this.chaserView.x + SHOTS.gun / TILE, this.sprite.mesh.position.x, dt);
     this.twistView.update(dt, this.skater);
     if (this.state === 'skate') {
       const street = toY(this.level, this.level.streetY);
@@ -1456,6 +1462,31 @@ export class Game {
     this.hud.gear(this.sim.gear);
   }
 
+  // the guards shooting (src/sim/shots.ts): the tell, the bang, a hit or a dodge
+  private shotFx(e: ShotEvent): void {
+    const x = toX(e.x);
+    const y = toY(this.level, e.y);
+    switch (e.type) {
+      case 'aim':
+        //the first time on a floor, say what to do
+        if (!this.shotsCalled) this.hud.callout('THEY SHOOT! OLLIE THE BULLETS!', 'bad');
+        this.shotsCalled = true;
+        break;
+      case 'shot':
+        this.shotsView.fired();
+        this.view.shake(0.05);
+        break;
+      case 'shotHit':
+        this.particles.grindStart(x, y, -1);
+        this.words.spawn(x, y + 0.4, 'BLAM!');
+        this.view.shake(0.25);
+        break;
+      case 'dodge':
+        this.hud.callout('DODGED!', 'good');
+        break;
+    }
+  }
+
   // stomped a drone: it's worth a trick's style, and goes down with a crunch
   private droneDown(index: number): void {
     const d = this.sim.swarm!.drones[index];
@@ -1483,6 +1514,8 @@ export class Game {
     if (e.type === 'smash') return this.smashed(e);
     if (e.type === 'dent') return this.dented(e);
     if (e.type === 'wear') return this.worn(e.part, e.level);
+    if (e.type === 'aim' || e.type === 'shot' || e.type === 'shotHit') return this.shotFx(e);
+    if (e.type === 'dodge') this.shotFx(e);
     if (e.type === 'puddle') {
       //rolled through a puddle: a sheet of water off the wheels, and the deck's bar ticks down blue
       const x = toX(e.x);
@@ -1499,7 +1532,7 @@ export class Game {
       this.view.shake(0.12);
       return;
     }
-    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip' && e.type !== 'birds') {
+    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip' && e.type !== 'birds' && e.type !== 'dodge') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;
       this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));

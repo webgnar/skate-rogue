@@ -697,6 +697,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 - [ ] Impact by drop: after an ollie on flat you can pop again almost at once. After a stair set or a car drop there's a medium crouch. After a roof drop there's a deep crouch, and taps during it are lost until he stands up.
 
+- [ ] Guards shoot (`?escape=3`): about 3 s into the chase you see a "!" over the front guard and a red line to you, then a bang and a yellow tracer. Ollie just before it reaches you and you get DODGED!. Stay on the ground and you get BLAM! and a slam. Up on a high line they don't shoot.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

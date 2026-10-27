@@ -909,6 +909,11 @@ export class Skater {
     this.events.push({ type: 'kicker' });
   }
 
+  // hit by a guard's bullet (src/sim/shots.ts): down you go, as a slam (Bubble Pads take it)
+  shot(): void {
+    this.slam();
+  }
+
   private slam(): void {
     if (this.pads > 0) {
       this.pads--;

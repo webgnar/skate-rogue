@@ -487,7 +487,7 @@ export class TrafficView {
 
 // the warning over a door car: a comic "!", yellow in a thick ink outline
 let bangTex: THREE.CanvasTexture | null = null;
-function bangTexture(): THREE.CanvasTexture {
+export function bangTexture(): THREE.CanvasTexture {
   if (bangTex) return bangTex;
   const c = document.createElement('canvas');
   c.width = 64;
