@@ -32,6 +32,11 @@ const DOOR_PAINTS = [0xf2c230, 0x2fb8c8, 0x3a7be8, 0x48b86a]; // door cars: brig
 const DOOR_OPEN = (64 * Math.PI) / 180; // how far an open door swings: flung wide, across your lane
 const DOOR_SIZE = [1.75, 1.15, 1.8]; // the door drawn bigger than life so it reads (zack: "exaggerate the door")
 const CRUISER_Z = STREET_Z.back; // the back lane, behind the skate lane
+// Heat this low and the cruiser gives up: it drops back out of the frame and is only hidden once it's fully off
+// screen (zack: "the cop car shouldnt dissapear when its chasing you while its still on screen"). Before, it was
+// hidden the moment it fell 8.8 tiles back, which is still well inside a landscape phone's view.
+const CRUISER_AWAY = { gap: 8.8, far: 30, rate: 0.02 }; // tiles: the gap it gives up at, where it drops back to
+const CRUISER_BOX = { x: 2.2, y0: -0.3, y1: 2.8, z: 1 }; // tiles round the car (light bar and flare too)
 
 export class TrafficView {
   readonly group = new THREE.Group();
@@ -45,7 +50,7 @@ export class TrafficView {
   private doorMeshes: { door: CarDoor; mesh: THREE.Group; pivot: THREE.Group; bang: THREE.Sprite; shutAt?: number }[] = [];
   private blinkers = new Map<number, THREE.Mesh>();
   private stages = new Map<number, Stage>(); // car-hop damage by vehicle id (car-damage.ts)
-  private cruiserGap = 10; // tiles behind the skater
+  private cruiserGap = CRUISER_AWAY.far; // tiles behind the skater: a new floor's cruiser drives in from off screen
   readonly jets = new CruiserJets(); // fold out for a canal jump
   private path: CruiserPath | null = null;
   private turning: { x: number; to: number; u: number } | null = null; // up the side street at the last floor's end
@@ -57,6 +62,9 @@ export class TrafficView {
   private readonly beamFrom = new THREE.Vector3();
   private readonly eyeAt = new THREE.Vector3();
   private readonly bar = new THREE.Vector3();
+  private readonly frustum = new THREE.Frustum();
+  private readonly viewProj = new THREE.Matrix4();
+  private readonly box = new THREE.Box3();
 
   constructor() {
     this.cruiser = this.makeCruiser();
@@ -130,7 +138,7 @@ export class TrafficView {
     this.doorMeshes = [];
     this.blinkers.clear();
     this.stages.clear();
-    this.cruiserGap = 10;
+    this.cruiserGap = CRUISER_AWAY.far;
     this.jets.reset();
     this.path = null;
     if (!rolledOn) this.turning = null;
@@ -398,6 +406,18 @@ export class TrafficView {
     g.add(panel, glass);
   }
 
+  // whether any of the cruiser is inside the camera's view (no camera: treat it as gone)
+  private onScreen(camera?: THREE.Camera): boolean {
+    if (!camera) return false;
+    camera.updateMatrixWorld();
+    this.frustum.setFromProjectionMatrix(this.viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    const p = this.cruiser.position;
+    const b = CRUISER_BOX;
+    this.box.min.set(p.x - b.x, p.y + b.y0, p.z - b.z);
+    this.box.max.set(p.x + b.x, p.y + b.y1, p.z + b.z);
+    return this.frustum.intersectsBox(this.box);
+  }
+
   // whether the cruiser is on screen to throw exhaust
   get cruiserShown(): boolean {
     return this.cruiser.visible;
@@ -405,10 +425,14 @@ export class TrafficView {
 
   // heat 0..100; hold: don't creep closer during a remount; caught: pull level with the skater
   // skaterY (px) aims the searchlight; it defaults to the street
-  chase(level: Level, skaterX: number, heat: number, hold: boolean, caught: boolean, dtMs: number, skaterY = level.streetY): void {
+  // camera: the view's, to keep the cruiser drawn until it's off screen
+  chase(level: Level, skaterX: number, heat: number, hold: boolean, caught: boolean, dtMs: number, skaterY = level.streetY, camera?: THREE.Camera): void {
     this.t += dtMs;
     const target = caught ? 0.2 : 9 - 8.3 * (heat / 100);
-    if (!(hold && target < this.cruiserGap)) this.cruiserGap += (target - this.cruiserGap) * (caught ? 0.12 : 0.06);
+    //cooled off: it drops back out of the frame instead of vanishing where it is
+    const away = !caught && target >= CRUISER_AWAY.gap;
+    const goal = away ? CRUISER_AWAY.far : target;
+    if (!(hold && goal < this.cruiserGap)) this.cruiserGap += (goal - this.cruiserGap) * (caught ? 0.12 : away ? CRUISER_AWAY.rate : 0.06);
     //it keeps to the street: held at the foot of a hill, through the tunnel under it, over the canals
     if (this.path?.level !== level) this.path = new CruiserPath(level);
     const frames = dtMs / (1000 / 60);
@@ -427,7 +451,7 @@ export class TrafficView {
     } else {
       this.cruiser.position.set(this.path.x, toY(level, level.streetY) + this.path.y, this.path.z);
       this.cruiser.rotation.y = (this.path.turn * Math.PI) / 2;
-      this.cruiser.visible = this.path.visible && this.cruiserGap < 8.8;
+      this.cruiser.visible = this.path.visible && (!away || this.onScreen(camera));
     }
     this.jets.update(turn ? 0 : this.path.y, dtMs / 1000);
     const flash = Math.floor(this.t / 160) % 2 === 0;

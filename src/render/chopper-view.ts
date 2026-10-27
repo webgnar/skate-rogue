@@ -26,6 +26,10 @@ function smooth(from: number, to: number, v: { v: number }, time: number, dt: nu
 
 const FOLLOW = { x: 0.18, y: 0.6, bank: 0.35 }; // seconds the follow takes to settle: along, up and down, banking
 const DROP = 9; // tiles over its height it comes in from, out of the sky, and climbs back up to when it leaves
+// gone from the sim (the finish line, the floor over): it climbs away up out of the frame, still flying on the way
+// it was, before it's hidden (zack: "the helicopter should fly upwards before dissapearing")
+const AWAY = { up: 1, accel: 5, gone: 30, fade: 0.4 }; // tiles/s it starts climbing at, tiles/s² it speeds up by,
+// tiles up it's hidden at, seconds its spotlight takes to go out
 
 export class ChopperView {
   readonly group = new THREE.Group();
@@ -42,6 +46,8 @@ export class ChopperView {
   private readonly vx = { v: 0 };
   private readonly vy = { v: 0 };
   private readonly vb = { v: 0 };
+  private v = 0; // tiles/s along the street, last seen
+  private away: { up: number; light: number; cone: number; pool: number } | null = null; // climbing away once the sim's done with it
 
   constructor() {
     const hull = model('Chopper');
@@ -99,9 +105,14 @@ export class ChopperView {
   // on something there)
   update(level: Level, ch: Pick<Chopper, 'x' | 'v' | 'lit' | 'covers'> | null, dt: number, ground?: { y: number; pool: boolean }): void {
     const was = this.group.visible;
-    this.group.visible = ch !== null;
-    if (!ch) return;
+    if (!ch) {
+      if (was) this.flyAway(dt);
+      return;
+    }
+    this.away = null;
+    this.group.visible = true;
     this.t += dt;
+    this.v = toX(ch.v) * 60;
     const cx = toX(at(ch, 'x')); // between the sim's steps (src/game/interp.ts)
     const x = was ? smooth(this.group.position.x, cx, this.vx, FOLLOW.x, dt) : cx;
     //it hovers over the skater (or the street), and never lower than the hill under it; it drops in out of the sky
@@ -134,5 +145,34 @@ export class ChopperView {
     this.poolMat.opacity = 0.5 + 0.35 * hot;
     //no pool where the L tracks are overhead
     this.pool.visible = this.lift < 1 && (ground ? ground.pool : !ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1));
+  }
+
+  // up and away out of the top of the frame, then hidden
+  private flyAway(dt: number): void {
+    const a = (this.away ??= { up: AWAY.up, light: 1, cone: this.coneMat.opacity, pool: this.poolMat.opacity });
+    this.t += dt;
+    a.up += AWAY.accel * dt;
+    this.lift += a.up * dt;
+    this.group.position.x += this.v * dt;
+    this.body.position.y = HIGH + this.lift;
+    //the spotlight goes out rather than cutting off
+    a.light = Math.max(0, a.light - dt / AWAY.fade);
+    this.coneMat.opacity = a.cone * a.light;
+    this.poolMat.opacity = a.pool * a.light;
+    if (a.light === 0) this.cone.visible = this.pool.visible = false;
+    this.blur.rotation.y += dt * 40;
+    const [main, tail] = this.rotors;
+    if (main) main.rotation.y += dt * 9;
+    if (tail) tail.rotation.z += dt * 21;
+    if (this.lift >= AWAY.gone) {
+      this.group.visible = false;
+      this.away = null;
+    }
+  }
+
+  // the world moved back by the next floor's origin (game.cross): so does a chopper still climbing away
+  shift(dx: number, dy: number): void {
+    this.group.position.x += dx;
+    this.group.position.y += dy;
   }
 }
