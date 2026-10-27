@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PHYS, TILE } from '../src/physics/constants';
 import { BIOME_GRAVITY, FEEL, landQuality, MOMENTUM, normalImpact, type MomentumMode } from '../src/physics/feel';
 import { CurvedRail, type Level, type Surface } from '../src/physics/level';
-import { Skater, type SkaterEvent } from '../src/physics/skater';
+import { impactTier, Skater, type SkaterEvent } from '../src/physics/skater';
 import { RIG_SCALE } from '../src/physics/tuck';
 import { SCALE } from '../src/render/skater-rig';
 import { TRICK_CATCH, TRICK_ROLL } from '../src/physics/tricks';
@@ -670,16 +670,44 @@ describe('no ollie during the impact', () => {
 
   it('a press while the knees take the landing is lost', () => {
     expect(pressAfterLanding(1).ollied).toBe(false);
-    expect(pressAfterLanding(PHYS.impactFrames - 1).ollied).toBe(false);
+    expect(pressAfterLanding(PHYS.impactTiers[0].frames - 1).ollied).toBe(false);
   });
 
   it('once the impact is over, the ollie pops at once', () => {
-    expect(pressAfterLanding(PHYS.impactFrames + 1).ollied).toBe(true);
+    expect(pressAfterLanding(PHYS.impactTiers[0].frames + 1).ollied).toBe(true);
   });
 
-  it('lasts as long as the landing clip', () => {
-    const len = CLIPS.land.keys[CLIPS.land.keys.length - 1].t;
-    expect(PHYS.impactFrames / 60).toBeCloseTo(len, 1);
+  // zack (2026-10-27): the impact grows with the drop, in three tiers, each with its own wait to pop again
+  it('an ollie on flat is a small drop; bigger drops lock you out longer', () => {
+    const sk = new Skater(levelOf(FLAT));
+    run(sk, 1, pressAt(0));
+    let land: SkaterEvent | undefined;
+    for (let f = 1; f < 200 && !land; f++) {
+      sk.step({ pressed: false, held: false });
+      land = lands(sk)[0];
+    }
+    expect(land).toMatchObject({ drop: 'small', lock: PHYS.impactTiers[0].frames });
+    expect(impactTier(50).drop).toBe('small');
+    expect(impactTier(150).drop).toBe('medium');
+    expect(impactTier(400).drop).toBe('big');
+    const frames = PHYS.impactTiers.map((t) => t.frames);
+    expect([...frames].sort((a, b) => a - b)).toEqual(frames);
+  });
+
+  it('a big drop holds the ollie back for the big tier', () => {
+    const sk = new Skater(levelOf(FLAT));
+    Object.assign(sk, { mode: 'air', y: sk.y - 300, topY: sk.y - 300, vsp: 0, surface: null });
+    let landedAt = -1;
+    let popped = -1;
+    for (let f = 0; f < 200; f++) {
+      const press = landedAt >= 0 && popped < 0;
+      sk.step({ pressed: press, held: press });
+      if (landedAt < 0 && lands(sk).length) {
+        expect(lands(sk)[0]).toMatchObject({ drop: 'big', lock: PHYS.impactTiers[2].frames });
+        landedAt = f;
+      } else if (landedAt >= 0 && sk.events.some((e) => e.type === 'ollie')) popped = f;
+    }
+    expect(popped - landedAt).toBeGreaterThanOrEqual(PHYS.impactTiers[2].frames);
   });
 
   // zack (2026-10-26): the Strong Legs boon gives a panicked second tap its ollie

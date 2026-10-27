@@ -35,6 +35,13 @@ export const PHYS = {
   slamFrames: 36, // ~0.6 s to get back to full speed
   bufferFrames: 6, // 100 ms input buffer
   impactFrames: 21, // Lou Gnar's IMPACT_DURATION, 350 ms: after a landing, no ollie until the knees are back up (zack)
+  // the impact grows with the drop (zack, 2026-10-27): px fallen from the top of the air to the landing, and the
+  // frames of no-ollie each tier gets. Small covers an ollie or a flip on flat (about 50 and 100 px up and down).
+  impactTiers: [
+    { drop: 'small', under: 112, frames: 12 },
+    { drop: 'medium', under: 224, frames: 21 },
+    { drop: 'big', under: Infinity, frames: 36 },
+  ] as const,
   coyoteFrames: 5,
   width: 30, // the board's length, nose to tail (zack, 2026-10-25): what cars, drones and props hit
   height: 48,
