@@ -777,6 +777,7 @@ export class Game {
     this.view.promote(specKey(spec), level, this.seed, next.floor, x, y);
     this.trafficView.handOff(old);
     for (const fx of [this.particles, this.impacts, this.words, this.smashFx]) fx.shift(-x, -y);
+    for (const ch of [this.chopper, this.topChopper]) ch.shift(-x, -y);
     const skater = this.skater;
     this.floor = next.floor;
     this.road = road;
@@ -1158,7 +1159,7 @@ export class Game {
     this.trafficView.syncCross(this.level, this.sim.traffic.cross);
     this.trafficView.syncStreet(this.level, this.sim.traffic);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
-    this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y);
+    this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y, this.view.camera);
     if (this.trafficView.cruiserShown) this.trafficView.jets.exhaust(this.particles, toY(this.level, this.level.streetY), dt);
     this.hud.heat(heat);
     this.sound?.update({
