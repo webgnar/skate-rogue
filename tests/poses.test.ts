@@ -224,3 +224,14 @@ describe('leg IK', () => {
     }
   });
 });
+
+describe('landing impacts by drop size', () => {
+  it('has a small, medium and big landing that dip deeper and last longer, each with a switch twin', () => {
+    const low = (c: string) => Math.min(...CLIPS[c].keys.map((k) => k.pose.hipY ?? 1));
+    expect(low('landSmall')).toBeGreaterThan(low('land'));
+    expect(low('land')).toBeGreaterThan(low('landBig'));
+    expect(clipLength(CLIPS.landSmall)).toBeLessThan(clipLength(CLIPS.land));
+    expect(clipLength(CLIPS.land)).toBeLessThan(clipLength(CLIPS.landBig));
+    for (const c of ['landSmall', 'landBig']) expect(CLIPS[switchName(c)]).toBeDefined();
+  });
+});

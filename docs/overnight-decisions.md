@@ -562,6 +562,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- 2026-10-27: There are now three landing impacts by drop size (zack): `landSmall` (a quick knee dip), `land` (unchanged) and `landBig` (a deep squat that holds, then a slow stand). The sim names the drop and the ollie lockout frames on the land event (design thread: small 12, medium 21, big 36 frames). The rig stretches the clip to exactly the lockout, so the knees come back up when you can ollie again. Until the sim's fields land, the drop is picked from how hard you hit (under FEEL.soft is small, FEEL.heavy and up is big). All three can be tuned in ?editor.
+
 - 2026-10-26: Nollie flips are popped off the nose properly now. The nollie version of each flip swaps the whole foot set (position, angle, on-board), so the back foot does the flick off the tail corner while the front foot pops, and the board pitch, lean and slide flip with it. Shove-its and heelflip/kickflip spins are scooped by the front foot, so the board spins the other way. Nollie 180s keep their spin direction (the body turns, not the board). Edits in ?editor still win over these.
 
 - **Hanging on to the cable car, and the firecracker (2026-10-26).** zack: the arm should reach and grab the car while

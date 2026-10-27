@@ -533,6 +533,28 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0.35, pose: { hipY: 0.88 } },
     ],
   },
+  // a small drop (an ollie or a flip on flat): a quick dip at the knees, arms barely move. The rig stretches each
+  // landing clip to the sim's ollie lockout for it (the 'land' event's lock), so the knees are back up when you can
+  // ollie again (zack, 2026-10-27: three impacts scaled to the drop)
+  landSmall: {
+    loop: false,
+    keys: [
+      { t: 0, pose: { hipY: 0.86, bend: 0.16 } },
+      { t: 0.06, pose: { hipY: 0.74, bend: 0.24, armLRaise: 0.5, armRRaise: 0.45, armLElbow: 0.4, armRElbow: 0.4 } },
+      { t: 0.2, pose: { hipY: 0.88 } },
+    ],
+  },
+  // a big drop (a roof): sinks deep into a full squat, arms flung up and out, head down, holds the compression, then
+  // stands back up slowly
+  landBig: {
+    loop: false,
+    keys: [
+      { t: 0, pose: { hipY: 0.82, bend: 0.25 } },
+      { t: 0.1, pose: { hipY: 0.48, bend: 0.52, nod: 0.35, armLRaise: 1.4, armRRaise: 1.3, armLElbow: 1.0, armRElbow: 0.95, armLFwd: 0.4, armRFwd: 0.3 } },
+      { t: 0.3, pose: { hipY: 0.52, bend: 0.46, nod: 0.3, armLRaise: 1.1, armRRaise: 1.0, armLElbow: 0.9, armRElbow: 0.85, armLFwd: 0.3, armRFwd: 0.25 } },
+      { t: 0.6, pose: { hipY: 0.88 } },
+    ],
+  },
   // backside smith grind (zack's photo): weight on the back leg over the locked back truck, front knee bent
   // pressing the nose down past the far side, torso upright and a little back, back arm up high, head down
   smith: {
