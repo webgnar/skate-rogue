@@ -105,7 +105,7 @@ export class Sound {
     this.coinsAt = this.coinsAt.filter((at) => t - at < COIN_VERB.window);
     const mix = coinMix(this.coinsAt.length);
     this.coinsAt.push(t);
-    const rate = (cue.rate ?? 1) * (1 + (Math.random() * 2 - 1) * COIN_VERB.jitter);
+    const rate = cue.rate ?? 1; // never detuned: off-pitch coins turn dissonant as they stack
     const voice = (r: number, dry: number, wet: number): void => {
       const src = ctx.createBufferSource();
       src.buffer = buf;

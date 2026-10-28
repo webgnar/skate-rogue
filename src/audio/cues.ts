@@ -48,7 +48,6 @@ export const COIN_VERB = {
   window: 0.4, // s: coins started within this of each other count as piled up
   shimmer: 0.28, // the octave-up ghost, into the reverb only, at full pile
   limit: -10, // dB: the coins' bus is held under this, so a stack swells instead of clipping
-  jitter: 0.025, // each coin's pitch wobbles this much either way, so a stack never phases the same twice
 };
 
 // how one coin splits between dry and the reverb, given how many others started inside COIN_VERB.window
