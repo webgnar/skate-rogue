@@ -566,6 +566,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 ## Models thread: animation
 
+- 2026-10-28: The frontside 180s turned back on landing (zack). Since the switch twins (PR #152), the fakie stance is the regular one mirrored, so the 180s have to end turned to it. The backside 180s ended 40 degrees short and carried on turning on the landing. The frontside ones (fs, nollie fs, fakie fs) went 40 degrees past it and unwound, which is the flip back zack saw. Both clips now end exactly in the switch stance, and the GLB is re-baked.
+
 - 2026-10-27: The guards are split into arms in art/chasers.py (GuardArm, GuardPistol), so their arms now pump as they run. While the sim aims (shooter.aimT > 0), the front guard raises the camera-side arm and holds a pistol out level, dipped a little. Each shot kicks the gun up, then the arm drops back to running. The muzzle sits 0.9 tiles ahead and about 44 px up, so SHOTS.gun and SHOTS.gunY now match it.
 - 2026-10-27: The shoe streak (zack: a shoe stretched across the screen after a few bails, staying until a reload). I couldn't reproduce it here. The one rig state a restart doesn't reset is a bone's scale: the clips and the per-frame restore only set position and rotation. Now every bone's scale goes back to 1 each frame, and any bone with a broken transform (NaN, or thrown far off) resets to its bind pose and logs one console warning.
 

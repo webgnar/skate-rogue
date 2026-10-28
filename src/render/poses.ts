@@ -472,14 +472,15 @@ export const CLIPS: Record<string, Clip> = {
   },
   // Backside 180: the skater and board turn half round together, back leading, and roll away fakie (back foot
   // first). Shoulders wind frontside first, then lead the turn; feet stay on the board, knees up. The clip ends a
-  // half turn round; the rig then flips to its fakie stance, which looks the same.
+  // half turn round in the switch stance (its yaw mirrored, -BASE.yaw), so when the rig flips to fakie and plays the
+  // switch twins nothing turns back (zack, 2026-10-28: the fs 180s ended 40 degrees past it and unwound on landing).
   bs180: {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 1.0, boardY: 0.3, yaw: 0.65, head: 0.6, bend: 0.22, armLRaise: 1.1, armRRaise: 1.0, armLFwd: -0.3, armRFwd: 0.5 } },
-      { t: 0.12, pose: { hipY: 1.08, boardY: 0.32, yaw: 0.35 - 1.1, head: 0.1, boardYaw: -0.9, bend: 0.3, nod: 0.35, armLRaise: 1.3, armRRaise: 1.2, armLFwd: 0.6, armRFwd: -0.3 } },
-      { t: 0.26, pose: { hipY: 1.06, boardY: 0.3, yaw: 0.35 - 2.6, head: -0.1, boardYaw: -2.5, bend: 0.28, nod: 0.35, armLRaise: 1.2, armRRaise: 1.3, armLFwd: 0.4, armRFwd: -0.2 } },
-      { t: 0.36, pose: { hipY: 1.0, boardY: 0.28, yaw: 0.35 - Math.PI, head: 0.4, boardYaw: -Math.PI, bend: 0.24, armLRaise: 1.1, armRRaise: 1.1 } },
+      { t: 0.12, pose: { hipY: 1.08, boardY: 0.32, yaw: -0.9, head: 0.1, boardYaw: -0.9, bend: 0.3, nod: 0.35, armLRaise: 1.3, armRRaise: 1.2, armLFwd: 0.6, armRFwd: -0.3 } },
+      { t: 0.26, pose: { hipY: 1.06, boardY: 0.3, yaw: -2.45, head: -0.1, boardYaw: -2.5, bend: 0.28, nod: 0.35, armLRaise: 1.2, armRRaise: 1.3, armLFwd: 0.4, armRFwd: -0.2 } },
+      { t: 0.36, pose: { hipY: 1.0, boardY: 0.28, yaw: -BASE.yaw - Math.PI, head: 0.4, boardYaw: -Math.PI, bend: 0.24, armLRaise: 1.1, armRRaise: 1.1 } },
     ],
   },
   // Frontside 180: the chest opens toward the way they roll and keeps turning; lands fakie looking at the landing
@@ -487,9 +488,9 @@ export const CLIPS: Record<string, Clip> = {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 1.0, boardY: 0.3, yaw: 0.05, head: 0.3, bend: 0.22, armLRaise: 1.0, armRRaise: 1.1, armLFwd: 0.5, armRFwd: -0.3 } },
-      { t: 0.12, pose: { hipY: 1.08, boardY: 0.32, yaw: 0.35 + 1.1, head: 0.5, boardYaw: 0.9, bend: 0.28, nod: 0.3, armLRaise: 1.3, armRRaise: 1.2, armLFwd: -0.3, armRFwd: 0.6 } },
-      { t: 0.26, pose: { hipY: 1.06, boardY: 0.3, yaw: 0.35 + 2.6, head: 0.6, boardYaw: 2.5, bend: 0.26, nod: 0.35, armLRaise: 1.2, armRRaise: 1.3, armLFwd: -0.2, armRFwd: 0.4 } },
-      { t: 0.36, pose: { hipY: 1.0, boardY: 0.28, yaw: 0.35 + Math.PI, head: 0.5, boardYaw: Math.PI, bend: 0.24, armLRaise: 1.1, armRRaise: 1.1 } },
+      { t: 0.12, pose: { hipY: 1.08, boardY: 0.32, yaw: 1.2, head: 0.5, boardYaw: 0.9, bend: 0.28, nod: 0.3, armLRaise: 1.3, armRRaise: 1.2, armLFwd: -0.3, armRFwd: 0.6 } },
+      { t: 0.26, pose: { hipY: 1.06, boardY: 0.3, yaw: 2.4, head: 0.6, boardYaw: 2.5, bend: 0.26, nod: 0.35, armLRaise: 1.2, armRRaise: 1.3, armLFwd: -0.2, armRFwd: 0.4 } },
+      { t: 0.36, pose: { hipY: 1.0, boardY: 0.28, yaw: -BASE.yaw + Math.PI, head: 0.5, boardYaw: Math.PI, bend: 0.24, armLRaise: 1.1, armRRaise: 1.1 } },
     ],
   },
   // 50-50: both trucks' hangers locked on the rail (wheels either side of it), board in line with it, knees bent,

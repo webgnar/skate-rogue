@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BASE, BOARD, CLIPS, clipLength, deckPoint, footTarget, kneePoint, mix, sample, type Pose } from '../src/render/poses';
-import { mirrorPose, onNose, switchName } from '../src/render/poses';
+import { mirrorPose, onNose, switchName, SPINS } from '../src/render/poses';
 
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
@@ -83,7 +83,9 @@ describe('rig poses', () => {
   it('180s turn the skater with the board: they land fakie, front foot trailing, back foot leading', () => {
     for (const name of ['bs180', 'fs180']) {
       const p = sample(CLIPS[name], clipLength(CLIPS[name]));
-      expect(Math.abs(p.yaw - BASE.yaw), name).toBeCloseTo(Math.PI);
+      // a half turn, ending in the switch stance (yaw mirrored) so the switch clips after it carry on without a turn back
+      expect(Math.abs(p.yaw + BASE.yaw), name).toBeCloseTo(Math.PI);
+      expect(p.yaw - SPINS[name], name).toBeCloseTo(-BASE.yaw);
       expect(footTarget(p, true).x, name).toBeLessThan(-0.2);
       expect(footTarget(p, false).x, name).toBeGreaterThan(0.2);
       expect(p.footFOn + p.footBOn).toBe(2); // feet stay on, it's not a shove-it
