@@ -1,0 +1,4 @@
+- [x] chain() and chainText() with tests
+- [x] Wires and dead slots in the shop and HUD
+- [x] Board in words in the shop
+- [x] Desktop and phone screenshots

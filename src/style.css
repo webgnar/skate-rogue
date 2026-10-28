@@ -1522,3 +1522,42 @@ html, body {
   #meta .done { font-size: calc(var(--u) * 2.4); }
   #meta .note { font-size: calc(var(--u) * 1.1); }
 }
+
+/* ---- board wires (openspec ui7-board-wires, src/ui/board-wires.ts): how the board reads, drawn on it. A wire in
+   the trigger's purple runs under the slots from each trigger to the last effect it fires, with a drop up into
+   each slot it feeds; a slot nothing fires is dimmed and crossed out. Same in the shop and the in-run HUD. ---- */
+#shop .slots, #slots { position: relative; }
+#shop .slots { padding-bottom: calc(var(--u) * 1.6); }
+#slots { padding-bottom: calc(var(--u) * 1.1); }
+.wire {
+  position: absolute;
+  height: calc(var(--u) * 0.45);
+  min-height: 3px;
+  margin-top: calc(var(--u) * 0.6);
+  background: var(--trigger);
+  border: 1.5px solid #000;
+  border-left: 0;
+  box-shadow: 0 0 calc(var(--u) * 0.8) var(--trigger);
+  pointer-events: none;
+}
+/* the dot at the trigger and the arrow head at the end */
+.wire::before { content: ''; position: absolute; left: calc(var(--u) * -0.5); top: 50%; width: calc(var(--u) * 1); height: calc(var(--u) * 1); min-width: 7px; min-height: 7px; translate: 0 -50%; border-radius: 50%; background: var(--trigger); border: 1.5px solid #000; }
+.wire::after { content: ''; position: absolute; right: calc(var(--u) * -0.7); top: 50%; translate: 0 -50%; border: calc(var(--u) * 0.6) solid transparent; border-left: calc(var(--u) * 0.9) solid var(--trigger); border-right: 0; }
+/* a drop up into each slot the trigger feeds */
+.wire b { position: absolute; bottom: 100%; width: calc(var(--u) * 0.4); min-width: 3px; height: calc(var(--u) * 0.6); translate: -50% 0; background: var(--trigger); }
+#shop .slot.dead, #slots .slot.dead { opacity: 0.45; position: relative; }
+#shop .slot.dead::before, #slots .slot.dead::before {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  background: linear-gradient(45deg, transparent 47.5%, #ff4a5a 47.5% 52.5%, transparent 52.5%), linear-gradient(-45deg, transparent 47.5%, #ff4a5a 47.5% 52.5%, transparent 52.5%);
+  opacity: 0.75;
+  pointer-events: none;
+}
+/* the board in words under it */
+#shop .story { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: calc(var(--u) * 0.2); font-size: calc(var(--u) * 1.35); line-height: 1.1; color: #e4c8ff; min-height: 1.1em; }
+#shop .story span::before { content: '⚡ '; color: var(--trigger); }
+#shop .story .none { font: 600 calc(var(--u) * 1.05)/1.2 system-ui, sans-serif; letter-spacing: 0; color: #b8a8cc; }
+#shop .story .none::before { content: ''; }
+#shop .gearrow { display: flex; flex-direction: column; justify-content: center; }
+#shop .setup, #shop .head { max-width: 1160px; }

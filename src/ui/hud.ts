@@ -8,6 +8,7 @@ import { modDef, type ModId, type Slots } from '../board/mods';
 import { actOf, FLOORS_PER_ACT } from '../gen/escape';
 import { label, type Road } from '../gen/roads';
 import { GEAR, type Gear, type GearPart } from '../run/gear';
+import { drawWires } from './board-wires';
 import { whole } from '../run/save';
 
 export const STOKE_SEGS = 10;
@@ -169,6 +170,7 @@ export class HudView {
       const m = modDef(id);
       return `<span class="slot ${m.kind}"><small>${m.kind === 'trigger' ? 'ON' : m.kind === 'modifier' ? 'MOD' : 'DO'}</small>${esc(m.short)}</span>`;
     }).join('');
+    drawWires(this.slotsEl, slots);
   }
 
   fire(i: number): void {
