@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chain, chainText, type Slots } from '../src/board/mods';
+import { dropBoard, type ShopState } from '../src/board/shop';
 
 const wires = (s: Slots) => chain(s).map((l) => `${l.live ? '+' : '-'}${l.wire ?? '.'}`);
 
@@ -19,5 +20,19 @@ describe('board chain', () => {
   });
   it('an empty board fires nothing', () => {
     expect(chainText([null, null, null])).toEqual([]);
+  });
+});
+
+describe('drag preview board', () => {
+  const s = { cash: 99, board: ['sparks', 'onOllie', null] as Slots, stock: ['speedKick', null] as ShopState['stock'], restocks: 0 };
+  it('a stock card held over a slot replaces it', () => {
+    expect(dropBoard(s, { stock: 0 }, 2)).toEqual(['sparks', 'onOllie', 'speedKick']);
+  });
+  it('a slot held over another swaps them', () => {
+    expect(chainText(dropBoard(s, { slot: 0 }, 1))).toEqual(['OLLIE ▸ SPARKS']);
+  });
+  it('leaves the shop as it was', () => {
+    dropBoard(s, { slot: 0 }, 1);
+    expect(s.board).toEqual(['sparks', 'onOllie', null]);
   });
 });

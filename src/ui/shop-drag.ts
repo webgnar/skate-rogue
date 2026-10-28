@@ -8,6 +8,8 @@
 export interface ShopActions {
   tap(el: HTMLElement): void;
   drop(card: HTMLElement, target: HTMLElement): void;
+  // the card is held over a slot (or, with null, over nothing): show what it would fire there
+  preview?(card: HTMLElement, target: HTMLElement | null): void;
 }
 
 const DRAG_FROM = 8; // px of movement before a press becomes a drag
@@ -41,6 +43,8 @@ export function bindShopDrag(shop: HTMLElement, actions: ShopActions, calm: () =
     over?.classList.remove('over');
     over = t;
     over?.classList.add('over');
+    shop.toggleAttribute('data-over', !!over); // the ghost fades so the wires under it show
+    if (press && (t === null || t.dataset.slot !== undefined)) actions.preview?.(press.el, t);
   };
 
   const end = () => {

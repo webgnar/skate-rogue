@@ -1,0 +1,3 @@
+- [x] dropBoard() with tests
+- [x] Preview wires and words while dragging over a slot, restore on leave or drop
+- [x] Desktop and phone screenshots

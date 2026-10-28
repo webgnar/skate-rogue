@@ -53,6 +53,15 @@ export function swap(s: ShopState, a: number, b: number): ShopState {
   return { ...s, board };
 }
 
+// the board a drag would leave, for the preview while it's held over a slot (openspec ui8-drag-preview): a stock
+// card replaces the slot, a slot swaps with it
+export function dropBoard(s: ShopState, from: { stock: number } | { slot: number }, to: number): Slots {
+  const board = s.board.slice();
+  if ('stock' in from) board[to] = s.stock[from.stock] ?? board[to];
+  else [board[from.slot], board[to]] = [board[to], board[from.slot]];
+  return board;
+}
+
 export function buySlot(s: ShopState): ShopState | null {
   if (s.board.length >= BOARD.maxSlots || s.cash < BOARD.slotPrice) return null;
   return { ...s, cash: s.cash - BOARD.slotPrice, board: [...s.board, null] };
