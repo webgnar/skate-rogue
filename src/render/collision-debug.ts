@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { at } from '../game/interp';
 import { PHYS, TILE } from '../physics/constants';
 import { FEEL } from '../physics/feel';
-import { isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
+import { isStreetAt, pits, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
 import type { Mode, Skater } from '../physics/skater';
 import { DEV, devSpeed, saveDev } from '../ui/dev';
 
@@ -339,6 +339,13 @@ export class CollisionDebug {
       for (let x = g.x0, i = 0; x <= g.x1; x += 4, i++) pts.push(P(x, level.streetY - (i % 2 ? 4 : 0)));
       line(pts, COLLIDER.gap, 1.5);
       label('glass', [pts[0][0], pts[0][1] - 6], COLLIDER.gap);
+    }
+    //the hill's pits: the far wall you slam into under the lip, and the bottom where the run ends
+    for (const p of pits(level)) {
+      if (!seen(p.x0, p.x1)) continue;
+      line([P(p.x1, p.lip), P(p.x1, p.floor)], COLLIDER.gap, 3);
+      line([P(p.x0, p.floor), P(p.x1, p.floor)], COLLIDER.gap, 1.5, [6, 4]);
+      label('PIT', P(p.x0 + 4, p.floor - 4), COLLIDER.gap);
     }
     for (const c of level.ceiling ?? []) {
       if (!seen(c.x0, c.x1)) continue;

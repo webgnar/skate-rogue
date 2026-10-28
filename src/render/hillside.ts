@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { run, sliceDone } from './slice';
 import { TOP } from '../gen/top-route';
 import { TILE } from '../physics/constants';
-import { inHill, type Level, type Surface } from '../physics/level';
+import { PIT, hillGround, inHill, type Level, type Surface } from '../physics/level';
 import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
 import { surfaceTexture } from './surfaces';
@@ -476,10 +476,7 @@ const tx = (px: number) => px / TILE;
 // the descent's ground, left to right in tiles: roofs, banks and hills (stairs are stepped separately)
 function descentGround(level: Level): Ground[] {
   const h = (py: number) => (level.streetY - py) / TILE;
-  return level.surfaces
-    .filter((s) => inHill(level, s.x0) && !s.side && (s.kind === 'roof' || s.kind === 'bank' || s.kind === 'stairs'))
-    .map((s) => ({ x0: tx(s.x0), x1: tx(s.x1), t0: h(s.y), t1: h(s.y1 ?? s.y), kind: s.kind }))
-    .sort((a, b) => a.x0 - b.x0);
+  return hillGround(level).map((s) => ({ x0: tx(s.x0), x1: tx(s.x1), t0: h(s.y), t1: h(s.y1 ?? s.y), kind: s.kind }));
 }
 
 // the lane's height at x (tiles): the descent's ground, a gap takes the lower edge, the street is 0
@@ -521,13 +518,14 @@ function frontRoof(ground: Ground[], hill: (x: number) => boolean, x0: number, x
   return lo + Math.min(0.6, 0.5 * (hi - lo));
 }
 
-// gaps in the descent's ground (tiles): crest jumps over a cross street (not the street chases between stretches)
+// gaps in the descent's ground (tiles): crest jumps over a cross street (not the street chases between stretches), the
+// physics' pits (level.ts pits())
 function gaps(ground: Ground[]): [number, number, number][] {
   const out: [number, number, number][] = [];
   for (let i = 1; i < ground.length; i++) {
     const a = ground[i - 1];
     const b = ground[i];
-    if (b.x0 - a.x1 > 0.5 && b.x0 - a.x1 < 8) out.push([a.x1, b.x0, Math.min(a.t1, b.t0)]);
+    if (b.x0 - a.x1 > PIT.gap[0] && b.x0 - a.x1 < PIT.gap[1]) out.push([a.x1, b.x0, Math.min(a.t1, b.t0)]);
   }
   return out;
 }
@@ -823,7 +821,7 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   //under each crest jump, the cross street it clears, running from the city behind to the camera
   const holes = gaps(ground);
   for (const [x0, x1, t] of holes) {
-    const low = t - 3.5;
+    const low = t - PIT.depth; // the pit's bottom, where you bail
     m.box(x0, x1, B, low, low, HILLSIDE.crossFar, HILLSIDE.rowB[1], { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]] });
     yield* tee(x0, x1, low);
   }
