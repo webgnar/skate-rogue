@@ -67,6 +67,7 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 - [ ] **Daily run:** once unlocked, the run-over screen shows DAILY RUN. It reloads into today's seed (the seed line says "daily"), the run-over screen shows today's daily best, and NORMAL RUN goes back.
 - [ ] *Tuning:* prices run from 15 to 60 Stoken (465 for everything). Does a good run earn enough that the first unlock comes after 2 or 3 runs?
 - [ ] Your old best score and banked Stoken carry over from before this update.
+- [ ] **New look (ui6-unlocks-look):** UNLOCKS with your Stoken, then SKATERS, DECKS, BOON LIBRARY and SPOTS panels. Each skater row shows that skater's real model, and each deck its own colour. RIDING is on what you ride, and prices are purple ◆. Upright it's one column you scroll, with BACK always on screen.
 
 ## Leaderboards
 
