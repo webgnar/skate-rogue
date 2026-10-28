@@ -2,7 +2,7 @@
 // wheels and a siren synthesized from noise and an oscillator, and the soundtrack (MUSIC in cues.ts). Browsers only start audio after a
 // tap, so the context is made on the first press. Any failure (no Web Audio, a sample that won't load) is silent:
 // the game never waits on sound.
-import { LOOPS, MUSIC, SAMPLES, rollGain, sirenGain, type Cue, type MusicId } from './cues';
+import { COIN_VERB, coinMix, LOOPS, MUSIC, SAMPLES, rollGain, sirenGain, type Cue, type MusicId } from './cues';
 import { SETTINGS } from '../ui/settings';
 
 export interface SoundFrame {
@@ -26,6 +26,9 @@ export class Sound {
   private want: MusicId | null = null;
   private track: Record<MusicId, number> = { gameplay: 0, title: 0 }; // where each slot is in its list
   private away = false; // the app is in the background (sleep)
+  private verb: GainNode | null = null; // the coins' reverb send (COIN_VERB)
+  private coins!: AudioNode; // the coins' bus, dry and wet: a gentle limiter so a stack swells instead of clipping
+  private coinsAt: number[] = []; // when the last few coins started, for how piled up they are
 
   constructor(private readonly base: string) {}
 
@@ -50,6 +53,7 @@ export class Sound {
     this.applyVolumes();
     this.makeRoll();
     this.makeSiren();
+    this.makeVerb();
     for (const id of SAMPLES) void this.load(`sounds/${id}`);
     for (const id of new Set(Object.values(MUSIC).flat())) void this.load(`music/${id}`);
   }
@@ -75,6 +79,7 @@ export class Sound {
     if (!cue || !this.ctx || this.ctx.state !== 'running') return;
     const buf = this.buffers.get(cue.sample);
     if (!buf) return;
+    if (cue.sample === 'coin' && this.verb) return this.playCoin(cue, buf);
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = cue.rate ?? 1;
@@ -82,6 +87,71 @@ export class Sound {
     g.gain.value = cue.vol;
     src.connect(g).connect(this.sfx);
     src.start();
+  }
+
+  // a coin: ducked and sent up into the reverb the more of them are stacking (coinMix), with the shimmer ghost
+  private playCoin(cue: Cue, buf: AudioBuffer): void {
+    const ctx = this.ctx!;
+    const t = ctx.currentTime;
+    this.coinsAt = this.coinsAt.filter((at) => t - at < COIN_VERB.window);
+    const mix = coinMix(this.coinsAt.length);
+    this.coinsAt.push(t);
+    const rate = (cue.rate ?? 1) * (1 + (Math.random() * 2 - 1) * COIN_VERB.jitter);
+    const voice = (r: number, dry: number, wet: number): void => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = r;
+      if (dry > 0) {
+        const g = ctx.createGain();
+        g.gain.value = cue.vol * dry;
+        src.connect(g).connect(this.coins);
+      }
+      const w = ctx.createGain();
+      w.gain.value = cue.vol * wet;
+      src.connect(w).connect(this.verb!);
+      src.start();
+    };
+    voice(rate, mix.dry, mix.wet);
+    if (mix.shimmer > 0.01) voice(rate * 2, 0, mix.shimmer);
+  }
+
+  // the coins' reverb: a convolver on an impulse made here from decaying noise, different on each channel and
+  // every time the game loads, so its tails never ring in a set pattern; high-passed so it sits above the street
+  private makeVerb(): void {
+    const ctx = this.ctx!;
+    try {
+      const rate = ctx.sampleRate;
+      const len = Math.floor(rate * COIN_VERB.seconds);
+      const pre = Math.floor(rate * COIN_VERB.predelay);
+      const ir = ctx.createBuffer(2, len, rate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        //a few sparse early reflections, then the dense tail
+        for (let n = 0; n < 6; n++) d[pre + Math.floor(Math.random() * rate * 0.06)] += (Math.random() * 2 - 1) * 0.5;
+        for (let i = pre; i < len; i++) {
+          const s = (i - pre) / rate;
+          d[i] += (Math.random() * 2 - 1) * Math.exp(-s * COIN_VERB.decay) * Math.min(1, s / 0.01);
+        }
+      }
+      const conv = ctx.createConvolver();
+      conv.buffer = ir;
+      const cut = ctx.createBiquadFilter();
+      cut.type = 'highpass';
+      cut.frequency.value = COIN_VERB.lowCut;
+      const limit = ctx.createDynamicsCompressor();
+      limit.threshold.value = COIN_VERB.limit;
+      limit.knee.value = 6;
+      limit.ratio.value = 8;
+      limit.attack.value = 0.003;
+      limit.release.value = 0.25;
+      limit.connect(this.sfx);
+      this.coins = limit;
+      const send = ctx.createGain();
+      send.connect(conv).connect(cut).connect(limit);
+      this.verb = send;
+    } catch {
+      this.verb = null; // the coins play dry
+    }
   }
 
   // silent while the app is in the background: frames stop there, so update() can't do it, and phones keep a web
