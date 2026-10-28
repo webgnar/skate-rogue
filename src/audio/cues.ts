@@ -11,7 +11,7 @@ export type MusicId = 'gameplay' | 'title';
 // order and loops back to the first; a slot with one track loops it; an empty slot is silence. 'title' plays on
 // the run summary, 'gameplay' while skating.
 export const MUSIC: Record<MusicId, string[]> = {
-  gameplay: [],
+  gameplay: ['funkadelic_miester'],
   title: [],
 };
 
