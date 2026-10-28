@@ -1,0 +1,4 @@
+- [x] Render skater portraits, deck looks and the cone
+- [x] Restyle the meta screen
+- [x] Portrait and landscape layouts
+- [x] Screenshots

@@ -118,7 +118,62 @@ async function main(): Promise<Record<string, string>> {
   out.rocket = shot(named(landmarks, 'Rocket'), [0.1, -0.4, 0], 0.9);
   out.coin = shot(named(pickups, 'Coin'), [0.2, -0.5, 0], 0.7);
   out.stoken = shot(named(pickups, 'Stoken'), [0.2, -0.5, 0], 0.7);
+  //for the unlocks screen (openspec ui6-unlocks-look): each skater's head and shoulders, the four decks, a cone
+  const props = await load('props.glb');
+  out.cone = shot(named(props, 'Cone'), [0.25, -0.5, 0], 0.8);
+  for (const id of ['lou-gnar', 'webster', 'roxy', 'keanu', 'goldie']) out[`skater-${id}`] = portrait(await load(`${id}.glb`));
+  for (const [id, look] of Object.entries(DECKS)) out[`deck-${id}`] = shot(deckLook(part(board, deckOnly), look), [-1.25, 0.2, 1.05]);
   return out;
+}
+
+// a skater from the shoulders up, turned a little toward the camera, framed on the head
+function portrait(model: THREE.Object3D): string {
+  const root = model; // not a clone: a cloned skinned mesh still follows the original's bones
+  root.traverse((o) => {
+    if (o.name === 'Board') o.visible = false;
+    if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).frustumCulled = false;
+  });
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x445066, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+  sun.position.set(2, 4, 3);
+  scene.add(sun);
+  root.rotation.y = 0.4; // a three-quarter view
+  scene.add(root);
+  inkify(scene);
+  scene.updateMatrixWorld(true);
+  const head = root.getObjectByName('Head')!.getWorldPosition(new THREE.Vector3());
+  const chest = root.getObjectByName('Spine1')!.getWorldPosition(new THREE.Vector3());
+  const span = head.distanceTo(chest);
+  const c = head.clone().lerp(chest, 0.25).add(new THREE.Vector3(0, span * 0.35, 0));
+  const half = span * 1.25;
+  const cam = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, 100);
+  cam.position.set(c.x, c.y, c.z + 10);
+  cam.lookAt(c);
+  renderer.render(scene, cam);
+  return canvas.toDataURL('image/png');
+}
+
+// the decks only differ in play (src/run/meta.ts), so each gets its own look here: a colour for the graphic and a shape
+interface Look { deck: number; logo: number; w?: number; l?: number }
+const DECKS: Record<string, Look> = {
+  popsicle: { deck: 0xb8322a, logo: 0xf2e8d0 },
+  cruiser: { deck: 0x2fb8b0, logo: 0xffe23a, l: 0.86, w: 1.1 },
+  bombhill: { deck: 0x1c1c24, logo: 0xff3b4e, l: 1.12, w: 0.94 },
+  slab: { deck: 0x7a2fb8, logo: 0x4dff8a, w: 1.3 },
+};
+function deckLook(obj: THREE.Object3D, look: Look): THREE.Object3D {
+  obj.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const name = matName(m);
+    const mat = (m.material as THREE.MeshStandardMaterial).clone();
+    if (name === 'deck' || name === 'plies') mat.color.setHex(look.deck);
+    if (name === 'logo') mat.color.setHex(look.logo);
+    m.material = mat;
+  });
+  obj.scale.set(look.l ?? 1, 1, look.w ?? 1);
+  return obj;
 }
 
 (window as unknown as { cardArt: Promise<Record<string, string>> }).cardArt = main();

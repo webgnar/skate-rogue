@@ -3,8 +3,25 @@
 // reloaded (its model loads at start), so closing after a change reloads.
 import { BRANCH_NAMES, buy, has, UNLOCKS, type Branch, type Unlock, type UnlockId } from '../run/meta';
 import { loadSave, writeSave, type Save } from '../run/save';
+import { glyph, pic, type Pic } from './shop-art';
 
 const BRANCHES: Branch[] = ['skater', 'deck', 'library', 'spot'];
+
+// each unlock's picture (openspec ui6-unlocks-look): the skaters and decks rendered from the game's models
+// (art/cards), the packs by what they bring
+const ART: Partial<Record<UnlockId, [string, string?]>> = {
+  FLOW: ['wheel'],
+  COOL: ['cruiser'],
+  STREET: ['cone'],
+  LUCK: ['coin'],
+  curses: ['stoken', 'skull'],
+  duos: ['rocket'],
+  daily: ['signal'],
+};
+function art(u: Unlock): string {
+  const [p, g] = u.branch === 'skater' ? [`skater-${u.id}`] : u.branch === 'deck' ? [`deck-${u.id}`] : (ART[u.id] ?? ['stoken']);
+  return `<span class="art">${pic(p as Pic)}${glyph(g)}</span>`;
+}
 
 export class MetaScreen {
   private changed = false;
@@ -66,10 +83,10 @@ export class MetaScreen {
   }
 
   private render(save: Save, note: string): void {
-    this.el.querySelector('.bank')!.textContent = this.all ? '◆ all unlocked (?unlockall)' : `◆ ${save.stoken} Stoken`;
+    this.el.querySelector('.bank')!.innerHTML = this.all ? '<i>◆</i> ALL <small>(?unlockall)</small>' : `<i>◆</i> ${save.stoken} <small>STOKEN</small>`;
     this.el.querySelector('.note')!.textContent = note || 'Tap to unlock with Stoken, or to ride an unlocked skater or deck';
     this.el.querySelector('.branches')!.innerHTML = BRANCHES.map(
-      (b) => `<div class="branch"><h3>${BRANCH_NAMES[b]}</h3>${UNLOCKS.filter((u) => u.branch === b).map((u) => this.item(save, u)).join('')}</div>`,
+      (b) => `<div class="branch ${b}"><h3>${BRANCH_NAMES[b]}</h3><div class="list">${UNLOCKS.filter((u) => u.branch === b).map((u) => this.item(save, u)).join('')}</div></div>`,
     ).join('');
   }
 
@@ -77,7 +94,7 @@ export class MetaScreen {
     const owned = this.owned(save, u.id);
     const on = (u.branch === 'skater' && save.skater === u.id) || (u.branch === 'deck' && save.deck === u.id);
     const cls = ['item', owned ? 'owned' : '', on ? 'on' : '', !owned && save.stoken < u.cost ? 'poor' : ''].filter(Boolean).join(' ');
-    const tag = on ? 'RIDING' : owned ? (u.branch === 'skater' || u.branch === 'deck' ? 'RIDE' : 'OWNED') : `◆${u.cost}`;
-    return `<button class="${cls}" data-unlock="${u.id}"><span class="name">${u.name}<span class="tag">${tag}</span></span><span class="line">${u.line}</span></button>`;
+    const tag = on ? 'RIDING' : owned ? (u.branch === 'skater' || u.branch === 'deck' ? 'RIDE' : 'OWNED') : `<i>◆</i>${u.cost}`;
+    return `<button class="${cls}" data-unlock="${u.id}">${art(u)}<span class="body"><span class="name">${u.name}</span><span class="line">${u.line}</span></span><span class="tag">${tag}</span></button>`;
   }
 }
