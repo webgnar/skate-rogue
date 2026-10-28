@@ -531,6 +531,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Chase guards: the front guard raises a pistol and aims while the red sight line shows, the gun kicks up on the shot, and the tracer leaves from the muzzle. All the guards pump their arms as they run.
 - [ ] Let the game run untouched into a few bails and a continue: no shoe stretches out into a streak (if it does, open the console and look for a "skater rig" warning).
 - [ ] Frontside and backside 180s, regular, fakie and nollie: the body turns one way and settles into the landing without turning back.
+- [ ] Board facing: after a shove-it, varial or hardflip, the board stays turned round on the landing, grind or next trick instead of spinning back on its own. A 180 turns Lou and the board together. A boardslide turns the board back straight.
 - [ ] Hop off a car roof: Lou does a boneless (front foot steps down onto the roof, back hand grabs the deck, the foot comes back on at the top). Riding fakie it's the mirrored switch boneless. Tune it in ?editor as `boneless (car hop)`.
 
 **Animation editor** (`npm run dev`, then http://localhost:5173/?editor)

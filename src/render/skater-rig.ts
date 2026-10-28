@@ -13,7 +13,7 @@ import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { Springs, bodyColliders } from './springs';
-import { BASE, BOARD, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, boardHalfTurn, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 import { nollieClip } from '../physics/tricks';
 import { FEEL } from '../physics/feel';
 
@@ -98,6 +98,13 @@ export class SkaterRig {
   private readonly boardRoot = new THREE.Group();
   private readonly boardPivot = new THREE.Group();
   private readonly boardSpin = new THREE.Group();
+  // The board's own facing: a trick that leaves the board half turned under the feet (a shove-it, a varial, a
+  // hardflip) hands over to a clip that has it straight, so the board would spin back on its own (zack, 2026-10-28).
+  // Instead the board stays turned: this turns the board's geometry a half turn about its centre (nose where the
+  // tail was), and the clip after carries on from straight. Separate from the rider's stance (fakie), which turns the
+  // whole rig. The clips and feet don't change: a board's two ends work the same.
+  private readonly boardFace = new THREE.Group();
+  private boardBack = false; // the board is round the other way: its nose under the back foot
 
   private clip: Clip = CLIPS.ride;
   private clipName = 'ride';
@@ -141,6 +148,7 @@ export class SkaterRig {
     m.add(this.boardRoot);
     this.boardRoot.add(this.boardPivot);
     this.boardPivot.add(this.boardSpin);
+    this.boardSpin.add(this.boardFace);
 
     // --- body ---
     const suit = this.lambert(COLORS.suit);
@@ -268,9 +276,9 @@ export class SkaterRig {
 
   // The Blender board (art/board.py) has its origin at the middle of the deck's top, like boardSpin.
   private fitBoard(board: THREE.Object3D): void {
-    for (const part of this.boardSpin.children) part.visible = false;
+    for (const part of this.boardFace.children) part.visible = false;
     this.board = board;
-    this.boardSpin.add(board);
+    this.boardFace.add(board);
     this.toonMaterials(board);
   }
 
@@ -578,23 +586,23 @@ export class SkaterRig {
       g.add(new THREE.Mesh(new THREE.BoxGeometry(len, T - 0.006, W).translate(0, -0.006 - (T - 0.006) / 2, 0), deck));
       return g;
     };
-    this.boardSpin.add(plank(flatHalf * 2));
+    this.boardFace.add(plank(flatHalf * 2));
     for (const side of [1, -1]) {
       const k = plank(kickLen);
       k.children.forEach((c) => (c as THREE.Mesh).geometry.translate(kickLen / 2, 0, 0));
       k.position.x = flatHalf * side;
       k.rotation.set(0, side > 0 ? 0 : Math.PI, BOARD.kick); // the tail is the nose turned round, grip still up
-      this.boardSpin.add(k);
+      this.boardFace.add(k);
     }
     const wheelGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.04, 8).rotateX(Math.PI / 2);
     for (const bx of [BOARD.bolts, -BOARD.bolts]) {
       const base = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.06).translate(bx, -T - 0.015, 0), truck);
       const hanger = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.2).translate(bx, -BOARD.deckTop + 0.045, 0), truck);
-      this.boardSpin.add(base, hanger);
+      this.boardFace.add(base, hanger);
       for (const z of [0.11, -0.11]) {
         const w = new THREE.Mesh(wheelGeo, wheel);
         w.position.set(bx, -BOARD.deckTop + 0.045, z);
-        this.boardSpin.add(w);
+        this.boardFace.add(w);
       }
     }
   }
@@ -602,6 +610,7 @@ export class SkaterRig {
   play(name: string, fade = FADE): void {
     const spin = this.settleSpin();
     this.snapshot(spin);
+    this.faceBoard();
     this.from = { ...this.pose };
     this.fade = fade;
     this.fadeLen = fade;
@@ -610,6 +619,21 @@ export class SkaterRig {
     this.t = 0;
     this.rate = 1;
     if (name === 'push') this.pushes = 0;
+  }
+
+  // Handing over from a clip that left the board mostly half turned: flip the board's facing, and take
+  // the half turn out of where the crossfade starts, so the board carries on from where it is instead of spinning back.
+  private faceBoard(): void {
+    const back = boardHalfTurn(this.pose.boardYaw);
+    if (!back) return;
+    this.boardBack = !this.boardBack;
+    this.boardFace.rotation.y = this.boardBack ? Math.PI : 0;
+    this.pose = { ...this.pose, boardYaw: this.pose.boardYaw - back };
+    this.snap?.board.multiply(new THREE.Matrix4().makeRotationY(-Math.PI));
+  }
+
+  get boardReversed(): boolean {
+    return this.boardBack;
   }
 
   // the clip to show for clipName: its switch twin while the rig is turned round (zack: switch has its own push,

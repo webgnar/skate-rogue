@@ -823,6 +823,14 @@ for (const id of ['bs180', 'fs180'] as const) {
   SPINS[switchName(n)] = SPINS[switchName(id)];
 }
 
+// The half turn (an odd multiple of pi) to take out of a board yaw a clip ended on when the board is left mostly
+// turned round under the feet (a shove-it, a varial, a hardflip), else 0. Past 110 degrees: a boardslide's quarter
+// turn (exactly 90) always turns back the way it came. The rig keeps the board turned instead (SkaterRig faceBoard).
+export function boardHalfTurn(yaw: number): number {
+  if (Math.abs(Math.atan2(Math.sin(yaw), Math.cos(yaw))) <= Math.PI / 2 + 0.35) return 0;
+  return Math.round((yaw - Math.PI) / (2 * Math.PI)) * 2 * Math.PI + Math.PI;
+}
+
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
 // the pose at time t (seconds) in a clip; missing values come from BASE
