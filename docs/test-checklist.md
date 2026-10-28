@@ -527,6 +527,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Landings match the drop: an ollie on flat is a quick knee dip, a medium drop is today's landing, and a roof drop is a deep squat that stands up slowly. You can ollie again just as the knees come back up.
 - [ ] Chase guards: the front guard raises a pistol and aims while the red sight line shows, the gun kicks up on the shot, and the tracer leaves from the muzzle. All the guards pump their arms as they run.
 - [ ] Let the game run untouched into a few bails and a continue: no shoe stretches out into a streak (if it does, open the console and look for a "skater rig" warning).
+- [ ] Frontside and backside 180s, regular, fakie and nollie: the body turns one way and settles into the landing without turning back.
 - [ ] Hop off a car roof: Lou does a boneless (front foot steps down onto the roof, back hand grabs the deck, the foot comes back on at the top). Riding fakie it's the mirrored switch boneless. Tune it in ?editor as `boneless (car hop)`.
 
 **Animation editor** (`npm run dev`, then http://localhost:5173/?editor)
