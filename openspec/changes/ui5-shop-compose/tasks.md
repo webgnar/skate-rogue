@@ -1,0 +1,4 @@
+- [x] Cards fill the bench, art scaled up
+- [x] Less text: 2 lines on desktop, none on phones
+- [x] Portrait: header in two rows, board over gear, cards 3 to a row
+- [x] Drag and tap still buy (headless check)
