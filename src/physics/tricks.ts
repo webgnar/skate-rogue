@@ -12,16 +12,24 @@ export type TrickId =
   | 'hardflip'
   | 'varial'
   | 'varialHeel'
-  | 'fsShuv';
+  | 'fsShuv'
+  | 'bsFlip'
+  | 'fsFlip'
+  | 'bsHeel'
+  | 'fsHeel';
 
 // tricks come round in this order (deterministic, like the rest of the floor); 180s are a quarter of them
 export const TRICK_ROLL: TrickId[] = [
   'kickflip', 'heelflip', 'bs180', 'shuv1', 'tre', 'fs180', 'varial', 'hardflip',
   'kickflip', 'bs180', 'fsShuv', 'heelflip', 'fs180', 'shuv2', 'varialHeel', 'tre',
+  // the 180 flips: a kickflip or heelflip under the skater as they turn half round (zack, 2026-10-28)
+  'kickflip', 'heelflip', 'bsFlip', 'shuv1', 'tre', 'fsFlip', 'varial', 'hardflip',
+  'kickflip', 'bsHeel', 'fsShuv', 'heelflip', 'fsHeel', 'shuv2', 'varialHeel', 'tre',
 ];
 
 export const SPIN: Record<TrickId, 0 | 180> = {
   kickflip: 0, heelflip: 0, shuv1: 0, shuv2: 0, bs180: 180, fs180: 180, tre: 0, hardflip: 0, varial: 0, varialHeel: 0, fsShuv: 0,
+  bsFlip: 180, fsFlip: 180, bsHeel: 180, fsHeel: 180,
 };
 
 // When each flip is caught: the time (s) in its clip (src/render/poses.ts) where the board stops turning and the
@@ -39,6 +47,10 @@ export const TRICK_CATCH: Record<TrickId, number> = {
   varial: 0.32,
   varialHeel: 0.32,
   fsShuv: 0.28,
+  bsFlip: 0.36,
+  fsFlip: 0.36,
+  bsHeel: 0.36,
+  fsHeel: 0.36,
 };
 
 const NAMES: Record<TrickId, string> = {
@@ -53,6 +65,10 @@ const NAMES: Record<TrickId, string> = {
   varial: 'VARIAL KICKFLIP',
   varialHeel: 'VARIAL HEELFLIP',
   fsShuv: 'FS SHUVIT',
+  bsFlip: 'BS 180 KICKFLIP',
+  fsFlip: 'FS 180 KICKFLIP',
+  bsHeel: 'BS 180 HEELFLIP',
+  fsHeel: 'FS 180 HEELFLIP',
 };
 
 // the callout: tricks thrown riding fakie say so ("FAKIE KICKFLIP", "FAKIE FS 180" back to regular), and so do

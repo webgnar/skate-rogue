@@ -10,7 +10,7 @@
 // the grip levels it. Flips and shove-its happen with both feet off; the feet then catch it back first.
 
 import clipEdits from './clip-edits.json';
-import { NOSE_STANCES, nollieClip, TRICK_CATCH, type TrickId } from '../physics/tricks';
+import { NOSE_STANCES, nollieClip, SPIN, TRICK_CATCH, type TrickId } from '../physics/tricks';
 
 export const BOARD = {
   length: 0.95,
@@ -474,13 +474,15 @@ export const CLIPS: Record<string, Clip> = {
   // first). Shoulders wind frontside first, then lead the turn; feet stay on the board, knees up. The clip ends a
   // half turn round in the switch stance (its yaw mirrored, -BASE.yaw), so when the rig flips to fakie and plays the
   // switch twins nothing turns back (zack, 2026-10-28: the fs 180s ended 40 degrees past it and unwound on landing).
+  // The tuck opens up as it comes round, so the hand over to the air clip is short (a deep crouch seen from behind
+  // pinched the seat of the suit).
   bs180: {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 1.0, boardY: 0.3, yaw: 0.65, head: 0.6, bend: 0.22, armLRaise: 1.1, armRRaise: 1.0, armLFwd: -0.3, armRFwd: 0.5 } },
       { t: 0.12, pose: { hipY: 1.08, boardY: 0.32, yaw: -0.9, head: 0.1, boardYaw: -0.9, bend: 0.3, nod: 0.35, armLRaise: 1.3, armRRaise: 1.2, armLFwd: 0.6, armRFwd: -0.3 } },
       { t: 0.26, pose: { hipY: 1.06, boardY: 0.3, yaw: -2.45, head: -0.1, boardYaw: -2.5, bend: 0.28, nod: 0.35, armLRaise: 1.2, armRRaise: 1.3, armLFwd: 0.4, armRFwd: -0.2 } },
-      { t: 0.36, pose: { hipY: 1.0, boardY: 0.28, yaw: -BASE.yaw - Math.PI, head: 0.4, boardYaw: -Math.PI, bend: 0.24, armLRaise: 1.1, armRRaise: 1.1 } },
+      { t: 0.36, pose: { hipY: 1.0, boardY: 0.16, yaw: -BASE.yaw - Math.PI, head: 0.4, boardYaw: -Math.PI, bend: 0.22, armLRaise: 1.1, armRRaise: 1.1 } },
     ],
   },
   // Frontside 180: the chest opens toward the way they roll and keeps turning; lands fakie looking at the landing
@@ -490,7 +492,7 @@ export const CLIPS: Record<string, Clip> = {
       { t: 0, pose: { hipY: 1.0, boardY: 0.3, yaw: 0.05, head: 0.3, bend: 0.22, armLRaise: 1.0, armRRaise: 1.1, armLFwd: 0.5, armRFwd: -0.3 } },
       { t: 0.12, pose: { hipY: 1.08, boardY: 0.32, yaw: 1.2, head: 0.5, boardYaw: 0.9, bend: 0.28, nod: 0.3, armLRaise: 1.3, armRRaise: 1.2, armLFwd: -0.3, armRFwd: 0.6 } },
       { t: 0.26, pose: { hipY: 1.06, boardY: 0.3, yaw: 2.4, head: 0.6, boardYaw: 2.5, bend: 0.26, nod: 0.35, armLRaise: 1.2, armRRaise: 1.3, armLFwd: -0.2, armRFwd: 0.4 } },
-      { t: 0.36, pose: { hipY: 1.0, boardY: 0.28, yaw: -BASE.yaw + Math.PI, head: 0.5, boardYaw: Math.PI, bend: 0.24, armLRaise: 1.1, armRRaise: 1.1 } },
+      { t: 0.36, pose: { hipY: 1.0, boardY: 0.16, yaw: -BASE.yaw + Math.PI, head: 0.5, boardYaw: Math.PI, bend: 0.22, armLRaise: 1.1, armRRaise: 1.1 } },
     ],
   },
   // 50-50: both trucks' hangers locked on the rail (wheels either side of it), board in line with it, knees bent,
@@ -746,6 +748,34 @@ export function mirrorClip(c: Clip): Clip {
   return { loop: c.loop, keys: c.keys.map((k) => ({ t: k.t, pose: mirrorKey(k.pose) })) };
 }
 
+// The 180 flips (bsFlip, fsFlip, bsHeel, fsHeel): the kickflip or heelflip under the feet while the body and board
+// turn half round as in the 180. The flip's keys, slowed to be caught with the spin (TRICK_CATCH), with the 180's
+// turn, head and arms at each (zack, 2026-10-28). An edit in ?editor of the flip or the 180 carries over.
+const SPIN_FLIPS: Record<string, [string, string]> = {
+  bsFlip: ['bs180', 'kickflip'],
+  fsFlip: ['fs180', 'kickflip'],
+  bsHeel: ['bs180', 'heelflip'],
+  fsHeel: ['fs180', 'heelflip'],
+};
+const SPIN_FIELDS = ['yaw', 'head', 'boardYaw', 'armLRaise', 'armLFwd', 'armLElbow', 'armRRaise', 'armRFwd', 'armRElbow'] as const;
+for (const [id, [spinId, flipId]] of Object.entries(SPIN_FLIPS)) {
+  const edited = (n: string) => ((clipEdits as Record<string, Clip>)[n]?.keys?.length ? (clipEdits as Record<string, Clip>)[n] : CLIPS[n]);
+  const spin = edited(spinId);
+  const flip = edited(flipId);
+  const slow = TRICK_CATCH[id as TrickId] / TRICK_CATCH[flipId as TrickId];
+  CLIPS[id] = {
+    loop: false,
+    keys: flip.keys.map((k) => {
+      const t = +(k.t * slow).toFixed(4);
+      const turn = sample(spin, t);
+      const pose: Key = { ...k.pose };
+      for (const f of SPIN_FIELDS) pose[f] = turn[f];
+      if (pose.footFX !== undefined) pose.footFX = Math.min(pose.footFX, 0.6); // the front foot kicks less far, the hips turned away from it
+      return { t, pose };
+    }),
+  };
+}
+
 // the nollie: the ollie's keys (as edited) popped off the nose
 {
   const ollie = (clipEdits as Record<string, Clip>).ollie?.keys?.length ? (clipEdits as Record<string, Clip>).ollie : CLIPS.ollie;
@@ -757,7 +787,7 @@ export function mirrorClip(c: Clip): Clip {
 // ?editor wins.
 for (const id of Object.keys(TRICK_CATCH) as TrickId[]) {
   const flip = (clipEdits as Record<string, Clip>)[id]?.keys?.length ? (clipEdits as Record<string, Clip>)[id] : CLIPS[id];
-  const spinBoard = id !== 'bs180' && id !== 'fs180';
+  const spinBoard = !SPIN[id]; // a 180's board turns with the body
   if (flip) CLIPS[nollieClip(id)] = { loop: flip.loop, keys: flip.keys.map((k) => ({ t: k.t, pose: nosePop(k.pose, spinBoard) })) };
 }
 // clips that ride the nose (switch twins included): popping out of them is a nollie (a fakie ollie riding switch)
@@ -816,11 +846,24 @@ export const GRIND_NAMES: Record<string, string> = {
 };
 for (const [name, call] of Object.entries(GRIND_NAMES)) GRIND_NAMES[switchName(name)] = `SWITCH ${call}`;
 // spins that leave the skater riding the other way round (fakie): the clip ends turned this far
-export const SPINS: Record<string, number> = { bs180: -Math.PI, fs180: Math.PI, switchBs180: Math.PI, switchFs180: -Math.PI };
-for (const id of ['bs180', 'fs180'] as const) {
+export const SPINS: Record<string, number> = {};
+for (const id of ['bs180', 'fs180', 'bsFlip', 'fsFlip', 'bsHeel', 'fsHeel'] as const) {
+  SPINS[id] = id.startsWith('bs') ? -Math.PI : Math.PI;
+  SPINS[switchName(id)] = -SPINS[id];
   const n = nollieClip(id);
   SPINS[n] = SPINS[id];
   SPINS[switchName(n)] = SPINS[switchName(id)];
+}
+
+// The yaw of a clip's stance, that the knees bend from: BASE.yaw riding regular, mirrored riding switch. A 180 hands
+// over from one to the other as the board comes round, as it ends in the other stance, so its knees keep bending the
+// way the stance does all through the spin and turn round with it (zack, 2026-10-28: the legs crossed at the end of
+// a backside 180).
+export function stanceYaw(name: string, p: Pose): number {
+  const from = isSwitch(name) ? -BASE.yaw : BASE.yaw;
+  const spin = SPINS[name];
+  if (!spin) return from;
+  return from * (1 - 2 * Math.min(Math.max(p.boardYaw / spin, 0), 1));
 }
 
 // The half turn (an odd multiple of pi) to take out of a board yaw a clip ended on when the board is left mostly
@@ -831,7 +874,9 @@ export function boardHalfTurn(yaw: number): number {
   return Math.round((yaw - Math.PI) / (2 * Math.PI)) * 2 * Math.PI + Math.PI;
 }
 
-const smooth = (t: number) => t * t * (3 - 2 * t);
+function smooth(t: number): number {
+  return t * t * (3 - 2 * t);
+}
 
 // the pose at time t (seconds) in a clip; missing values come from BASE
 export function sample(clip: Clip, t: number): Pose {
