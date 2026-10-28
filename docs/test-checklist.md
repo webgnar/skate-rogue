@@ -334,6 +334,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **Worn looks on Lou:** a chipped deck nose, a scuffed shoe and then a hole, rusty trucks, coned wheels.
 - [ ] **Shop recomposed (ui5-shop-compose):** the cards fill the space under YOUR BOARD and YOUR GEAR with big pictures. On the phone there's no effect text on the cards (the hint strip says what to do). Upright, the cards come three to a row. Tap and drag still buy.
 - [ ] **Board wires (ui7-board-wires):** in the shop and on the in-run board, a purple wire runs under the slots from each trigger to the effects it fires. Anything nothing fires (an effect left of every trigger, a trigger with nothing after it) is dimmed with a red X. Under YOUR BOARD the shop spells it out, e.g. "OLLIE ▸ ×2 KICK". Check it on desktop and on the phone both ways round.
+- [ ] **Drag preview (ui8-drag-preview):** in the shop, drag a card (or a board slot) and hold it over a slot without letting go. The wires pulse and redraw for the board you would get, and the words under YOUR BOARD read "IF YOU DROP IT: ...". Slide off the slots and the real board comes back. Try it on desktop and on the phone both ways round.
 
 ## Smashables
 

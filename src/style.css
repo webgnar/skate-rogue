@@ -1561,3 +1561,11 @@ html, body {
 #shop .story .none::before { content: ''; }
 #shop .gearrow { display: flex; flex-direction: column; justify-content: center; }
 #shop .setup, #shop .head { max-width: 1160px; }
+
+/* ui8-drag-preview: while a card is held over a slot, the wires and the words show the board it would make */
+#shop .slots.preview .wire { animation: wirepulse 0.5s ease-in-out infinite alternate; }
+#shop .story.preview span:not(.none) { color: #fff; }
+#shop .story.preview::before { content: 'IF YOU DROP IT:'; font-size: 0.75em; color: var(--trigger); letter-spacing: 0.05em; }
+@keyframes wirepulse { from { filter: brightness(1); } to { filter: brightness(1.8) drop-shadow(0 0 4px var(--trigger)); } }
+@media (prefers-reduced-motion: reduce) { #shop .slots.preview .wire { animation: none; filter: brightness(1.6); } }
+#shop[data-over] .ghost { opacity: 0.4; transition: opacity 0.1s; }

@@ -6,7 +6,8 @@ import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type BoonId, typ
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
 import { GEAR, wornness } from './run/gear';
-import { chainText, modDef, type ModId } from './board/mods';
+import { chainText, modDef, type ModId, type Slots } from './board/mods';
+import { dropBoard, type ShopState } from './board/shop';
 import { drawWires } from './ui/board-wires';
 import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
@@ -154,20 +155,26 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     : 'stock' in picked
       ? `Board full: tap the slot ${modDef(shop.stock[picked.stock]!).name} replaces`
       : 'Tap another slot to swap';
-  //the board in words under it: what each trigger fires, or how to start
-  const lines = chainText(shop.board);
-  const story = lines.length
+  return { slots, parts, hand: cards.join(''), hint, story: storyHtml(shop.board) };
+}
+
+// the board in words under it: what each trigger fires, or how to start
+function storyHtml(board: Slots): string {
+  const lines = chainText(board);
+  return lines.length
     ? lines.map((l) => `<span>${esc(l)}</span>`).join('')
-    : shop.board.some(Boolean)
+    : board.some(Boolean)
       ? '<span class="none">Nothing fires: a purple TRIGGER fires the effects to its right</span>'
       : '<span class="none">A purple TRIGGER fires the cyan EFFECTS to its right</span>';
-  return { slots, parts, hand: cards.join(''), hint, story };
 }
 
 // the shop's gear tones: green to red as a part wears (the HUD's bars are in src/ui/hud.ts)
 function gearTone(c: number): string {
   return c <= GEAR.busted ? 'busted' : wornness(c) > 0 ? 'worn' : 'fresh';
 }
+
+// set up by makeHud: the drag preview, drawn on the shop it holds
+let shopPreview: (card: HTMLElement, to: HTMLElement | null) => void = () => {};
 
 function makeHud(): Hud {
   const calloutEl = document.getElementById('callout')!;
@@ -191,6 +198,7 @@ function makeHud(): Hud {
   let chosen = -1;
   let pickTimer = 0;
   let shopOpen = false;
+  let shopNow: ShopState | null = null; // the shop as last drawn, for the drag preview
   let shopCash = 0;
   let shopSlots: string[] = [];
   pickEl.addEventListener('pointerdown', (e) => {
@@ -200,6 +208,17 @@ function makeHud(): Hud {
   window.addEventListener('keydown', (e) => {
     if (/^Digit[123]$/.test(e.code)) chosen = Number(e.code.slice(5)) - 1;
   });
+  //while a card is held over a slot, the wires and the words show the board it would make (openspec ui8-drag-preview)
+  shopPreview = (card, to) => {
+    if (!shopNow) return;
+    const slotsEl = shopEl.querySelector<HTMLElement>('.slots')!;
+    const from = card.dataset.stock !== undefined ? { stock: Number(card.dataset.stock) } : { slot: Number(card.dataset.slot) };
+    const board = to ? dropBoard(shopNow, from, Number(to.dataset.slot)) : shopNow.board;
+    slotsEl.classList.toggle('preview', !!to);
+    drawWires(slotsEl, board);
+    shopEl.querySelector('.story')!.innerHTML = storyHtml(board);
+    shopEl.querySelector('.story')!.classList.toggle('preview', !!to);
+  };
   return {
     floor: (n, road) => {
       view.setFloor(n, road);
@@ -241,9 +260,12 @@ function makeHud(): Hud {
         void shopEl.offsetWidth;
         shopEl.classList.add('opening');
       }
+      shopNow = v.shop;
       const slotsEl = shopEl.querySelector('.slots')!;
+      slotsEl.classList.remove('preview');
       slotsEl.innerHTML = h.slots;
       shopEl.querySelector('.story')!.innerHTML = h.story;
+      shopEl.querySelector('.story')!.classList.remove('preview');
       drawWires(slotsEl as HTMLElement, v.shop.board);
       const partsEl = shopEl.querySelector('.parts')!;
       partsEl.innerHTML = h.parts;
@@ -447,7 +469,7 @@ async function start() {
       fn();
     });
   };
-  bindShopDrag(document.getElementById('shop')!, { tap: (el) => game.shopTap(el), drop: (card, to) => game.shopDrop(card, to) }, () => FX.reduceMotion);
+  bindShopDrag(document.getElementById('shop')!, { tap: (el) => game.shopTap(el), drop: (card, to) => game.shopDrop(card, to), preview: (card, to) => shopPreview(card, to) }, () => FX.reduceMotion);
   tapOnly('pausebtn', () => game.setPaused(true));
   //between runs: the unlock tree, and the daily run once it's unlocked. A change reloads into the new setup.
   const reloadWith = (key: string, on: boolean) => {
