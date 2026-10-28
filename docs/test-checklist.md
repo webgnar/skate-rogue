@@ -537,6 +537,9 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Let the game run untouched into a few bails and a continue: no shoe stretches out into a streak (if it does, open the console and look for a "skater rig" warning).
 - [ ] Frontside and backside 180s, regular, fakie and nollie: the body turns one way and settles into the landing without turning back.
 - [ ] Board facing: after a shove-it, varial or hardflip, the board stays turned round on the landing, grind or next trick instead of spinning back on its own. A 180 turns Lou and the board together. A boardslide turns the board back straight.
+- [ ] Backside 180, regular and fakie: Lou's knees bend the way he faces all through the spin, his legs never cross, and both feet stay on the deck as he lands round and into the air pose.
+- [ ] 180 flips: BS/FS 180 KICKFLIP and BS/FS 180 HEELFLIP come up in the trick roll. The board flips a whole turn under Lou while he and the board turn half round, and he rides away fakie. Off a nose manual or nosegrind they're NOLLIE, riding fakie they're FAKIE.
+- [ ] Cars (sedan, robotaxi, sheriff SUV) have a front windshield and back glass, and the dented, busted and wrecked cars show it cracked.
 - [ ] Hop off a car roof: Lou does a boneless (front foot steps down onto the roof, back hand grabs the deck, the foot comes back on at the top). Riding fakie it's the mirrored switch boneless. Tune it in ?editor as `boneless (car hop)`.
 
 **Animation editor** (`npm run dev`, then http://localhost:5173/?editor)

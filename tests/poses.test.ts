@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BASE, BOARD, CLIPS, clipLength, deckPoint, footTarget, kneePoint, mix, sample, type Pose } from '../src/render/poses';
-import { boardHalfTurn, mirrorPose, onNose, switchName, SPINS } from '../src/render/poses';
+import { boardHalfTurn, mirrorPose, onNose, stanceYaw, switchName, SPINS } from '../src/render/poses';
 
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
@@ -81,7 +81,7 @@ describe('rig poses', () => {
   });
 
   it('180s turn the skater with the board: they land fakie, front foot trailing, back foot leading', () => {
-    for (const name of ['bs180', 'fs180']) {
+    for (const name of ['bs180', 'fs180', 'bsFlip', 'fsFlip', 'bsHeel', 'fsHeel']) {
       const p = sample(CLIPS[name], clipLength(CLIPS[name]));
       // a half turn, ending in the switch stance (yaw mirrored) so the switch clips after it carry on without a turn back
       expect(Math.abs(p.yaw + BASE.yaw), name).toBeCloseTo(Math.PI);
@@ -92,6 +92,20 @@ describe('rig poses', () => {
     }
     expect(sample(CLIPS.bs180, 0.2).boardYaw).toBeLessThan(0); // backside: the tail swings behind the heels
     expect(sample(CLIPS.fs180, 0.2).boardYaw).toBeGreaterThan(0);
+    // the 180 flips flip the board a whole turn as they come round
+    expect(Math.abs(sample(CLIPS.bsFlip, 99).boardRoll)).toBeCloseTo(2 * Math.PI);
+    expect(sample(CLIPS.bsFlip, 99).boardRoll).toBeCloseTo(-sample(CLIPS.fsHeel, 99).boardRoll);
+  });
+
+  it('the knees bend from the stance a 180 is in: regular at the pop, switch once the board is round', () => {
+    for (const name of ['bs180', 'fs180', 'bsFlip', 'fsHeel']) {
+      const clip = CLIPS[name];
+      expect(stanceYaw(name, sample(clip, 0)), name).toBeCloseTo(BASE.yaw);
+      expect(stanceYaw(name, sample(clip, clipLength(clip))), name).toBeCloseTo(-BASE.yaw);
+      const sw = switchName(name);
+      expect(stanceYaw(sw, sample(CLIPS[sw], clipLength(CLIPS[sw]))), sw).toBeCloseTo(BASE.yaw);
+    }
+    expect(stanceYaw('kickflip', sample(CLIPS.kickflip, 0.2))).toBe(BASE.yaw);
   });
 
   it('360 flip: a full backside spin and a full kickflip roll together; hardflip: frontside half spin and kickflip roll', () => {

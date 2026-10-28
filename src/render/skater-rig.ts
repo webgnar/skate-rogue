@@ -13,7 +13,7 @@ import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
 import { Springs, bodyColliders } from './springs';
-import { BASE, BOARD, boardHalfTurn, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, SPINS, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
+import { BASE, BOARD, boardHalfTurn, CLIPS, EDITED, GRIND_NAMES, onNose, isSwitch, switchName, SPINS, stanceYaw, type Clip, type Pose, type Vec, clipLength, footTarget, footYaw, kneePoint, mix, sample } from './poses';
 import { nollieClip } from '../physics/tricks';
 import { FEEL } from '../physics/feel';
 
@@ -1046,7 +1046,7 @@ export class SkaterRig {
       this.toes[i].rotation.x = -(front ? p.footFToe : p.footBToe);
       const ankle = new THREE.Vector3(0, ANKLE, -0.05).applyQuaternion(foot.quaternion).add(foot.position);
       const hip = this.hips[i].position.clone().applyMatrix4(this.pelvis.matrix);
-      const knee = kneePoint(hip, ankle, THIGH, SHIN, kneePole(front, p.yaw - (isSwitch(this.shown) ? -BASE.yaw : BASE.yaw)));
+      const knee = kneePoint(hip, ankle, THIGH, SHIN, kneePole(front, p.yaw - stanceYaw(this.shown, p)));
       const k = new THREE.Vector3(knee.x, knee.y, knee.z);
       place(this.thighs[i], hip, k);
       place(this.shins[i], k, ankle);

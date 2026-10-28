@@ -71,6 +71,10 @@ export const TRICK_TRAIL: Record<string, number[]> = {
   shuv2: [1, 0.88, 0.3],
   bs180: [0.95, 0.95, 1],
   fs180: [0.95, 0.95, 1],
+  bsFlip: [0.35, 0.95, 1],
+  fsFlip: [0.35, 0.95, 1],
+  bsHeel: [1, 0.4, 0.85],
+  fsHeel: [1, 0.4, 0.85],
 };
 
 export type GrindStyle = 'metal' | 'concrete';

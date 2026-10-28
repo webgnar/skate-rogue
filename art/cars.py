@@ -155,6 +155,24 @@ def inset(pts, d):
     return [(cx + (x - cx) * (1 - d), cz + (z - cz) * (1 - d * 1.6)) for x, z in pts]
 
 
+def pane(bm, pts, i, half, frame=0.06, proud=0.012):
+    """A window in the panel of the side profile `pts` from point i to i + 1 (x, z), across the car to +-half: a
+    frame's width in from both ends, standing just proud of the panel on the outside."""
+    a, b = pts[i], pts[i + 1]
+    cx = sum(p[0] for p in pts) / len(pts)
+    cz = sum(p[1] for p in pts) / len(pts)
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    n = math.hypot(dx, dz)
+    ux, uz = dx / n, dz / n
+    nx, nz = uz, -ux
+    if nx * ((a[0] + b[0]) / 2 - cx) + nz * ((a[1] + b[1]) / 2 - cz) < 0:  # away from the middle of the profile
+        nx, nz = -nx, -nz
+    p0 = (a[0] + ux * frame, a[1] + uz * frame)
+    p1 = (b[0] - ux * frame, b[1] - uz * frame)
+    out = lambda p, d: (p[0] + nx * d, p[1] + nz * d)
+    prism(bm, [out(p0, -0.01), out(p1, -0.01), out(p1, proud), out(p0, proud)], -half, half)
+
+
 def car(name, mats, kind):
     spec = SUV if kind == 'cruiser' else PRIUS
     L, W, CW = spec['len'], spec['wide'], spec['cabin_w']
@@ -177,6 +195,10 @@ def car(name, mats, kind):
 
     bm = bmesh.new()  # the glasshouse: dark band just proud of the cabin sides, windscreen and back glass
     prism(bm, inset(spec['cabin'], 0.07), -CW / 2 - 0.006, CW / 2 + 0.006)
+    # the windscreen and the back glass, just proud of the raked panels they sit in (zack, 2026-10-28: the inset
+    # glasshouse left them inside the body)
+    pane(bm, spec['cabin'], 0, CW / 2 - 0.07)
+    pane(bm, spec['cabin'], 2, CW / 2 - 0.07)
     parts.append(link('glass', bm, mats['glass']))
 
     bm = bmesh.new()  # bumpers, grille, door seams, handles
