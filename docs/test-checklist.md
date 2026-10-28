@@ -331,6 +331,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **Card pictures:** every card shows a picture from the game's own models (board, truck, wheel, car, coin, Stoken gem; the sneaker is drawn) with a glyph for what it does. Do the pictures say what each mod does at a glance? Any you'd swap?
 - [ ] **Small phone:** on an iPhone SE all slots (even five) and all four gear tiles fit across; gear tiles there show just the picture and the bar.
 - [ ] **Worn looks on Lou:** a chipped deck nose, a scuffed shoe and then a hole, rusty trucks, coned wheels.
+- [ ] **Shop recomposed (ui5-shop-compose):** the cards fill the space under YOUR BOARD and YOUR GEAR with big pictures. On the phone there's no effect text on the cards (the hint strip says what to do). Upright, the cards come three to a row. Tap and drag still buy.
 
 ## Smashables
 

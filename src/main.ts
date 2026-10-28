@@ -145,7 +145,7 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     if (c >= 100) continue; // only worn parts are for sale
     cards.push(`<button class="card-shop gearcard ${shop.cash < GEAR.price[p] ? 'poor' : ''}" data-gear="${p}">
       <span class="kind">GEAR</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>${gearArt(p)}
-      <span class="text">Yours is at ${c}%</span><span class="price">$${GEAR.price[p]}</span>
+      <span class="text">Yours: ${c}%</span><span class="price">$${GEAR.price[p]}</span>
     </button>`);
   }
   const hint = !picked
