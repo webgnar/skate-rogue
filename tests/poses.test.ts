@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BASE, BOARD, CLIPS, clipLength, deckPoint, footTarget, kneePoint, mix, sample, type Pose } from '../src/render/poses';
-import { mirrorPose, onNose, switchName, SPINS } from '../src/render/poses';
+import { boardHalfTurn, mirrorPose, onNose, switchName, SPINS } from '../src/render/poses';
 
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
@@ -235,5 +235,26 @@ describe('landing impacts by drop size', () => {
     expect(clipLength(CLIPS.landSmall)).toBeLessThan(clipLength(CLIPS.land));
     expect(clipLength(CLIPS.land)).toBeLessThan(clipLength(CLIPS.landBig));
     for (const c of ['landSmall', 'landBig']) expect(CLIPS[switchName(c)]).toBeDefined();
+  });
+});
+
+describe('board facing', () => {
+  it('a trick that leaves the board half turned hands the half turn to the board facing; a boardslide turns back', () => {
+    expect(boardHalfTurn(Math.PI)).toBeCloseTo(Math.PI);
+    expect(boardHalfTurn(-Math.PI)).toBeCloseTo(-Math.PI);
+    expect(boardHalfTurn(3 * Math.PI)).toBeCloseTo(3 * Math.PI);
+    expect(boardHalfTurn(2 * Math.PI)).toBe(0);
+    expect(boardHalfTurn(Math.PI / 2)).toBe(0);
+    expect(boardHalfTurn(-Math.PI / 2)).toBe(0);
+  });
+
+  it('every clip ends with the board straight or half turned (never skewed), and the 180s turn the body with it', () => {
+    for (const [name, clip] of Object.entries(CLIPS)) {
+      if (clip.loop) continue;
+      const p = sample(clip, clipLength(clip));
+      const yaw = p.boardYaw - (SPINS[name] ?? 0); // a 180 turns the rig round with it first
+      const left = yaw - boardHalfTurn(yaw);
+      expect(Math.abs(Math.atan2(Math.sin(left), Math.cos(left))), name).toBeLessThan(0.6);
+    }
   });
 });
