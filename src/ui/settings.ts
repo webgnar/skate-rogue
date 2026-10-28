@@ -6,14 +6,14 @@ const KEY = 'gnar-run-settings';
 
 export interface Settings {
   sound: number; // effects volume, 0-1
-  music: number; // 0-1
+  music: number; // 0-1, off until the player turns it up
   haptics: boolean;
   fullscreen: boolean; // src/ui/fullscreen.ts
   tilt: boolean; // gyro tilt, src/render/tilt.ts (off until the pause card's switch gets motion permission)
 }
 
 // full screen starts on for touch screens, where the browser bars eat the most of the view
-export const SETTINGS: Settings = { sound: 1, music: 0.7, haptics: true, fullscreen: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, tilt: false };
+export const SETTINGS: Settings = { sound: 1, music: 0, haptics: true, fullscreen: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, tilt: false };
 
 const unit = (v: unknown, d: number) => (typeof v === 'number' && v >= 0 && v <= 1 ? v : d);
 

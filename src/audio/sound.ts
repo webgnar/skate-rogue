@@ -55,6 +55,14 @@ export class Sound {
     this.makeSiren();
     this.makeVerb();
     for (const id of SAMPLES) void this.load(`sounds/${id}`);
+    this.loadMusic();
+  }
+
+  // the soundtrack only downloads once the music volume is above zero (it starts at zero)
+  private musicLoading = false;
+  private loadMusic(): void {
+    if (this.musicLoading || SETTINGS.music <= 0) return;
+    this.musicLoading = true;
     for (const id of new Set(Object.values(MUSIC).flat())) void this.load(`music/${id}`);
   }
 
@@ -62,6 +70,7 @@ export class Sound {
     if (!this.ctx) return;
     this.sfx.gain.value = SETTINGS.sound;
     this.musicBus.gain.value = SETTINGS.music * LOOPS.music;
+    this.loadMusic();
   }
 
   private async load(id: string): Promise<void> {
