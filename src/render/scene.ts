@@ -19,6 +19,7 @@ import { inkSteps, setInkLens, setInkResolution, solid } from './toon';
 import { mergeInkSteps, splitSteps } from './kit-merge';
 import { run, sliceDone, sliceEnd, sliceStart } from './slice';
 import { ShaderKeep } from './shader-keep';
+import { Bay } from './bay';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
 
@@ -102,6 +103,9 @@ function textures(root: THREE.Object3D): THREE.Texture[] {
   return [...out];
 }
 
+// world y the skyline cards stand on (with the backdrop's own lift); the bay's water lies at it
+const SKYLINE_FEET = -10;
+
 export class StreetView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -129,6 +133,7 @@ export class StreetView {
   private readonly hemis: THREE.HemisphereLight[] = [];
   private readonly suns: THREE.DirectionalLight[] = [];
   private readonly sky = skyMesh();
+  private readonly bay = new Bay(); // the water out to the skyline, seen from up high (bay.ts)
   readonly rain = new Rain();
   readonly puddles = new Puddles();
   private lightningIn = 0; // seconds to the next lightning glow in a downpour
@@ -185,7 +190,7 @@ export class StreetView {
       this.hemis.push(hemi);
       this.suns.push(sun);
     }
-    this.scene.add(this.sky, this.puddles.mesh, this.night.group, this.gates.group, this.sirens.group, this.ambience.points);
+    this.scene.add(this.sky, this.bay.mesh, this.puddles.mesh, this.night.group, this.gates.group, this.sirens.group, this.ambience.points);
     this.front.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
@@ -232,7 +237,7 @@ export class StreetView {
       tex.needsUpdate = true;
       tex.updateMatrix();
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w * repeat, h), skylineMaterial(tex));
-      mesh.position.set(0, h / 2 - 10 + l.lift, l.z);
+      mesh.position.set(0, h / 2 + SKYLINE_FEET + l.lift, l.z);
       this.scene.add(mesh);
       this.backdrop.push({ mesh, parallax: l.parallax, w, y: mesh.position.y, off: 0 });
     }
@@ -278,6 +283,7 @@ export class StreetView {
     this.wet = Math.min(1, rain);
     for (const kit of this.kits()) this.wetKit(kit);
     this.puddles.setSky(m.skyTop, m.skyBottom, m.neon);
+    this.bay.setSky(m.skyBottom, m.neon);
     for (const n of [this.night, ...[...this.aheads.values()].map((a) => a.night)]) n.setNight(m.neon, rain);
     for (const s of [this.sirens, ...[...this.aheads.values()].map((a) => a.sirens)]) s.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
@@ -518,6 +524,7 @@ export class StreetView {
       b.mesh.position.x = this.camX * b.parallax + b.off;
       b.mesh.position.y = b.y + this.skyDrop;
     }
+    this.bay.update(dt, this.camX, SKYLINE_FEET + this.skyDrop);
     if (this.behind && this.camX > BEHIND_TILES) this.dropBehind();
     this.rain.update(dt, this.camera);
     this.ambience.update(dt, this.camera, this.pointScale);

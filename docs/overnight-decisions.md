@@ -861,3 +861,10 @@ and listed it here for review. Any of these can be flipped in the morning.
 - The hit and the whiff draw in the skater's pass (scene.ts front) so Lou can't hide them. Everything stays a local
   spot: no whole-screen flash. Reduce-flashing shrinks and dims the glows. The aim tell (sight line, ring, "!") is
   unchanged, because dodging depends on it.
+
+## Bay water behind the city (2026-10-28)
+- zack: light blue water from the back streets out to the skyline cards, close to the sky's colour, comic and very
+  minimal, only seen from up high. bay.ts is one flat plane at the skyline cards' feet (scene.ts SKYLINE_FEET),
+  from z -26 out to -110, following the camera. It's a flat light blue mixed with the sky's horizon colour (so dusk
+  and night carry through) and white ink dashes for the chop that drift and fade slowly, never blinking.
+- One draw, no textures, no lights, no fog. From the street the rooftops hide it.
