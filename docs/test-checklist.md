@@ -750,6 +750,6 @@ off to compare. Reduce motion skips it.
 - [ ] With Reduce Flashing on, the glows are smaller and dimmer but the tracer still reads.
 
 ## Bay water (2026-10-28)
-- [ ] Up high (the top route, big airs), light blue water shows behind the houses with the skyline standing in it.
+- [ ] Up high (the top route, big airs), light blue water shows behind the houses, and the skyline stands on a far shore across it (not in the water).
 - [ ] The water is close to the sky's colour, with small white dashes drifting slowly (no blinking).
 - [ ] At night the water darkens with the sky; from the street you don't see it.

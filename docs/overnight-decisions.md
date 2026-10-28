@@ -868,3 +868,6 @@ and listed it here for review. Any of these can be flipped in the morning.
   from z -26 out to -110, following the camera. It's a flat light blue mixed with the sky's horizon colour (so dusk
   and night carry through) and white ink dashes for the chop that drift and fade slowly, never blinking.
 - One draw, no textures, no lights, no fog. From the street the rooftops hide it.
+- zack: "the pink buildings shouldn't be in the water". The water now stops at z -61. The skyline cards stand on a
+  far shore (bay.ts land, z -60 to -130): flat dusky concrete with an ink line at the water's edge and a paler quay
+  strip, hazing into the sky at the back. It costs one more draw.
