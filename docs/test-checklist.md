@@ -748,3 +748,8 @@ off to compare. Reduce motion skips it.
 - [ ] On a chase floor in portrait, the shot reads at a glance: a star at the gun, then a bright tracer with a fading tail.
 - [ ] Getting hit shows a red spark burst over Lou; dodging shows a white whip of air under him.
 - [ ] With Reduce Flashing on, the glows are smaller and dimmer but the tracer still reads.
+
+## Bay water (2026-10-28)
+- [ ] Up high (the top route, big airs), light blue water shows behind the houses with the skyline standing in it.
+- [ ] The water is close to the sky's colour, with small white dashes drifting slowly (no blinking).
+- [ ] At night the water darkens with the sky; from the street you don't see it.
