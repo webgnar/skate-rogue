@@ -6,7 +6,8 @@ import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type BoonId, typ
 import { Game, type Hud, type ShopView } from './game/game';
 import type { UnderView } from './run/spot';
 import { GEAR, wornness } from './run/gear';
-import { modDef, type ModId } from './board/mods';
+import { chainText, modDef, type ModId } from './board/mods';
+import { drawWires } from './ui/board-wires';
 import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
 import { boonArt, boonIcon, spotArt } from './ui/boon-art';
@@ -117,7 +118,7 @@ const KIND_TAG = { trigger: 'TRIGGER', effect: 'EFFECT', modifier: 'MODIFIER' } 
 
 // the skate shop as a card game (src/ui/shop-drag.ts): your setup across the top is where cards land, the hand of
 // cards along the bottom is the stock
-function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hint: string } {
+function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hint: string; story: string } {
   const { shop, picked } = v;
   const sel = (i: number) => (picked && 'slot' in picked && picked.slot === i ? 'picked' : picked && 'stock' in picked ? 'target' : '');
   const slots = shop.board.map((id, i) => slot(id, i, sel(i))).join('<i class="arrow">›</i>');
@@ -153,7 +154,14 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     : 'stock' in picked
       ? `Board full: tap the slot ${modDef(shop.stock[picked.stock]!).name} replaces`
       : 'Tap another slot to swap';
-  return { slots, parts, hand: cards.join(''), hint };
+  //the board in words under it: what each trigger fires, or how to start
+  const lines = chainText(shop.board);
+  const story = lines.length
+    ? lines.map((l) => `<span>${esc(l)}</span>`).join('')
+    : shop.board.some(Boolean)
+      ? '<span class="none">Nothing fires: a purple TRIGGER fires the effects to its right</span>'
+      : '<span class="none">A purple TRIGGER fires the cyan EFFECTS to its right</span>';
+  return { slots, parts, hand: cards.join(''), hint, story };
 }
 
 // the shop's gear tones: green to red as a part wears (the HUD's bars are in src/ui/hud.ts)
@@ -235,6 +243,8 @@ function makeHud(): Hud {
       }
       const slotsEl = shopEl.querySelector('.slots')!;
       slotsEl.innerHTML = h.slots;
+      shopEl.querySelector('.story')!.innerHTML = h.story;
+      drawWires(slotsEl as HTMLElement, v.shop.board);
       const partsEl = shopEl.querySelector('.parts')!;
       partsEl.innerHTML = h.parts;
       //a slot or a part that changed stamps in

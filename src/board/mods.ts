@@ -104,3 +104,56 @@ export function fires(slots: Slots, trigger: TriggerId): Firing[] {
   });
   return out;
 }
+
+// How a board reads, for drawing it (the shop and the HUD): which trigger each slot answers to and whether it ever
+// does anything. A wire runs from a trigger along to the last effect it fires; a modifier is live when an effect
+// follows it in the same run; anything left of every trigger, or a trigger with nothing after it, is dead.
+export interface Link {
+  live: boolean; // fires (a trigger: fires something; an effect: is fired; a modifier: shapes a fired effect)
+  wire: 'start' | 'mid' | 'end' | null; // its place on its trigger's wire
+}
+
+export function chain(slots: Slots): Link[] {
+  const out: Link[] = slots.map(() => ({ live: false, wire: null }));
+  const kind = (i: number) => (slots[i] ? modDef(slots[i]!).kind : null);
+  for (let t = 0; t < slots.length; t++) {
+    if (kind(t) !== 'trigger') continue;
+    let end = t;
+    for (let i = t + 1; i < slots.length && kind(i) !== 'trigger'; i++) if (kind(i) === 'effect') end = i;
+    if (end === t) continue; // fires nothing
+    out[t] = { live: true, wire: 'start' };
+    let effectAhead = false;
+    for (let i = end; i > t; i--) {
+      if (kind(i) === 'effect') effectAhead = true;
+      out[i] = { live: kind(i) === 'effect' || (kind(i) === 'modifier' && effectAhead), wire: i === end ? 'end' : 'mid' };
+    }
+  }
+  return out;
+}
+
+// the board in words, one line per trigger that fires anything: "OLLIE ▸ ×2 KICK · SPARKS"
+export function chainText(slots: Slots): string[] {
+  const lines: string[] = [];
+  let line: string[] | null = null;
+  let head = '';
+  let mods: string[] = [];
+  const flush = () => {
+    if (line?.length) lines.push(`${head} ▸ ${line.join(' · ')}`);
+  };
+  for (const id of slots) {
+    if (!id) continue;
+    const d = modDef(id);
+    if (d.kind === 'trigger') {
+      flush();
+      line = [];
+      head = d.short;
+      mods = [];
+    } else if (line && d.kind === 'modifier') mods.push(d.short);
+    else if (line && d.kind === 'effect') {
+      line.push([...mods, d.short].join(' '));
+      mods = [];
+    }
+  }
+  flush();
+  return lines;
+}
