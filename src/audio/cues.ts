@@ -37,6 +37,27 @@ const VOL: Record<SampleId, number> = {
 
 const cue = (sample: SampleId, scale = 1, rate = 1): Cue => ({ sample, vol: VOL[sample] * scale, rate });
 
+// The coins ring out in a reverb (src/audio/sound.ts: a convolver on a freshly made, random impulse, so no two
+// tails ring alike). A lone coin is mostly dry; when they pile up (a line taken at speed) each one is ducked and
+// more of it goes up into the reverb, with a ghost an octave up feeding only the reverb: the shimmer.
+export const COIN_VERB = {
+  seconds: 2.6, // the impulse's length
+  decay: 2.2, // how fast it dies (higher: shorter)
+  predelay: 0.025, // s before the tail starts
+  lowCut: 700, // Hz: the tail is the high end only, so it rings above the street instead of muddying it
+  window: 0.4, // s: coins started within this of each other count as piled up
+  shimmer: 0.4, // the octave-up ghost, into the reverb only, at full pile
+  limit: -10, // dB: the coins' bus is held under this, so a stack swells instead of clipping
+  jitter: 0.025, // each coin's pitch wobbles this much either way, so a stack never phases the same twice
+};
+
+// how one coin splits between dry and the reverb, given how many others started inside COIN_VERB.window
+export function coinMix(pile: number): { dry: number; wet: number; shimmer: number } {
+  const p = Math.max(0, pile);
+  const k = Math.min(1, p / 6); // 0 alone, 1 at six or more stacked
+  return { dry: 1 / (1 + p * 0.45), wet: 0.15 + 0.45 * k, shimmer: COIN_VERB.shimmer * k };
+}
+
 // the sound a sim event makes, if any (grinds are the loop, below)
 export function cueFor(e: FloorEvent): Cue | null {
   switch (e.type) {

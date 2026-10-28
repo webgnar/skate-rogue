@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buzzFor, cueFor, MOMENT, MUSIC, rollGain, SAMPLES, sirenGain } from '../src/audio/cues';
+import { buzzFor, coinMix, cueFor, MOMENT, MUSIC, rollGain, SAMPLES, sirenGain } from '../src/audio/cues';
 
 describe('sound cues', () => {
   it('every sample the cues use ships in public/sounds', async () => {
@@ -19,6 +19,16 @@ describe('sound cues', () => {
     const hard = cueFor({ type: 'land', impact: 9 })!.vol;
     expect(hard).toBeGreaterThan(soft);
     expect(cueFor({ type: 'near' })).toBeNull();
+  });
+
+  it('stacked coins are ducked and pushed up into the reverb; a lone coin stays mostly dry', () => {
+    const alone = coinMix(0);
+    const pile = coinMix(8);
+    expect(alone.shimmer).toBe(0);
+    expect(alone.dry).toBeGreaterThan(alone.wet);
+    expect(pile.dry).toBeLessThan(alone.dry);
+    expect(pile.wet).toBeGreaterThan(alone.wet);
+    expect(pile.shimmer).toBeGreaterThan(0);
   });
 
   it('the wheels roll louder with speed and go quiet in the air; the siren comes in with Heat', () => {
