@@ -6,7 +6,7 @@ import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { Tuck } from './tuck';
 import { LEDGE_GRINDS, MANUALS, NOSE_STANCES, RAIL_GRINDS, rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
-import { ceilingAt, currentAt, isStreetAt, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { PIT, ceilingAt, currentAt, isStreetAt, pitAt, pits, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
@@ -78,6 +78,8 @@ export class Skater {
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   pads = 0; // Bubble Pads slams left this floor
   tucks = 0; // Tuck and Roll saves left this floor
+  walled = false; // hit a pit's far wall (see wall()): no more pops or flips, just the drop
+  private tuckOut = false; // bouncing up out of a pit (Tuck and Roll): you slide up its wall, not into it
   cracker: Surface | null = null; // Firecracker: the stair set we're riding down
   crackStep = -1; // the last step the tail clacked on
   rocket = false; // Rocket Grind: jumps come back at the top of this launch
@@ -163,7 +165,7 @@ export class Skater {
   }
 
   private advance(input: StepInput): void {
-    if (input.pressed) this.buffer = PHYS.bufferFrames;
+    if (input.pressed && !this.walled) this.buffer = PHYS.bufferFrames;
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
     if (this.floatT > 0) this.floatT--;
@@ -512,21 +514,26 @@ export class Skater {
       }
     } else if (this.mode === 'air') {
       this.land(px, py);
+      if (this.mode === 'air') this.wall(px);
     }
 
     this.stepCracker();
     this.checkHazards();
 
-    //in the canal
-    if (this.mode === 'air' && this.y > this.level.streetY + PHYS.bailDepth && this.tucks > 0) {
+    //in the canal, or down a pit on the hill
+    const bottom = pitAt(this.level, this.x)?.floor ?? this.level.streetY + PHYS.bailDepth;
+    if (this.mode === 'air' && this.y > bottom && this.tucks > 0) {
       //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
       this.tucks--;
+      this.walled = false;
+      this.tuckOut = true;
       this.vsp = PHYS.tuckBounce;
       this.hsp = Math.max(this.hsp, PHYS.baseSpeed);
       this.jumps = this.maxJumps;
       this.kicked = true;
       this.events.push({ type: 'tuck' });
-    } else if (this.mode === 'air' && this.y > this.level.streetY + PHYS.bailDepth) {
+    } else if (this.mode === 'air' && this.y > bottom) {
+      this.y = Math.min(this.y, bottom);
       this.mode = 'bail';
       this.hsp = 0;
       this.events.push({ type: 'bail' });
@@ -686,6 +693,33 @@ export class Skater {
     }
   }
 
+  // a pit's far wall (level.ts pits()): come up short of the lip, under it, and the board hits the wall. You slam into
+  // it, stop dead, and drop straight down the pit to bail at the bottom (zack, 2026-10-28: you used to pass through
+  // the wall and fall glitching through the hill). Just short of the lip, you get up onto it.
+  private wall(px: number): void {
+    const fy = this.boardY;
+    for (const p of pits(this.level)) {
+      const at = p.x1 - truckReach(p.far);
+      if (px > at || this.x <= at || fy <= p.lip) continue;
+      this.x = at;
+      if (fy - p.lip <= PIT.catch && !this.walled) {
+        this.feel.settle(this.tuck.lift);
+        this.y = p.lip;
+        this.touchDown(p.far);
+        return;
+      }
+      //bouncing up out of the pit (Tuck and Roll), you slide up the wall and over the lip
+      if (this.tuckOut && this.vsp < 0) return;
+      this.hsp = 0;
+      this.carry = 0;
+      if (this.walled) return;
+      this.walled = true;
+      this.fakie = false;
+      this.events.push({ type: 'slam' });
+      return;
+    }
+  }
+
   private touchDown(s: Surface | null): void {
     const m = s ? surfaceSlope(s) : 0;
     const impact = normalImpact(this.hsp, this.vsp, m);
@@ -695,6 +729,7 @@ export class Skater {
     this.trickCatch = 0;
     this.surface = s;
     this.vsp = 0;
+    this.tuckOut = false;
     this.jumps = this.maxJumps;
     this.coyote = 0;
     this.flipped = false;

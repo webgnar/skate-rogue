@@ -37,7 +37,7 @@ chase between each:
 | Crest | The flat intersection at the top of each block, 5–8 tiles, with a cross street running back | Breathe, set up |
 | Stairs | A public stairway with a handrail (always one on floor 1 and on any set over 8) | Ollie it, flip it, or grind the rail |
 | Drop | A retaining wall down to the next street, 1.5–4 tiles | Roll off or ollie for style |
-| Gap | A crest jump over a cross street onto the next block falling away under you | Ollie or flip it; falling in is a bail |
+| Gap | A crest jump over a cross street onto the next block falling away under you | Ollie or flip it. Its far side is a solid wall up to the lip: come up short and you slam into it and drop straight down to bail on the cross street 3.5 tiles under the lower lip (`pits()` in src/physics/level.ts). Up to 8 px short of the lip you still get up onto it |
 | Kicker | A short climb to the next corner that throws you into the air | Roll up; the Stoken is often over the lip |
 
 The physics did not change: hills are banks that fall away (`Surface.hill` only changes how they're drawn),

@@ -239,6 +239,10 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **L trains:** two-car trains come round the bend from behind the buildings, run along the stretch your way,
       and bend off at the far end, then another comes about 12 s later. Catch one and hop its roof, or slam into
       its back. A bus fits under the track.
+- [ ] **Pit walls:** on floor 2's downhill, roll off into the crest jump's pit without popping (or pop late). Lou
+      slams into the far wall under the lip, stops dead, drops straight down, and bails on the cross street at the
+      bottom. He never passes through the wall into the hill. The collision overlay (C) draws the wall in red, with
+      PIT at the bottom.
 - [ ] *Feel:* is the hill too fast, or not fast enough? Are the crest jumps readable at speed? Too much grey from
       the near sidewalk and rooftops at street level?
 - [ ] *Phone:* frame rate on the older iPhone on a hill floor with the L in view.

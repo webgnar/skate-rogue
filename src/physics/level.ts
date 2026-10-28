@@ -219,6 +219,53 @@ export function inHill(level: Level, x: number): boolean {
   return (level.hillSpans ?? []).some(([a, b]) => x >= a && x < b);
 }
 
+// a pit on the hill: a crest jump's gap over a cross street (src/gen/hills.ts), as hillside.ts draws it. Its far
+// side is a solid wall up to the lip (zack, 2026-10-28: come up short and you hit it, bail, and drop straight down);
+// the cross street's road is its bottom, PIT.depth tiles under the lower lip
+export interface Pit {
+  x0: number; // px: the near lip's edge
+  x1: number; // the far wall
+  far: Surface; // the ground over the far wall
+  lip: number; // y of the far lip
+  floor: number; // y of the cross street down in it
+}
+
+export const PIT = {
+  depth: 3.5, // tiles under the lower lip
+  gap: [0.5, 8], // tiles: wider than this is a gap, narrower than this is the street chase between stretches of hill
+  catch: 8, // px: the board comes up this little short of the far lip and you get up onto it anyway (like rolling onto a kerb)
+} as const;
+
+// the hill's ground, left to right: roofs, banks and stairways (not side lines, kickers or anything in the air)
+export function hillGround(level: Level): Surface[] {
+  return level.surfaces
+    .filter((s) => inHill(level, s.x0) && !s.side && !s.kicker && !s.sky && !s.top && (s.kind === 'roof' || s.kind === 'bank' || s.kind === 'stairs'))
+    .sort((a, b) => a.x0 - b.x0);
+}
+
+const PITS = new WeakMap<Level, { n: number; pits: Pit[] }>();
+
+// every pit on the floor, left to right
+export function pits(level: Level): Pit[] {
+  const hit = PITS.get(level);
+  if (hit && hit.n === level.surfaces.length) return hit.pits;
+  const ground = hillGround(level);
+  const out: Pit[] = [];
+  for (let i = 1; i < ground.length; i++) {
+    const [a, b] = [ground[i - 1], ground[i]];
+    const w = (b.x0 - a.x1) / TILE;
+    if (w <= PIT.gap[0] || w >= PIT.gap[1]) continue;
+    out.push({ x0: a.x1, x1: b.x0, far: b, lip: b.y, floor: Math.max(a.y1 ?? a.y, b.y) + PIT.depth * TILE });
+  }
+  PITS.set(level, { n: level.surfaces.length, pits: out });
+  return out;
+}
+
+// the pit x is over, if any
+export function pitAt(level: Level, x: number): Pit | undefined {
+  return pits(level).find((p) => x >= p.x0 && x <= p.x1);
+}
+
 const CAR_W = 2 * TILE;
 const CAR_H = 40;
 export const MANUAL_PAD_MAX = 3 * TILE; // the longest ledge that counts as a manual pad
