@@ -3,25 +3,29 @@
 // edits both.
 // Saved in browser storage, guarded like the save.
 const KEY = 'gnar-run-settings';
+// bumped when the default mix changes: volumes saved under an older mix are dropped once for the new defaults
+const MIX = 2;
 
 export interface Settings {
   sound: number; // effects volume, 0-1
-  music: number; // 0-1, off until the player turns it up
+  music: number; // 0-1
   haptics: boolean;
   fullscreen: boolean; // src/ui/fullscreen.ts
   tilt: boolean; // gyro tilt, src/render/tilt.ts (off until the pause card's switch gets motion permission)
 }
 
 // full screen starts on for touch screens, where the browser bars eat the most of the view
-export const SETTINGS: Settings = { sound: 1, music: 0, haptics: true, fullscreen: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, tilt: false };
+export const SETTINGS: Settings = { sound: 0.25, music: 0.75, haptics: true, fullscreen: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, tilt: false };
 
 const unit = (v: unknown, d: number) => (typeof v === 'number' && v >= 0 && v <= 1 ? v : d);
 
 export function loadSettings(): void {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Settings>;
-    SETTINGS.sound = unit(s.sound, SETTINGS.sound);
-    SETTINGS.music = unit(s.music, SETTINGS.music);
+    const s = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Settings> & { mix?: number };
+    if (s.mix === MIX) {
+      SETTINGS.sound = unit(s.sound, SETTINGS.sound);
+      SETTINGS.music = unit(s.music, SETTINGS.music);
+    }
     if (typeof s.haptics === 'boolean') SETTINGS.haptics = s.haptics;
     if (typeof s.fullscreen === 'boolean') SETTINGS.fullscreen = s.fullscreen;
     if (typeof s.tilt === 'boolean') SETTINGS.tilt = s.tilt;
@@ -32,7 +36,7 @@ export function loadSettings(): void {
 
 export function saveSettings(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(SETTINGS));
+    localStorage.setItem(KEY, JSON.stringify({ ...SETTINGS, mix: MIX }));
   } catch {
     //not remembered in a private window
   }

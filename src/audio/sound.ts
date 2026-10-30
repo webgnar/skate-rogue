@@ -65,7 +65,7 @@ export class Sound {
     this.loadMusic();
   }
 
-  // the soundtrack only downloads once the music volume is above zero (it starts at zero)
+  // the soundtrack only downloads once the music volume is above zero
   private musicLoading = false;
   private loadMusic(): void {
     if (this.musicLoading || SETTINGS.music <= 0) return;
