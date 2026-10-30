@@ -104,7 +104,7 @@ function glyph(g: CanvasRenderingContext2D, x: number, y: number, s: number, rng
   }
 }
 
-function paintFacade(g: CanvasRenderingContext2D, [x, y, w, h]: Rect, [body, band, trim]: [string, string, string], v: number, rng: () => number): void {
+function paintFacade(g: CanvasRenderingContext2D, glow: CanvasRenderingContext2D, [x, y, w, h]: Rect, [body, band, trim]: [string, string, string], v: number, rng: () => number): void {
   g.fillStyle = body;
   g.fillRect(x, y, w, h);
   //grime: drips down from each sill, and a darker floor slab along the bottom
@@ -117,8 +117,13 @@ function paintFacade(g: CanvasRenderingContext2D, [x, y, w, h]: Rect, [body, ban
     const wy = y + 8;
     g.fillStyle = trim;
     g.fillRect(wx - 1, wy - 1, 22, 16);
-    g.fillStyle = rng() < 0.3 ? '#e8d88a' : '#28344a'; // a lit window now and then
+    const lit = rng() < 0.3; // a lit window now and then, glowing at night
+    g.fillStyle = lit ? '#e8d88a' : '#28344a';
     g.fillRect(wx, wy, 20, 14);
+    if (lit) {
+      glow.fillStyle = '#c8a860';
+      glow.fillRect(wx, wy, 20, 14);
+    }
     g.fillStyle = shade(trim, 0.8);
     g.fillRect(wx + 9, wy, 2, 14);
     if (v === 0) {
@@ -160,6 +165,13 @@ function paintSign(g: CanvasRenderingContext2D, [x, y, w, h]: Rect, [bg, ink]: [
 }
 
 let atlas: THREE.Texture | null = null;
+let glowMap: THREE.Texture | null = null;
+
+// what glows at night, on the atlas: the signs and lanterns in their own colours, the lit windows warm
+export function chinatownGlowMap(): THREE.Texture {
+  chinatownAtlas();
+  return glowMap!;
+}
 
 export function chinatownAtlas(): THREE.Texture {
   if (atlas) return atlas;
@@ -168,9 +180,16 @@ export function chinatownAtlas(): THREE.Texture {
   c.height = AH;
   const g = c.getContext('2d')!;
   g.imageSmoothingEnabled = false;
+  const gc = document.createElement('canvas');
+  gc.width = AW;
+  gc.height = AH;
+  const glow = gc.getContext('2d')!;
+  glow.imageSmoothingEnabled = false;
+  glow.fillStyle = '#000000';
+  glow.fillRect(0, 0, AW, AH);
   const rng = makeRng(8848);
   PAINTS.forEach((p, i) => {
-    for (let v = 0; v < VARIANTS; v++) paintFacade(g, facade(i, v), p, v, rng);
+    for (let v = 0; v < VARIANTS; v++) paintFacade(g, glow, facade(i, v), p, v, rng);
     //its plain side wall
     const [sx, sy] = SWATCH.side(i);
     g.fillStyle = shade(p[0], 0.9);
@@ -203,7 +222,13 @@ export function chinatownAtlas(): THREE.Texture {
     g.fillStyle = k % 2 ? '#6a665e' : '#8a867c';
     g.fillRect(SWATCH.grime[0] + randInt(rng, 2 * PX), SW_Y + randInt(rng, 2 * PX), 1 + randInt(rng, 2), 2 + randInt(rng, 5));
   }
+  //the signs' boards and the lanterns glow in their own colours
+  const copy = ([x, y, w, h]: Rect) => glow.drawImage(c, x, y, w, h, x, y, w, h);
+  copy([0, SIGN_Y, AW, 4 * PX + PX]);
+  copy(SWATCH.lantern);
+  copy(SWATCH.gold);
   atlas = pixelTexture(c);
+  glowMap = pixelTexture(gc);
   return atlas;
 }
 
@@ -340,3 +365,6 @@ export function cables(m: Mesher, a: V3, b: V3, drop: number, n: number, rng: ()
 
 // a deterministic stream for a block's art
 export const chinatownRng = (seed: number, floor: number) => makeRng(seed * 71 + floor * 389);
+
+// how much Chinatown's signs, lanterns and windows glow at the mood's neon (0 day, 1 night)
+export const chinatownGlow = (neon: number) => 0.05 + 1.6 * neon;

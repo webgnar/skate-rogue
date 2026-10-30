@@ -35,6 +35,8 @@ function toToon(m: THREE.Material): THREE.Material {
     color: m.color,
     map: m.map,
     emissive: m.emissive,
+    emissiveMap: m.emissiveMap,
+    emissiveIntensity: m.emissiveIntensity,
     transparent: m.transparent,
     opacity: m.opacity,
     alphaTest: m.alphaTest,

@@ -13,7 +13,10 @@ export const CAB = {
   cruise: 0.35, // share of base speed, before you grab on: you catch it
   speed: 2.5, // share of base speed it floors it to, pulling you
   accel: 0.2, // px/frame per frame: it floors it
-  turnFrames: 34, // turning off at the corner, out of your lane and up the side street
+  turnFrames: 34, // turning off at the corner, out of your lane and into the side street
+  awayFrames: 110, // then driving off up it
+  awaySpeed: 0.1, // tiles per frame up the side street
+  sideZ: -3.2, // tiles: where it's turned to, at the side street's mouth
 };
 
 export type CabState = 'wait' | 'cruise' | 'pull' | 'turn' | 'gone';
@@ -21,7 +24,8 @@ export type CabState = 'wait' | 'cruise' | 'pull' | 'turn' | 'gone';
 export class Cab {
   state: CabState = 'wait';
   speed = 0;
-  turn = 0; // 0 down your street, 1 turned off up the side street
+  turn = 0; // 0 down your street, 1 turned off into the side street
+  z = 0; // tiles across the street: 0 in your lane, back up the side street once it's turned
   pulled = false; // set by the floor sim: the skater's hanging on this step
   readonly box: Car;
 
@@ -44,10 +48,16 @@ export class Cab {
     if (this.state === 'cruise' && this.pulled) this.state = 'pull';
     if (this.state === 'pull') this.speed = Math.min(PHYS.baseSpeed * CAB.speed, this.speed + CAB.accel);
     if (this.state === 'turn') {
-      //braking round the corner
-      this.turn = Math.min(1, this.turn + 1 / CAB.turnFrames);
-      this.speed *= 0.93;
-      if (this.turn >= 1) this.state = 'gone';
+      //braking round the corner, then up the side street
+      if (this.turn < 1) {
+        this.turn = Math.min(1, this.turn + 1 / CAB.turnFrames);
+        this.speed *= 0.85;
+        this.z = CAB.sideZ * this.turn;
+      } else {
+        this.speed = 0;
+        this.z -= CAB.awaySpeed;
+        if (this.z < CAB.sideZ - CAB.awaySpeed * CAB.awayFrames) this.state = 'gone';
+      }
     }
     this.box.x0 += this.speed;
     this.box.x1 += this.speed;
