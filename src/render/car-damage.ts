@@ -234,7 +234,7 @@ export class CarHopFx {
     if (n) this.pieces.burst(Array.from({ length: n }, (_, i) => ({ geometry: spring(), offset: new THREE.Vector3((i - (n - 1) / 2) * 0.2, 0.05, 0.3) })), x, roof, z, street, -1, 1.5);
     //dust bursts out of it, puffing out round the roof and down the sides
     p.spray(x, roof, { z: z + 0.4, n: stage === 3 ? 34 : 20, colors: DUST, life: [0.6, 1.1], size: [0.26, 0.4], size1: 0.85, speed: [1.2, 3.6], angle: [-Math.PI * 0.1, Math.PI * 1.1], drag: 3, grav: -0.4, alpha: 0.9, fadeFrom: 0, radius: 0.35 });
-    p.dust(x, roof, 1.4);
+    p.dust(x, roof, 1.4, true);
     p.spray(x, roof, { z: z + 0.4, n: stage >= 2 ? 8 : 4, colors: SEAT, life: [0.4, 0.7], size: [0.06, 0.1], speed: [2, 4], angle: [Math.PI * 0.2, Math.PI * 0.8], grav: 12, drag: 1, ink: true, floor: street });
     this.fx.shake(CAR_FX.shake[stage]);
     if (stage < 3) {
@@ -245,8 +245,8 @@ export class CarHopFx {
     this.pieces.burst(panels.map((g, i) => ({ geometry: g, offset: new THREE.Vector3((i - 1.5) * 0.4, 0.1 + i * 0.05, 0.2) })), x, roof, z, street, paint, 1.4);
     this.pieces.burst([{ geometry: wheel, offset: new THREE.Vector3(0.6, -0.4, 0.4) }], x, roof, z, street, 0x111114, 1.2);
     p.debris(x, street, 1);
-    p.dust(x - 0.8, street, 1.6);
-    p.dust(x + 0.8, street, 1.6);
+    p.dust(x - 0.8, street, 1.6, true);
+    p.dust(x + 0.8, street, 1.6, true);
     this.fx.word(x, roof + 1.1, 'TOTALED!');
   }
 
