@@ -1013,6 +1013,11 @@ export class SkaterRig {
     wearShoes(this.mesh, g.shoes);
   }
 
+  // the deck as drawn (origin at the middle of its top), for effects that follow the board (flip-lines.ts)
+  get deck(): THREE.Object3D {
+    return this.boardFace;
+  }
+
   // the grip tape's colour (src/board/grips.ts)
   setGrip(color: number): void {
     paintGrip(this.board ?? this.boardFace, color);

@@ -151,7 +151,7 @@ describe('puddles', () => {
 });
 
 describe('effect settings from the URL', () => {
-  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink' } as const;
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink' } as const;
   const q = (s: string) => applyParams({ ...base }, new URLSearchParams(s));
   it('calm turns on both accessibility switches, calm=0 turns them off', () => {
     expect(q('calm')).toMatchObject({ reduceMotion: true, reduceFlashing: true });
@@ -669,5 +669,14 @@ describe('escape set pieces', () => {
     log.length = 0;
     fx.chaser('guards', 0, 0, true, 1 / 60);
     expect(log[0].rate).toBeGreaterThan(slow);
+  });
+});
+
+describe('flip lines setting', () => {
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink' } as const;
+  it('picks a look from the URL and ignores unknown ones', () => {
+    expect(applyParams({ ...base }, new URLSearchParams('fliplines=swoosh')).flipLines).toBe('swoosh');
+    expect(applyParams({ ...base }, new URLSearchParams('fliplines=pixels')).flipLines).toBe('pixels');
+    expect(applyParams({ ...base }, new URLSearchParams('fliplines=nope')).flipLines).toBe('ink');
   });
 });

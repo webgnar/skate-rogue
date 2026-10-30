@@ -38,6 +38,7 @@ import { TimeWarp } from './time-warp';
 import { BulletTime, landCall } from './bullet-time';
 import { Aura, inkify } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
+import { FlipLines } from '../render/flip-lines';
 import { FX } from '../render/fx-settings';
 import { HeatCue } from '../render/heat-cue';
 import { BoonFx } from '../render/boon-fx';
@@ -272,6 +273,7 @@ export class Game {
   private readonly warp = new TimeWarp();
   private readonly bullet = new BulletTime();
   private readonly speedLines = new SpeedLines();
+  private readonly flipLines = new FlipLines(FX.flipLines);
   private readonly boonFx = new BoonFx(this.particles);
   readonly smashFx = new SmashFx(this.particles, {
     word: (x, y, w) => this.words.spawn(x, y, w),
@@ -348,7 +350,7 @@ export class Game {
     this.visor = new VisorGlint(this.sprite.mesh);
     this.skaterLight = new SkaterLight(this.sprite.mesh);
     this.view.front.add(this.skaterLight.group);
-    this.view.over.add(this.speedLines.mesh);
+    this.view.over.add(this.speedLines.mesh, this.flipLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.over.add(this.impacts.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
@@ -1325,8 +1327,10 @@ export class Game {
     if (this.flip && this.flip.left > 0) {
       this.flip.left -= dt;
       const p = this.sprite.mesh.position;
-      if (this.skater.mode === 'air') this.particles.flipTrail(p.x, p.y + 0.08, this.flip.rgb, dt);
+      if (this.skater.mode === 'air' && FX.flipLines === 'pixels') this.particles.flipTrail(p.x, p.y + 0.08, this.flip.rgb, dt);
     }
+    this.flipLines.style = FX.reduceMotion ? 'pixels' : FX.flipLines;
+    this.flipLines.update(dt, this.sprite.deck, this.view.camera, skating && !!this.flip && this.skater.mode === 'air');
     this.speedLines.update(dt, this.view.camera, FX.reduceMotion ? 0 : flow, gnar && !FX.reduceMotion);
     //the camera backs off in big air and at speed (reduce motion keeps the frame still)
     this.view.drift.update(dt, FX.reduceMotion ? 'roll' : sk.mode, FX.reduceMotion ? 0 : flow, skating && !FX.reduceMotion ? speed / PHYS.baseSpeed : 1);
@@ -1593,6 +1597,7 @@ export class Game {
         this.visor.ping();
         this.view.zoom.trick();
         this.flip = { rgb: TRICK_TRAIL[e.name] ?? TRICK_TRAIL.kickflip, left: FLIP_TRAIL_SECS, at: this.clock };
+        this.flipLines.trick(this.flip.rgb);
         this.hud.callout(trickName(e.name, e.fakie, e.nollie) + combo, 'trick');
         break;
       case 'grind':
