@@ -30,6 +30,24 @@ describe('ollie', () => {
     expect(held).toBeCloseTo((5 * 5) / (2 * 0.25), -1); // QFS: about 50 px
   });
 
+  it('snaps up fast (zack: "the mechanics of an ollie happen fast"), then hangs and comes down as before', () => {
+    const sk = new Skater(levelOf(FLAT));
+    const heights: number[] = [];
+    let landed = -1;
+    run(sk, 60, (f) => {
+      heights.push(sk.level.streetY - sk.y);
+      if (f > 1 && landed < 0 && sk.mode !== 'air') landed = f;
+      return pressAt(0, 60)(f);
+    });
+    const top = Math.max(...heights);
+    //90% of the way up in 9 frames (QFS's plain arc took 14), to the same height
+    expect(heights.findIndex((h) => h >= 0.9 * top)).toBeLessThanOrEqual(10);
+    expect(top).toBeCloseTo((5 * 5) / (2 * 0.25), -1);
+    //and in the air as long, so a gap clears the same (QFS: 39 frames on flat)
+    expect(landed).toBeGreaterThanOrEqual(39);
+    expect(landed).toBeLessThanOrEqual(42);
+  });
+
   it('second press is a flip trick, third does nothing', () => {
     const sk = new Skater(levelOf(FLAT));
     const presses = new Set([0, 15, 25]);

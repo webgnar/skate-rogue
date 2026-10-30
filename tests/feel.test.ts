@@ -262,7 +262,8 @@ describe('rails', () => {
     const t = rail.at(sk.railD);
     const down = sk.railV * t.ty;
     sk.step({ pressed: true, held: true });
-    expect(sk.vsp).toBeCloseTo(PHYS.ollie + down + PHYS.grav, 1);
+    //the pop snaps up (PHYS.popSnap) from where the rail was carrying you
+    expect(sk.vsp).toBeCloseTo((PHYS.ollie + down) * PHYS.popSnap + PHYS.grav * PHYS.popSnap ** 2, 1);
   });
 });
 
@@ -337,7 +338,9 @@ describe('district gravity', () => {
       });
       return sk.level.streetY - top;
     };
-    expect(apex(0.6) / apex()).toBeCloseTo(1 / 0.6, 1);
+    //1/g on paper; a step at a time the pop's fast first frames (PHYS.popSnap) cost a few px either way
+    expect(apex(0.6) / apex()).toBeGreaterThan(1 / 0.6 - 0.05);
+    expect(apex(0.6) / apex()).toBeLessThan(1 / 0.6 + 0.1);
     expect(BIOME_GRAVITY.space).toBe(0.6);
     expect(BIOME_GRAVITY.atlantis).toBe(0.8);
   });

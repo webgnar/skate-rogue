@@ -51,7 +51,7 @@ export const BOONS: Boon[] = [
   { id: 'bigPop', type: 'POP', name: 'Big Pop', effect: 'Ollie 20% higher', max: 3 },
   { id: 'floatyFlip', type: 'POP', name: 'Boostin', effect: 'Half gravity right after a flip trick', max: 1 }, // id kept from its old name, Floaty Flip (saves and ?boons= links use it)
   { id: 'lateFlip', type: 'POP', name: 'Late Flip', effect: 'Flip tricks always go full height', note: 'even on a quick tap', max: 1 },
-  { id: 'pressureFlip', type: 'POP', name: 'Mad Pop', effect: 'Keep holding after an ollie to float', note: '30% less gravity after 0.25 s', max: 1 }, // id kept from its old name, Pressure Flip
+  { id: 'pressureFlip', type: 'POP', name: 'Mad Pop', effect: 'Keep holding after an ollie to float', note: '30% less gravity after 0.15 s', max: 1 }, // id kept from its old name, Pressure Flip
   {
     id: 'strongLegs', type: 'POP', name: 'Strong Legs', effect: 'Tap twice as you land to ollie straight out of it',
     note: 'no waiting for your knees', max: 1,

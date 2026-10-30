@@ -84,6 +84,7 @@ export class Skater {
   crackStep = -1; // the last step the tail clacked on
   rocket = false; // Rocket Grind: jumps come back at the top of this launch
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
+  snap = false; // rising off an ollie: the pop's fast climb and hang at the top (PHYS.popSnap)
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
   readonly feel = new Feel(); // the body and board response (src/physics/feel.ts)
@@ -238,6 +239,7 @@ export class Skater {
     this.gravFlipT = from.gravFlipT;
     this.rocket = from.rocket;
     this.kicked = from.kicked;
+    this.snap = from.snap;
     this.trickT = from.trickT;
     this.trickCatch = from.trickCatch;
     Object.assign(this.feel, from.feel);
@@ -282,6 +284,7 @@ export class Skater {
       this.rocket = true;
       this.kicked = true;
     }
+    this.snapUp();
     this.buffer = 0;
     this.coyote = 0;
     this.flipped = false;
@@ -374,8 +377,16 @@ export class Skater {
     return this.surface ? surfaceMaterial(this.surface) : 'concrete';
   }
 
+  // the pop snaps up: the same height, popSnap times quicker (a fall off a handrail stays a fall)
+  snapUp(): void {
+    if (this.vsp >= 0) return;
+    this.vsp *= PHYS.popSnap;
+    this.snap = true;
+  }
+
   private trick(): void {
     this.kicked = false;
+    this.snap = false;
     if (this.jumps > 0) this.jumps--;
     else this.spare -= 1;
     this.vsp = PHYS.trick * this.gear.trick;
@@ -406,6 +417,7 @@ export class Skater {
 
   private leaveGround(): void {
     this.kicked = false;
+    this.snap = false;
     this.rocket = false;
     if (this.mode === 'grind' || this.mode === 'rail') this.carry = Math.max(this.carry, Math.abs(this.hsp));
     if (this.mode === 'grind' && this.surface) this.spawnGhost(this.surface.y);
@@ -460,6 +472,8 @@ export class Skater {
     //vertical speed
     if (this.mode === 'air') {
       let grav = this.grav;
+      if (this.snap && this.vsp >= PHYS.popHang) this.snap = false;
+      if (this.snap) grav *= this.vsp < -PHYS.popHang ? PHYS.popSnap * PHYS.popSnap : PHYS.popHangGrav;
       if (this.floatT > 0) grav *= 0.5; // Boostin
       if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Mad Pop
       //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
@@ -472,7 +486,8 @@ export class Skater {
       }
       //let go while rising: a short hop (QFS variable jump); Late Flip keeps flips full height
       const cut = !(this.flipped && this.mods.lateFlip) && this.gravFlipT === 0 && !this.kicked;
-      if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, PHYS.ollie / PHYS.jumpCut);
+      //(off a snapped-up pop, letting go goes straight to the hang at the top)
+      if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, this.snap ? -PHYS.popHang : PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
       if (this.trickCatch > 0) this.trickT++;
       this.topY = Math.min(this.topY, this.y);
@@ -481,6 +496,7 @@ export class Skater {
       if (push) this.hsp = Math.max(1, this.hsp + push);
     } else {
       this.vsp = 0;
+      this.snap = false;
     }
 
     const px = this.x;
@@ -528,6 +544,7 @@ export class Skater {
       this.walled = false;
       this.tuckOut = true;
       this.vsp = PHYS.tuckBounce;
+      this.snap = false;
       this.hsp = Math.max(this.hsp, PHYS.baseSpeed);
       this.jumps = this.maxJumps;
       this.kicked = true;
@@ -826,6 +843,7 @@ export class Skater {
     this.feel.bounce(Math.max(0, this.vsp), this.caught < 1 ? this.looseWheels : 0);
     this.trickCatch = 0;
     this.kicked = false;
+    this.snap = false;
     this.vsp = PHYS.carHop * this.mods.hopScale;
     this.topY = this.y; // off the roof: the drop is from this bounce
     this.jumps = this.maxJumps;

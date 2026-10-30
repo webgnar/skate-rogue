@@ -215,7 +215,12 @@ export class FloorSim {
     const sk = this.skater;
     this.pops = this.pops.filter((t) => {
       if (t > 1) return true;
-      if (sk.mode === 'air') sk.vsp = Math.min(sk.vsp, PHYS.ollie * BOARD.doublePop);
+      //a small ollie, so it snaps up like one (PHYS.popSnap)
+      const pop = PHYS.ollie * BOARD.doublePop * PHYS.popSnap;
+      if (sk.mode === 'air' && sk.vsp > pop) {
+        sk.vsp = pop;
+        sk.snap = true;
+      }
       return false;
     }).map((t) => t - 1);
     const grinding = isGrind(sk.mode);
@@ -258,7 +263,10 @@ export class FloorSim {
         sk.spare += BOARD.jumpRefill;
         break;
       case 'gravFlip':
-        if (sk.mode === 'air') sk.gravFlipT = BOARD.gravFlipFrames;
+        if (sk.mode === 'air') {
+          sk.gravFlipT = BOARD.gravFlipFrames;
+          sk.snap = false;
+        }
         break;
       case 'shockwave':
         for (const v of this.traffic.vehicles) {

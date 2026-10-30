@@ -23,6 +23,9 @@ const chase = () => {
     if (from >= level.exitX) continue;
     const sk = sim.skater;
     Object.assign(sk, { x: from, y: level.streetY, surface: null, mode: 'roll', vsp: 0, hsp: PHYS.baseSpeed });
+    //jumped ahead past the traffic's spawn points: let them all spawn, then clear them off the street
+    sim.traffic.step(sk.x);
+    sim.traffic.vehicles.length = 0;
     sim.chaser!.step(sk, []);
     return sim;
   }
