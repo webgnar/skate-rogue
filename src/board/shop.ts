@@ -1,6 +1,7 @@
 // The skate shop (GDD: Run structure, the Noita Holy Mountain beat): no floor, just spending run cash on the board.
 // Pure: stock rolls from the run seed, and buying, swapping, slots and restocks are plain functions on a ShopState.
 import { makeRng, randInt } from '../gen/rng';
+import { GRIP, type GripId } from './grips';
 import { BOARD, MOD_DEFS, modDef, type ModId, type Slots } from './mods';
 
 export interface ShopState {
@@ -8,6 +9,7 @@ export interface ShopState {
   board: Slots;
   stock: (ModId | null)[]; // null once bought
   restocks: number;
+  grip?: GripId | null; // the one grip colour this shop sells (grips.ts), null once bought
 }
 
 export const STOCK_SIZE = 4;
@@ -72,4 +74,10 @@ export function restock(s: ShopState, seed: number, visit: number): ShopState | 
   if (s.cash < price) return null;
   const restocks = s.restocks + 1;
   return { ...s, cash: s.cash - price, restocks, stock: rollStock(seed, visit, restocks) };
+}
+
+// buy the shop's grip colour; it goes straight on the board
+export function buyGrip(s: ShopState): ShopState | null {
+  if (!s.grip || s.cash < GRIP.price) return null;
+  return { ...s, cash: s.cash - GRIP.price, grip: null };
 }

@@ -9,7 +9,8 @@ import { FloorPrefetch, specKey } from '../run/prefetch';
 import { ACTS, actOf, endsAct, ESCAPE } from '../gen/escape';
 import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
-import { buy, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
+import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
+import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
@@ -62,7 +63,7 @@ import { TwistView } from '../render/twist-view';
 import { BountyView } from '../render/bounty-view';
 import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
-import { SkaterRig } from '../render/skater-rig';
+import { LIFT, SkaterRig } from '../render/skater-rig';
 import { trickName } from '../physics/tricks';
 import { parkedPaint, toX, toY } from '../render/kit';
 import { CarHopFx, damageParked, parkedDamage, slideParked } from '../render/car-damage';
@@ -148,6 +149,8 @@ export interface ShopView {
   restockPrice: number;
   maxSlots: number;
   gear: Gear; // what your gear is at; the shop sells new parts
+  grip: GripId; // the grip on the board; the shop sells one other colour (shop.grip)
+  gripPrice: number;
 }
 
 export interface Hud {
@@ -300,6 +303,7 @@ export class Game {
   private shopPick: ShopPick = null;
   private shopVisits = 0;
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
+  private grip: GripId = loadSave().grip; // the grip tape's colour, kept between runs (src/board/grips.ts)
   // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
   // next one is already there, built in the background while you skated this one
   private readonly prefetch = new FloorPrefetch();
@@ -337,6 +341,7 @@ export class Game {
     this.view.actor.add(this.sprite.mesh);
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
+    this.sprite.setGrip(gripDef(this.grip).color);
     this.aura = new Aura(this.sprite.mesh);
     this.visor = new VisorGlint(this.sprite.mesh);
     this.skaterLight = new SkaterLight(this.sprite.mesh);
@@ -794,7 +799,7 @@ export class Game {
 
   private openShop(): void {
     this.shopVisits++;
-    this.shop = { cash: this.run.cash, board: this.board.slice(), stock: rollStock(this.seed, this.shopVisits, 0), restocks: 0 };
+    this.shop = { cash: this.run.cash, board: this.board.slice(), stock: rollStock(this.seed, this.shopVisits, 0), restocks: 0, grip: gripFor(this.seed, this.shopVisits, this.grip) };
     this.shopPick = null;
     this.openMenu('shop', performance.now());
     this.showShop();
@@ -809,6 +814,8 @@ export class Game {
       restockPrice: restockPrice(this.shop),
       maxSlots: BOARD.maxSlots,
       gear: this.gear,
+      grip: this.grip,
+      gripPrice: GRIP.price,
     });
     this.hud.money(this.shop.cash, this.run.stoken);
   }
@@ -829,7 +836,7 @@ export class Game {
     if (this.state !== 'shop') return;
     const s = this.shop;
     if (!s) return;
-    const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-gear],[data-done]');
+    const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-gear],[data-grip],[data-done]');
     if (!el) return;
     const pick = this.shopPick;
     let next: ShopState | null = s;
@@ -875,6 +882,16 @@ export class Game {
         this.hud.callout(`NEW ${GEAR.names[part].toUpperCase()}`, 'good');
       } else if (this.gear[part] < 100) this.hud.callout('NOT ENOUGH CASH', 'bad');
       this.shopPick = null;
+    } else if (el.dataset.grip !== undefined) {
+      //a new grip colour: on the board at once, and kept for later runs
+      const id = s.grip;
+      const got = buyGrip(s);
+      if (got && id) {
+        next = got;
+        this.setGrip(id);
+        this.hud.callout(`${gripDef(id).name.toUpperCase()} GRIP`, 'good');
+      } else if (id) this.hud.callout('NOT ENOUGH CASH', 'bad');
+      this.shopPick = null;
     } else if (el.dataset.restock !== undefined) {
       next = restock(s, this.seed, this.shopVisits) ?? s;
       this.shopPick = null;
@@ -884,6 +901,12 @@ export class Game {
     }
     this.shop = next;
     this.showShop();
+  }
+
+  private setGrip(id: GripId): void {
+    this.grip = id;
+    this.sprite.setGrip(gripDef(id).color);
+    writeSave({ ...loadSave(), grip: id });
   }
 
   private leaveShop(): void {
@@ -1197,7 +1220,8 @@ export class Game {
 
     this.sprite.mesh.position.x = toX(x);
     //landed on a lifted board: drawn lower while the legs reach down to it (src/physics/tuck.ts)
-    this.sprite.mesh.position.y = toY(this.level, y + this.skater.feel.drop);
+    //plus the lift that keeps the hero-sized board's wheels on the ground (skater-rig.ts BOARD_SIZE)
+    this.sprite.mesh.position.y = toY(this.level, y + this.skater.feel.drop) + LIFT * this.sprite.mesh.scale.y;
     const sk = this.skater;
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
     this.sprite.grab = this.cableView.grab(sk.surface);

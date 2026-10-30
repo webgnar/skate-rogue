@@ -13,11 +13,12 @@ export interface ShopActions {
 }
 
 const DRAG_FROM = 8; // px of movement before a press becomes a drag
-const CARD = '[data-stock],[data-gear],[data-buyslot],[data-slot]';
+const CARD = '[data-stock],[data-gear],[data-grip],[data-buyslot],[data-slot]';
 
 // what a card is, for the CSS and for where it may land
-export function dragKind(el: HTMLElement): 'mod' | 'slot' | 'buyslot' | 'gear' {
+export function dragKind(el: HTMLElement): 'mod' | 'slot' | 'buyslot' | 'gear' | 'grip' {
   if (el.dataset.stock !== undefined) return 'mod';
+  if (el.dataset.grip !== undefined) return 'grip';
   if (el.dataset.gear !== undefined) return 'gear';
   if (el.dataset.buyslot !== undefined) return 'buyslot';
   return 'slot';
@@ -27,7 +28,7 @@ export function dragKind(el: HTMLElement): 'mod' | 'slot' | 'buyslot' | 'gear' {
 export function dropTarget(kind: ReturnType<typeof dragKind>, under: Element | null): HTMLElement | null {
   if (!under) return null;
   if (kind === 'mod' || kind === 'slot') return under.closest<HTMLElement>('[data-slot]');
-  if (kind === 'buyslot') return under.closest<HTMLElement>('[data-drop="board"]');
+  if (kind === 'buyslot' || kind === 'grip') return under.closest<HTMLElement>('[data-drop="board"]');
   return under.closest<HTMLElement>('[data-drop="gear"]');
 }
 

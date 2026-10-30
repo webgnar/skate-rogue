@@ -896,6 +896,7 @@ html, body {
 #shop[data-drag='mod'] .slot,
 #shop[data-drag='slot'] .slot { box-shadow: 0 0 0 2px var(--cyan); }
 #shop[data-drag='buyslot'] .board,
+#shop[data-drag='grip'] .board,
 #shop[data-drag='gear'] .gearrow { box-shadow: 0 0 0 3px var(--cyan), 0 0 calc(var(--u) * 2) var(--cyan); }
 #shop .slot.over { transform: scale(1.15); box-shadow: 0 0 0 3px var(--yellow), 0 0 calc(var(--u) * 2) var(--yellow); background: #3a2060; }
 #shop .board.over, #shop .gearrow.over { transform: scale(1.04); box-shadow: 0 0 0 3px var(--yellow), 0 0 calc(var(--u) * 2.4) var(--yellow); }
@@ -969,6 +970,8 @@ html, body {
 .card-shop.mod.modifier { --c: var(--modifier); --tint: #4a3a10; }
 .card-shop.extra { --c: #4dff8a; --tint: #134a2a; }
 .card-shop.gearcard { --c: #ff9a3a; --tint: #4e2a10; }
+.card-shop.gripcard { --tint: #1a1a24; } /* --c is the grip's own colour, set on the card */
+.card-shop .art .grip { width: 86%; height: auto; }
 .card-shop .kind {
   align-self: flex-start;
   margin: calc(var(--u) * -0.5) 0 0 calc(var(--u) * -0.6);

@@ -6,7 +6,7 @@ import { CLIPS, clipLength, sample, type Clip } from '../render/poses';
 import { TILE } from './constants';
 
 const FADE_FRAMES = 5; // the rig's 0.08 s crossfade
-export const RIG_SCALE = 1.15; // the rig's scale on the poses (skater-rig.ts SCALE): a pose unit is this many tiles
+export const RIG_SCALE = 1.38; // the rig's scale on the poses (skater-rig.ts SCALE): a pose unit is this many tiles
 
 export class Tuck {
   lift = 0; // px the board is above the feet now

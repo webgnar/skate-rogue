@@ -1,6 +1,7 @@
 // What a phone keeps between runs: best score, the Stoken bank and what it bought (src/run/meta.ts), and the
 // skater and deck you ride. Browser storage can be missing or blocked, so every read and write is guarded.
 import type { SkaterId } from '../render/skater-rig';
+import { GRIP, isGrip, type GripId } from '../board/grips';
 import { isDeck, isSkaterId, isUnlockId, type DeckId, type UnlockId } from './meta';
 
 const KEY = 'gnar-run-save';
@@ -12,6 +13,7 @@ export interface Save {
   unlocked: UnlockId[];
   skater: SkaterId;
   deck: DeckId;
+  grip: GripId; // the grip tape's colour, bought in the shop (src/board/grips.ts)
   daily: { day: string; best: number }; // today's daily run best
   tag?: string; // the leaderboard name
   gnar: number; // the highest Gnar level won (src/run/gnar.ts)
@@ -23,7 +25,7 @@ export interface Save {
 // like 10.799999999999997); the HUD, the screens and the bank only ever see the whole Stoken
 export const whole = (n: number): number => Math.floor(n + 1e-6);
 
-export const EMPTY_SAVE: Save = { best: 0, stoken: 0, wins: 0, unlocked: [], skater: 'lou-gnar', deck: 'popsicle', daily: { day: '', best: 0 }, gnar: 0, gnarPick: 0 };
+export const EMPTY_SAVE: Save = { best: 0, stoken: 0, wins: 0, unlocked: [], skater: 'lou-gnar', deck: 'popsicle', grip: GRIP.start, daily: { day: '', best: 0 }, gnar: 0, gnarPick: 0 };
 
 export function loadSave(): Save {
   try {
@@ -36,6 +38,7 @@ export function loadSave(): Save {
       unlocked: Array.isArray(s.unlocked) ? s.unlocked.filter(isUnlockId) : [],
       skater: isSkaterId(s.skater) ? s.skater : 'lou-gnar',
       deck: isDeck(s.deck) ? s.deck : 'popsicle',
+      grip: isGrip(s.grip) ? s.grip : GRIP.start,
       daily: { day: String(s.daily?.day ?? ''), best: Number(s.daily?.best) || 0 },
       gnar: Number(s.gnar) || 0,
       gnarPick: Number(s.gnarPick) || 0,
