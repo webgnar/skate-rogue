@@ -305,7 +305,7 @@ export class Game {
   private shopPick: ShopPick = null;
   private shopVisits = 0;
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
-  private grip: GripId = loadSave().grip; // the grip tape's colour, kept between runs (src/board/grips.ts)
+  private grip: GripId = loadSave().tape ?? GRIP.start; // the grip tape's colour, kept between runs (src/board/grips.ts)
   // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
   // next one is already there, built in the background while you skated this one
   private readonly prefetch = new FloorPrefetch();
@@ -909,7 +909,7 @@ export class Game {
   private setGrip(id: GripId): void {
     this.grip = id;
     this.sprite.setGrip(gripDef(id).color);
-    writeSave({ ...loadSave(), grip: id });
+    writeSave({ ...loadSave(), tape: id });
   }
 
   private leaveShop(): void {

@@ -27,9 +27,10 @@ const ARM_FIELDS = [
 // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles at 1.15. zack (2026-10-30): "something
 // about the player character needs to be bigger. its too hard to see the board", so Lou is 1.2x that
 export const SCALE = 1.38;
-// and the board 1.4x again on top, a hero board that reads on a phone. Scaled about the deck's top, where the feet
+// and the board in proportion to him (zack 2026-10-30: 1.4x on top was too big; "shrink down board to ratio of
+// player"). Kept as a knob: scaled about the deck's top, where the feet
 // stand, so the wheels reach lower: the game lifts the rig by LIFT (in the rig's units) to keep them on the ground
-export const BOARD_SIZE = 1.4;
+export const BOARD_SIZE = 1;
 export const LIFT = BOARD.deckTop * (BOARD_SIZE - 1);
 const THIGH = 0.4;
 const SHIN = 0.4;
