@@ -20,6 +20,7 @@ import { mergeInkSteps, splitSteps } from './kit-merge';
 import { run, sliceDone, sliceEnd, sliceStart } from './slice';
 import { ShaderKeep } from './shader-keep';
 import { Bay } from './bay';
+import { biasCamera, GHOST, ghostMaterial } from './ghost';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
 
@@ -109,8 +110,14 @@ const SKYLINE_FEET = -10;
 export class StreetView {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
-  // the skater draws in its own pass over the level: always in front of what they ride, still occluding itself
+  // the skater draws in its own pass, in depth with the level so the foreground can hide him (ghost.ts), then the
+  // effects over everything: `actor` holds the skater, `over` the effects; the pass's lights light both
   readonly front = new THREE.Scene();
+  readonly actor = new THREE.Group();
+  readonly over = new THREE.Group();
+  private readonly ghost = ghostMaterial();
+  private readonly actorCam = new THREE.PerspectiveCamera();
+  private readonly louAt = new THREE.Vector3();
   readonly camera = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 400);
   private kit: THREE.Group | null = null;
   private cut = cutPlanes(); // the kit's clipping planes: [start, end]
@@ -191,7 +198,8 @@ export class StreetView {
       this.suns.push(sun);
     }
     this.scene.add(this.sky, this.bay.mesh, this.puddles.mesh, this.night.group, this.gates.group, this.sirens.group, this.ambience.points);
-    this.front.add(this.rain.mesh);
+    this.front.add(this.actor, this.over);
+    this.over.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
 
@@ -676,6 +684,10 @@ export class StreetView {
     for (const t of [target, null]) {
       r.setRenderTarget(t);
       for (const s of [this.scene, this.front]) jobs.push(r.compileAsync(s, this.camera));
+      //and the skater's ghost, which only ever draws through the override
+      this.front.overrideMaterial = this.ghost;
+      jobs.push(r.compileAsync(this.front, this.camera));
+      this.front.overrideMaterial = null;
     }
     r.setRenderTarget(null);
     jobs.push(this.lens.warm(r));
@@ -701,10 +713,26 @@ export class StreetView {
     const tanY = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
     setInkLens(this.lensK > 0.001 ? Math.min(1, this.lensK) : 0, tanY * this.camera.aspect, tanY);
     this.lens.render(this.renderer, this.camera, this.lensK, FX.pixel > 1, this.lensLevel > 1, () => {
-      this.renderer.clear();
-      this.renderer.render(this.scene, this.camera);
-      this.renderer.clearDepth();
-      this.renderer.render(this.front, this.camera);
+      const r = this.renderer;
+      r.clear();
+      r.render(this.scene, this.camera);
+      //the skater against the level's depth, pulled a little toward the camera: first his hidden parts as the
+      //dithered ghost, then him where he shows
+      const lou = this.actor.children[0]?.getWorldPosition(this.louAt).applyMatrix4(this.camera.matrixWorldInverse);
+      const cam = biasCamera(this.camera, lou ? -lou.z : 10, GHOST.margin, this.actorCam);
+      this.over.visible = false;
+      this.ghost.uniforms.uColor.value.setHex(GHOST.colors[FX.ghost]);
+      this.ghost.uniforms.uCell.value = Math.max(1, Math.round(GHOST.cell * this.pixelRatio));
+      this.front.overrideMaterial = this.ghost;
+      r.render(this.front, cam);
+      this.front.overrideMaterial = null;
+      r.render(this.front, cam);
+      //then the effects over everything
+      r.clearDepth();
+      this.over.visible = true;
+      this.actor.visible = false;
+      r.render(this.front, this.camera);
+      this.actor.visible = true;
     });
     this.compiled += this.keep.pin();
   }

@@ -334,16 +334,16 @@ export class Game {
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
     this.skyView.reset(this.sim.sky);
-    this.view.front.add(this.sprite.mesh);
+    this.view.actor.add(this.sprite.mesh);
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
     this.aura = new Aura(this.sprite.mesh);
     this.visor = new VisorGlint(this.sprite.mesh);
     this.skaterLight = new SkaterLight(this.sprite.mesh);
     this.view.front.add(this.skaterLight.group);
-    this.view.front.add(this.speedLines.mesh);
+    this.view.over.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
-    this.view.front.add(this.impacts.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
+    this.view.over.add(this.impacts.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);

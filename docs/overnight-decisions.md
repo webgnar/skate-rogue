@@ -876,3 +876,12 @@ and listed it here for review. Any of these can be flipped in the morning.
 - zack: "the pink buildings shouldn't be in the water". The water now stops at z -61. The skyline cards stand on a
   far shore (bay.ts land, z -60 to -130): flat dusky concrete with an ink line at the water's edge and a paler quay
   strip, hazing into the sky at the back. It costs one more draw.
+
+## Lou passes behind the foreground (2026-10-30)
+- A playtester asked why Lou is always drawn in front of everything. He used to draw in his own pass after the depth
+  was cleared. Now his pass keeps the level's depth (scene.ts `actor`; effects moved to `over`, still drawn on top).
+- So that what he rides never cuts his board or feet, his depth is pulled 1.6 tiles toward the camera (ghost.ts
+  biasCamera, exact at his distance). Only things clearly in front of his lane hide him.
+- Where he's hidden, his shape shows as a 50% checker dither in chunky 2 px cells, with no outline. It's hot pink
+  by default, or yellow with ?ghost=yellow (FX.ghost, saved), for zack to pick. It costs one extra draw of his
+  meshes, and the fisheye bends it like everything else.
