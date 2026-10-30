@@ -120,6 +120,7 @@ export const LOOPS = {
   sirenFrom: 25, // the siren comes in at this Heat
   sirenMax: 0.12,
   music: 0.35,
+  pauseDuck: 0.35, // the music's level under the pause card, of its own
 };
 
 // how loud the rolling wheels are at a speed (px/frame); silent in the air or stopped
