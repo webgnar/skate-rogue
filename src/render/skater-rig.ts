@@ -732,6 +732,15 @@ export class SkaterRig {
     if (this.bound.length) this.absorb(0);
   }
 
+  // the animation editor's knee handles: each leg's pole target as last posed, and where it sits with no offset
+  poleAt(leg: 0 | 1): { base: THREE.Vector3; target: THREE.Vector3 } {
+    return { base: this.poles[leg].base.clone(), target: this.poles[leg].target.clone() };
+  }
+  kneeAt(leg: 0 | 1): THREE.Vector3 {
+    return this.shins[leg].position.clone();
+  }
+  private poles = [0, 1].map(() => ({ base: new THREE.Vector3(), target: new THREE.Vector3() }));
+
   // the animation editor's head handle: where the neck pivot is now (rig space)
   headAt(): THREE.Vector3 {
     this.mesh.updateMatrixWorld(true);
@@ -1046,7 +1055,14 @@ export class SkaterRig {
       this.toes[i].rotation.x = -(front ? p.footFToe : p.footBToe);
       const ankle = new THREE.Vector3(0, ANKLE, -0.05).applyQuaternion(foot.quaternion).add(foot.position);
       const hip = this.hips[i].position.clone().applyMatrix4(this.pelvis.matrix);
-      const knee = kneePoint(hip, ankle, THIGH, SHIN, kneePole(front, p.yaw - stanceYaw(this.shown, p)));
+      // the knee's pole target: out from the middle of the leg the way the knee bends by itself, moved by the pose's
+      // knee offset (the editor's knee handles)
+      const mid = hip.clone().add(ankle).multiplyScalar(0.5);
+      const d = kneePole(front, p.yaw - stanceYaw(this.shown, p));
+      const base = new THREE.Vector3(d.x, d.y, d.z).normalize().multiplyScalar(POLE_OUT).add(mid);
+      const target = base.clone().add(front ? new THREE.Vector3(p.kneeFX, p.kneeFY, p.kneeFZ) : new THREE.Vector3(p.kneeBX, p.kneeBY, p.kneeBZ));
+      this.poles[i] = { base, target };
+      const knee = kneePoint(hip, ankle, THIGH, SHIN, target.clone().sub(mid));
       const k = new THREE.Vector3(knee.x, knee.y, knee.z);
       place(this.thighs[i], hip, k);
       place(this.shins[i], k, ankle);
@@ -1059,6 +1075,7 @@ export class SkaterRig {
 // outward from the stance's middle, whatever the feet do, so a squash, a slope or a landing never folds a knee
 // backward or sideways (zack). turn: the body's yaw away from the stance (a boardslide turns it down the rail).
 const KNEE_SPLAY = 0.15;
+const POLE_OUT = 0.6; // how far out from the middle of the leg the pole target sits with no offset
 function kneePole(front: boolean, turn = 0): Vec {
   const x = front ? KNEE_SPLAY : -KNEE_SPLAY;
   return { x: x * Math.cos(turn) + Math.sin(turn), y: 0, z: Math.cos(turn) - x * Math.sin(turn) };

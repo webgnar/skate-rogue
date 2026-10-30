@@ -52,6 +52,14 @@ export interface Pose {
   footBPitch: number;
   footBToe: number;
   footBRoll: number;
+  // knee pole targets: where each knee bends toward, moved by this much (rig space) from where it aims by itself
+  // (toward the camera, a touch outward). 0 keeps the automatic bend.
+  kneeFX: number;
+  kneeFY: number;
+  kneeFZ: number;
+  kneeBX: number;
+  kneeBY: number;
+  kneeBZ: number;
   boardX: number;
   boardY: number; // lift of the pivot point
   boardZ: number; // sideways shift, to keep a truck on the rail when the board is turned
@@ -94,6 +102,12 @@ export const BASE: Pose = {
   footBPitch: 0,
   footBToe: 0,
   footBRoll: 0,
+  kneeFX: 0,
+  kneeFY: 0,
+  kneeFZ: 0,
+  kneeBX: 0,
+  kneeBY: 0,
+  kneeBZ: 0,
   boardX: 0,
   boardY: 0,
   boardZ: 0,
@@ -728,6 +742,12 @@ export function mirrorPose(p: Pose): Pose {
     footBPitch: p.footFPitch,
     footBToe: p.footFToe,
     footBRoll: p.footFRoll,
+    kneeFX: -p.kneeBX,
+    kneeFY: p.kneeBY,
+    kneeFZ: p.kneeBZ,
+    kneeBX: -p.kneeFX,
+    kneeBY: p.kneeFY,
+    kneeBZ: p.kneeFZ,
     boardX: -p.boardX,
     boardPivot: -p.boardPivot,
     boardPitch: -p.boardPitch,
