@@ -159,6 +159,23 @@ export function outlineMaterial(): THREE.ShaderMaterial {
   return inkMat;
 }
 
+// an outline of its own colour and width (the gnar glow's shards, shard-aura.ts): the shared resolution and lens,
+// pushed back in depth by `depth` so it sits behind the ink
+export function glowMaterial(width: number, color: THREE.ColorRepresentation, depth: number): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    vertexShader: outlineVertex,
+    fragmentShader: outlineFragment,
+    uniforms: {
+      uWidth: { value: width },
+      uRes: inkUniforms.uRes,
+      uLens: inkUniforms.uLens,
+      uColor: { value: new THREE.Color(color) },
+      uDepth: { value: depth },
+    },
+    side: THREE.BackSide,
+  });
+}
+
 // the fisheye this frame (lens.ts): its strength and the flat picture's tan half-angles; strength 0 when it's off
 export function setInkLens(k: number, tanX: number, tanY: number): void {
   inkUniforms.uLens.value.set(k, tanX, tanY);
