@@ -28,6 +28,7 @@ import { TrafficView } from '../render/traffic-view';
 import { STREET_Z } from '../traffic/traffic';
 import { INTERP, at, keep } from './interp';
 import { ElView } from '../render/el-view';
+import { ChinatownView } from '../render/chinatown-view';
 import { CableView } from '../render/cable-view';
 import { Impacts } from '../render/impact';
 import { Particles, TRICK_TRAIL } from '../render/particles';
@@ -214,6 +215,7 @@ export class Game {
   private sim: FloorSim;
   private trafficView = new TrafficView();
   private elView = new ElView(); // the L's trains
+  private chinatownView = new ChinatownView(); // Chinatown's cross traffic and cabs
   private cableView = new CableView(); // the cable cars up the later stretches of hill
   private prev = { x: 0, y: 0 };
   private loop = new FixedStep();
@@ -349,7 +351,7 @@ export class Game {
     this.view.over.add(this.speedLines.mesh);
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.over.add(this.impacts.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
+    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.view.scene.add(this.particles.behind); // grind sparks: in the level's pass, so the skater draws over them
@@ -584,6 +586,7 @@ export class Game {
     this.trafficView.clear(!!from);
     this.elView.clear();
     this.cableView.set(this.level);
+    this.chinatownView.clear();
     this.pickups.setLevel(this.level);
     this.bountyView.set(this.level);
     this.twistView.set(this.level);
@@ -1067,6 +1070,11 @@ export class Game {
       keep(c.box, 'x0', 'x1');
     }
     for (const d of sim.traffic.doors) keep(d, 'open');
+    for (const h of sim.traffic.hillCross) for (const c of h.cars) keep(c, 'z');
+    for (const c of sim.traffic.cabs) {
+      keep(c, 'turn');
+      keep(c.box, 'x0', 'x1');
+    }
     for (const t of sim.trains) {
       keep(t, 't');
       for (const b of t.boxes) keep(b, 'x0', 'x1');
@@ -1186,6 +1194,7 @@ export class Game {
     this.elView.sync(this.level, this.sim.trains);
     this.cableView.sync(this.level, x);
     this.trafficView.syncCross(this.level, this.sim.traffic.cross);
+    this.chinatownView.sync(this.level, this.sim.traffic);
     this.trafficView.syncStreet(this.level, this.sim.traffic);
     const heat = this.state === 'pick' || this.state === 'over' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y, this.view.camera);
@@ -1224,7 +1233,7 @@ export class Game {
     this.sprite.mesh.position.y = toY(this.level, y + this.skater.feel.drop) + LIFT * this.sprite.mesh.scale.y;
     const sk = this.skater;
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
-    this.sprite.grab = this.cableView.grab(sk.surface);
+    this.sprite.grab = sk.skitching ? this.chinatownView.grab(this.level, sk.skitching) : this.cableView.grab(sk.surface);
     this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
     this.sprite.setGear(this.sim.gear);
     //stood still on the board under a menu, hands up when busted

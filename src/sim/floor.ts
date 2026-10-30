@@ -161,6 +161,7 @@ export class FloorSim {
         : this.traffic.inLane;
     if (this.chaser) this.shooter?.step(this.chaser, this.skater);
     this.skater.step(input);
+    for (const c of this.traffic.cabs) c.pulled = this.skater.skitching === c.box;
     const skaterEvents = this.skater.events.slice();
     this.skater.events.length = 0;
     this.events = skaterEvents;

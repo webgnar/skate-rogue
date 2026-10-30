@@ -14,7 +14,7 @@ import { coinArc, coinLine, DESCENT, maxSteps, PICKUPS, startHeight, stairs, ter
 import { makeRng, randInt, type Rng } from './rng';
 import { floorEdit } from './level-edits';
 
-export type Beat = 'hill' | 'railHill' | 'stairs' | 'drop' | 'gap' | 'kicker' | 'chase';
+export type Beat = 'hill' | 'railHill' | 'stairs' | 'drop' | 'gap' | 'kicker' | 'chase' | 'cross' | 'skitch';
 
 export const HILLS = {
   grade: (floor: number) => Math.min(0.42, 0.2 + 0.018 * floor), // tiles down per tile along (SF's steepest: ~0.3)
@@ -34,6 +34,28 @@ export const HILLS = {
   // power lines strung low over some blocks to grind (zack: "the player should be able to grind these at times")
   wire: { chance: 0.45, min: 10, height: 2, sag: 0.45 }, // tiles: the wire's height over the road at its poles
 };
+
+// Chinatown (zack, 2026-10-30): once an act, the stretch of hill after the cable car is a Chinatown block. Its
+// intersections have cross traffic driving straight across them ('cross'), and one long flat has a cab you skitch
+// for speed into a kicker ('skitch'): at the cab's speed an ollie and a flip off it reach the top route's power line,
+// at your own you fall short and bomb the block below (src/traffic/hill-cross.ts, src/traffic/cab.ts)
+export const CHINATOWN = {
+  floors: [5, 8, 11, 14], // the middle floor of acts 2-5; Endless every third floor
+  stretch: 1, // which stretch of hill (0 is the floor's first, 1 the one up the first cable car)
+  recipe: [['cross'], ['skitch'], ['cross', 'railHill'], ['cross'], ['stairs']] as Beat[][],
+  crest: [7, 8], // tiles: an intersection with cross traffic, the cross street across its middle
+  flat: [28, 32], // tiles: the cab's flat, kicker and all
+  cabFrom: 3, // tiles into the flat the cab waits, idling
+  kicker: { len: 3, rise: 1.5, fromEnd: 6 }, // tiles: the kicker's run and lip, and how far from the flat's end it stands
+  wireOverLip: 5, // tiles: the top route's power line starts this far over the kicker's lip
+  wireHold: 14, // tiles: and holds that height this far on
+};
+
+// the stretch of a floor that's Chinatown, if any
+export function chinatownStretch(floor: number): number | undefined {
+  const on = floor <= RECIPES.length ? CHINATOWN.floors.includes(floor) : floor % 3 === 2;
+  return on ? CHINATOWN.stretch : undefined;
+}
 
 // every floor, slot by slot; each slot picks one of its beats by seed. A 'chase' slot ends a stretch of hill: the
 // floor runs out into a street chase with traffic, then a cable car takes you up the next hill and the next stretch
@@ -66,7 +88,7 @@ export const RECIPES: Beat[][][] = [
 ];
 
 // how much of the floor's height each beat takes (a kicker climbs, so it's paid for by the others)
-const WEIGHT: Record<Beat, number> = { hill: 1, railHill: 1.1, stairs: 1, drop: 0.6, gap: 1.2, kicker: 0, chase: 0 };
+const WEIGHT: Record<Beat, number> = { hill: 1, railHill: 1.1, stairs: 1, drop: 0.6, gap: 1.2, kicker: 0, chase: 0, cross: 1, skitch: 0 };
 
 const range = (rng: Rng, [lo, hi]: number[]) => lo + randInt(rng, hi - lo + 1);
 
@@ -122,6 +144,11 @@ export function stretches(seed: number, floor: number, short = false): Beat[][] 
   if (short) {
     const all = kept.flat();
     return [[all[0], ...all.slice(-2)]];
+  }
+  const ct = chinatownStretch(floor);
+  if (ct !== undefined && ct < kept.length) {
+    const rng = makeRng(seed * 19 + floor * 6151);
+    kept[ct] = CHINATOWN.recipe.map((slot) => slot[randInt(rng, slot.length)]);
   }
   return kept;
 }
@@ -184,7 +211,9 @@ export function buildClimb(seed: number, floor: number, streetY: number, k: numb
   b.h = top;
   //the top: a flat intersection to set up on
   terrace(b, streetY, 8, rng, false);
+  if (k === chinatownStretch(floor)) b.chinatown = [b.x - 8 * TILE, 0];
   stretch(b, rng, stretches(seed, floor)[k] ?? ['hill', 'stairs'], streetY, floor);
+  if (b.chinatown) b.chinatown[1] = b.x;
   //whole pieces: the run-out takes up the rest
   const pieces = Math.ceil(b.x / (CHUNK_W * TILE));
   const end = pieces * CHUNK_W * TILE;
@@ -193,6 +222,23 @@ export function buildClimb(seed: number, floor: number, streetY: number, k: numb
     b.x = end;
   }
   return b;
+}
+
+// Chinatown's cab flat: a long flat with a cab rolling your way at its start (roll into its back bumper and you're
+// skitching it), a kicker ramp standing near its end, and a corner just before the kicker where the cab turns off and
+// lets you go. The kicker throws you along its face at whatever speed you hit it with (src/physics/skater.ts)
+function skitch(b: Builder, rng: Rng, streetY: number): void {
+  const len = range(rng, CHINATOWN.flat);
+  const y = yOf(streetY, b.h);
+  const k = CHINATOWN.kicker;
+  const kx = b.x + (len - k.fromEnd - k.len) * TILE;
+  const lip = { x: kx + k.len * TILE, y: y - k.rise * TILE };
+  b.surfaces.push({ kind: 'bank', x0: kx, x1: lip.x, y, y1: lip.y, row: -1, kicker: true });
+  (b.cabs ??= []).push({ x: b.x + CHINATOWN.cabFrom * TILE, y, turnX: kx + TILE / 2, lip });
+  //coins along the cab's line, then up off the lip toward the wire
+  coinLine(b, b.x + (CHINATOWN.cabFrom + 4) * TILE, y - PICKUPS.ride, kx - 2 * TILE, y - PICKUPS.ride);
+  coinArc(b, lip.x - TILE, lip.y - PICKUPS.ride, lip.x + 7 * TILE, lip.y - CHINATOWN.wireOverLip * TILE - PICKUPS.ride, PICKUPS.arc);
+  terrace(b, streetY, len, rng, false);
 }
 
 // one stretch of hill from the builder's height down to the street: its beats, the last a stairway, then a last
@@ -244,6 +290,16 @@ function stretch(b: Builder, rng: Rng, beats: Beat[], streetY: number, floor: nu
       const drop = Math.max(1, Math.min(b.h - 1, plan - 1));
       hill(b, streetY, runFor(drop), drop, false);
       crest(true);
+    } else if (beat === 'cross') {
+      //Chinatown: a block down to an intersection with cars driving straight across it
+      const drop = Math.max(1, Math.min(b.h - 1, plan));
+      hill(b, streetY, runFor(drop), drop, false);
+      const len = range(rng, CHINATOWN.crest);
+      const y = yOf(streetY, b.h);
+      (b.crossings ??= []).push({ x: b.x + (len / 2) * TILE, y });
+      terrace(b, streetY, len, rng, false);
+    } else if (beat === 'skitch') {
+      skitch(b, rng, streetY);
     } else {
       //kicker: a short climb up to the next corner that throws you into the air at the top
       const rise = rises[i];

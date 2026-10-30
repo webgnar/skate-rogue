@@ -53,6 +53,7 @@ export interface Car {
   bottom: number;
   model?: 'cruiser' | 'bus'; // parked roadblock vehicles; plain parked cars leave it out
   kicker?: number; // a box truck's dropped tailgate: this far behind x0 it launches you (px)
+  skitch?: boolean; // a Chinatown cab (src/traffic/cab.ts): roll into its back bumper and you hang on, skitching
   ledge?: Surface; // an L train's car (src/traffic/el.ts): a one-way platform: its roof is a grind that moves with it, and it never hits you
 }
 
@@ -211,6 +212,18 @@ export interface Level {
   // (a cable car up from the street, then down again); left out = just the opening descent
   hillSpans?: [number, number][];
   flocks?: FlockSite[]; // pigeons on the top route (src/sim/sky.ts)
+  chinatown?: [number, number][]; // Chinatown's blocks of hill, px (src/gen/hills.ts)
+  hillCross?: { x: number; y: number }[]; // their intersections with cross traffic: the cross street's middle, the ground (src/traffic/hill-cross.ts)
+  cabs?: CabRun[]; // their cab flats (src/traffic/cab.ts)
+}
+
+// a Chinatown cab flat: where the cab waits rolling (its back), the ground's height, where it turns off and lets go
+// (its front), and the kicker's lip just past that
+export interface CabRun {
+  x: number;
+  y: number;
+  turnX: number;
+  lip: { x: number; y: number };
 }
 
 // on a stretch of hill (or the opening descent), not the street

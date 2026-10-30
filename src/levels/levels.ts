@@ -34,6 +34,8 @@ const BEAT_NAMES: Record<string, string> = {
   gap: 'crest jump',
   kicker: 'kicker',
   chase: 'chase',
+  cross: 'cross traffic',
+  skitch: 'cab + kicker',
 };
 const BEAT_HELP: Record<string, string> = {
   hill: 'a block of street to bomb down',
@@ -43,6 +45,8 @@ const BEAT_HELP: Record<string, string> = {
   gap: 'jump the cross street onto the next block',
   kicker: 'a short climb that throws you into the air',
   chase: 'a flat stretch with traffic',
+  cross: 'a block down to an intersection with cars driving across it (Chinatown)',
+  skitch: 'a long flat with a cab to skitch into a kicker up to the top route (Chinatown)',
 };
 
 const SKY_HELP: Record<SkyBeat, string> = {

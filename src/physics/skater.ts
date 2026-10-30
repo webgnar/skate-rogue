@@ -18,6 +18,7 @@ export type SkaterEvent =
   | { type: 'rail'; name: string }
   | { type: 'hop' }
   | { type: 'kicker' } // launched off a box truck's tailgate
+  | { type: 'skitch'; on: boolean } // grabbed a cab's back bumper (on), or let go of it
   | { type: 'pad' } // a slam the Bubble Pads took
   | { type: 'tuck' } // Tuck and Roll: fell in a gap and bounced back out
   | { type: 'firecracker' } // Firecracker: rolled into a stair set and rode it down instead of slamming
@@ -36,6 +37,8 @@ export type ImpactTier = (typeof PHYS.impactTiers)[number]['drop'];
 export function impactTier(drop: number): (typeof PHYS.impactTiers)[number] {
   return PHYS.impactTiers.find((t) => drop < t.under) ?? PHYS.impactTiers[PHYS.impactTiers.length - 1];
 }
+
+const SKITCH_GAP = 4; // px between the board's nose and a cab's bumper, hanging on
 
 export class Skater {
   x: number;
@@ -87,6 +90,8 @@ export class Skater {
   snap = false; // rising off an ollie: the pop's fast climb and hang at the top (PHYS.popSnap)
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
+  skitching: Car | null = null; // a Chinatown cab you're hanging on to (src/traffic/cab.ts)
+  private skitchX = 0; // its back bumper last step
   readonly feel = new Feel(); // the body and board response (src/physics/feel.ts)
   readonly tuck = new Tuck(); // the board's lift above the feet in the air, from the clips (src/physics/tuck.ts)
   private roofs = new WeakMap<Car, number>(); // each vehicle's roof as of the last step
@@ -416,6 +421,7 @@ export class Skater {
   }
 
   private leaveGround(): void {
+    this.letGo();
     this.kicked = false;
     this.snap = false;
     this.rocket = false;
@@ -432,6 +438,27 @@ export class Skater {
     this.mode = 'air';
   }
 
+  // off a cab's bumper, keeping its speed (it bleeds off like rail speed)
+  private letGo(): void {
+    if (!this.skitching) return;
+    this.skitching = null;
+    this.events.push({ type: 'skitch', on: false });
+  }
+
+  // hanging on to a cab: it pulls you along at its speed, the board just behind its bumper. It moved first this step
+  private skitch(): void {
+    const cab = this.skitching!;
+    if (!cab.skitch || this.mode !== 'roll') {
+      this.letGo();
+      return;
+    }
+    const v = Math.max(0, cab.x0 - this.skitchX);
+    this.skitchX = cab.x0;
+    this.carry = Math.max(this.carry, v);
+    this.hsp = Math.max(v, this.hsp * 0.9);
+    this.x = cab.x0 - PHYS.width / 2 - SKITCH_GAP - this.hsp;
+  }
+
   private baseSpeed(): number {
     //after a slam you're back to full speed over slamFrames
     const k = this.slamT > 0 ? 1 - (1 - PHYS.slamSpeed) * (this.slamT / PHYS.slamFrames) : 1;
@@ -446,7 +473,8 @@ export class Skater {
       const tow = this.surface?.tow ?? 0;
       //a cable car climb: the cable takes you up at its own speed, the slope doesn't slow you
       if (tow > 0) this.carry = Math.max(this.carry, tow);
-      else if (m !== 0) {
+      //(a kicker's too short to slow you: you hit its lip at the speed you hit its foot)
+      else if (m !== 0 && !this.surface?.kicker) {
         const pull = this.grav * FEEL.slopeGrav * (m / Math.hypot(1, m));
         this.carry = pull > 0 ? Math.max(this.carry, this.hsp) + pull : Math.max(0, this.carry + pull);
       }
@@ -455,6 +483,7 @@ export class Skater {
       this.carry = Math.max(0, this.carry - bleed);
       const cap = Math.max(this.baseSpeed(), this.carry);
       this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : cap;
+      if (this.skitching) this.skitch();
     } else if (this.mode === 'grind') {
       this.onRailT++;
       //More Wax: builds on a flat ledge, not a sloped one
@@ -514,9 +543,9 @@ export class Skater {
 
     if (this.mode === 'roll' || this.mode === 'grind') {
       //a kicker ramp standing on the street: you roll up onto it
-      if (this.mode === 'roll' && !this.surface) {
+      if (this.mode === 'roll' && (!this.surface || this.surface.kind === 'roof')) {
         const ramp = this.level.surfaces.find((s) => s.kicker && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
-        if (ramp) this.surface = ramp;
+        if (ramp && ramp !== this.surface) this.surface = ramp;
       }
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);
       //ground under the middle of the board first, then a truck still on the edge holds you
@@ -922,7 +951,14 @@ export class Skater {
     for (const car of this.cars()) {
       //an L train is a one-way platform (zack, 2026-10-25): you pass through it from below and the sides, and only
       //its roof counts, as a grind
-      if (this.hitCars.has(car) || car.ledge) continue;
+      if (this.hitCars.has(car) || car.ledge || car === this.skitching) continue;
+      //a cab's back bumper, rolling up to it on the ground: you grab on (a cab you let go of, you can catch again)
+      if (car.skitch && this.mode === 'roll' && this.x + half >= car.x0 - SKITCH_GAP && this.x < car.x0 && Math.abs(this.y - car.bottom) <= 8) {
+        this.skitching = car;
+        this.skitchX = car.x0;
+        this.events.push({ type: 'skitch', on: true });
+        continue;
+      }
       //a dropped tailgate: roll up it and it kicks you up over the box, with a burst of speed (a bomb)
       if (car.kicker && this.mode === 'roll' && !this.surface && this.x + half >= car.x0 - car.kicker && this.x < car.x0) {
         this.hitCars.add(car);
