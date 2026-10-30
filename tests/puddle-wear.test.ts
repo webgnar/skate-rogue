@@ -5,7 +5,7 @@ import { puddleSpots } from '../src/render/puddles';
 import { freshGear, GEAR } from '../src/run/gear';
 import { FloorSim } from '../src/sim/floor';
 
-describe('puddles wear the bearings', () => {
+describe('puddles wear the bearings and the deck', () => {
   const rolling = (wheels = 100) => {
     const sim = new FloorSim(buildFloor(9, 1), undefined, 0, [], { ...freshGear(), wheels });
     sim.traffic.vehicles.length = 0;
@@ -16,7 +16,7 @@ describe('puddles wear the bearings', () => {
     return sim;
   };
 
-  it('rolling through a formed puddle washes out the bearings once, with a puddle event', () => {
+  it('rolling through a formed puddle washes out the bearings and soaks the deck once, with a puddle event', () => {
     const sim = rolling();
     const sk = sim.skater;
     const deck = sim.gear.deck;
@@ -30,7 +30,7 @@ describe('puddles wear the bearings', () => {
     expect(sk.x).toBeGreaterThan(sim.puddles[0].x + sim.puddles[0].w); // rolled right through it
     expect(splashes).toBe(1);
     expect(100 - sim.gear.bearings).toBeCloseTo(GEAR.puddle + (rolled * GEAR.rollSec) / 60, 5);
-    expect(sim.gear.deck).toBe(deck);
+    expect(deck - sim.gear.deck).toBeCloseTo(GEAR.puddleDeck, 5);
   });
 
   it('fresh wheels push through a puddle; worn ones bog down in it', () => {

@@ -13,7 +13,7 @@ export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 export type SkaterEvent =
   | { type: 'ollie'; spin: 0 | 180; lip?: boolean; nose?: boolean } // lip: popped right at the edge of the ground (or just off it); nose: off a nose grind or nose manual
   | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean; nollie?: boolean } // fakie: the stance it was thrown from; nollie: in the air off the nose
-  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; drop?: ImpactTier; lock?: number; lined?: number; spare?: number; flush?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); drop: how big a drop it was, and lock: the frames of no-ollie it gave (not on a manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one)
+  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; drop?: ImpactTier; lock?: number; lined?: number; spare?: number; flush?: number; lost?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); drop: how big a drop it was, and lock: the frames of no-ollie it gave (not on a manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one); lost: px/frame of speed the landing cost you (only if any)
   | { type: 'grind'; name: string } // name: the grind (its clip), LEDGE_GRINDS or RAIL_GRINDS
   | { type: 'rail'; name: string }
   | { type: 'hop' }
@@ -773,6 +773,7 @@ export class Skater {
     const caught = this.caught;
     const spare = this.trickCatch > 0 && caught >= 1 ? this.trickT - this.trickCatch : -1;
     const vsp = this.vsp;
+    const before = Math.max(Math.abs(this.hsp), this.carry); // to see what the landing cost you
     this.trickCatch = 0;
     this.surface = s;
     this.vsp = 0;
@@ -825,13 +826,16 @@ export class Skater {
       if (quality === 'heavy' && m === 0 && !this.mods.butter) this.carry *= Math.max(0, 1 - FEEL.heavyScrub * (impact - FEEL.heavy));
       if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
       this.feel.land(impact, quality, this.looseWheels);
+      //the speed the landing took off you: coming down against the slope, or hard to flat (it wears the deck)
+      //(speed over the cap rides on carry: what's scrubbed off it goes on the next step)
+      const lost = Math.max(0, before - Math.min(Math.abs(this.hsp), Math.max(this.baseSpeed(), this.carry)));
       //a manual pad: you ride it in a manual (unless you slammed onto it)
       const manual = !!s?.manual && quality !== 'slam';
       this.stance = manual ? MANUALS[this.manuals++ % MANUALS.length] : '';
       //the bigger the drop, the longer the knees take to come back up before you can pop again
       const tier = impactTier(this.y - this.topY);
       const lock = manual ? undefined : tier.frames;
-      this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : { drop: tier.drop, lock }), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}) });
+      this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : { drop: tier.drop, lock }), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}), ...(lost > 0 ? { lost } : {}) });
       if (!s?.manual || quality === 'slam') {
         this.impactT = tier.frames;
         this.impactTaps = 0;

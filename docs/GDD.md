@@ -622,11 +622,11 @@ Oct 30), each worn by the thing it takes the beating from:
 
 | Part | Worn by | When it's worn |
 | --- | --- | --- |
-| **Deck** | Ollies (every pop, off the street, a ledge or a rail) | Ollies pop lower, down to −30% at 0 |
+| **Deck** | Hard landings most (zack, Oct 30: impact from gravity, worst landing against your momentum so it costs you speed: 0.25 per px/frame of impact over a soft landing, plus 0.55 per px/frame of speed lost), then ollies (0.4 each) and puddles (2 each) | Ollies pop lower, down to −30% at 0 |
 | **Shoes** | Flip tricks (the flick scuffs the grip side) | Flip tricks in the air pop lower, down to −30% |
 | **Trucks** | Grinding (every second on a rail, ledge or roof edge) | Grinds settle slower, down to −30% |
 | **Wheels** | Going fast (every second above 1.25× cruising speed: rail exits, bombs, kickers), and broken glass (8 a stretch) | Under 50, broken glass slams you instead of crunching under the wheels; puddles bog you down more (6% of your speed on fresh wheels, 45% on dead ones); cruising speed drops a little, down to −7% |
-| **Bearings** | Puddles (12 each) and grit (0.3 every second rolling on the ground) | Cruising speed drops, down to −20%: the main speed part (zack, Oct 30) |
+| **Bearings** | Puddles (12 each), dirt (0.3 every second rolling on the ground), and the dust and shards of smashing wood, stone or glass props or rolling over broken glass (1 each) | Cruising speed drops, down to −20%: the main speed part (zack, Oct 30) |
 
 - **Condition** runs from 100 (fresh) to 0. A part costs you nothing until it's half worn; below 50 the cost grows
   in a straight line to the most it can be at 0. Nothing ever breaks outright or ends a run: busted gear makes the

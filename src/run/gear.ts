@@ -13,11 +13,17 @@ export const GEAR = {
   // and its escape, about 2.5 parts are worn past half for the bot: the wheels and deck well past, the shoes
   // about half the time, the trucks only for a skater who grinds a lot (the bot grinds little). About 3x the wear
   // before (0.35, 1.2, 0.42, 0.46, 0.38), when no part was near half worn by then. tests/balance.test.ts holds it
-  ollie: 1.15, // deck, per ollie
+  ollie: 0.4, // deck, per ollie: the pop is the small part of what a deck takes
+  // deck, per landing (zack, 2026-10-30: impact from gravity wears the deck the most, worst landing against your
+  // momentum so you lose speed): per px/frame of impact over a kiss (FEEL.soft), plus per px/frame of speed lost
+  land: 0.25,
+  landLost: 0.55,
+  puddleDeck: 2, // deck, per puddle: the water soaks into the wood (zack, 2026-10-26; kept 2026-10-30)
   puddle: 12, // bearings, per puddle rolled through: water washes the grease out and rusts the races (zack, 2026-10-30)
-  rollSec: 0.3, // bearings, per second rolling on the ground: grit works into them
+  rollSec: 0.3, // bearings, per second rolling on the ground: dirt works into them
+  smashGrit: 1.0, // bearings, per dusty or glassy prop smashed and per stretch of broken glass rolled over
   glass: 8, // wheels, per stretch of broken glass rolled over: it chunks the urethane
-  flip: 1.31, // shoes, per flip trick
+  flip: 1.25, // shoes, per flip trick
   grindSec: 1.4, // trucks, per second on a rail or ledge
   fastSec: 1.0, // wheels, per second going faster than fastOver x cruising speed
   fastOver: 1.25,
@@ -30,7 +36,7 @@ export const GEAR = {
   puddleDrag: { fresh: 0.06, dead: 0.45 }, // speed a puddle takes off you, fresh wheels to dead ones
   price: { deck: 25, shoes: 15, trucks: 20, wheels: 15, bearings: 15 } as Gear,
   names: { deck: 'Deck', shoes: 'Shoes', trucks: 'Trucks', wheels: 'Wheels', bearings: 'Bearings' } as Record<GearPart, string>,
-  wornBy: { deck: 'ollies', shoes: 'flip tricks', trucks: 'grinding', wheels: 'speed and rough ground', bearings: 'puddles and grit' } as Record<GearPart, string>,
+  wornBy: { deck: 'hard landings', shoes: 'flip tricks', trucks: 'grinding', wheels: 'speed and rough ground', bearings: 'puddles, dirt and smashing' } as Record<GearPart, string>,
 };
 
 export function freshGear(): Gear {
