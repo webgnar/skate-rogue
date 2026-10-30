@@ -167,6 +167,35 @@ describe('cars', () => {
     expect(sk.mode).toBe('roll');
   });
 
+  // Mario rules (zack, 2026-10-30): coming down onto a car's side or corner is a hop, not a slam
+  const side = (vsp: number) => {
+    const sk = new Skater(levelOf(cars));
+    const car = sk.level.cars[0];
+    sk.mode = 'air';
+    sk.x = car.x0 - PHYS.width / 2 - 2;
+    sk.y = car.roof + 14;
+    sk.hsp = 4;
+    sk.vsp = vsp;
+    sk.step(idle(0));
+    return { sk, car };
+  };
+
+  it('falling into the side of a car is a hop off its roof', () => {
+    const { sk, car } = side(3);
+    expect(sk.events.some((e) => e.type === 'hop')).toBe(true);
+    expect(sk.events.some((e) => e.type === 'slam')).toBe(false);
+    expect(sk.hopped).toBe(car);
+    expect(sk.vsp).toBeLessThan(0);
+    expect(sk.y).toBeLessThanOrEqual(car.roof);
+    expect(sk.jumps).toBe(2);
+  });
+
+  it('rising into the side of a car still slams', () => {
+    const { sk } = side(-3);
+    expect(sk.events.some((e) => e.type === 'slam')).toBe(true);
+    expect(sk.events.some((e) => e.type === 'hop')).toBe(false);
+  });
+
   it('running into a car slams you but the run goes on', () => {
     const sk = new Skater(levelOf(cars));
     run(sk, 200);
