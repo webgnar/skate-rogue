@@ -592,8 +592,26 @@ async function start() {
     if (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') game.choose(Number(e.code.slice(5)) - 1);
   });
 
-  const resize = () => view.resize();
-  window.addEventListener('resize', resize);
+  //iOS fires 'resize' (and orientationchange) before it has laid the page out in its new shape, so the canvas still
+  //measures the old size then, and nothing fires once it settles: the old-shaped picture got stretched over the new
+  //screen (portrait drawn into landscape, then squished going back). Watch the canvas box itself, which reports only
+  //after layout, and check again a moment after each rotation for good measure
+  let sized = '';
+  const resize = () => {
+    const now = `${canvas.clientWidth}x${canvas.clientHeight}`;
+    if (now === sized || canvas.clientHeight === 0) return;
+    sized = now;
+    view.resize();
+  };
+  const settle = () => {
+    resize();
+    requestAnimationFrame(resize);
+    for (const ms of [100, 300, 700]) setTimeout(resize, ms);
+  };
+  new ResizeObserver(resize).observe(canvas);
+  window.addEventListener('resize', settle);
+  window.addEventListener('orientationchange', settle);
+  window.visualViewport?.addEventListener('resize', settle);
   resize();
   document.getElementById('seed')!.textContent = (daily ? `daily · seed ${seed}` : `seed ${seed}`) + (gnar ? ` · gnar ${gnar}` : '');
   document.querySelector('#paused .seed')!.textContent = `seed ${seed}` + (gnar ? ` · gnar ${gnar}: ${GNAR_RULES.slice(0, gnar).map((r) => r.name).join(', ')}` : '');
