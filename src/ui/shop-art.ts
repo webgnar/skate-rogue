@@ -1,5 +1,5 @@
 // Card art for the skate shop (openspec/changes/ui3-shop-look): each card shows one of the game's own models
-// (rendered by art/cards, public/sprites/cards/*.png) on a burst in the card's colour, with a comic glyph on top
+// (rendered by art/cards, public/sprites/cards/*.png; the gear cards' truck, wheel and shoe are art/gear.py) on a burst in the card's colour, with a comic glyph on top
 // that says what the mod does (an arrow for a pop, a clock for a delay, ×2...).
 import type { ModId } from '../board/mods';
 import type { GearPart } from '../run/gear';
@@ -33,12 +33,6 @@ const MOD_ART: Record<ModId, [Pic, Glyph?]> = {
 };
 
 const GEAR_ART: Record<GearPart, Pic> = { deck: 'deck', trucks: 'truck', wheels: 'wheel', shoes: 'shoe', bearings: 'bearing' };
-
-// a sneaker in the comic style: no model of Lou's shoes on their own, so it's drawn
-const SHOE =
-  '<svg class="pic" viewBox="0 0 64 40" aria-hidden="true"><path d="M4 22c0-6 3-12 6-14l8 1c3 5 9 8 16 9l14 3c7 1 12 4 12 9v3H4z" fill="#ff3fa4" stroke="#120a16" stroke-width="2.5" stroke-linejoin="round"/>' +
-  '<path d="M18 9c2 6 8 9 15 10l-4 7H8" fill="#f4f0f6" stroke="#120a16" stroke-width="2" stroke-linejoin="round"/><path d="M20 13l5-2M23 17l5-2M27 20l5-2" stroke="#120a16" stroke-width="2" stroke-linecap="round"/>' +
-  '<path d="M3 31h59v4a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" fill="#f4f0f6" stroke="#120a16" stroke-width="2.5"/><path d="M36 25c6 0 12 1 16 4" stroke="#120a16" stroke-width="2" fill="none"/></svg>';
 
 // bearings in the comic style, from zack's refs (2026-10-30): a Swiss-style one in front, black shield with a red
 // ring and bright races, and an open bronze ceramic one behind it showing its black balls in a white cage
@@ -83,7 +77,7 @@ export function glyph(g: Glyph | undefined): string {
 }
 
 export function pic(p: Pic): string {
-  return p === 'shoe' ? SHOE : p === 'bearing' ? BEARING : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
+  return p === 'bearing' ? BEARING : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
 }
 
 export function modArt(id: ModId): string {

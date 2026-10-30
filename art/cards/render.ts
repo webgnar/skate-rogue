@@ -3,6 +3,7 @@
 // public/sprites/cards/<name>.png.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { inkify, setInkResolution } from '../../src/render/toon';
 
 const SIZE = 320;
@@ -13,10 +14,19 @@ renderer.setClearColor(0x000000, 0);
 renderer.localClippingEnabled = true;
 setInkResolution(SIZE, SIZE, 1.6);
 
+// a room to reflect in, for the polished trucks and eyelets of the gear (art/gear.py)
+const room = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const shiny = (s: THREE.Scene) => {
+  s.environment = room;
+  s.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (m?.isMeshStandardMaterial && m.metalness < 0.5) m.envMapIntensity = 0.15; // no sheen off suede and urethane
+  });
+};
+
 const loader = new GLTFLoader();
 const load = (f: string) => loader.loadAsync(`/models/${f}`).then((g) => g.scene);
 
-const TRUCK = ['metal', 'bushing', 'steel', 'gold', 'bolt'];
 const matName = (o: THREE.Object3D) => ((o as THREE.Mesh).material as THREE.Material | undefined)?.name ?? '';
 
 // keep only some of a model: by material, and by where each triangle sits (in the model's own space)
@@ -83,17 +93,19 @@ async function main(): Promise<Record<string, string>> {
   const pickups = await load('pickups.glb');
   const named = (root: THREE.Object3D, n: string) => root.getObjectByName(n)!.clone(true);
   const out: Record<string, string> = {};
-  const deckOnly = (m: THREE.Mesh) => ['grip', 'deck', 'plies', 'logo'].includes(matName(m));
+  const deckOnly = (m: THREE.Mesh) => ['grip', 'gripbar', 'deck', 'plies', 'logo'].includes(matName(m));
   //the deck on its own, graphic side up and angled like it's leaning on the shop wall
   out.deck = shot(part(board, deckOnly), [-1.25, 0.2, 0.75]);
   //the whole board, three ways: cruising, popped (tail down) and mid-flip
   out.board = shot(part(board, () => true), [0.35, -0.35, 0.5]);
   out.pop = shot(part(board, () => true), [0.3, -0.3, 0.75]);
   out.flip = shot(part(board, () => true), [2.2, -0.2, 0.55]);
-  //one truck: the hardware on the nose side
-  out.truck = shot(part(board, (m) => TRUCK.includes(matName(m)), (c) => c.x > 0.1 && c.y < -0.012), [0.35, -1.25, 0]);
-  //one wheel, face on so the swirl shows
-  out.wheel = shot(part(board, (m) => matName(m) === 'wheel', (c) => c.x > 0.1 && c.z > 0), [0.2, -0.45, 0]);
+  //the gear cards: the shop's own detailed models (art/gear.py), not the game's board. A truck upside down like it's
+  //sitting on the shop counter, from above, a wheel turned so the swirl and the rounded tread both show, a shoe from the outside
+  const gear = (await loader.loadAsync('/art/cards/gear.glb')).scene;
+  out.truck = shot(named(gear, 'Truck'), [Math.PI + 0.85, -1.45, 0], 0.9, shiny);
+  out.wheel = shot(named(gear, 'Wheel'), [0.2, 0.5, 0], 0.84, shiny);
+  out.shoe = shot(named(gear, 'Shoe'), [0.3, 0.35, 0], 0.92, shiny);
   //the board grinding a rail
   out.grind = shot(part(board, () => true), [0.3, -0.5, 0.25], 0.86, (_, pivot) => {
     const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.5, 12), new THREE.MeshLambertMaterial({ color: 0x9aa4b4 }));

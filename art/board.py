@@ -41,6 +41,8 @@ TRACK = 0.105  # wheel centres from the middle, across the board
 AXLE_Z = WHEEL_R - DECK_TOP  # relative to the deck top
 BASE_Z = -THICK  # underside of the deck
 HOLES = (2.125 * INCH / 2, 1.625 * INCH / 2)  # the old-school bolt pattern, half spacing along and across
+# the bar across the grip just inside the back truck's bolts, so the tail reads at a glance (zack, 2026-10-30)
+BAR = (-BOLTS + HOLES[0] + 0.012, -BOLTS + HOLES[0] + 0.077)
 
 COLORS = {
     'grip': 0x1C1C20,
@@ -52,6 +54,7 @@ COLORS = {
     'gold': 0xD7A93A,
     'logo': 0xD12A2A,
     'wheel': 0xF1E6CF,
+    'gripbar': 0xE2C08D,  # bare maple; wear.ts paintGrip picks a colour that stands out from the grip
 }
 PLIES = [0xB52E28, 0xE2C08D, 0xE8B830, 0xB52E28, 0xE8B830, 0xE2C08D, 0xB52E28]  # top to bottom
 
@@ -156,7 +159,8 @@ def deck(mats):
     r = WIDTH / 2
     cols = [i / 30 * 2 * (half - r) - (half - r) for i in range(31)]
     cols += [s * (half - r + r * math.sin(a / 6 * math.pi / 2)) for s in (1, -1) for a in range(1, 7)]
-    cols.sort()
+    cols += list(BAR)
+    cols = sorted(c for c in cols if not any(0 < abs(c - b) < 0.006 for b in BAR))
     rows = 10
     bm = bmesh.new()
     grid = []
@@ -177,7 +181,7 @@ def deck(mats):
             bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
     n = len(bm.verts)
     ply = textured('plies', image('plies', 1, len(PLIES), lambda x, y: PLIES[len(PLIES) - 1 - y]))
-    ob = link('deck', bm, [mats['grip'], mats['deck'], ply])
+    ob = link('deck', bm, [mats['grip'], mats['deck'], ply, mats['gripbar']])
     sol = ob.modifiers.new('wood', 'SOLIDIFY')
     sol.thickness = THICK
     sol.offset = -1
@@ -190,6 +194,9 @@ def deck(mats):
     for p in me.polygons:  # keep the grip (material 0) facing up
         if (p.material_index == 0 and p.normal.z < 0) or (p.material_index == 1 and p.normal.z > 0):
             p.flip()
+    for p in me.polygons:  # the bar: the grip faces across it
+        if p.material_index == 0 and BAR[0] < p.center.x < BAR[1]:
+            p.material_index = 3
     # the edge shows the plies: v runs from the bottom veneer to the top one
     uv = me.uv_layers.new(name='UVMap')
     for p in me.polygons:
