@@ -871,6 +871,16 @@ export class Skater {
     }
   }
 
+  // falling into a car's side: up onto its roof, and whatever its roof does (a hop, or a grind with Roof Rider)
+  private stomp(car: Car): void {
+    const ledge = this.mods.roofRider && this.level.cars.includes(car) ? roofLedge(car) : null;
+    this.feel.settle(this.tuck.lift);
+    this.y = car.roof;
+    if (!ledge) return this.carHop(car);
+    this.x = Math.min(Math.max(this.x, ledge.x0), ledge.x1);
+    this.touchDown(ledge);
+  }
+
   private carHop(car: Car): void {
     this.hopped = car;
     //the knees take the roof and fire you back up; caught mid-flip, the board's only half under you and you rock
@@ -974,6 +984,12 @@ export class Skater {
       //tucked in the air, the body balls up: its bottom is the lifted board
       const overlapY = this.y - (this.mode === 'air' ? this.tuck.lift : 0) > car.roof + 6 && this.y - PHYS.height < car.bottom;
       if (overlapX && overlapY) {
+        //Mario rules (zack, 2026-10-30): coming down, any touch is a stomp, the side or the corner of a car as much as
+        //its roof. Up onto the roof and off it in a hop. Only running or rising into a car slams you.
+        if (this.mode === 'air' && this.vsp > 0) {
+          this.stomp(car);
+          continue;
+        }
         this.hitCars.add(car);
         this.slam();
       }
