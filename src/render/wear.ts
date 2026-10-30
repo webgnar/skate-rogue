@@ -84,6 +84,31 @@ export function bearingCaps(mat: THREE.Material): THREE.Mesh {
   return mesh;
 }
 
+// the paint a slide shreds off the deck's underside, as it looks now (worn, it's rubbed through to the wood), in
+// sRGB for the particles: a few samples of the deck's own colour, plus the plies that show where it's chipped
+const PLY_PAINT = [0xe2c08d, 0xe8b830].map((h) => new THREE.Color(h).getRGB(new THREE.Color(), THREE.SRGBColorSpace));
+export function deckPaint(board: THREE.Object3D): number[][] {
+  const out: number[][] = [];
+  const c = new THREE.Color();
+  board.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
+    const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+    for (const [a, b] of ranges(mesh, 'deck')) {
+      const step = Math.max(1, Math.floor((b - a) / 24));
+      for (let i = a; i < b; i += step) {
+        if (pos.getY(i) > -0.005) continue; // the underside only, not the grip side
+        if (col) c.setRGB(col.getX(i), col.getY(i), col.getZ(i), THREE.LinearSRGBColorSpace);
+        else c.copy((mesh.material as THREE.MeshToonMaterial).color);
+        c.getRGB(c, THREE.SRGBColorSpace);
+        out.push([c.r, c.g, c.b]);
+      }
+    }
+  });
+  return [...out, ...PLY_PAINT.map((p) => [p.r, p.g, p.b])];
+}
+
 export function wearBoard(board: THREE.Object3D, g: Gear): void {
   const deck = look(g.deck);
   const trucks = look(g.trucks);

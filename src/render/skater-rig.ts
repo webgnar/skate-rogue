@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
-import { bearingCaps, paintGrip, wearBoard, wearShoes } from './wear';
+import { bearingCaps, deckPaint, paintGrip, wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
@@ -1017,6 +1017,14 @@ export class SkaterRig {
     this.worn = key;
     if (this.board) wearBoard(this.board, g);
     wearShoes(this.mesh, g.shoes);
+  }
+
+  // the colours a slide shreds off the deck (wear.ts deckPaint); the built-in board is plain red
+  deckPaint(): number[][] {
+    const paint = this.board ? deckPaint(this.board) : [];
+    if (paint.length > 2) return paint;
+    const c = new THREE.Color(COLORS.deck).getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
+    return [[c.r, c.g, c.b]];
   }
 
   // the grip tape's colour (src/board/grips.ts)
