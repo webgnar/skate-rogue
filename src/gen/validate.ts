@@ -28,8 +28,8 @@ export interface BotRun {
 
 // boost: skate in the gnar state, at its cruising speed (SCORE.gnarBoost) with slams free of Heat
 // boost 'game': the gnar state comes and goes as the run's stoke meter fills and drains, as in the game
-export function botRun(level: Level, boost: number | 'game' = 1): BotRun {
-  const sim = new FloorSim(level);
+export function botRun(level: Level, boost: number | 'game' = 1, gear?: Gear): BotRun {
+  const sim = new FloorSim(level, undefined, undefined, undefined, gear);
   const run = boost === 'game' ? new RunScore() : null;
   const fixed = (k: number) => {
     sim.skater.boost = k;
