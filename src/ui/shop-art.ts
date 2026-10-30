@@ -104,9 +104,35 @@ export function gearIcon(part: GearPart): string {
   return pic(GEAR_ART[part]);
 }
 
-// a grip colour card's picture: the board from above, its grip tape in the colour, the bolt heads showing
+// a grip colour card's picture (zack's photo, 2026-10-30): a roll of grip tape in the colour, its brown paper
+// backing peeled out behind it with GRIP printed on it, the grit speckled over the roll
 export function gripArt(color: string): string {
-  const bolts = [-27, 27].flatMap((x) => [-4, 4].map((y) => `<circle cx="${50 + x + (y > 0 ? 2 : -2)}" cy="${20 + y}" r="1.6" fill="#ccd"/>`)).join('');
-  return `<span class="art"><svg class="grip" viewBox="0 0 100 40" aria-hidden="true">
-    <rect x="4" y="8" width="92" height="24" rx="12" fill="${color}" stroke="#000" stroke-width="3"/>${bolts}</svg></span>`;
+  const id = `g${color.replace('#', '')}`;
+  //a steady scatter of grit, light and dark
+  const rnd = (n: number) => {
+    const v = Math.sin(n * 127.1) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const grit = Array.from({ length: 90 }, (_, i) => {
+    const x = 50 + rnd(i) * 40;
+    const y = 22 + rnd(i + 500) * 64;
+    return `<circle cx="${x}" cy="${y}" r="0.7" fill="${i % 3 ? '#000' : '#fff'}" opacity="${i % 3 ? 0.22 : 0.3}"/>`;
+  }).join('');
+  const words = [
+    [16, 30],
+    [30, 54],
+    [12, 74],
+  ].map(([x, y]) => `<text x="${x}" y="${y}" transform="rotate(-18 ${x} ${y})" class="grip-word">GRIP</text>`).join('');
+  return `<span class="art"><svg class="grip" viewBox="0 0 100 96" aria-hidden="true">
+    <defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity="0.35"/>
+      <stop offset="0.35" stop-color="#fff" stop-opacity="0.12"/><stop offset="1" stop-color="#000" stop-opacity="0.45"/></linearGradient></defs>
+    <path d="M6 14 Q30 4 58 10 L58 82 Q30 78 6 88 Z" fill="#c9935a" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/>
+    ${words}
+    <path d="M48 14 L48 84 A22 7 0 0 0 92 84 L92 14 Z" fill="${color}" stroke="#000" stroke-width="2.5"/>
+    <path d="M48 14 L48 84 A22 7 0 0 0 92 84 L92 14 Z" fill="url(#${id})"/>
+    ${grit}
+    <ellipse cx="70" cy="14" rx="22" ry="7" fill="${color}" stroke="#000" stroke-width="2.5"/>
+    <ellipse cx="70" cy="14" rx="22" ry="7" fill="#fff" opacity="0.18"/>
+    <ellipse cx="70" cy="14" rx="11" ry="3.6" fill="#eee" stroke="#000" stroke-width="1.5"/>
+  </svg></span>`;
 }
