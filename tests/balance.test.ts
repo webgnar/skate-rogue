@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { botRun, validatedFloor, type BotRun } from '../src/gen/validate';
 import { validatedEscape } from '../src/gen/escape';
 import { floorTwist } from '../src/gen/twists';
+import { freshGear, GEAR, GEAR_PARTS } from '../src/run/gear';
 
 declare const process: { env: Record<string, string | undefined>; stderr: { write(s: string): void } };
 
@@ -19,7 +20,7 @@ function floorRuns(floor: number): BotRun[] {
 }
 
 describe('balance (bot runs)', () => {
-  it('floors: cleared, 25 to 90 seconds, about 4 floors to half-worn gear, Heat in hand', () => {
+  it('floors: cleared, 25 to 90 seconds, Heat in hand', () => {
     const checks: { sec: number; worn: number; heat: number }[] = [];
     const rows: string[] = ['floor   sec  coins  stoken  slams  maxHeat  wornest'];
     for (let floor = 1; floor <= 15; floor++) {
@@ -35,11 +36,31 @@ describe('balance (bot runs)', () => {
       //(25: the top route's power line is a faster way down a hill than the street, and the bot often takes it)
       expect(row.sec).toBeGreaterThan(25);
       expect(row.sec).toBeLessThan(90);
-      expect(row.worn).toBeLessThan(18); // the worst part: half-worn takes about 3 floors or more
       //(two or three street chases a floor give slams more chances to bunch up: 60 before the longer floors)
+      expect(row.worn).toBeLessThan(50); // the worst part: one floor never wears it past half on its own
       expect(row.heat).toBeLessThan(80);
     }
   }, 120000);
+
+  //zack (2026-10-30): by the first skate shop, after act 1 (three floors and its escape; a floor 2 shop is rare),
+  //about 2.5 of the 4 parts should be worn past half and want replacing
+  it('gear: about 2.5 parts worn past half by the first shop', () => {
+    const SHOP_SEEDS = 16;
+    let worn = 0;
+    for (let s = 0; s < SHOP_SEEDS; s++) {
+      const seed = (s + 1) * 7919;
+      let gear = freshGear();
+      for (let floor = 1; floor <= 3; floor++) {
+        gear = botRun(validatedFloor(seed, floor, { twist: floorTwist(seed, floor), hills: true, danger: 2 }).level, 1, gear).gear;
+      }
+      gear = botRun(validatedEscape(seed, 1), 1, gear).gear;
+      worn += GEAR_PARTS.filter((p) => gear[p] < GEAR.wornFrom).length;
+    }
+    const avgWorn = worn / SHOP_SEEDS;
+    if (process.env.BALANCE) process.stderr.write(`first shop: ${avgWorn.toFixed(2)} parts worn past half\n`);
+    expect(avgWorn).toBeGreaterThan(2);
+    expect(avgWorn).toBeLessThan(3);
+  }, 300000);
 
   it('escapes: cleared in 20 to 50 seconds', () => {
     for (let act = 1; act <= 5; act++) {

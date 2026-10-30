@@ -630,9 +630,11 @@ the thing it takes the beating from:
 - **Condition** runs from 100 (fresh) to 0. A part costs you nothing until it's half worn; below 50 the cost grows
   in a straight line to the most it can be at 0. Nothing ever breaks outright or ends a run: busted gear makes the
   street harder, so it's a pressure, never a wall.
-- **How fast:** tuned so a part you lean on lasts about 3 to 5 floors before it's half worn. The reference bot
-  (which skates as little as it can) wears the deck and shoes about 7 to 16 a floor; a stylish player wears them
-  about twice that. Your build decides what wears: a grind build eats trucks, a flip build eats shoes.
+- **How fast:** tuned so that by the first skate shop (after act 1's three floors and its escape) about 2.5 of
+  the 4 parts are worn past half and want replacing (zack, 2026-10-30). For the reference bot (which skates as
+  little as it can) that's the wheels and deck well past half, the shoes about half the time, and the trucks not yet
+  (the bot grinds little). A part you lean on loses about 20 to 40 a floor. Your build decides what wears: a grind
+  build eats trucks, a flip build eats shoes. `npm run balance` prints the first-shop count.
 - **The run keeps it:** wear carries from floor to floor and resets with a new run. Fresh gear every run.
 - **The shop** always has a gear row under the mod stock: New Deck $25, New Shoes $15, New Trucks $20, New Wheels
   $15. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:

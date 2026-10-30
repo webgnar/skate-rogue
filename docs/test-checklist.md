@@ -284,7 +284,8 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] From floor 4, some floors have a twist: wind gusts (currents), a tunnel ceiling, conveyor rails, crumbling
       ledges, or lots of rails. Floors 1 to 3 never do. Each should look right in the one city.
 - [ ] Act 3's escape is always the guards: "GUARDS! RUN!" at the start, "COLLARED!" if they catch you.
-- [ ] Gear wears about 10% slower than before (hill floors are longer); half-worn should still take 3 or 4 floors.
+- [ ] Gear wears about 3x faster than before (2026-10-30): at the first skate shop, after act 1's escape, 2 or 3
+      parts should show worn past half (the wheels and deck almost always, the shoes about half the time).
 
 ## Level editor (?levels, docs/level-editor.md)
 
@@ -322,7 +323,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 
 - [ ] **Gear wear:** four bars on the HUD (bottom right) for the deck, shoes, trucks and wheels. The deck wears from ollies, the shoes from flip tricks, the trucks from grinding and the wheels from going fast. A part turns yellow below 50 and red and blinking at 15, with a callout at each.
 - [ ] **Worn gear costs you:** below half, a worn deck pops lower, worn shoes flip lower, worn trucks grind slower and worn wheels cruise slower. The most it costs is at 0.
-- [ ] **The shop sells new parts:** a NEW <PART> card in the hand for each worn part (deck $25, shoes $15, trucks $20, wheels $15). *Tuning:* does gear wear too fast or too slow? About 3 to 5 floors to half is the aim. Wear was cut by about a quarter in the balance pass (the bot now gets a part to half in 4 floors early on, 3 in acts 3 to 5).
+- [ ] **The shop sells new parts:** a NEW <PART> card in the hand for each worn part (deck $25, shoes $15, trucks $20, wheels $15). *Tuning:* does gear wear too fast or too slow? The aim is about 2.5 parts worn past half by the first shop (zack, 2026-10-30).
 - [ ] **Modifiers in the shop:** gold-edged mods marked MOD: Times Two (×2, $45), Delay ($15), Combo Only (COMBO 5+, $30) and Coin Flip (50/50, $25). Each changes the next effect after it in the slots. Try `[On Ollie] [Times Two] [Speed Kick]`: two kicks per ollie. `[On Land] [Delay] [Double Pop]`: the pop comes half a second after you land.
 - [ ] **Combo Only and Coin Flip:** `[On Trick] [Combo Only] [Cash Burst]` pays nothing until your combo hits 5, then double. `[On Grind Start] [Coin Flip] [Spark Trail]` sometimes gives nothing, sometimes a big trail. *Tuning:* are the prices right?
 - [ ] **The shop is a card game (PR for ui2-card-shop):** the stock is a fanned hand of cards along the bottom (4 mods, `+1 SLOT` while the board has room, and a `NEW <PART>` card for each worn part); YOUR BOARD and YOUR GEAR sit across the top.

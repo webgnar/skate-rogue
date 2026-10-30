@@ -47,6 +47,6 @@ describe('puddles wear the deck', () => {
       const level = buildFloor(seed, floor);
       most = Math.max(most, puddleSpots(level, seed, floor).length);
     }
-    expect(most * GEAR.puddle).toBeLessThan(20);
+    expect(most * GEAR.puddle).toBeLessThan(65); // 20 before the 2026-10-30 wear tuning made all wear about 3x
   });
 });

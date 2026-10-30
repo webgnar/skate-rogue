@@ -8,17 +8,15 @@ export type Gear = Record<GearPart, number>;
 export const GEAR_PARTS: GearPart[] = ['deck', 'shoes', 'trucks', 'wheels'];
 
 export const GEAR = {
-  // wear per use, out of 100
-  // (balance pass, 2026-10-24: about 4 floors to half worn for the bot. Halved again when floors became two or three
-  // stretches of hill with street chases between, about twice as long: 0.8, 1.0, 1.1 and 0.9 before; trimmed about 8%
-  // when a rail-catch bug stopped lifting the bot onto the top route's power line and its floors ran longer: 0.38,
-  // 0.46 and 0.5 before)
-  ollie: 0.35, // deck, per ollie
-  puddle: 1.2, // deck, per puddle rolled through: the water soaks into the wood (zack, 2026-10-26)
-  flip: 0.42, // shoes, per flip trick
-  grindSec: 0.46, // trucks, per second on a rail or ledge
-  fastSec: 0.38, // wheels, per second going faster than fastOver x cruising speed (0.42 before the L's kicker sent you up
-  // onto its fast grind more often)
+  // wear per use, out of 100. Tuned (2026-10-30, zack) so that by the first skate shop, after act 1's three floors
+  // and its escape, about 2.5 of the 4 parts are worn past half for the bot: the wheels and deck well past, the shoes
+  // about half the time, the trucks only for a skater who grinds a lot (the bot grinds little). About 3x the wear
+  // before (0.35, 1.2, 0.42, 0.46, 0.38), when no part was near half worn by then. tests/balance.test.ts holds it
+  ollie: 1.15, // deck, per ollie
+  puddle: 3.9, // deck, per puddle rolled through: the water soaks into the wood (zack, 2026-10-26)
+  flip: 1.31, // shoes, per flip trick
+  grindSec: 1.4, // trucks, per second on a rail or ledge
+  fastSec: 1.0, // wheels, per second going faster than fastOver x cruising speed
   fastOver: 1.25,
   wornFrom: 50, // below this a part starts to cost you
   busted: 15, // the HUD flashes it from here
