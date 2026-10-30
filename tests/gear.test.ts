@@ -51,9 +51,10 @@ describe('gear wear', () => {
       sim.step({ pressed: true, held: true });
       return sim.skater.vsp;
     };
-    //one step in, gravity has had a frame
-    expect(pop(0) - PHYS.grav).toBeCloseTo(PHYS.ollie * (1 - GEAR.max.deck));
-    expect(pop(100) - PHYS.grav).toBeCloseTo(PHYS.ollie);
+    //one step in, the pop's gravity has had a frame (it snaps up: PHYS.popSnap)
+    const g = PHYS.grav * PHYS.popSnap ** 2;
+    expect(pop(0) - g).toBeCloseTo(PHYS.ollie * PHYS.popSnap * (1 - GEAR.max.deck));
+    expect(pop(100) - g).toBeCloseTo(PHYS.ollie * PHYS.popSnap);
   });
 
   it('calls out a part when it wears past half and when it is nearly gone', () => {

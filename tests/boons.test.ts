@@ -105,7 +105,7 @@ describe('POP boons', () => {
     expect(air('floatyFlip')).toBeGreaterThan(air() + 4);
   });
 
-  it('Mad Pop (pressureFlip): holding past 0.25 s floats, a short hold does not', () => {
+  it('Mad Pop (pressureFlip): holding past 0.15 s floats, a short hold does not', () => {
     const base = peak(skater(FLAT), 120, pressAt(0, 120));
     const pressure = peak(skater(FLAT, 'pressureFlip'), 120, pressAt(0, 120));
     expect(pressure).toBeGreaterThan(base);

@@ -275,21 +275,23 @@ export const CLIPS: Record<string, Clip> = {
   // 4. at the top the board is level under the feet with both knees tucked high;
   // 5. coming down the front foot pushes the nose a little low, arms out wide for balance;
   // 6. legs reach for the ground and soak up the landing (the land clip).
+  // Steps 1-4 play fast, in time with the sim's snapped-up pop (PHYS.popSnap: 90% of the height in 0.15 s, zack
+  // 2026-10-30): tucked at the top by 0.27 s, through the hang, and down from 0.4 s as before.
   ollie: {
     loop: false,
     keys: [
       { t: 0, pose: { hipY: 0.84, footBX: TAIL_FOOT } },
-      { t: 0.1, pose: { ...crouch } },
-      { t: 0.16, pose: { ...pop } },
+      { t: 0.04, pose: { ...crouch } },
+      { t: 0.08, pose: { ...pop } },
       {
-        t: 0.27,
+        t: 0.15,
         pose: {
           hipY: 1.06, bend: 0.12, lean: -0.05, nod: 0.3, boardX: 0.12, boardY: POP_Y + 0.16, boardPivot: TAIL, boardPitch: 1.0,
           footFX: 0.3, footBX: TAIL_FOOT, armRRaise: 2.8, armRFwd: -0.1, armRElbow: 0.15, armLRaise: 1.1, armLFwd: 0.3,
         },
       },
       {
-        t: 0.4,
+        t: 0.27,
         pose: {
           hipY: 1.14, bend: 0.32, nod: 0.35, boardY: 0.5, footFX: NOSE_FOOT, footBX: -0.34,
           armRRaise: 2.3, armRElbow: 0.3, armLRaise: 1.4, armLFwd: 0.35,

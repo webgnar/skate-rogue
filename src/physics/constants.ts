@@ -9,6 +9,13 @@ export const PHYS = {
   ollie: -5, // QFS jump_spd
   trick: -5, // QFS: the second jump is as strong as the first
   jumpCut: 2.5, // QFS jump_dampner: let go while rising -> vsp = max(vsp, ollie / 2.5)
+  // the ollie snaps up (zack, 2026-10-30: "skateboarding is fast, the mechanics of an ollie happen fast"): the pop
+  // leaves popSnap times faster against popSnap^2 times the gravity, so it climbs to the same height in 1/popSnap of
+  // the time (90% of the way up in 9 frames, was 14), then hangs at the top (popHangGrav of the gravity while slower
+  // than popHang px/frame) so the whole jump is in the air as long as before (40 frames on flat, was 39) and comes down the same way
+  popSnap: 1.7,
+  popHang: 1,
+  popHangGrav: 0.45,
   jumps: 2, // QFS jumps_initial
   baseSpeed: 3.5, // auto-run (QFS walks at 2; a runner needs more)
   accel: 0.15,
@@ -49,7 +56,7 @@ export const PHYS = {
   floatyFrames: 24, // Boostin
   frenzyStep: 0.1, // More Wax
   frenzyFlat: 0.15, // More Wax only builds on a grind this flat (slope), not down a handrail (zack)
-  pressureFrames: 15, // Mad Pop kicks in after holding this long
+  pressureFrames: 9, // Mad Pop kicks in after holding this long (near the top of the snapped-up pop, PHYS.popSnap)
   ghostTiles: 4, // Ghost Rail
   ghostFrames: 120,
   wobbleOver: 1.3, // Speed Wobbles: land faster than this times cruising speed and you slam
