@@ -1,7 +1,7 @@
 // The skater controller: Quest For Stoken's movement rules (calc_movement, jumped, check_grind,
 // player_grinding_state, player_rail_state) on Lou Gnar's one-button auto-run. Pure: no rendering, no DOM.
 import { NO_MODS, type Mods } from '../boons/mods';
-import { NO_WEAR, type GearScale } from '../run/gear';
+import { GEAR, NO_WEAR, type GearScale } from '../run/gear';
 import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { Tuck } from './tuck';
@@ -23,6 +23,7 @@ export type SkaterEvent =
   | { type: 'tuck' } // Tuck and Roll: fell in a gap and bounced back out
   | { type: 'firecracker' } // Firecracker: rolled into a stair set and rode it down instead of slamming
   | { type: 'clack'; step: number } // a firecracker's tail hitting the next step down
+  | { type: 'glass' } // rolled over broken glass on wheels good enough to take it (a crunch, and it chunks them)
   | { type: 'slam' }
   | { type: 'bail' }
   | { type: 'exit' };
@@ -129,7 +130,7 @@ export class Skater {
   }
 
   private get looseWheels(): number {
-    return 1 + FEEL.wornRock * 1.5 * (1 - this.gear.speed);
+    return 1 + FEEL.wornRock * 0.3 * Math.max(0, 1 - 2 * this.gear.grip);
   }
 
   get maxJumps(): number {
@@ -945,7 +946,7 @@ export class Skater {
     this.vsp = this.railV * p.ty;
   }
 
-  // car sides and broken glass: a slam, never the end of the run
+  // car sides and broken glass: a slam, never the end of the run. Wheels at least half fresh roll over the glass
   private checkHazards(): void {
     const half = PHYS.width / 2;
     for (const car of this.cars()) {
@@ -977,7 +978,8 @@ export class Skater {
       this.level.glass.forEach((g, i) => {
         if (!this.hitGlass.has(i) && this.x >= g.x0 && this.x <= g.x1) {
           this.hitGlass.add(i);
-          this.slam();
+          if (this.gear.grip * 100 >= GEAR.roughFrom) this.events.push({ type: 'glass' });
+          else this.slam();
         }
       });
     }

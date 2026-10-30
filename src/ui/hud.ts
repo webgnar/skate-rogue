@@ -15,13 +15,15 @@ export const STOKE_SEGS = 10;
 export const HEAT_SEGS = 10;
 export const WEAR_SEGS = 5;
 export const HEAT_STARS = [25, 50, 75, 90]; // Heat for each star
-export const GEAR_ORDER: GearPart[] = ['deck', 'trucks', 'wheels', 'shoes']; // the mockup's order
+export const GEAR_ORDER: GearPart[] = ['deck', 'trucks', 'wheels', 'bearings', 'shoes']; // the mockup's order, bearings by the wheels
 
 // small inked icons for the gear bars
 export const GEAR_ICONS: Record<GearPart, string> = {
   deck: '<svg viewBox="0 0 24 24"><rect x="9" y="1" width="6" height="22" rx="3" transform="rotate(35 12 12)" fill="#e8e0d0" stroke="#000" stroke-width="2"/><circle cx="8" cy="7" r="1.4" fill="#000"/><circle cx="16" cy="17" r="1.4" fill="#000"/></svg>',
   trucks: '<svg viewBox="0 0 24 24"><path d="M2 12h20v3H2zM9 8h6v4H9z" fill="#c9ced6" stroke="#000" stroke-width="1.8" stroke-linejoin="round"/><circle cx="3.5" cy="13.5" r="2.5" fill="#f2e8d0" stroke="#000" stroke-width="1.5"/><circle cx="20.5" cy="13.5" r="2.5" fill="#f2e8d0" stroke="#000" stroke-width="1.5"/></svg>',
   wheels: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f2e8d0" stroke="#000" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#9aa0a8" stroke="#000" stroke-width="1.6"/></svg>',
+  //a shielded bearing: black shield with a red ring, the silver races showing (zack's Swiss bearing refs)
+  bearings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#c9ced6" stroke="#000" stroke-width="2"/><circle cx="12" cy="12" r="7.6" fill="#1a1a1e"/><circle cx="12" cy="12" r="5.6" fill="none" stroke="#e8322a" stroke-width="1.4"/><circle cx="12" cy="12" r="3.6" fill="#c9ced6" stroke="#000" stroke-width="1.4"/><circle cx="12" cy="12" r="1.6" fill="#000"/></svg>',
   shoes: '<svg viewBox="0 0 24 24"><path d="M2 8l6-1 2 3 5 2 6 2 1 4H2z" fill="#f4f4f4" stroke="#000" stroke-width="1.8" stroke-linejoin="round"/><path d="M2 17h20" stroke="#ff2fb4" stroke-width="2"/></svg>',
 };
 
@@ -124,7 +126,7 @@ export class HudView {
       const p = el.dataset.part as GearPart;
       this.gearBars[p] = { meter: new Meter(el.querySelector('.meter')!, WEAR_SEGS, () => 'var(--wear)'), box: new Cell(el) };
     });
-    this.gear({ deck: 100, trucks: 100, wheels: 100, shoes: 100 });
+    this.gear({ deck: 100, trucks: 100, wheels: 100, bearings: 100, shoes: 100 });
     this.board([]);
   }
 

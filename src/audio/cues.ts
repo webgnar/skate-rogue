@@ -82,6 +82,8 @@ export function cueFor(e: FloorEvent): Cue | null {
       return cue('trick', 0.35, 1.8); // the gun comes up: a click
     case 'clack':
       return cue('impact', 0.45, 2.2); // a firecracker's tail on the next step: a quick high clack
+    case 'glass':
+      return cue('impact', 0.5, 2.8); // rolling over broken glass: a high crunch
     case 'hop':
       return cue('impact', 0.7, 1.6); // the hollow bonk of a car roof
     case 'kicker':

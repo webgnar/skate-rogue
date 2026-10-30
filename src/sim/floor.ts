@@ -32,7 +32,7 @@ export type FloorEvent =
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
-  | { type: 'puddle'; x: number; y: number } // rolled into a puddle: it soaks the deck
+  | { type: 'puddle'; x: number; y: number } // rolled into a puddle: it washes out the bearings
   | ShotEvent // the guards shooting at you on a chase (src/sim/shots.ts)
   | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' }
   // a car hop dented a car (src/traffic/damage.ts): x is its middle and y its roof, px; stage 3 is wrecked
@@ -98,8 +98,8 @@ export class FloorSim {
 
   private readonly flip: () => number; // the board's coin flips, from the floor seed
   private slipT = 0; // frames drafting behind a car
-  // Rain puddles (the view's, src/render/puddles.ts, set by the game on a rainy floor): rolling through one soaks
-  // the deck. x, y: centre and surface (px); w: half width when full (px); delay: seconds before it starts to form,
+  // Rain puddles (the view's, src/render/puddles.ts, set by the game on a rainy floor): rolling through one washes
+  // out the bearings. x, y: centre and surface (px); w: half width when full (px); delay: seconds before it starts to form,
   // grow: seconds to form; k: how far it forms in a light rain (1 in a full one)
   puddles: { x: number; y: number; w: number; delay: number; grow: number; k: number }[] = [];
   private frames = 0; // steps this floor, for how formed the puddles are
@@ -406,21 +406,28 @@ export class FloorSim {
     });
   }
 
-  // gear wear: the deck from ollies, the shoes from flip tricks, the trucks from grinding, the wheels from speed
+  // gear wear: the deck from ollies, the shoes from flip tricks, the trucks from grinding, the wheels from speed and
+  // glass, the bearings from grit and puddles
   private wear(events: readonly SkaterEvent[]): void {
     const sk = this.skater;
-    const use: Gear = { deck: 0, shoes: 0, trucks: 0, wheels: 0 };
+    const use: Gear = { deck: 0, shoes: 0, trucks: 0, wheels: 0, bearings: 0 };
     for (const e of events) {
       if (e.type === 'ollie') use.deck += GEAR.ollie;
       else if (e.type === 'trick') use.shoes += GEAR.flip;
+      else if (e.type === 'glass') use.wheels += GEAR.glass;
     }
+    if (sk.mode === 'roll') use.bearings += GEAR.rollSec / 60;
     //(the top route's power line is a long, smooth grind: it wears your trucks and wheels a lot less)
     const soft = sk.rail?.top ? TOP.wear : 1;
     if (isGrind(sk.mode)) use.trucks += (GEAR.grindSec / 60) * soft;
-    //rolling into a puddle soaks the deck (zack: "rolling through puddles should wear out your deck")
+    //rolling into a puddle washes out the bearings (zack, 2026-10-30), and drags you: fresh wheels push through it,
+    //worn ones bog down
     const wet = sk.mode === 'roll' ? this.puddleAt(sk.x, sk.y) : null;
     if (wet && wet !== this.wading) {
-      use.deck += GEAR.puddle;
+      use.bearings += GEAR.puddle;
+      const drag = GEAR.puddleDrag.fresh + (GEAR.puddleDrag.dead - GEAR.puddleDrag.fresh) * (1 - sk.gear.grip);
+      sk.hsp *= 1 - drag;
+      sk.carry *= 1 - drag;
       this.events.push({ type: 'puddle', x: sk.x, y: sk.y });
     }
     this.wading = wet;

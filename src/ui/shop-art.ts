@@ -7,7 +7,7 @@ import type { GearPart } from '../run/gear';
 const base = import.meta.env.BASE_URL;
 
 export type Pic =
-  | 'board' | 'pop' | 'flip' | 'grind' | 'car' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe'
+  | 'board' | 'pop' | 'flip' | 'grind' | 'car' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe' | 'bearing'
   | 'cruiser' | 'robotaxi' | 'bus' | 'boxtruck' | 'drone' | 'chopper' | 'wanted' | 'signal' | 'rocket';
 export type Glyph = 'up' | 'down' | 'right' | 'curl' | 'clock' | 'speed' | 'ring' | 'sparks' | 'plus' | 'flipv' | string;
 
@@ -32,13 +32,28 @@ const MOD_ART: Record<ModId, [Pic, Glyph?]> = {
   coinFlip: ['coin', '?'],
 };
 
-const GEAR_ART: Record<GearPart, Pic> = { deck: 'deck', trucks: 'truck', wheels: 'wheel', shoes: 'shoe' };
+const GEAR_ART: Record<GearPart, Pic> = { deck: 'deck', trucks: 'truck', wheels: 'wheel', shoes: 'shoe', bearings: 'bearing' };
 
 // a sneaker in the comic style: no model of Lou's shoes on their own, so it's drawn
 const SHOE =
   '<svg class="pic" viewBox="0 0 64 40" aria-hidden="true"><path d="M4 22c0-6 3-12 6-14l8 1c3 5 9 8 16 9l14 3c7 1 12 4 12 9v3H4z" fill="#ff3fa4" stroke="#120a16" stroke-width="2.5" stroke-linejoin="round"/>' +
   '<path d="M18 9c2 6 8 9 15 10l-4 7H8" fill="#f4f0f6" stroke="#120a16" stroke-width="2" stroke-linejoin="round"/><path d="M20 13l5-2M23 17l5-2M27 20l5-2" stroke="#120a16" stroke-width="2" stroke-linecap="round"/>' +
   '<path d="M3 31h59v4a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" fill="#f4f0f6" stroke="#120a16" stroke-width="2.5"/><path d="M36 25c6 0 12 1 16 4" stroke="#120a16" stroke-width="2" fill="none"/></svg>';
+
+// bearings in the comic style, from zack's refs (2026-10-30): a Swiss-style one in front, black shield with a red
+// ring and bright races, and an open bronze ceramic one behind it showing its black balls in a white cage
+const balls = Array.from({ length: 7 }, (_, i) => {
+  const a = (i / 7) * Math.PI * 2 - 0.4;
+  return `<circle cx="${(22 + Math.cos(a) * 9.2).toFixed(1)}" cy="${(18 + Math.sin(a) * 9.2).toFixed(1)}" r="2.7" fill="#1c1c22" stroke="#120a16" stroke-width="1"/><circle cx="${(21.2 + Math.cos(a) * 9.2).toFixed(1)}" cy="${(17.2 + Math.sin(a) * 9.2).toFixed(1)}" r="0.8" fill="#9aa"/>`;
+}).join('');
+const BEARING =
+  '<svg class="pic" viewBox="0 0 64 40" aria-hidden="true">' +
+  '<circle cx="22" cy="18" r="15" fill="#c8954a" stroke="#120a16" stroke-width="2.5"/><circle cx="22" cy="18" r="12" fill="#f4f0f6" stroke="#8a5f2a" stroke-width="1.2"/>' +
+  balls +
+  '<circle cx="22" cy="18" r="6.4" fill="#d6a95e" stroke="#120a16" stroke-width="2"/><circle cx="22" cy="18" r="3.6" fill="#f4f0f6" stroke="#8a5f2a" stroke-width="1"/>' +
+  '<circle cx="42" cy="22" r="16" fill="#d8dce2" stroke="#120a16" stroke-width="2.5"/><circle cx="42" cy="22" r="13" fill="#17171b" stroke="#120a16" stroke-width="1"/>' +
+  '<circle cx="42" cy="22" r="9.6" fill="none" stroke="#e8322a" stroke-width="2.2"/><circle cx="42" cy="22" r="6" fill="#d8dce2" stroke="#120a16" stroke-width="2"/>' +
+  '<circle cx="42" cy="22" r="3.2" fill="#3a3a44" stroke="#120a16" stroke-width="1.2"/><path d="M33 13a12 12 0 0 1 8-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.8"/></svg>';
 
 const SVG_GLYPHS: Record<string, string> = {
   up: '<path d="M16 3 4 17h7v12h10V17h7z"/>',
@@ -68,7 +83,7 @@ export function glyph(g: Glyph | undefined): string {
 }
 
 export function pic(p: Pic): string {
-  return p === 'shoe' ? SHOE : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
+  return p === 'shoe' ? SHOE : p === 'bearing' ? BEARING : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
 }
 
 export function modArt(id: ModId): string {

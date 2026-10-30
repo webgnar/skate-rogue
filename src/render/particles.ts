@@ -419,18 +419,25 @@ export class Particles {
   }
 
   // a gear part wore past half (worn) or is nearly done (busted): a puff from that part, bigger when busted.
-  // Deck splinters, a shoe scuff, sparks off the trucks, rubber crumbs from the wheels. (x, y) is the skater's feet.
-  gearWear(part: 'deck' | 'shoes' | 'trucks' | 'wheels', busted: boolean, x: number, y: number): void {
+  // Deck splinters, a shoe scuff, sparks off the trucks, rubber crumbs from the wheels, grease and rust from the
+  // bearings. (x, y) is the skater's feet.
+  gearWear(part: 'deck' | 'shoes' | 'trucks' | 'wheels' | 'bearings', busted: boolean, x: number, y: number): void {
     const k = busted ? 1.8 : 1;
     const look: Record<typeof part, Spray> = {
       deck: { n: 8, colors: [[0.78, 0.55, 0.3], [0.62, 0.42, 0.22], [0.9, 0.75, 0.5]], life: [0.4, 0.7], size: [0.07, 0.11], speed: [1.5, 3.5], angle: [0.3, Math.PI - 0.3], grav: 14, drag: 1, ink: true, floor: y },
       shoes: { n: 6, colors: [[0.85, 0.82, 0.78], [0.6, 0.58, 0.55]], life: [0.3, 0.5], size: [0.12, 0.18], size1: 0.3, speed: [0.5, 1.5], angle: [0.2, Math.PI * 0.6], drag: 4, grav: -0.3, alpha: 0.7, fadeFrom: 0 },
       trucks: { n: 8, colors: [[1, 1, 1], [1, 0.88, 0.54], [1, 0.69, 0.25]], life: [0.15, 0.3], size: [0.08, 0.12], speed: [2.5, 5], angle: [0.2, Math.PI - 0.2], grav: 14 },
       wheels: { n: 8, colors: [[0.95, 0.9, 0.75], [0.3, 0.28, 0.3]], life: [0.35, 0.6], size: [0.06, 0.09], speed: [1, 2.5], angle: [Math.PI * 0.55, Math.PI * 0.95], grav: 12, drag: 1.5, ink: true, floor: y },
+      bearings: { n: 7, colors: [[0.12, 0.1, 0.1], [0.48, 0.27, 0.15], [0.7, 0.72, 0.75]], life: [0.3, 0.5], size: [0.04, 0.07], speed: [1, 2.5], angle: [Math.PI * 0.4, Math.PI * 0.9], grav: 12, drag: 1.5, floor: y },
     };
     const o = look[part];
     const at = part === 'shoes' ? y + 0.35 : y + 0.08;
     this.spray(x, at, { ...o, n: Math.round(o.n * k), speed: [o.speed[0], o.speed[1] * (busted ? 1.3 : 1)] });
+  }
+
+  // rolled over broken glass: bright shards kicked out behind the wheels
+  shards(x: number, y: number): void {
+    this.spray(x, y + 0.05, { n: 12, colors: [[0.75, 0.91, 1], [1, 1, 1], [0.45, 0.7, 0.85]], life: [0.25, 0.5], size: [0.05, 0.09], speed: [1.5, 3.5], angle: [Math.PI * 0.55, Math.PI * 0.9], grav: 14, drag: 1, ink: true, floor: y });
   }
 
   // a general spray for one-off looks (boons, board mods): `n` pixels from (x, y) in world units

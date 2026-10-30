@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { wearBoard, wearShoes } from '../src/render/wear';
+import { bearingCaps, wearBoard, wearShoes } from '../src/render/wear';
 import { freshGear } from '../src/run/gear';
 
 const deckMesh = () => {
@@ -33,6 +33,17 @@ describe('gear wear looks', () => {
     const board = new THREE.Group().add(wheel);
     wearBoard(board, { ...freshGear(), wheels: 0 });
     expect(g.attributes.position.getY(0)).toBeGreaterThan(-0.12 + 0.001);
+  });
+
+  it('rusts worn bearings, and a new set is clean again', () => {
+    const caps = bearingCaps(new THREE.MeshBasicMaterial());
+    const board = new THREE.Group().add(caps);
+    const col = caps.geometry.attributes.color;
+    const fresh = Array.from(col.array as Float32Array);
+    wearBoard(board, { ...freshGear(), bearings: 0 });
+    expect(Array.from(col.array as Float32Array)).not.toEqual(fresh);
+    wearBoard(board, freshGear());
+    Array.from(col.array as Float32Array).forEach((v, i) => expect(v).toBeCloseTo(fresh[i]));
   });
 
   it('shows the shoe scuff when worn and the hole when nearly busted', () => {

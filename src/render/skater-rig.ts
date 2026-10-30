@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
-import { paintGrip, wearBoard, wearShoes } from './wear';
+import { bearingCaps, paintGrip, wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
@@ -287,6 +287,9 @@ export class SkaterRig {
     this.board = board;
     this.boardFace.add(board);
     this.toonMaterials(board);
+    const caps = this.lambert(0xffffff);
+    caps.vertexColors = true;
+    board.add(bearingCaps(caps));
   }
 
   // the model's materials as the rig's own, so they blink on slams and take the toon ramp
@@ -1001,7 +1004,7 @@ export class SkaterRig {
   }
   private warned = false;
 
-  // show how worn the deck, trucks, wheels and shoes are (wear.ts); redrawn only when a part crosses a step of 5
+  // show how worn the deck, trucks, wheels, bearings and shoes are (wear.ts); redrawn only when a part crosses a step of 5
   setGear(g: Gear): void {
     const key = GEAR_PARTS.map((p) => Math.round(g[p] / 5)).join();
     if (key === this.worn) return;

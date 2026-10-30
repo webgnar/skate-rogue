@@ -170,8 +170,8 @@ export interface Hud {
   fire(slot: number): void; // a board slot just fired
   shop(view: ShopView | null): void; // null hides the shop
   under(view: UnderView | null): void; // the underground spot; null hides it
-  gear(gear: Gear): void; // how worn your deck, shoes, trucks and wheels are
-  gearTick(part: GearPart): void; // a part just took a hit of wear (a puddle soaked the deck)
+  gear(gear: Gear): void; // how worn your deck, shoes, trucks, wheels and bearings are
+  gearTick(part: GearPart): void; // a part just took a hit of wear (a puddle, broken glass)
   cont(view: ContinueView | null): void; // the continue card after a bail or a bust; null hides it
   continues(left: number): void; // continues left this run
 }
@@ -1553,12 +1553,21 @@ export class Game {
     if (e.type === 'aim' || e.type === 'shot' || e.type === 'shotHit') return this.shotFx(e);
     if (e.type === 'dodge') this.shotFx(e);
     if (e.type === 'puddle') {
-      //rolled through a puddle: a sheet of water off the wheels, and the deck's bar ticks down blue
+      //rolled through a puddle: a sheet of water off the wheels, and the bearings' bar ticks down blue
       const x = toX(e.x);
       const y = toY(this.level, e.y);
       this.particles.splash(x, y, 0.9);
       this.words.spawn(x, y + 0.3, 'SPLSH!');
-      this.hud.gearTick('deck');
+      this.hud.gearTick('bearings');
+      return;
+    }
+    if (e.type === 'glass') {
+      //rolled over broken glass on good wheels: shards kicked out, a crunch, and the wheels' bar ticks down
+      const x = toX(this.skater.x);
+      const y = toY(this.level, this.skater.y);
+      this.particles.shards(x, y);
+      this.words.spawn(x, y + 0.3, 'CRNCH!');
+      this.hud.gearTick('wheels');
       return;
     }
     if (e.type === 'doorSlam') {
