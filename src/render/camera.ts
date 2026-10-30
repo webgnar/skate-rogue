@@ -44,7 +44,9 @@ export const PHONE_CAM = {
   portraitW: 9.5, // tiles of width on a phone held upright (it showed 21; height follows from the aspect)
   portraitFov: 74, // tall screen, so a tall lens: about 40 degrees across
   lead: [0.22, 0.42], // landscape, portrait: Lou sits left of centre so more street ahead shows
-  low: [0.12, 0.14], // landscape, portrait: Lou sits below centre, the roofs, wires and the L above in view
+  // landscape, portrait: Lou sits below centre, the roofs, wires and the L above in view (zack 2026-10-30: "move the
+  // camera up. so the board is lower on the screen, and you can see up more": 0.12 and 0.14 before)
+  low: [0.36, 0.3],
   punch: 1, // trick and grind zooms at this share of their strength (zack 2026-10-25: "zoom effects More")
 };
 
