@@ -151,7 +151,7 @@ describe('puddles', () => {
 });
 
 describe('effect settings from the URL', () => {
-  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1 } as const;
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink' } as const;
   const q = (s: string) => applyParams({ ...base }, new URLSearchParams(s));
   it('calm turns on both accessibility switches, calm=0 turns them off', () => {
     expect(q('calm')).toMatchObject({ reduceMotion: true, reduceFlashing: true });

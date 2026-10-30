@@ -5,6 +5,7 @@
 //   ?nomotion ?noflash   either one alone
 //   ?heatcue             a striped edge that shows Heat without relying on red and blue
 //   ?pixel=4             the chunky low-res look: each rendered pixel covers 4 x 4 screen pixels (1: sharp)
+//   ?ghost=yellow        the colour of Lou's dithered shape where the foreground hides him (pink by default)
 // Add =0 to turn one back off (?calm=0). The device's "reduce motion" setting turns reduce motion on.
 const KEY = 'gnar-run-fx';
 
@@ -16,7 +17,11 @@ export interface FxSettings {
   reduceFlashing: boolean; // no impact flash or lightning; police flares glow steady
   heatCue: boolean;
   pixel: number; // the low-res look: screen pixels per rendered pixel, 1 (sharp) to PIXEL_MAX
+  ghost: Ghost; // Lou's dithered shape through the foreground (ghost.ts)
 }
+
+export type Ghost = 'pink' | 'yellow';
+export const GHOSTS: Ghost[] = ['pink', 'yellow'];
 
 export const PIXEL_MAX = 4; // past 4 the one-pixel ink swallows the skater
 
@@ -26,6 +31,7 @@ export const FX: FxSettings & { tier: Tier } = {
   reduceFlashing: false,
   heatCue: false,
   pixel: 1,
+  ghost: 'pink',
   tier: 'high',
 };
 
@@ -39,21 +45,21 @@ export function initFx(params: URLSearchParams, prefersReducedMotion = false): v
   }
   Object.assign(FX, applyParams({ ...defaults(prefersReducedMotion), ...saved }, params));
   FX.tier = FX.quality === 'low' ? 'low' : 'high';
-  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue', 'pixel'].some((k) => params.has(k))) saveFx();
+  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue', 'pixel', 'ghost'].some((k) => params.has(k))) saveFx();
 }
 
 // remember the settings (the URL flags, or the pause card)
 export function saveFx(): void {
   try {
-    const { quality, reduceMotion, reduceFlashing, heatCue, pixel } = FX;
-    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue, pixel }));
+    const { quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost } = FX;
+    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost }));
   } catch {
     //not remembered in a private window
   }
 }
 
 function defaults(prefersReducedMotion: boolean): FxSettings {
-  return { quality: 'auto', reduceMotion: prefersReducedMotion, reduceFlashing: false, heatCue: false, pixel: 1 };
+  return { quality: 'auto', reduceMotion: prefersReducedMotion, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink' };
 }
 
 export function applyParams(s: FxSettings, params: URLSearchParams): FxSettings {
@@ -67,6 +73,9 @@ export function applyParams(s: FxSettings, params: URLSearchParams): FxSettings 
   if (params.has('heatcue')) out.heatCue = on('heatcue');
   if (params.has('pixel')) out.pixel = Number(params.get('pixel')) || 1;
   out.pixel = clampPixel(out.pixel);
+  const g = params.get('ghost');
+  if (g && (GHOSTS as string[]).includes(g)) out.ghost = g as Ghost;
+  if (!GHOSTS.includes(out.ghost)) out.ghost = 'pink';
   return out;
 }
 

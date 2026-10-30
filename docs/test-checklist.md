@@ -760,3 +760,8 @@ off to compare. Reduce motion skips it.
 - [ ] Up high (the top route, big airs), light blue water shows behind the houses, and the skyline stands on a far shore across it (not in the water).
 - [ ] The water is close to the sky's colour, with small white dashes drifting slowly (no blinking).
 - [ ] At night the water darkens with the sky; from the street you don't see it.
+
+## Lou behind the foreground (2026-10-30)
+- [ ] When a pole, a near-lane car or a foreground wall passes in front of Lou, it hides him and his shape shows through as a pink dither (?ghost=yellow for yellow).
+- [ ] Grinding rails, riding ledges, car roofs and the L: his board and feet are never cut by what he's on.
+- [ ] Particles, words, rain and hit stars still draw over everything.
