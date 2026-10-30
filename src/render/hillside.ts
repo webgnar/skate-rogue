@@ -19,6 +19,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
 import { surfaceTexture } from './surfaces';
 import { TUNNEL, mouths } from '../traffic/tunnel';
+import { cables, chinatownAtlas, chinatownRng, tenement } from './chinatown-art';
 
 const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
 
@@ -386,6 +387,7 @@ function materials(): NonNullable<typeof mats> {
     walk: new THREE.MeshLambertMaterial({ map: surfaceTexture('pavers'), color: 0xa9a4b2 }),
     concrete: new THREE.MeshLambertMaterial({ map: surfaceTexture('concrete'), color: 0x8c8794 }),
     house: new THREE.MeshLambertMaterial({ map: houseAtlas() }),
+    ct: new THREE.MeshLambertMaterial({ map: chinatownAtlas() }), // Chinatown's tenements (chinatown-art.ts)
     //the power lines: flat ink, no outline of their own
     wire: new THREE.MeshBasicMaterial({ color: 0x1a1424 }),
   };
@@ -394,7 +396,7 @@ function materials(): NonNullable<typeof mats> {
 
 // ------------------------------------------------------------------------------------------------- geometry
 
-type Key = 'road' | 'walk' | 'concrete' | 'house' | 'wire';
+type Key = 'road' | 'walk' | 'concrete' | 'house' | 'wire' | 'ct';
 type V3 = [number, number, number];
 type UvFn = (p: V3) => [number, number];
 
@@ -534,6 +536,30 @@ function gaps(ground: Ground[]): [number, number, number][] {
 // on them do, so the near sidewalk, the low wall and the houses in front make way (tiles: x0, x1, height)
 function throughStreets(level: Level): [number, number, number][] {
   return (level.hillCross ?? []).map((k) => [tx(k.x) - HILLSIDE.crossW / 2, tx(k.x) + HILLSIDE.crossW / 2, (level.streetY - k.y) / TILE]);
+}
+
+// Chinatown's blocks (tiles), where tenements stand instead of the row houses (chinatown-art.ts)
+function chinatownSpans(level: Level): [number, number][] {
+  return (level.chinatown ?? []).map(([a, b]): [number, number] => [tx(a), tx(b)]);
+}
+const overlaps = (spans: [number, number][], xa: number, xb: number) => spans.some(([a, b]) => xb > a && xa < b);
+
+// a row of tenements from x0 to x1 (tiles), skipping the cut ranges: their x ranges
+function tenementRow(m: Mesher, rng: () => number, x0: number, x1: number, z0: number, z1: number, base: (xa: number, xb: number) => number, foot: (xa: number, xb: number) => number, cut: (xa: number, xb: number) => boolean, storeys: [number, number], shops: boolean): [number, number][] {
+  const out: [number, number][] = [];
+  for (let x = x0; x < x1; ) {
+    const w = Math.min(x1 - x, 2.5 + randInt(rng, 5) * 0.5);
+    if (w < 1.5) break;
+    if (cut(x, x + w)) {
+      x += 0.5;
+      continue;
+    }
+    const b = base(x, x + w);
+    tenement(m, rng, { x0: x, x1: x + w, base: b, foot: Math.min(b, foot(x, x + w)), z0, z1, storeys: storeys[0] + randInt(rng, storeys[1] - storeys[0] + 1), shops });
+    out.push([x, x + w]);
+    x += w;
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------------------------------------ the shapes
@@ -847,11 +873,32 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   const stretches = hillStretches(level);
   const [bz0, bz1] = HILLSIDE.backRow;
   const [uz1, uz0, up] = HILLSIDE.upRow;
+  const china = chinatownSpans(level);
+  const inChina = (a: number, b: number) => overlaps(china, a, b);
   for (const [s0, s1] of stretches) {
-    yield* houseRowSteps(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, (a, b) => cut(a, b) || atPortal(a, b), { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
-    yield* houseRowSteps(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, cut, { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
+    yield* houseRowSteps(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, (a, b) => cut(a, b) || atPortal(a, b) || inChina(a, b), { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
+    yield* houseRowSteps(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, (a, b) => cut(a, b) || inChina(a, b), { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
     //cypresses between the rows, standing over the back row's roofs now and then
-    for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
+    for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) if (!inChina(x - 1, x + 1)) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
+  }
+  //Chinatown: tenements along the street with their shops, taller ones crowding up the hill behind, cables strung
+  //in bundles along the street and from the street's blocks up to the ones behind
+  const crng = chinatownRng(level.layout.seed, level.layout.floor);
+  for (const [a, b] of china) {
+    if (sliceDone()) yield;
+    const street = tenementRow(m, crng, a, b, bz1, bz0, (xa, xb) => lane((xa + xb) / 2) + c, (xa, xb) => lowest(ground, hill, xa, xb) - 0.5, (xa, xb) => cut(xa, xb) || atPortal(xa, xb), [2, 4], true);
+    tenementRow(m, crng, a - 2, b + 2, uz0, uz1, (xa, xb) => lane((xa + xb) / 2) + up, () => B, cut, [4, 7], false);
+    for (let i = 1; i < street.length; i++) {
+      const [x0] = street[i - 1];
+      const [, x1] = street[i];
+      const h0 = lane(x0) + c;
+      const h1 = lane(x1) + c;
+      for (const [dy, z] of [[4.4, bz0 + 0.25], [5.6, bz0 + 0.5], [7.2, bz0 + 0.15]] as const) cables(m, [x0, h0 + dy, z], [x1, h1 + dy, z], 0.5, 2 + randInt(crng, 3), crng);
+      if (crng() < 0.5) {
+        const x = (x0 + x1) / 2;
+        cables(m, [x, lane(x) + c + 6, bz0], [x + (crng() - 0.5) * 3, lane(x) + up + 9, uz1], 1.2, 3, crng);
+      }
+    }
   }
   //power poles along the back sidewalk with their wires sagging between them (photo 3), street trees between poles
   const P = HILLSIDE.pole;
@@ -866,6 +913,7 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
     if (holes.some(([a, b]) => x > a - 0.5 && x < b + 0.5)) continue;
     if (atPortal(x - 1, x + 1)) continue; // clear of the tunnel's mouth, where the cruiser swings out
     if (topLine.some(([a, b]) => x > a - 1 && x < b + 1)) continue; // the top route's line hangs there instead
+    if (inChina(x - 1, x + 1)) continue; // Chinatown strings its cables off the tenements
     const top = lane(x) + c + P.height;
     poles.push([x, top]);
     const pole = rectUv(SWATCH.pole);
@@ -898,7 +946,7 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
     const [xa] = poles[i - 1];
     const [xb] = poles[i];
     const x = (xa + xb) / 2 + (rng() - 0.5) * 2;
-    if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2) && !atPortal(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
+    if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2) && !atPortal(x - 1.2, x + 1.2) && !inChina(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
   }
   //where the night city bolts street lights onto the poles (street-lights.ts): under the wires, over the road
   group.userData.poleLamps = poles.map(([x, top]) => ({ x, y: top - 1.9, z: P.z, ground: lane(x), slope: (lane(x + 1) - lane(x - 1)) / 2 }));
@@ -1032,7 +1080,15 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
   const [az0, az1, adrop] = HILLSIDE.rowA;
   const [bz0, bz1, bdrop] = HILLSIDE.rowB;
   const storeys = 3 * HILLSIDE.storey;
-  yield* houseRowSteps(m, rng, -10, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, open, { bay: 0.7, chimney: 0.35, hip: false, shrub: 0.25 });
-  yield* houseRowSteps(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, open, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
+  const china = chinatownSpans(level);
+  const notChina = (a: number, b: number) => open(a, b) || overlaps(china, a, b);
+  yield* houseRowSteps(m, rng, -10, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, notChina, { bay: 0.7, chimney: 0.35, hip: false, shrub: 0.25 });
+  yield* houseRowSteps(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, notChina, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
+  //Chinatown's rooftops below the lane, their water tanks and shacks
+  const crng = chinatownRng(level.layout.seed + 1, level.layout.floor);
+  for (const [a, b] of china) {
+    tenementRow(m, crng, a, b, az0, az1, (xa, xb) => low(xa, xb) - adrop - 3 * HILLSIDE.storey, () => B, open, [3, 3], false);
+    tenementRow(m, crng, a, b, bz0, bz1, (xa, xb) => low(xa, xb) - bdrop - 3 * HILLSIDE.storey, () => B, open, [3, 3], false);
+  }
   yield* m.buildSteps(group);
 }
