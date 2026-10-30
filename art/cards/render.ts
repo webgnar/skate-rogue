@@ -105,6 +105,9 @@ async function main(): Promise<Record<string, string>> {
   const gear = (await loader.loadAsync('/art/cards/gear.glb')).scene;
   out.truck = shot(named(gear, 'Truck'), [Math.PI + 0.85, -1.45, 0], 0.9, shiny);
   out.wheel = shot(named(gear, 'Wheel'), [0.2, 0.5, 0], 0.84, shiny);
+  //the GRIND boons' wax: three sticks of Ledge Butter, and a slab of More Wax in front of its box
+  out.butter = shot(named(gear, 'LedgeButter'), [0.5, -0.35, 0], 0.9);
+  out.wax = shot(named(gear, 'MoreWax'), [0.35, -0.3, 0], 0.9);
   out.shoe = shot(named(gear, 'Shoe'), [0.3, 0.35, 0], 0.92, shiny);
   //the board grinding a rail
   out.grind = shot(part(board, () => true), [0.3, -0.5, 0.25], 0.86, (_, pivot) => {
