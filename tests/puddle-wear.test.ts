@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { buildFloor } from '../src/gen/descent';
 import { PHYS, TILE } from '../src/physics/constants';
 import { puddleSpots } from '../src/render/puddles';
-import { GEAR } from '../src/run/gear';
+import { freshGear, GEAR } from '../src/run/gear';
 import { FloorSim } from '../src/sim/floor';
 
-describe('puddles wear the deck', () => {
-  const rolling = () => {
-    const sim = new FloorSim(buildFloor(9, 1));
+describe('puddles wear the bearings', () => {
+  const rolling = (wheels = 100) => {
+    const sim = new FloorSim(buildFloor(9, 1), undefined, 0, [], { ...freshGear(), wheels });
     sim.traffic.vehicles.length = 0;
     const sk = sim.skater;
     // a full puddle on the ground just ahead
@@ -16,18 +16,33 @@ describe('puddles wear the deck', () => {
     return sim;
   };
 
-  it('rolling through a formed puddle soaks the deck once, with a puddle event', () => {
+  it('rolling through a formed puddle washes out the bearings once, with a puddle event', () => {
     const sim = rolling();
     const sk = sim.skater;
     const deck = sim.gear.deck;
+    let rolled = 0;
     let splashes = 0;
     for (let i = 0; i < 90 && sk.mode === 'roll'; i++) {
       sim.step({ pressed: false, held: false });
+      rolled++;
       splashes += sim.events.filter((e) => e.type === 'puddle').length;
     }
     expect(sk.x).toBeGreaterThan(sim.puddles[0].x + sim.puddles[0].w); // rolled right through it
     expect(splashes).toBe(1);
-    expect(deck - sim.gear.deck).toBeCloseTo(GEAR.puddle, 5);
+    expect(100 - sim.gear.bearings).toBeCloseTo(GEAR.puddle + (rolled * GEAR.rollSec) / 60, 5);
+    expect(sim.gear.deck).toBe(deck);
+  });
+
+  it('fresh wheels push through a puddle; worn ones bog down in it', () => {
+    const through = (wheels: number) => {
+      const sim = rolling(wheels);
+      for (let i = 0; i < 90; i++) {
+        sim.step({ pressed: false, held: false });
+        if (sim.events.some((e) => e.type === 'puddle')) return sim.skater.hsp;
+      }
+      throw new Error('never reached the puddle');
+    };
+    expect(through(0)).toBeLessThan(through(100) * 0.7);
   });
 
   it('a puddle still forming, or one you ollie over, does nothing', () => {
@@ -41,12 +56,13 @@ describe('puddles wear the deck', () => {
     }
   });
 
-  it("a rainy floor has 5 to 15 puddles: rolling through every one costs about a floor's worth of ollies", () => {
+  it('a rainy floor has 5 to 15 puddles: rolling through every one can wreck fresh bearings, not past 0', () => {
     let most = 0;
     for (let seed = 1; seed <= 8; seed++) for (let floor = 1; floor <= 4; floor++) {
       const level = buildFloor(seed, floor);
       most = Math.max(most, puddleSpots(level, seed, floor).length);
     }
-    expect(most * GEAR.puddle).toBeLessThan(65); // 20 before the 2026-10-30 wear tuning made all wear about 3x
+    expect(most * GEAR.puddle).toBeGreaterThan(GEAR.wornFrom);
+    expect(most * GEAR.puddle).toBeLessThan(200);
   });
 });

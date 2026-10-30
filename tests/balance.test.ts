@@ -43,7 +43,8 @@ describe('balance (bot runs)', () => {
   }, 120000);
 
   //zack (2026-10-30): by the first skate shop, after act 1 (three floors and its escape; a floor 2 shop is rare),
-  //about 2.5 of the 4 parts should be worn past half and want replacing
+  //about 2.5 parts should be worn past half and want replacing (still, with bearings added: the bot never hits a
+  //puddle, so its bearings only take grit)
   it('gear: about 2.5 parts worn past half by the first shop', () => {
     const SHOP_SEEDS = 16;
     let worn = 0;

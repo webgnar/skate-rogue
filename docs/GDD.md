@@ -617,29 +617,30 @@ and a slot flashes when it fires. No Heat cool-down or boon reroll in the shop y
 
 ## Gear and wear
 
-zack, Oct 24, 2026: your gear wears out with use and has to be replaced at the shop. Four parts, each worn by
-the thing it takes the beating from:
+zack, Oct 24, 2026: your gear wears out with use and has to be replaced at the shop. Five parts (bearings added
+Oct 30), each worn by the thing it takes the beating from:
 
 | Part | Worn by | When it's worn |
 | --- | --- | --- |
 | **Deck** | Ollies (every pop, off the street, a ledge or a rail) | Ollies pop lower, down to −30% at 0 |
 | **Shoes** | Flip tricks (the flick scuffs the grip side) | Flip tricks in the air pop lower, down to −30% |
 | **Trucks** | Grinding (every second on a rail, ledge or roof edge) | Grinds settle slower, down to −30% |
-| **Wheels** | Going fast (every second above 1.25× cruising speed: rail exits, bombs, kickers) | Cruising speed drops, down to −20% |
+| **Wheels** | Going fast (every second above 1.25× cruising speed: rail exits, bombs, kickers), and broken glass (8 a stretch) | Under 50, broken glass slams you instead of crunching under the wheels; puddles bog you down more (6% of your speed on fresh wheels, 45% on dead ones); cruising speed drops a little, down to −7% |
+| **Bearings** | Puddles (12 each) and grit (0.3 every second rolling on the ground) | Cruising speed drops, down to −20%: the main speed part (zack, Oct 30) |
 
 - **Condition** runs from 100 (fresh) to 0. A part costs you nothing until it's half worn; below 50 the cost grows
   in a straight line to the most it can be at 0. Nothing ever breaks outright or ends a run: busted gear makes the
   street harder, so it's a pressure, never a wall.
 - **How fast:** tuned so that by the first skate shop (after act 1's three floors and its escape) about 2.5 of
-  the 4 parts are worn past half and want replacing (zack, 2026-10-30). For the reference bot (which skates as
+  the parts are worn past half and want replacing (zack, 2026-10-30; still about 2.5 with bearings added). For the reference bot (which skates as
   little as it can) that's the wheels and deck well past half, the shoes about half the time, and the trucks not yet
-  (the bot grinds little). A part you lean on loses about 20 to 40 a floor. Your build decides what wears: a grind
+  (the bot grinds little); its bearings sit around 83, since balance runs have no rain. A part you lean on loses about 20 to 40 a floor. Your build decides what wears: a grind
   build eats trucks, a flip build eats shoes. `npm run balance` prints the first-shop count.
 - **The run keeps it:** wear carries from floor to floor and resets with a new run. Fresh gear every run.
 - **The shop** always has a gear row under the mod stock: New Deck $25, New Shoes $15, New Trucks $20, New Wheels
-  $15. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
+  $15, New Bearings $15. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
   a new mod, or keep your setup rolling.
-- **HUD:** four bars in the GEAR WEAR panel, bottom right (DECK, TRUCKS, WHEELS, SHOES), green while fresh,
+- **HUD:** five bars in the GEAR WEAR panel, bottom right (DECK, TRUCKS, WHEELS, BEARINGS, SHOES), green while fresh,
   yellow once a part starts costing you and red, blinking, from 15. A callout fires when a part wears past half
   ("SHOES WORN") and again near the end ("DECK BUSTED!").
 - **Looks (models and effects threads):** worn parts should show on Lou: a chipped, delaminating deck nose and

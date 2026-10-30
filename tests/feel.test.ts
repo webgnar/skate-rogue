@@ -361,10 +361,10 @@ describe('district gravity', () => {
 describe('worn gear', () => {
   it('worn wheels rock you more on a sketchy landing, worn trucks on a rail', () => {
     const street = levelOf(FLAT).streetY;
-    const rockLanding = (speed: number) => {
+    const rockLanding = (grip: number) => {
       const y = street - 8 * TILE;
       const sk = new Skater(withExtras([{ kind: 'roof', x0: 0, x1: 4 * TILE, y, row: -1 }], [], { x: TILE, y }));
-      sk.gear = { ollie: 1, trick: 1, grind: 1, speed };
+      sk.gear = { ollie: 1, trick: 1, grind: 1, speed: 1, grip };
       let w = 0;
       for (let f = 0; f < 200; f++) {
         sk.step({ pressed: false, held: false });
@@ -372,11 +372,11 @@ describe('worn gear', () => {
       }
       return w;
     };
-    expect(rockLanding(0.8)).toBeGreaterThan(rockLanding(1) * 1.2);
+    expect(rockLanding(0)).toBeGreaterThan(rockLanding(1) * 1.2);
     const rockRail = (grind: number) => {
       const rail = new CurvedRail(3 * TILE, street - 40, 30 * TILE, street - 40, 0);
       const sk = new Skater(withExtras([], [rail], { x: 3 * TILE + 4, y: street - 50 }));
-      sk.gear = { ollie: 1, trick: 1, grind, speed: 1 };
+      sk.gear = { ollie: 1, trick: 1, grind, speed: 1, grip: 1 };
       sk.mode = 'air';
       sk.vsp = 8;
       let w = 0;

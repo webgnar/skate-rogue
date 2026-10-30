@@ -4,6 +4,11 @@ import { PHYS, TILE } from '../src/physics/constants';
 import { FloorSim } from '../src/sim/floor';
 import { FLAT, levelOf, pressAt } from './helpers';
 
+const GLASS = [
+  '................', '................', '................', '................', '................',
+  '................', '................', '................', '......^^........', '################',
+];
+
 const RAIL = [
   '................', '................', '................', '................', '................',
   '................', '................', '................', '..============..', '################',
@@ -11,12 +16,13 @@ const RAIL = [
 
 describe('gear wear', () => {
   it('fresh gear and gear down to half cost nothing; worn gear costs more the closer it gets to 0', () => {
-    expect(gearScale(freshGear())).toEqual({ ollie: 1, trick: 1, grind: 1, speed: 1 });
+    expect(gearScale(freshGear())).toEqual({ ollie: 1, trick: 1, grind: 1, speed: 1, grip: 1 });
     expect(wornness(GEAR.wornFrom)).toBe(0);
     expect(wornness(25)).toBeCloseTo(0.5);
-    const dead = gearScale({ deck: 0, shoes: 0, trucks: 0, wheels: 0 });
+    const dead = gearScale({ deck: 0, shoes: 0, trucks: 0, wheels: 0, bearings: 0 });
     expect(dead.ollie).toBeCloseTo(1 - GEAR.max.deck);
-    expect(dead.speed).toBeCloseTo(1 - GEAR.max.wheels);
+    expect(dead.speed).toBeCloseTo((1 - GEAR.max.wheels) * (1 - GEAR.max.bearings));
+    expect(dead.grip).toBe(0);
   });
 
   it('ollies wear the deck, flip tricks the shoes', () => {
@@ -71,5 +77,37 @@ describe('gear wear', () => {
     expect(replace(worn, 100, 'shoes')).toEqual({ gear: freshGear(), cash: 100 - GEAR.price.shoes });
     expect(replace(worn, 5, 'shoes')).toBeNull();
     expect(replace(worn, 100, 'deck')).toBeNull();
+  });
+
+  it('bearings drive your speed far more than wheels do', () => {
+    const speed = (g: Partial<ReturnType<typeof freshGear>>) => gearScale({ ...freshGear(), ...g }).speed;
+    expect(1 - speed({ bearings: 0 })).toBeGreaterThan(2 * (1 - speed({ wheels: 0 })));
+    expect(speed({ bearings: GEAR.wornFrom })).toBe(1);
+  });
+
+  it('rolling works grit into the bearings, slowly', () => {
+    const sim = new FloorSim(levelOf(FLAT));
+    for (let f = 0; f < 60; f++) sim.step({ pressed: false, held: false });
+    expect(sim.gear.bearings).toBeCloseTo(100 - GEAR.rollSec, 5);
+  });
+
+  it('wheels at least half fresh roll over broken glass and take a chunk of wear; worn ones slam', () => {
+    const over = (wheels: number) => {
+      const sim = new FloorSim(levelOf(GLASS), undefined, 0, [], { ...freshGear(), wheels });
+      const seen: string[] = [];
+      //(levelOf repeats the layout: the first glass is 22 tiles in, the next 16 past it)
+      for (let f = 0; f < 260; f++) {
+        sim.step({ pressed: false, held: false });
+        seen.push(...sim.skater.events.map((e) => e.type), ...sim.events.map((e) => e.type));
+      }
+      return { seen, wheels: sim.gear.wheels };
+    };
+    const fresh = over(100);
+    expect(fresh.seen).toContain('glass');
+    expect(fresh.seen).not.toContain('slam');
+    expect(fresh.wheels).toBeCloseTo(100 - GEAR.glass, 5);
+    const worn = over(GEAR.roughFrom - 1);
+    expect(worn.seen).toContain('slam');
+    expect(worn.seen).not.toContain('glass');
   });
 });

@@ -1,9 +1,10 @@
 // How worn gear looks (GDD: Gear and wear), on the skater rig's board and shoes. Wear shows before it costs you:
 // from fresh (100) the deck's nose and tail chip and its graphic rubs through to the wood, the trucks dull, rust and
 // the hangers grind flat, the wheels go grubby, cone on their inner edge and flat-spot, and the lead shoe scuffs
-// where the ollie drags it up the grip, then wears a hole. The board is board.glb (art/board.py); the shoe scuff
+// where the ollie drags it up the grip, then wears a hole, and the bearings in the wheels' faces rust. The board is board.glb (art/board.py); the shoe scuff
 // and hole are decals in each skater's GLB ('WearScuff', 'WearHole'), hidden till worn.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GEAR, type Gear } from '../run/gear';
 
 // art/board.py, in the board's own space (x along the deck, y up, z across)
@@ -52,13 +53,60 @@ function chip(pos: THREE.BufferAttribute, fresh: Float32Array, i: number, v: num
   pos.setX(i, Math.sign(x) * (Math.abs(x) - bite * Math.min(1, into) ** 2));
 }
 
+// The bearings, in each wheel's outer face round the axle nut (board.py has none): a Swiss-style black shield with
+// a red ring and bright races, from zack's refs (2026-10-30). One mesh for all eight faces, coloured per vertex.
+const BEARING_R = (11 * INCH) / 25.4; // a 22 mm bearing
+const BEARING = [
+  { r0: 0.78, r1: 1, color: 0xd8dce2 }, // outer race
+  { r0: 0.48, r1: 0.78, color: 0x17171b }, // the black shield
+  { r0: 0.58, r1: 0.66, color: 0xe8322a }, // its red ring
+  { r0: 0.3, r1: 0.48, color: 0xd8dce2 }, // inner race
+];
+export function bearingCaps(mat: THREE.Material): THREE.Mesh {
+  const geos: THREE.BufferGeometry[] = [];
+  const c = new THREE.Color();
+  for (const x of [-BOARD.bolts, BOARD.bolts]) {
+    for (const side of [-1, 1]) {
+      BEARING.forEach((ring, i) => {
+        const g = new THREE.RingGeometry(ring.r0 * BEARING_R, ring.r1 * BEARING_R, 14).toNonIndexed();
+        //facing out from the wheel, just proud of its face (the red ring a hair prouder, over the shield)
+        if (side < 0) g.rotateY(Math.PI);
+        g.translate(x, BOARD.axleY, side * (BOARD.track + WHEEL_W / 2 + 0.001 + i * 0.0002));
+        c.setHex(ring.color);
+        g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: g.attributes.position.count }, () => [c.r, c.g, c.b]).flat(), 3));
+        geos.push(g);
+      });
+    }
+  }
+  const mesh = new THREE.Mesh(mergeGeometries(geos), mat);
+  mesh.name = 'Bearings';
+  mesh.userData.mat = 'bearings';
+  return mesh;
+}
+
 export function wearBoard(board: THREE.Object3D, g: Gear): void {
   const deck = look(g.deck);
   const trucks = look(g.trucks);
   const wheels = look(g.wheels);
+  const bearings = look(g.bearings);
   board.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
+    if (mesh.userData.mat === 'bearings') {
+      //grimy, then rusting out from the shield's edge in blotches as the water gets in
+      const col = mesh.geometry.attributes.color as THREE.BufferAttribute;
+      const tint = original(col);
+      const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+      const c = new THREE.Color();
+      for (let i = 0; i < col.count; i++) {
+        const blot = hash(Math.round(pos.getX(i) * 400), Math.round(pos.getY(i) * 400));
+        c.setRGB(tint[i * 3], tint[i * 3 + 1], tint[i * 3 + 2]).lerp(DULL, Math.min(1, bearings * 1.5) * 0.5);
+        c.lerp(RUST, Math.max(0, bearings * 1.6 - 0.6) * (0.4 + 0.6 * blot));
+        col.setXYZ(i, c.r, c.g, c.b);
+      }
+      col.needsUpdate = true;
+      return;
+    }
     const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
     const fresh = original(pos);
     const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
