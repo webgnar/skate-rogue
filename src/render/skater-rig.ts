@@ -645,6 +645,11 @@ export class SkaterRig {
     this.snap?.board.multiply(new THREE.Matrix4().makeRotationY(-Math.PI));
   }
 
+  // the group the board's meshes ride in (the gnar glow's board shard, shard-aura.ts)
+  get boardGroup(): THREE.Object3D {
+    return this.boardFace;
+  }
+
   get boardReversed(): boolean {
     return this.boardBack;
   }

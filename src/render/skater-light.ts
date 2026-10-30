@@ -11,7 +11,7 @@ export const SKATER_LIGHT = {
   key: 0.8, // key light at full night
   rainKey: 0.55, // extra key light in a downpour-ish rain (rain 1)
   lamp: 2.2, // the lamp light from above, in the middle of a cobra head's pool
-  rim: 1.3, // rim width in CSS px at full dark
+  rim: 2.1, // rim width in CSS px at full dark, past the city ink (the skater's own ink is 0.8 px thicker, game.ts SKATER_INK)
   ease: 6, // how fast the lamp light follows the skater in and out of pools, per second
 };
 
