@@ -23,7 +23,8 @@ export class Sound {
   private grind: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
   private roll: { gain: GainNode; filter: BiquadFilterNode } | null = null;
   private siren: { gain: GainNode; osc: OscillatorNode; lfo: OscillatorNode } | null = null;
-  private music: { id: MusicId; src: AudioBufferSourceNode } | null = null;
+  private music: { id: MusicId; src: AudioBufferSourceNode; track: string; at: number } | null = null;
+  private beats = new Map<string, number[]>(); // each track's beats, seconds in (public/music/<name>.beats.json)
   private want: MusicId | null = null;
   private track: Record<MusicId, number> = { gameplay: 0, title: 0 }; // where each slot is in its list
   private away = false; // the app is in the background (sleep)
@@ -70,7 +71,39 @@ export class Sound {
   private loadMusic(): void {
     if (this.musicLoading || SETTINGS.music <= 0) return;
     this.musicLoading = true;
-    for (const id of new Set(Object.values(MUSIC).flat())) void this.load(`music/${id}`);
+    for (const id of new Set(Object.values(MUSIC).flat())) {
+      void this.load(`music/${id}`);
+      void this.loadBeats(id);
+    }
+  }
+
+  private async loadBeats(id: string): Promise<void> {
+    try {
+      const res = await fetch(`${this.base}music/${id}.beats.json`);
+      const beats = ((await res.json()) as { beats: number[] }).beats;
+      if (Array.isArray(beats) && beats.length) this.beats.set(id, beats);
+    } catch {
+      //no beats file: the gnar glow keeps its steady pulse
+    }
+  }
+
+  // how many beats of the playing track have gone by (looping on), or null with no track or no beats for it
+  beatIndex(): number | null {
+    if (!this.ctx || !this.music || this.ctx.state !== 'running') return null;
+    const beats = this.beats.get(this.music.track);
+    const len = this.music.src.buffer?.duration ?? 0;
+    if (!beats || !len) return null;
+    const t = this.ctx.currentTime - this.music.at;
+    if (t < 0) return null;
+    const pos = t % len;
+    let lo = 0;
+    let hi = beats.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (beats[mid] <= pos) lo = mid + 1;
+      else hi = mid;
+    }
+    return Math.floor(t / len) * beats.length + lo;
   }
 
   applyVolumes(): void {
@@ -220,7 +253,8 @@ export class Sound {
       old.src.stop();
     }
     if (!list.length) return;
-    const buf = this.buffers.get(list[this.track[id] % list.length]);
+    const track = list[this.track[id] % list.length];
+    const buf = this.buffers.get(track);
     if (!buf) return; // still loading: load() starts it
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
@@ -233,7 +267,7 @@ export class Sound {
     };
     src.connect(this.musicBus);
     src.start();
-    this.music = { id, src };
+    this.music = { id, src, track, at: this.ctx.currentTime };
   }
 
   private setGrind(on: boolean): void {
