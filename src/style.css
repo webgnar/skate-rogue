@@ -35,14 +35,12 @@ html, body {
   text-align: center;
   font-size: clamp(24px, 6vw, 44px);
   letter-spacing: 2px;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 0.12s, transform 0.12s;
 }
-#callout.show { opacity: 1; transform: scale(1); }
-#callout.trick { color: var(--trick); }
-#callout.good { color: var(--good); }
-#callout.bad { color: var(--bad); }
+/* one per callout (src/ui/callouts.ts floats them up off the screen); a newer one pushes it up a line */
+#callout .pop { position: absolute; top: 0; left: 0; right: 0; padding: 0 12px; transition: translate 0.18s ease-out; will-change: transform; }
+#callout .trick { color: var(--trick); }
+#callout .good { color: var(--good); }
+#callout .bad { color: var(--bad); }
 #hint {
   bottom: max(12px, env(safe-area-inset-bottom));
   left: 0;
