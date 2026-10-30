@@ -304,6 +304,7 @@ export class Game {
   private readonly visor: VisorGlint;
   private readonly skaterLight: SkaterLight;
   private gnarGlow = 0; // 0..1, eases with the gnar state
+  private lastBeat = 0; // the soundtrack's beat count last frame (the gnar glow steps on each)
   private clock = 0;
   private readonly puddleRes = new THREE.Vector2();
   private ghostMesh: THREE.Mesh;
@@ -1345,6 +1346,10 @@ export class Game {
     this.view.rhythm.combo(skating ? this.run.combo : 0);
     this.view.rhythm.update(dt, skating ? flow : 0);
     this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
+    //the glow's shards step on the soundtrack's beat (a steady 0.58 s pulse when there's no music to follow)
+    const beat = this.sound?.beatIndex() ?? Math.floor(this.clock / 0.58);
+    if (beat !== this.lastBeat && this.gnarGlow > 0.01) this.aura.beat();
+    this.lastBeat = beat;
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
     this.skaterInk.uniforms.uWidth.value = Math.max(1, SKATER_INK * this.view.resolution);
     this.skaterLight.update(dt, this.sprite.mesh.position, (x, y, out) => this.view.night.lights.lightAt(x, y, out), this.gnarGlow > 0.01, this.view.resolution);

@@ -3,32 +3,44 @@
 // low-poly hull of the vertices it moves (the extreme points along a handful of directions, wrapped in a convex
 // hull), riding the bone; the board gets one too. Drawn as outlines pushed out behind the skater, the hulls' union
 // is a faceted silhouette of straight edges: a glow in the gnar colours and a black ink edge round it.
+//
+// Three levels of it, finer to chunkier (zack: "alternate between the different poly types to the beat of the
+// song"): the game steps it on each beat of the soundtrack, low, lower, lowest, lower, low...
 import * as THREE from 'three';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 import { glowMaterial, inkNormals, INK } from './toon';
 
 export const SHARDS = {
-  glow: 8, // CSS px the glow reaches past the hulls at full
+  glow: 6.5, // CSS px the glow reaches past the hulls at full
   edge: 3, // and the black edge past that
-  swell: 1.15, // each hull grown about its middle, so the facets stand clear of the body
   minVerts: 12, // bones that move fewer vertices than this get no shard of their own (fingers, toe tips)
 };
 
-// the directions the hull takes its extreme points along: the axes and the cube's diagonals, both ways. Fewer
-// directions, fewer and longer edges
-const DIRS = [
-  [1, 0, 0], [0, 1, 0], [0, 0, 1],
-  [1, 1, 1], [1, 1, -1], [1, -1, 1], [-1, 1, 1],
-].flatMap(([x, y, z]) => {
-  const v = new THREE.Vector3(x, y, z).normalize();
-  return [v, v.clone().negate()];
-});
+const both = (axes: number[][]) =>
+  axes.flatMap(([x, y, z]) => {
+    const v = new THREE.Vector3(x, y, z).normalize();
+    return [v, v.clone().negate()];
+  });
+const AXES = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+const FACES = [[1, 1, 0], [1, -1, 0], [1, 0, 1], [1, 0, -1], [0, 1, 1], [0, 1, -1]];
+const CORNERS = [[1, 1, 1], [1, 1, -1], [1, -1, 1], [-1, 1, 1]];
+
+// the levels, finest first: the directions a hull takes its extreme points along (fewer directions, fewer and
+// longer edges) and how much it's grown about its middle so the facets stand clear of the body. zack picked the
+// finest of the three mockups as the look; it's where the glow starts and rests
+export const LEVELS = [
+  { dirs: both([...AXES, ...FACES, ...CORNERS]), swell: 1.08 },
+  { dirs: both([...AXES, ...CORNERS]), swell: 1.15 },
+  { dirs: both(CORNERS), swell: 1.3 },
+];
+// the order the beat steps through them
+const STEPS = [0, 1, 2, 1];
 
 // the low-poly hull of some points: the farthest along each direction
-export function shardOf(points: THREE.Vector3[]): THREE.BufferGeometry | null {
+export function shardOf(points: THREE.Vector3[], level = LEVELS[0]): THREE.BufferGeometry | null {
   if (points.length < 4) return null;
   const picked = new Set<THREE.Vector3>();
-  for (const d of DIRS) {
+  for (const d of level.dirs) {
     let best = points[0];
     let far = -Infinity;
     for (const p of points) {
@@ -45,7 +57,7 @@ export function shardOf(points: THREE.Vector3[]): THREE.BufferGeometry | null {
     const mid = new THREE.Vector3();
     for (const p of picked) mid.add(p);
     mid.divideScalar(picked.size);
-    const geo = new ConvexGeometry([...picked].map((p) => p.clone().sub(mid).multiplyScalar(SHARDS.swell).add(mid)));
+    const geo = new ConvexGeometry([...picked].map((p) => p.clone().sub(mid).multiplyScalar(level.swell).add(mid)));
     if (!geo.getAttribute('position')?.count) return null;
     inkNormals(geo);
     return geo;
@@ -57,7 +69,8 @@ export function shardOf(points: THREE.Vector3[]): THREE.BufferGeometry | null {
 export class ShardAura {
   private readonly glow = glowMaterial(INK.width, 0xffd23f, 0.002);
   private readonly edge = glowMaterial(INK.width, INK.color, 0.004);
-  private readonly hulls: THREE.Mesh[] = [];
+  private readonly hulls: THREE.Mesh[][] = LEVELS.map(() => []);
+  private step = 0; // where in STEPS the beat has it
 
   // root: the skater rig's mesh; board: the group the board's meshes ride in
   constructor(root: THREE.Object3D, board: THREE.Object3D) {
@@ -74,8 +87,10 @@ export class ShardAura {
       for (const m of parts) if (m.skeleton.bones === bones || m.skeleton.bones.every((b, i) => b === bones[i])) this.points(m, per);
       per.forEach((pts, b) => {
         if (pts.length < SHARDS.minVerts) return;
-        const geo = shardOf(pts);
-        if (geo) this.add(bones[b], geo);
+        LEVELS.forEach((level, l) => {
+          const geo = shardOf(pts, level);
+          if (geo) this.add(bones[b], geo, l);
+        });
       });
     }
     this.board(board);
@@ -115,11 +130,13 @@ export class ShardAura {
       const pos = mesh.geometry.getAttribute('position');
       for (let i = 0; i < pos.count; i++) pts.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(m));
     });
-    const geo = shardOf(pts);
-    if (geo) this.add(board, geo);
+    LEVELS.forEach((level, l) => {
+      const geo = shardOf(pts, level);
+      if (geo) this.add(board, geo, l);
+    });
   }
 
-  private add(parent: THREE.Object3D, geo: THREE.BufferGeometry): void {
+  private add(parent: THREE.Object3D, geo: THREE.BufferGeometry, level: number): void {
     for (const mat of [this.edge, this.glow]) {
       const hull = new THREE.Mesh(geo, mat);
       hull.userData.ink = true; // not a body part: the ink, rims and wear leave it alone
@@ -127,14 +144,23 @@ export class ShardAura {
       hull.visible = false;
       hull.renderOrder = -1;
       parent.add(hull);
-      this.hulls.push(hull);
+      this.hulls[level].push(hull);
     }
+  }
+
+  // on a beat: the next level (low, lower, lowest, lower, ...)
+  beat(): void {
+    this.step = (this.step + 1) % STEPS.length;
   }
 
   // amount 0..1 grows it in; t (seconds) cycles the colour gold, magenta, cyan (as the old Aura did)
   set(amount: number, t: number, pixelRatio: number): void {
     const on = amount > 0.01;
-    for (const h of this.hulls) h.visible = on;
+    if (!on) this.step = 0; // each gnar starts on the finest
+    const level = STEPS[this.step];
+    this.hulls.forEach((hulls, l) => {
+      for (const h of hulls) h.visible = on && l === level;
+    });
     if (!on) return;
     const glow = SHARDS.glow * amount * (0.85 + 0.15 * Math.sin(t * 12));
     this.glow.uniforms.uWidth.value = glow * pixelRatio;
