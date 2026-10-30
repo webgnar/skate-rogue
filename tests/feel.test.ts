@@ -7,21 +7,12 @@ import { RIG_SCALE } from '../src/physics/tuck';
 import { SCALE } from '../src/render/skater-rig';
 import { TRICK_CATCH, TRICK_ROLL } from '../src/physics/tricks';
 import { CLIPS, sample } from '../src/render/poses';
-import { FLAT, levelOf, pressAt, run } from './helpers';
+import { FLAT, levelOf, pressAt, run, withExtras } from './helpers';
 import { addBoon } from '../src/boons/defs';
 import { NO_MODS, skaterMods } from '../src/boons/mods';
 
 type Land = Extract<SkaterEvent, { type: 'land' }>;
 const lands = (sk: Skater) => sk.events.filter((e): e is Land => e.type === 'land');
-
-// the street, with extra surfaces and rails dropped on it
-// (no street under the banks, so you roll onto them)
-function withExtras(surfaces: Surface[], rails: CurvedRail[] = [], start?: { x: number; y: number }): Level {
-  const base = levelOf(FLAT);
-  const banks = surfaces.filter((s) => s.kind === 'bank');
-  const street = base.street.map((on, c) => on && !banks.some((s) => (c + 1) * TILE > s.x0 && c * TILE < s.x1));
-  return { ...base, street, surfaces: [...base.surfaces, ...surfaces], rails: [...base.rails, ...rails], startX: start?.x ?? base.startX, startY: start?.y ?? base.startY };
-}
 
 // rolling off a roof `tiles` up onto the street
 function dropFrom(tiles: number): Skater {

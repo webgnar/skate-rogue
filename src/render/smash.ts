@@ -8,9 +8,11 @@ import * as THREE from 'three';
 import { warmMesh } from './shader-keep';
 import type { Particles } from './particles';
 import { FX } from './fx-settings';
+import { stuffOf, type Stuff } from '../sim/stuff';
+
+export { stuffOf, type Stuff };
 
 export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb' | 'car';
-export type Stuff = 'glass' | 'metal' | 'wood' | 'plastic' | 'stone' | 'paper';
 
 export interface SmashHit {
   prop: string; // the prop's model name, such as 'Bottle' or 'NewsBoxRed'
@@ -38,26 +40,6 @@ export const SMASH = {
   //something still does. Add 'roll', 'land', 'grind', 'hop' or 'bomb' back to bring it back for those
   shakeOn: new Set<SmashHow>(['slam', 'car']),
 };
-
-// what a prop is made of, from its name
-const STUFF: [RegExp, Stuff][] = [
-  //the other worlds' smashables (props.ts WORLD_PROPS): pottery and marble chip like stone, crystal like glass
-  [/crystal/i, 'glass'],
-  [/jug|urn|amphora|vase|mug|bust|shell|coral/i, 'stone'],
-  [/chest|haybale/i, 'wood'],
-  [/battery|holocube|serverrack|fuelcell/i, 'metal'],
-  [/cardboard/i, 'paper'], // before wood's 'board'
-  [/bottle|window|glass|lamp/i, 'glass'],
-  [/hydrant|newsbox|mailbox|meter|sign|pole|can|rail/i, 'metal'],
-  [/crate|bench|pallet|board|sandwich/i, 'wood'],
-  [/cone|bin|barrel|cooler/i, 'plastic'],
-  [/planter|pot|brick|statue|column|bust/i, 'stone'],
-  [/paper|box|news|poster/i, 'paper'],
-];
-
-export function stuffOf(prop: string): Stuff {
-  return STUFF.find(([re]) => re.test(prop))?.[1] ?? 'plastic';
-}
 
 const hex = (c: number) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
 const LOOK: Record<Stuff, { chips: number[][]; dust: number[][] | null; sparks: boolean; words: string[]; piece: number }> = {
