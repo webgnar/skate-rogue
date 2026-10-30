@@ -48,7 +48,7 @@ import { hideProp, propsFor, restyle } from '../render/props';
 import { BIOMES, biomeMood, type BiomeId } from '../render/biomes';
 import { SkaterLight } from '../render/skater-light';
 import { clockFor, mixMood, moodAt, rainLevel, rainy, WEATHER, type Mood } from '../render/atmosphere';
-import { puddleSpots } from '../render/puddles';
+import { chinatownPuddles, puddleSpots } from '../render/puddles';
 import { FloorSim, type FloorEvent } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
 import { SkyView } from '../render/sky-view';
@@ -597,7 +597,7 @@ export class Game {
     this.prev = from ? { x: this.prev.x + from.dx, y: this.prev.y + from.dy } : { x: this.skater.x, y: this.skater.y };
     if (!from) this.view.setLevel(this.level, this.seed, this.floor);
     const rain = this.applyMood(!!from);
-    this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
+    this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain, chinatownPuddles(this.level, this.seed, this.floor));
     //the sim wears the deck rolling through them, so it needs them in its own units
     this.sim.puddles = this.view.puddles.forSim().map((p) => ({ ...p, x: p.x * TILE, y: this.level.streetY - p.y * TILE, w: p.w * TILE }));
     this.dripEdges = this.level.surfaces
@@ -1072,7 +1072,7 @@ export class Game {
     for (const d of sim.traffic.doors) keep(d, 'open');
     for (const h of sim.traffic.hillCross) for (const c of h.cars) keep(c, 'z');
     for (const c of sim.traffic.cabs) {
-      keep(c, 'turn');
+      keep(c, 'turn', 'z');
       keep(c.box, 'x0', 'x1');
     }
     for (const t of sim.trains) {

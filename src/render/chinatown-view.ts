@@ -16,7 +16,6 @@ import { at } from '../game/interp';
 const PAINTS = [0xd94a4a, 0x3a7be8, 0xe8e2d0, 0x48b86a, 0x2a2a30, 0xc8a050];
 const CAB_YELLOW = 0xf6c21c;
 const LEN = 2.1; // tiles: a cross car's length, along the cross street
-const SIDE_Z = -3.2; // where a cab's turned off to, up the side street
 
 export class ChinatownView {
   readonly group = new THREE.Group();
@@ -125,7 +124,7 @@ export class ChinatownView {
     for (const { cab, mesh } of this.cabs) {
       mesh.visible = cab.state !== 'wait' && cab.state !== 'gone';
       const turn = at(cab, 'turn');
-      mesh.position.set(toX((at(cab.box, 'x0') + at(cab.box, 'x1')) / 2), 0, turn * SIDE_Z);
+      mesh.position.set(toX((at(cab.box, 'x0') + at(cab.box, 'x1')) / 2), 0, at(cab, 'z'));
       //swinging left, up the side street
       mesh.rotation.y = (turn * Math.PI) / 2;
     }
