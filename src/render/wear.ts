@@ -135,3 +135,27 @@ export function wearShoes(model: THREE.Object3D, condition: number): void {
     if (o.userData.mat === 'WearHole') o.visible = condition < HOLE_FROM;
   });
 }
+
+// paint the grip tape (src/board/grips.ts): its vertices in a merged board, or its own material. The colour goes into
+// the fresh copy too, so wear redraws over the new grip
+export function paintGrip(board: THREE.Object3D, color: number): void {
+  const c = new THREE.Color(color);
+  board.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
+    if (mesh.userData.mat === 'grip' || (!col && mesh.userData.grip)) {
+      (mesh.material as THREE.MeshToonMaterial).color.copy(c);
+      return;
+    }
+    if (!col) return;
+    const fresh = original(col);
+    for (const [a, b] of ranges(mesh, 'grip')) {
+      for (let i = a; i < b; i++) {
+        fresh.set([c.r, c.g, c.b], i * 3);
+        col.setXYZ(i, c.r, c.g, c.b);
+      }
+    }
+    col.needsUpdate = true;
+  });
+}

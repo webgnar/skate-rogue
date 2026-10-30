@@ -88,3 +88,10 @@ export function gearArt(part: GearPart): string {
 export function gearIcon(part: GearPart): string {
   return pic(GEAR_ART[part]);
 }
+
+// a grip colour card's picture: the board from above, its grip tape in the colour, the bolt heads showing
+export function gripArt(color: string): string {
+  const bolts = [-27, 27].flatMap((x) => [-4, 4].map((y) => `<circle cx="${50 + x + (y > 0 ? 2 : -2)}" cy="${20 + y}" r="1.6" fill="#ccd"/>`)).join('');
+  return `<span class="art"><svg class="grip" viewBox="0 0 100 40" aria-hidden="true">
+    <rect x="4" y="8" width="92" height="24" rx="12" fill="${color}" stroke="#000" stroke-width="3"/>${bolts}</svg></span>`;
+}

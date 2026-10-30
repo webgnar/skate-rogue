@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
-import { wearBoard, wearShoes } from './wear';
+import { paintGrip, wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
@@ -24,7 +24,13 @@ const ARM_FIELDS = [
   ['armLRaise', 'armLFwd', 'armLElbow'],
   ['armRRaise', 'armRFwd', 'armRElbow'],
 ] as const;
-export const SCALE = 1.15; // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles
+// the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles at 1.15. zack (2026-10-30): "something
+// about the player character needs to be bigger. its too hard to see the board", so Lou is 1.2x that
+export const SCALE = 1.38;
+// and the board 1.4x again on top, a hero board that reads on a phone. Scaled about the deck's top, where the feet
+// stand, so the wheels reach lower: the game lifts the rig by LIFT (in the rig's units) to keep them on the ground
+export const BOARD_SIZE = 1.4;
+export const LIFT = BOARD.deckTop * (BOARD_SIZE - 1);
 const THIGH = 0.4;
 const SHIN = 0.4;
 const ANKLE = 0.075; // sole to ankle
@@ -142,6 +148,7 @@ export class SkaterRig {
     const m = this.mesh;
     m.scale.setScalar(SCALE);
     m.position.z = 0.25;
+    this.boardFace.scale.setScalar(BOARD_SIZE);
 
     // --- board ---
     this.buildBoard();
@@ -582,7 +589,9 @@ export class SkaterRig {
     const kickLen = (BOARD.tail - flatHalf) / Math.cos(BOARD.kick);
     const plank = (len: number) => {
       const g = new THREE.Group();
-      g.add(new THREE.Mesh(new THREE.BoxGeometry(len, 0.006, W).translate(0, -0.003, 0), grip));
+      const tape = new THREE.Mesh(new THREE.BoxGeometry(len, 0.006, W).translate(0, -0.003, 0), grip);
+      tape.userData.grip = true;
+      g.add(tape);
       g.add(new THREE.Mesh(new THREE.BoxGeometry(len, T - 0.006, W).translate(0, -0.006 - (T - 0.006) / 2, 0), deck));
       return g;
     };
@@ -999,6 +1008,11 @@ export class SkaterRig {
     this.worn = key;
     if (this.board) wearBoard(this.board, g);
     wearShoes(this.mesh, g.shoes);
+  }
+
+  // the grip tape's colour (src/board/grips.ts)
+  setGrip(color: number): void {
+    paintGrip(this.board ?? this.boardFace, color);
   }
 
   // push at cruising speed, roll when carrying extra speed from rails or drops

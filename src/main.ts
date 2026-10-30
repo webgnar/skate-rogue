@@ -8,11 +8,12 @@ import type { UnderView } from './run/spot';
 import { GEAR, wornness } from './run/gear';
 import { chainText, modDef, type ModId, type Slots } from './board/mods';
 import { dropBoard, type ShopState } from './board/shop';
+import { gripDef } from './board/grips';
 import { drawWires } from './ui/board-wires';
 import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
 import { boonArt, boonIcon, spotArt } from './ui/boon-art';
-import { gearArt, gearIcon, modArt, slotArt } from './ui/shop-art';
+import { gearArt, gearIcon, gripArt, modArt, slotArt } from './ui/shop-art';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
@@ -140,6 +141,15 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
   if (shop.board.length < v.maxSlots) {
     cards.push(`<button class="card-shop extra ${shop.cash < v.slotPrice ? 'poor' : ''}" data-buyslot>
       <span class="kind">BOARD</span><b>+1 SLOT</b>${slotArt()}<span class="text">Room for one more mod</span><span class="price">$${v.slotPrice}</span>
+    </button>`);
+  }
+  if (shop.grip) {
+    //the one grip colour this shop sells (src/board/grips.ts)
+    const g = gripDef(shop.grip);
+    const color = `#${g.color.toString(16).padStart(6, '0')}`;
+    cards.push(`<button class="card-shop gripcard ${shop.cash < v.gripPrice ? 'poor' : ''}" data-grip style="--c:${color}">
+      <span class="kind">GRIP</span><b>${esc(g.name.toUpperCase())}</b>${gripArt(color)}
+      <span class="text">New grip tape, yours for good</span><span class="price">$${v.gripPrice}</span>
     </button>`);
   }
   for (const p of GEAR_ORDER) {
