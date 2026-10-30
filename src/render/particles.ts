@@ -1,24 +1,54 @@
 // All the small stuff in one draw call: grind sparks, landing dust and slam debris. A fixed pool of square pixel
 // particles (matching QFS's pixel art) drawn as THREE.Points; debris gets an ink rim like the comic burst.
+// Grind sparks draw the original Gnar Run's spark sprites instead (public/sprites/fx/grind-sparks.png, three 16 px
+// frames: gold, white-hot, gold), flickering between frames and flipping like the old GameMaker o_grindspark.
 import * as THREE from 'three';
 import { ParticlePool } from './particle-pool';
 import { FX } from './fx-settings';
 
 const MAX = 256;
+const SPARK_FRAMES = 3;
+// which frames each kind of grind spark flickers through: a metal rail flashes white-hot, a ledge stays gold
+const SPARK_CYCLE: Record<GrindStyle, number[]> = { metal: [1, 0, 1, 2], concrete: [0, 2] };
+const NO_SPRITE = -1;
+
+// the sprite atlas, loaded once in the browser (tests build Particles under Node, with no images)
+function sparkTexture(): THREE.Texture {
+  const tex = new THREE.Texture();
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (typeof Image !== 'undefined') {
+    const img = new Image();
+    img.onload = () => {
+      tex.image = img;
+      tex.needsUpdate = true;
+    };
+    img.src = `${import.meta.env.BASE_URL}sprites/fx/grind-sparks.png`;
+  }
+  return tex;
+}
 
 const vertex = /* glsl */ `
   attribute float aSize;
   attribute float aAlpha;
   attribute float aInk;
   attribute vec3 aColor;
+  attribute float aSprite;
+  attribute float aFlip;
   uniform float uScale;
   varying vec3 vColor;
   varying float vAlpha;
   varying float vInk;
+  varying float vSprite;
+  varying float vFlip;
   void main() {
     vColor = aColor;
     vAlpha = aAlpha;
     vInk = aInk;
+    vSprite = aSprite;
+    vFlip = aFlip;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_PointSize = aSize * uScale / -mv.z;
     gl_Position = projectionMatrix * mv;
@@ -26,11 +56,27 @@ const vertex = /* glsl */ `
 `;
 
 const fragment = /* glsl */ `
+  uniform sampler2D uSparks;
   varying vec3 vColor;
   varying float vAlpha;
   varying float vInk;
+  varying float vSprite;
+  varying float vFlip;
   void main() {
     if (vAlpha < 0.01) discard;
+    if (vSprite > -0.5) {
+      // a spark sprite frame: one of 8 orientations (quarter turns, then a mirror), crisp pixels, tinted
+      vec2 uv = gl_PointCoord - 0.5;
+      float o = vFlip;
+      if (mod(o, 2.0) > 0.5) uv = vec2(-uv.y, uv.x);
+      if (mod(floor(o / 2.0), 2.0) > 0.5) uv = -uv;
+      if (o > 3.5) uv.x = -uv.x;
+      uv += 0.5;
+      vec4 s = texture2D(uSparks, vec2((vSprite + uv.x) / ${SPARK_FRAMES}.0, 1.0 - uv.y));
+      if (s.a < 0.5) discard;
+      gl_FragColor = vec4(s.rgb * vColor, vAlpha);
+      return;
+    }
     vec2 e = abs(gl_PointCoord - 0.5);
     vec3 col = vColor;
     if (vInk > 0.5 && max(e.x, e.y) > 0.3) col = vec3(0.06, 0.03, 0.08);
@@ -56,11 +102,11 @@ const SPARK_HOT = [
   [1, 0.96, 0.7],
 ];
 
-// a concrete ledge: duller orange sparks, with chips of concrete
-const SPARK_WARM = [
-  [1, 0.7, 0.25],
-  [1, 0.55, 0.15],
-  [1, 0.85, 0.45],
+// a concrete ledge: the gold sprite frames, warmed toward orange, with chips of concrete
+const SPARK_TINT = [
+  [1, 0.9, 0.8],
+  [1, 0.8, 0.62],
+  [1, 1, 1],
 ];
 
 // flip trails by trick: kickflips cyan, heelflips magenta, shuvs yellow, 180s white
@@ -125,8 +171,14 @@ export class Particles {
   private readonly size: THREE.BufferAttribute;
   private readonly alpha: THREE.BufferAttribute;
   private readonly ink: THREE.BufferAttribute;
+  private readonly sprite: THREE.BufferAttribute;
+  private readonly flip: THREE.BufferAttribute;
+  private readonly cycle = new Float32Array(MAX).fill(NO_SPRITE); // a SPARK_CYCLE index, or NO_SPRITE for a pixel
+  private readonly frame0 = new Float32Array(MAX); // where in its cycle this spark starts
+  private readonly fps = new Float32Array(MAX); // how fast it flickers
   private readonly mat: THREE.ShaderMaterial;
   private sparkDebt = 0;
+  private flareDebt = 0;
   private trailDebt = 0;
   private splashDebt = 0;
   private flipDebt = 0;
@@ -140,15 +192,19 @@ export class Particles {
     this.size = attr(1);
     this.alpha = attr(1);
     this.ink = attr(1);
+    this.sprite = attr(1);
+    this.flip = attr(1);
     geo.setAttribute('position', this.pos);
     geo.setAttribute('aColor', this.col);
     geo.setAttribute('aSize', this.size);
     geo.setAttribute('aAlpha', this.alpha);
     geo.setAttribute('aInk', this.ink);
+    geo.setAttribute('aSprite', this.sprite);
+    geo.setAttribute('aFlip', this.flip);
     this.mat = new THREE.ShaderMaterial({
       vertexShader: vertex,
       fragmentShader: fragment,
-      uniforms: { uScale: { value: 500 } },
+      uniforms: { uScale: { value: 500 }, uSparks: { value: sparkTexture() } },
       transparent: true,
       depthWrite: false,
     });
@@ -170,6 +226,7 @@ export class Particles {
     this.fadeFrom[i] = fadeFrom;
     this.ink.setX(i, ink ? 1 : 0);
     this.ink.needsUpdate = true;
+    this.cycle[i] = NO_SPRITE;
     return i;
   }
 
@@ -179,6 +236,13 @@ export class Particles {
     this.sparkDebt += rate * dt * (FX.tier === 'low' ? 0.5 : 1);
     const p = this.pool;
     const metal = style === 'metal';
+    //a big spark flashing right where the truck bites, a new one turned a new way every few frames
+    this.flareDebt += (rate > 0 ? 24 : 0) * dt;
+    while (this.flareDebt >= 1) {
+      this.flareDebt--;
+      const f = this.spawn(x, y + 0.03, 0.3, 0.07, metal ? [1, 1, 1] : pick(SPARK_TINT), metal ? rand(0.7, 0.9) : rand(0.55, 0.7), 0.35, 1, 0.6, false);
+      this.sparkSprite(f, style);
+    }
     while (this.sparkDebt >= 1) {
       this.sparkDebt--;
       if (!metal && Math.random() < 0.3) {
@@ -190,7 +254,12 @@ export class Particles {
         p.floor[c] = y - 1.5;
         continue;
       }
-      const i = this.spawn(x + rand(-0.05, 0.05), y + rand(0, 0.06), rand(0.05, 0.25), metal ? rand(0.18, 0.42) : rand(0.12, 0.3), pick(metal ? SPARK_HOT : SPARK_WARM), metal ? rand(0.12, 0.2) : rand(0.1, 0.16), 0.03, 1, 0.5, false);
+      // most are spark sprites; a metal rail also spits tiny white-hot pixels between them
+      const ember = metal && Math.random() < 0.3;
+      const i = ember
+        ? this.spawn(x + rand(-0.05, 0.05), y + rand(0, 0.06), rand(0.05, 0.25), rand(0.12, 0.3), pick(SPARK_HOT), rand(0.07, 0.11), 0.02, 1, 0.5, false)
+        : this.spawn(x + rand(-0.05, 0.05), y + rand(0, 0.06), rand(0.05, 0.25), metal ? rand(0.2, 0.42) : rand(0.16, 0.32), metal ? [1, 1, 1] : pick(SPARK_TINT), metal ? rand(0.45, 0.65) : rand(0.38, 0.52), 0.12, 1, 0.55, false);
+      if (!ember) this.sparkSprite(i, style);
       p.vx[i] = dir * rand(-2.5, 1.5) * (metal ? 1.2 : 0.8);
       p.vy[i] = rand(0.8, 3.6) * (metal ? 1.1 : 0.8);
       p.vz[i] = rand(-0.6, 1.6);
@@ -198,6 +267,13 @@ export class Particles {
       p.drag[i] = 1.2;
       p.floor[i] = y - 0.05;
     }
+  }
+
+  // draw particle `i` as a flickering spark sprite
+  private sparkSprite(i: number, style: GrindStyle): void {
+    this.cycle[i] = style === 'metal' ? 0 : 1;
+    this.frame0[i] = Math.floor(Math.random() * 8);
+    this.fps[i] = rand(14, 26);
   }
 
   // the gnar state's sparkle trail: rainbow pixels shed behind the skater
@@ -400,8 +476,18 @@ export class Particles {
       this.size.setX(i, p.size0[i] + (p.size1[i] - p.size0[i]) * t);
       const f = this.fadeFrom[i];
       this.alpha.setX(i, this.alpha0[i] * (t <= f ? 1 : 1 - (t - f) / (1 - f)));
+      if (this.cycle[i] === NO_SPRITE) {
+        this.sprite.setX(i, NO_SPRITE);
+        continue;
+      }
+      //flicker to the next frame, turned a new way each time
+      const frames = this.cycle[i] === 0 ? SPARK_CYCLE.metal : SPARK_CYCLE.concrete;
+      const k = this.frame0[i] + Math.floor(p.age[i] * this.fps[i]);
+      this.sprite.setX(i, frames[k % frames.length]);
+      this.flip.setX(i, (k * 3) % 8);
     }
     this.pos.needsUpdate = this.col.needsUpdate = this.size.needsUpdate = this.alpha.needsUpdate = true;
+    this.sprite.needsUpdate = this.flip.needsUpdate = true;
   }
 
   clear(): void {
