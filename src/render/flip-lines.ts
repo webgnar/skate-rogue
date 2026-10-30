@@ -142,7 +142,9 @@ export class FlipLines {
     this.roll *= hold;
     this.spin *= hold;
 
-    if (on) {
+    // at most one sample per 1/240 s, so slow motion and fast screens still keep the whole window
+    const last = this.samples[this.samples.length - 1];
+    if (on && (!last || this.clock - last.t >= 1 / 240)) {
       this.samples.push({ t: this.clock, q: this.q.clone() });
       if (this.samples.length > MAX_SAMPLES) this.samples.shift();
     }
