@@ -257,7 +257,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     //the L's running rails are part of its track; the sky beats are drawn on their own (sky-kit.ts)
     if (s.el || s.sky) continue;
     //the hill draws its own ground
-    if (level.hills && inHill(level, s.x0) && !s.side && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
+    if (level.hills && inHill(level, s.x0) && !s.side && !s.kicker && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
     if (s.kind === 'roof') {
       //a roof at street level is just more street (the descent's last run-out)
       if (y < 0.5) {
@@ -349,9 +349,11 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
       }
     } else if (s.kind === 'bank' && s.kicker) {
       //the L's kicker: a skatepark launch ramp out on the street, plywood sides and a steel face
+      //(a Chinatown kicker stands on a flat partway down the hill: its foot is the ground there)
+      const base = toY(level, s.y);
       const shape = new THREE.Shape();
-      shape.moveTo(0, 0);
-      shape.lineTo(w, 0);
+      shape.moveTo(0, base);
+      shape.lineTo(w, base);
       shape.lineTo(w, toY(level, s.y1!));
       shape.closePath();
       const geo = new THREE.ExtrudeGeometry(shape, { depth: 1.6, bevelEnabled: false });

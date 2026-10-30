@@ -11,7 +11,7 @@ import { polyRail, isStreetAt, surfaceY, type CurvedRail, type Level, type Surfa
 import { PICKUPS } from './descent';
 import { makeRng, type Rng } from './rng';
 import { SKY, type FlockSite } from '../sim/sky';
-import { editFloor } from './hills';
+import { CHINATOWN, editFloor } from './hills';
 import { floorEdit } from './level-edits';
 
 export const TOP = {
@@ -53,7 +53,7 @@ export function groundAt(level: Level, x: number): number | undefined {
 // highest ground behind it), falling straight to the rooftops'
 // height at the foot, and never rising (a grind doesn't climb); smoothed, it's one long grind (the poles it hangs
 // from are scenery: a wire per span between them kicked you off at every pole)
-function wire(level: Level, a: number, b: number, from = TOP.start): CurvedRail | null {
+function wire(level: Level, a: number, b: number, from = TOP.start, lip?: { x: number; y: number }): CurvedRail | null {
   const xs: number[] = [];
   const gs: number[] = [];
   for (let x = a; x <= b; x += TILE / 2) {
@@ -70,7 +70,8 @@ function wire(level: Level, a: number, b: number, from = TOP.start): CurvedRail 
   //can get to the high part can start like halfway down the hill"), and it never reaches down low ("dont have the
   //upper levels power lines reach down low"). How you get up there is still open: zack took the launch ramps out
   //("the ramps are bad... it should be all physics based")
-  const start = xs[p] + from * (b - xs[p]);
+  //(on a Chinatown block it starts over its cab flat's kicker, high enough that only the cab's speed gets you there)
+  const start = lip ? lip.x : xs[p] + from * (b - xs[p]);
   //under it, the highest ground of the last few tiles
   const env = xs.map((x, i) => {
     let g = gs[i];
@@ -80,9 +81,11 @@ function wire(level: Level, a: number, b: number, from = TOP.start): CurvedRail 
   const k0 = xs.findIndex((x) => x >= start);
   if (k0 < 0 || xs.length - k0 < 6) return null;
   const x0 = xs[k0];
-  const y0 = env[k0] - TOP.high;
+  const y0 = lip ? Math.min(env[k0] - TOP.high, lip.y - CHINATOWN.wireOverLip * TILE) : env[k0] - TOP.high;
   const yEnd = level.streetY - TOP.height;
-  const line = (x: number) => y0 + ((x - x0) / (b - x0)) * (yEnd - y0);
+  //(over a kicker it holds its height a while, past where an ollie and a flip off the lip at your own speed reach)
+  const hold = lip ? Math.min(CHINATOWN.wireHold * TILE, (b - x0) / 2) : 0;
+  const line = (x: number) => (x <= x0 + hold ? y0 : y0 + ((x - x0 - hold) / (b - x0 - hold)) * (yEnd - y0));
   const px = xs.slice(k0);
   const ys = px.map((x, i) => Math.min(line(x), env[k0 + i] - TOP.high));
   //smooth it (a kink is a jolt), then from the end back never higher further on, and never closer to the ground
@@ -138,7 +141,8 @@ export function addTopRoute(level: Level, seed: number): void {
   const surfaces: Surface[] = [];
   const flocks: FlockSite[] = [];
   spans.forEach(([a, b], i) => {
-    const w = wire(level, a, b, t.topStart);
+    const lip = (level.cabs ?? []).find((c) => c.lip.x > a && c.lip.x < b)?.lip;
+    const w = wire(level, a, b, t.topStart, lip);
     if (w) {
       rails.push(w);
       //pigeons sitting on the wire, halfway down

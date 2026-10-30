@@ -8,7 +8,7 @@ import { crossPlan } from '../traffic/cross';
 import { doorPlan, stopPlan } from '../traffic/street';
 import { bountyPlan } from '../run/bounty';
 import { TILE } from '../physics/constants';
-import { buildLevel, CurvedRail, type Level, type Pickup, type Surface } from '../physics/level';
+import { buildLevel, CurvedRail, type CabRun, type Level, type Pickup, type Surface } from '../physics/level';
 import type { Fork } from './roads';
 import { CHUNK_W, makeLayout, STREET_ROW } from './layout';
 import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } from './pieces';
@@ -52,6 +52,9 @@ export interface Builder {
   top: number; // tiles the floor starts above the street
   pickups: Pickup[];
   prng: Rng; // pickups roll on their own stream so they never change the floor's shape
+  crossings?: { x: number; y: number }[]; // Chinatown's intersections with cross traffic: the cross street's middle, the ground's height
+  cabs?: CabRun[]; // Chinatown's cab flats
+  chinatown?: [number, number]; // the Chinatown block, px
 }
 
 export interface FloorOptions {
@@ -232,8 +235,14 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   const hillSurfaces: Surface[] = [];
   const hillRails: CurvedRail[] = [];
   const hillPickups: Pickup[] = [];
+  const hillCross: { x: number; y: number }[] = [];
+  const cabs: CabRun[] = [];
+  const chinatown: [number, number][] = [];
   climbs.forEach((c, i) => {
     const at = starts[i];
+    hillCross.push(...(c.crossings ?? []).map((k) => ({ x: k.x + at, y: k.y })));
+    cabs.push(...(c.cabs ?? []).map((r) => ({ ...r, x: r.x + at, turnX: r.turnX + at, lip: { x: r.lip.x + at, y: r.lip.y } })));
+    if (c.chinatown) chinatown.push([c.chinatown[0] + at, c.chinatown[1] + at]);
     spans.push([at, at + c.x]);
     hillSurfaces.push(...c.surfaces.map((s) => ({ ...s, x0: s.x0 + at, x1: s.x1 + at })));
     hillRails.push(...c.rails.map((r) => shiftRail(r, at)));
@@ -280,6 +289,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     fork,
     danger: opts.danger ?? 2,
     ...(opts.hills ? { hills: true, hillSpans: spans } : {}),
+    ...(chinatown.length ? { chinatown, hillCross, cabs } : {}),
     ...(opts.gravity !== undefined && opts.gravity !== 1 ? { gravity: opts.gravity } : {}),
   };
   //Chicago's L over the street, before the side line so the side line stays clear of it

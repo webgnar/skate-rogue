@@ -117,6 +117,16 @@ because with two or three street chases a floor, slams get more chances to bunch
 - **Escapes**: the helicopter escapes' L covers (3.5 tiles up, for hiding from the spotlight) are grindable too, from
   a bus roof.
 
+## Chinatown (`CHINATOWN` in `src/gen/hills.ts`)
+
+Once an act (floors 5, 8, 11, 14; Endless every third floor) the stretch of hill up the first cable car is a Chinatown
+block, for a change of pace. Its intersections have cross traffic driving straight across (`src/traffic/hill-cross.ts`):
+ollie it, hop it or skate the gap. One long flat has a cab (`src/traffic/cab.ts`): roll into its back bumper to skitch
+it up to 2.5x speed; it lets go at the corner before a kicker. At the cab's speed an ollie on the kicker and a flip at
+the top reach the top route's power line (`wireOverLip`, `wireHold`); at your own you fall short and bomb the block
+below through more cross traffic. Greybox art in `src/render/chinatown-view.ts`; the Chinatown look comes from zack's
+Walled City photos.
+
 ## How to see it
 
 - `npm run dev`, then `localhost:5173/?seed=5&floor=1` (any floor 1–15). Add `&bot` to watch it skated.

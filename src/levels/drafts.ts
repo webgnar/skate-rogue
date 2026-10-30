@@ -6,7 +6,7 @@ import type { SkyBeat } from '../gen/sky-beats';
 
 const KEY = 'gnar-run-level-drafts';
 
-export const BEATS: Beat[] = ['hill', 'railHill', 'stairs', 'drop', 'gap', 'kicker', 'chase'];
+export const BEATS: Beat[] = ['hill', 'railHill', 'stairs', 'drop', 'gap', 'kicker', 'chase', 'cross', 'skitch'];
 
 export const SKY_BEAT_LIST: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap'];
 

@@ -834,8 +834,8 @@ export class SkaterRig {
       //riding a stair set down in a manual: the clip runs while the tail clacks each step
       const want = 'firecracker' in CLIPS ? 'firecracker' : 'manual';
       if (this.clipName !== want) this.play(want, 0.08);
-    } else if (sk.mode === 'roll' && (sk.surface?.tow ?? 0) > 0) {
-      //towed up a hill by the cable car, hanging on to it
+    } else if (sk.mode === 'roll' && ((sk.surface?.tow ?? 0) > 0 || sk.skitching)) {
+      //towed up a hill by the cable car, or skitching a cab, hanging on to it
       if (this.clipName !== 'towed') this.play('towed', 0.2);
     } else if (sk.manualing) {
       //a manual pad: on the back wheels or the front ones, taking turns (the sim's pick)

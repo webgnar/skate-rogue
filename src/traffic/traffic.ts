@@ -5,6 +5,8 @@ import { makeRng, randInt } from '../gen/rng';
 import { PHYS, TILE } from '../physics/constants';
 import { inHill, isStreetAt, type Car, type Level, type Surface } from '../physics/level';
 import { CROSS, CrossCar, type Intersection } from './cross';
+import { HillCross } from './hill-cross';
+import { Cab } from './cab';
 import { CarDoor, STOP, type BusStop } from './street';
 import { TUNNEL, groundAt, mouthX, mouths } from './tunnel';
 
@@ -123,6 +125,8 @@ export class Traffic {
   vehicles: Vehicle[] = [];
   noBrake = false; // Spoofed Plate: robotaxis don't brake for the skater
   readonly cross: CrossCar[]; // cars crossing at intersections
+  readonly hillCross: HillCross[]; // Chinatown's intersections on the hill, cars driving straight across
+  readonly cabs: Cab[]; // Chinatown's cabs to skitch
   readonly doors: CarDoor[]; // back-lane parked cars' doors
   private readonly kiosks: Surface[]; // vehicles pull out behind these (ARCADE)
   private nextStop = 0;
@@ -137,6 +141,8 @@ export class Traffic {
     doors: number[] = [],
   ) {
     this.cross = intersections.map((i) => new CrossCar(i, level.streetY));
+    this.hillCross = (level.hillCross ?? []).map((k, i) => new HillCross(k.x, k.y, level.layout.seed * 23 + level.layout.floor * 911 + i * 131));
+    this.cabs = (level.cabs ?? []).map((r) => new Cab(r));
     this.kiosks = level.surfaces.filter((s) => isKiosk(level, s));
     this.doors = doors.map((x) => new CarDoor(x, level.streetY));
   }
@@ -170,6 +176,8 @@ export class Traffic {
       c.step(skaterX);
       if (c.turned) this.turnIn(c, i);
     }
+    for (const h of this.hillCross) h.step(skaterX);
+    for (const c of this.cabs) c.step(skaterX);
     while (this.next < this.plan.length && skaterX >= this.plan[this.next].at) this.spawn(this.plan[this.next++]);
     while (this.nextStop < this.stops.length && skaterX >= this.stops[this.nextStop].trigger) this.pullIn(this.stops[this.nextStop++]);
     for (const d of this.doors) d.step(skaterX);
@@ -285,8 +293,11 @@ export class Traffic {
     return this.doors.filter((d) => d.solid).map((d) => d.box);
   }
 
-  // cross traffic in the skate lane right now
+  // cross traffic in the skate lane right now (the street's and the hill's), and the cabs in it
   get crossing(): Car[] {
-    return this.cross.filter((c) => c.inLane).map((c) => c.box);
+    const out = this.cross.filter((c) => c.inLane).map((c) => c.box);
+    for (const h of this.hillCross) out.push(...h.inLane);
+    for (const c of this.cabs) if (c.solid) out.push(c.box);
+    return out;
   }
 }

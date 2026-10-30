@@ -530,6 +530,12 @@ function gaps(ground: Ground[]): [number, number, number][] {
   return out;
 }
 
+// Chinatown's intersections (src/traffic/hill-cross.ts): their cross streets run on past the camera, as the cars
+// on them do, so the near sidewalk, the low wall and the houses in front make way (tiles: x0, x1, height)
+function throughStreets(level: Level): [number, number, number][] {
+  return (level.hillCross ?? []).map((k) => [tx(k.x) - HILLSIDE.crossW / 2, tx(k.x) + HILLSIDE.crossW / 2, (level.streetY - k.y) / TILE]);
+}
+
 // ------------------------------------------------------------------------------------------------ the shapes
 
 // a prism on a trapezoid footprint standing out from z (a three-sided bay): x0..x1 against the wall, its front
@@ -787,6 +793,10 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
     for (const lx of [x0 - 0.75, x0 - 0.05, x1 + 0.05, x1 + 0.75]) m.quad('house', [lx - 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz1], [lx + 0.06, t + 0.01, rz0], [lx - 0.06, t + 0.01, rz0], paint);
     yield* tee(x0, x1, t);
   }
+  //Chinatown's run on toward the camera, over the houses in front, on a retaining wall down to the foundations
+  for (const [x0, x1, t] of throughStreets(level)) {
+    m.box(x0, x1, B, t, t, rz1, HILLSIDE.rowB[1], { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]], left: ['concrete', cs], right: ['concrete', cs], front: ['concrete', UV.front(2, 2)] });
+  }
   //the cable car's slot up each climb, between its two running rails (cable-view.ts runs the car on it)
   const steel = rectUv(SWATCH.grey);
   const slot = rectUv(SWATCH.dark);
@@ -970,7 +980,8 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
   const cf = UV.front(2, 2);
   const holes = gaps(ground);
   //where there's no ground in front: canals on the street, the crest jumps' cross streets on the hill
-  const open = (x0: number, x1: number) => holes.some(([a, b]) => x1 > a - 0.1 && x0 < b + 0.1);
+  const through = throughStreets(level);
+  const open = (x0: number, x1: number) => [...holes, ...through].some(([a, b]) => x1 > a - 0.1 && x0 < b + 0.1);
   //the street's near sidewalk and the low wall (the hill's sidewalk is part of buildHill; its wall is here)
   let x = level.hills ? Math.floor(finale) : Math.max(0, Math.floor(finale));
   while (x < cols) {
@@ -994,7 +1005,15 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
         const t = g.t0 + ((g.t1 - g.t0) * (k + 1)) / steps;
         wall(g.x0 + k, g.x0 + k + 1, t, t);
       }
-    } else wall(g.x0, g.x1, g.t0, g.t1);
+    } else {
+      //broken where a Chinatown cross street runs through
+      let a = g.x0;
+      for (const [c0, c1] of through.filter(([c0, c1]) => c1 > g.x0 && c0 < g.x1).sort((p, q) => p[0] - q[0])) {
+        if (c0 > a) wall(a, c0, g.t0 + ((g.t1 - g.t0) * (a - g.x0)) / (g.x1 - g.x0), g.t0 + ((g.t1 - g.t0) * (c0 - g.x0)) / (g.x1 - g.x0));
+        a = Math.max(a, c1);
+      }
+      if (a < g.x1) wall(a, g.x1, g.t0 + ((g.t1 - g.t0) * (a - g.x0)) / (g.x1 - g.x0), g.t1);
+    }
   }
   for (let s = Math.max(0, Math.floor(finale)); s < cols; ) {
     if (!level.street[s]) {
