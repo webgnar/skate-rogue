@@ -18,6 +18,7 @@ export class Sound {
   private ctx: AudioContext | null = null;
   private sfx!: GainNode;
   private musicBus!: GainNode;
+  private musicDuck!: GainNode; // after the bus: dips the music while paused
   private buffers = new Map<string, AudioBuffer>();
   private grind: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
   private roll: { gain: GainNode; filter: BiquadFilterNode } | null = null;
@@ -49,7 +50,13 @@ export class Sound {
     this.sfx = ctx.createGain();
     this.musicBus = ctx.createGain();
     this.sfx.connect(ctx.destination);
-    this.musicBus.connect(ctx.destination);
+    this.musicDuck = ctx.createGain();
+    this.musicBus.connect(this.musicDuck).connect(ctx.destination);
+    //a hidden tab goes quiet; paused in view, only the music plays on (update)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) void ctx.suspend().catch(() => {});
+      else void ctx.resume().catch(() => {});
+    });
     this.applyVolumes();
     this.makeRoll();
     this.makeSiren();
@@ -173,12 +180,16 @@ export class Sound {
   // the loops and the music, every frame
   update(f: SoundFrame): void {
     if (!this.ctx || this.away) return;
+    if (this.ctx.state === 'suspended' && !document.hidden) void this.ctx.resume().catch(() => {});
+    const t = this.ctx.currentTime;
+    //paused: the street sounds fade out and the music dips under the pause card
+    this.musicDuck.gain.setTargetAtTime(f.paused ? LOOPS.pauseDuck : 1, t, 0.25);
     if (f.paused) {
-      if (this.ctx.state === 'running') void this.ctx.suspend().catch(() => {});
+      this.setGrind(false);
+      this.roll?.gain.gain.setTargetAtTime(0, t, 0.05);
+      this.siren?.gain.gain.setTargetAtTime(0, t, 0.1);
       return;
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => {});
-    const t = this.ctx.currentTime;
     const grinding = f.skating && (f.mode === 'grind' || f.mode === 'rail');
     this.setGrind(grinding);
     if (this.roll) {
