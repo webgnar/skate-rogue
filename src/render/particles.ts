@@ -193,8 +193,10 @@ export class Particles {
   private readonly cycle = new Float32Array(MAX).fill(NO_SPRITE); // a CYCLES index, or NO_SPRITE for a pixel
   private readonly frame0 = new Float32Array(MAX); // where in its cycle this spark starts
   private readonly fps = new Float32Array(MAX); // how fast it flickers
+  private readonly tumble = new Float32Array(MAX); // a paint flake's spin (radians a second), 0 for none
   private readonly mat: THREE.ShaderMaterial;
   private sparkDebt = 0;
+  private flakeDebt = 0;
   private flareDebt = 0;
   private trailDebt = 0;
   private splashDebt = 0;
@@ -256,6 +258,7 @@ export class Particles {
     this.ink.needsUpdate = true;
     this.cycle[i] = NO_SPRITE;
     this.layer.setX(i, 0);
+    this.tumble[i] = 0;
     this.layer.needsUpdate = true;
     return i;
   }
@@ -319,6 +322,35 @@ export class Particles {
     this.cycle[i] = PUFF;
     this.frame0[i] = Math.floor(Math.random() * 8);
     this.fps[i] = 0;
+  }
+
+  // a slide (the deck across a rail or ledge, not the trucks): flakes of the deck's paint shredded off its underside
+  // where it bites, `paint` from the rig (SkaterRig.deckPaint: its colours as worn, and the plies under them). The
+  // rail is dragging under the board, so they peel off behind and flutter down, tumbling; a little wood dust with them.
+  // Behind the skater, like the sparks.
+  slide(x: number, y: number, dir: number, rate: number, dt: number, paint: number[][]): void {
+    this.flakeDebt += rate * dt * (FX.tier === 'low' ? 0.5 : 1);
+    const p = this.pool;
+    while (this.flakeDebt >= 1) {
+      this.flakeDebt--;
+      const dust = Math.random() < 0.2;
+      const big = !dust && Math.random() < 0.35;
+      const i = this.spawn(x + rand(-0.22, 0.22), y + rand(-0.03, 0.02), rand(0.05, 0.3), dust ? rand(0.3, 0.5) : rand(0.5, 0.95), dust ? pick(DUST) : pick(paint), dust ? rand(0.08, 0.12) : big ? rand(0.2, 0.28) : rand(0.12, 0.18), dust ? 0.2 : 0.08, dust ? 0.6 : 1, dust ? 0 : 0.6, big);
+      p.vx[i] = -dir * rand(0.6, 2.6);
+      p.vy[i] = dust ? rand(-0.2, 0.4) : rand(0, 1.8);
+      p.vz[i] = rand(-0.5, 1.2);
+      p.grav[i] = dust ? -0.2 : rand(4, 7);
+      p.drag[i] = dust ? 4 : rand(1.8, 2.8);
+      p.floor[i] = y - 1.5;
+      if (!dust) this.tumble[i] = rand(8, 20);
+      this.under(i);
+    }
+  }
+
+  // the deck locks onto a rail across it: a burst of paint
+  slideStart(x: number, y: number, dir: number, paint: number[][]): void {
+    this.flakeDebt += 26;
+    this.slide(x, y, dir, 0, 0, paint);
   }
 
   // the gnar state's sparkle trail: rainbow pixels shed behind the skater
@@ -531,7 +563,9 @@ export class Particles {
       const t = p.t(i);
       this.pos.setXYZ(i, p.px[i], p.py[i], p.pz[i]);
       this.col.setXYZ(i, p.r[i], p.g[i], p.b[i]);
-      this.size.setX(i, p.size0[i] + (p.size1[i] - p.size0[i]) * t);
+      //a flake tumbling end over end: thin edge on, then flat to the camera
+      const spin = this.tumble[i] ? 0.3 + 0.7 * Math.abs(Math.cos(p.age[i] * this.tumble[i] + i)) : 1;
+      this.size.setX(i, (p.size0[i] + (p.size1[i] - p.size0[i]) * t) * spin);
       const f = this.fadeFrom[i];
       this.alpha.setX(i, this.alpha0[i] * (t <= f ? 1 : 1 - (t - f) / (1 - f)));
       if (this.cycle[i] === NO_SPRITE) {

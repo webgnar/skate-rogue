@@ -66,7 +66,7 @@ import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
 import { LIFT, SkaterRig } from '../render/skater-rig';
 import { ShardAura } from '../render/shard-aura';
-import { trickName } from '../physics/tricks';
+import { SLIDES, trickName } from '../physics/tricks';
 import { parkedPaint, toX, toY } from '../render/kit';
 import { CarHopFx, damageParked, parkedDamage, slideParked } from '../render/car-damage';
 import { OneButton } from './input';
@@ -213,6 +213,7 @@ const FLOW_RANGE = 0.7;
 const GNAR_TRAIL = 40; // sparkles per second
 const SPARKS_RAIL = 150;
 const SPARKS_LEDGE = 70;
+const SLIDE_FLAKES = 0.8; // paint flakes per spark the same grind would throw: fewer, they hang around longer
 
 export class Game {
   private level: Level;
@@ -270,6 +271,7 @@ export class Game {
   }
   private spotState = 'hunt';
   private readonly particles = new Particles();
+  private paint: number[][] = [[0.78, 0.19, 0.17]]; // the deck's colours, for a slide's paint flakes (SkaterRig.deckPaint)
   private readonly focus = new FocusLines();
   private readonly escapeFx = new EscapeFx(this.particles);
   private readonly words = new SoundWords();
@@ -1379,9 +1381,22 @@ export class Game {
     if (this.state !== 'skate' || (sk.mode !== 'rail' && sk.mode !== 'grind')) return;
     const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
     const rate = (sk.mode === 'rail' ? SPARKS_RAIL : SPARKS_LEDGE) * Math.min(2, Math.max(0.4, speed / PHYS.baseSpeed));
-    const [x, y] = this.backTruck();
-    //rails are metal; ledges, roof edges and banks are concrete
-    this.particles.grind(x, y, 1, rate, dt, sk.material);
+    //a slide shreds the deck's paint off its middle; rails are metal; ledges, roof edges and banks are concrete
+    if (SLIDES.has(sk.stance)) this.particles.slide(...this.deckMiddle(), 1, rate * SLIDE_FLAKES, dt, this.paint);
+    else this.particles.grind(...this.backTruck(), 1, rate, dt, sk.material);
+  }
+
+  // a grind or slide locked on: sparks off the back truck, or a slide's burst of paint
+  private grindStart(): void {
+    if (!SLIDES.has(this.skater.stance)) return this.particles.grindStart(...this.backTruck(), 1);
+    this.paint = this.sprite.deckPaint(); // as worn now
+    this.particles.slideStart(...this.deckMiddle(), 1, this.paint);
+  }
+
+  // where the middle of the deck's underside meets the rail
+  private deckMiddle(): [number, number] {
+    const p = this.sprite.mesh.position;
+    return [p.x, p.y];
   }
 
   // where the back truck meets the rail, from the rig's tilt
@@ -1607,11 +1622,11 @@ export class Game {
         this.hud.callout(trickName(e.name, e.fakie, e.nollie) + combo, 'trick');
         break;
       case 'grind':
-        this.particles.grindStart(...this.backTruck(), 1);
+        this.grindStart();
         this.hud.callout(this.sprite.grindName + combo, 'trick');
         break;
       case 'rail':
-        this.particles.grindStart(...this.backTruck(), 1);
+        this.grindStart();
         this.hud.callout(this.sprite.grindName + combo, 'trick');
         break;
       case 'hop':

@@ -85,6 +85,9 @@ export const nollieClip = (id: TrickId): string => 'nollie' + id[0].toUpperCase(
 // The sim picks them, so it knows when it's on the nose; the rig plays the clip of the same name.
 export const LEDGE_GRINDS = ['grind1', 'crooked', 'fiveO', 'noseGrind', 'smith', 'feeble'] as const;
 export const RAIL_GRINDS = ['grind2', 'grind1', 'fsBoardslide', 'fiveO', 'smith', 'grind2', 'crooked', 'fsBoardslide', 'noseGrind', 'feeble'] as const;
+// slides ride the deck itself across the rail (a boardslide, and any lipslide, noseslide or tailslide), not the
+// trucks: they shred the deck's paint instead of throwing sparks (src/render/particles.ts slide)
+export const SLIDES = new Set<string>(['grind2', 'fsBoardslide', 'lipslide', 'fsLipslide', 'noseslide', 'tailslide']);
 // manual pads take turns too: a manual, then a nose manual
 export const MANUALS = ['manual', 'noseManual'] as const;
 // riding these, the weight's on the nose: an ollie out of them is a nollie
