@@ -22,6 +22,10 @@ npm run dev
     clip still stores the arm angles, so the sliders keep working).
   A foot on the board slides along the deck (X) and across it toward the toe or heel edge (Z, the "toe/heel" value);
   lift it more than 10 cm up off the deck and it steps off the board.
+  cyan and pink diamonds: the front and back knees' **pole targets**, the points each knee bends toward (a dashed
+  line joins each knee to its diamond). Drag one to swing the knee in, out, up or back; the leg IK still puts the
+  foot where it was. The offsets are under **Knees (pole targets)** on the right, keyed like everything else;
+  double-click one to put that knee back to bending by itself (toward the camera, a touch outward).
   White: the head. It shows rings instead of arrows: turn it, nod it or tilt it.
   `h` hides the dots so you can see the pose under them.
 - **Feet:** each foot has **heel lift** (about the ball of the foot), **toes up** (the toes bend at the ball) and

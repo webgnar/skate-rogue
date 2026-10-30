@@ -90,6 +90,19 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
     ],
   },
   {
+    // the knees' pole targets (the diamond handles): where each knee bends toward, as an offset from where it aims
+    // by itself
+    name: 'Knees (pole targets)',
+    fields: [
+      { f: 'kneeFX', label: 'front along', min: -1.5, max: 1.5 },
+      { f: 'kneeFY', label: 'front up', min: -1.5, max: 1.5 },
+      { f: 'kneeFZ', label: 'front toe/heel', min: -1.5, max: 1.5 },
+      { f: 'kneeBX', label: 'back along', min: -1.5, max: 1.5 },
+      { f: 'kneeBY', label: 'back up', min: -1.5, max: 1.5 },
+      { f: 'kneeBZ', label: 'back toe/heel', min: -1.5, max: 1.5 },
+    ],
+  },
+  {
     name: 'Board',
     fields: [
       { f: 'boardX', label: 'along', min: -2, max: 2 },
@@ -106,11 +119,13 @@ const DEFS = new Map(GROUPS.flatMap((g) => g.fields).map((d) => [d.f, d]));
 const DEG = 180 / PI;
 const ROLL_SPEED = 6; // tiles a second the ground scrolls by with "roll" on
 
-type Handle = 'hips' | 'footF' | 'footB' | 'board' | 'handL' | 'handR' | 'head';
+type Handle = 'hips' | 'footF' | 'footB' | 'kneeF' | 'kneeB' | 'board' | 'handL' | 'handR' | 'head';
 const HANDLES: { id: Handle; color: number; label: string }[] = [
   { id: 'hips', color: 0xffd23a, label: 'hips' },
   { id: 'footF', color: 0x4ad8ff, label: 'front foot' },
   { id: 'footB', color: 0xff5ad8, label: 'back foot' },
+  { id: 'kneeF', color: 0x4ad8ff, label: 'front knee aim' },
+  { id: 'kneeB', color: 0xff5ad8, label: 'back knee aim' },
   { id: 'board', color: 0xff8a2a, label: 'board' },
   { id: 'handL', color: 0x7df0a0, label: 'front hand' },
   { id: 'handR', color: 0xb98cff, label: 'back hand' },
@@ -326,8 +341,10 @@ export async function startEditor(base: string): Promise<void> {
   // drag handles, in the rig's own space (children of its mesh)
   const handles = new Map<Handle, THREE.Mesh>();
   for (const h of HANDLES) {
+    const knee = h.id.startsWith('knee');
     const m = new THREE.Mesh(
-      new THREE.SphereGeometry(h.id === 'hips' ? 0.07 : 0.055, 16, 12),
+      // the knees' pole targets are diamonds in their foot's colour
+      knee ? new THREE.OctahedronGeometry(0.06) : new THREE.SphereGeometry(h.id === 'hips' ? 0.07 : 0.055, 16, 12),
       new THREE.MeshBasicMaterial({ color: h.color, depthTest: false, transparent: true, opacity: 0.9 }),
     );
     m.renderOrder = 10;
@@ -336,6 +353,17 @@ export async function startEditor(base: string): Promise<void> {
     rig.mesh.add(m);
     handles.set(h.id, m);
   }
+  // a line from each knee to its pole target, so it reads which knee a diamond steers
+  const poleLines = [0, 1].map((i) => {
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+      new THREE.LineDashedMaterial({ color: HANDLES.find((h) => h.id === (i ? 'kneeB' : 'kneeF'))!.color, dashSize: 0.04, gapSize: 0.03, depthTest: false, transparent: true, opacity: 0.8 }),
+    );
+    line.renderOrder = 9;
+    line.userData.inked = true;
+    rig.mesh.add(line);
+    return line;
+  });
   const gizmo = new TransformControls(camera, canvas);
   gizmo.setSize(0.8);
   scene.add(gizmo.getHelper());
@@ -354,7 +382,12 @@ export async function startEditor(base: string): Promise<void> {
       edit('drag:head', { nod: e.x, head: e.y, headTilt: -e.z });
     } else if (active === 'hips') edit('drag:hips', { hipX: p.x, hipY: p.y, hipZ: p.z });
     else if (active === 'handL' || active === 'handR') edit(`drag:${active}`, reach(pose, active === 'handL' ? 0 : 1, p));
-    else if (active === 'board') edit('drag:board', { boardX: p.x, boardY: p.y - BOARD.deckTop, boardZ: p.z });
+    else if (active === 'kneeF' || active === 'kneeB') {
+      // the offset from where the knee aims by itself (SkaterRig.poleAt), which doesn't move while only this does
+      const front = active === 'kneeF';
+      const o = p.clone().sub(rig.poleAt(front ? 0 : 1).base);
+      edit(`drag:${active}`, front ? { kneeFX: o.x, kneeFY: o.y, kneeFZ: o.z } : { kneeBX: o.x, kneeBY: o.y, kneeBZ: o.z });
+    } else if (active === 'board') edit('drag:board', { boardX: p.x, boardY: p.y - BOARD.deckTop, boardZ: p.z });
     else {
       const front = active === 'footF';
       const on = front ? pose.footFOn : pose.footBOn;
@@ -595,12 +628,23 @@ export async function startEditor(base: string): Promise<void> {
     handles.get('footF')!.position.set(f.x, f.y, f.z);
     handles.get('footB')!.position.set(b.x, b.y, b.z);
     handles.get('board')!.position.set(pose.boardX, pose.boardY + BOARD.deckTop, pose.boardZ);
+    ([0, 1] as const).forEach((i) => handles.get(i ? 'kneeB' : 'kneeF')!.position.copy(rig.poleAt(i).target));
+  }
+
+  // the dashed lines from the knees to their diamonds, wherever the diamonds are (while dragging too)
+  function drawPoleLines(): void {
+    ([0, 1] as const).forEach((i) => {
+      const line = poleLines[i];
+      line.visible = handles.get('hips')!.visible;
+      line.geometry.setFromPoints([rig.kneeAt(i), handles.get(i ? 'kneeB' : 'kneeF')!.position]);
+      line.computeLineDistances();
+    });
   }
 
   function updateHint(): void {
     const h = HANDLES.find((x) => x.id === active);
     hint.innerHTML = h
-      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along and across the deck; lift it up off the deck and it steps off, "on board" puts it back)' : h.id.startsWith('hand') ? ' (the shoulder and elbow follow)' : ''} · esc to let go`
+      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along and across the deck; lift it up off the deck and it steps off, "on board" puts it back)' : h.id.startsWith('hand') ? ' (the shoulder and elbow follow)' : h.id.startsWith('knee') ? ' (the pole target: the knee bends toward it; double-click "Knees" values to put it back)' : ''} · esc to let go`
       : `click a dot to move it: ${HANDLES.map((x) => `<b style="color:#${x.color.toString(16).padStart(6, '0')}">${x.label}</b>`).join(' ')} · drag to orbit, scroll to zoom, h hides the dots`;
   }
   updateHint();
@@ -792,6 +836,7 @@ export async function startEditor(base: string): Promise<void> {
     const pose = sampleNow();
     rig.preview(pose, name);
     if (!gizmo.dragging) placeHandles(pose);
+    drawPoleLines();
     // the ghost: the last key before the playhead (or the one before the key under it)
     const prev = [...clip.keys].reverse().find((k) => k.t < t - 1e-6);
     ghost.mesh.visible = ghostOn && !!prev;

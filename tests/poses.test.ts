@@ -197,6 +197,13 @@ describe('rig poses', () => {
     expect(b.footFX).toBeGreaterThan(a.footFX);
   });
 
+  it('knee pole targets mirror with the legs in switch twins', () => {
+    const p = { ...BASE, kneeFX: 0.3, kneeFY: -0.2, kneeFZ: 0.1, kneeBX: -0.4 };
+    const m = mirrorPose(p);
+    expect([m.kneeBX, m.kneeBY, m.kneeBZ]).toEqual([-0.3, -0.2, 0.1]);
+    expect(m.kneeFX).toBeCloseTo(0.4);
+  });
+
   it('blends between clips take the short way round for spun boards', () => {
     const landed = { ...BASE, boardRoll: -2 * Math.PI, boardYaw: -Math.PI };
     const half = mix(landed, BASE, 0.5);
