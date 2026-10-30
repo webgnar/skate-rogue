@@ -1,0 +1,3 @@
+- [x] Callouts float up and shrink off the screen, stacking when several land at once
+- [x] Pause freezes them; reduce motion holds and fades
+- [x] Before/after on iPhone SE and 14, upright and sideways

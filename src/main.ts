@@ -17,6 +17,7 @@ import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
+import { makeCallouts } from './ui/callouts';
 import { initCam } from './render/camera';
 import { initBullet } from './game/bullet-time';
 import { isBiome } from './render/biomes';
@@ -177,7 +178,7 @@ function gearTone(c: number): string {
 let shopPreview: (card: HTMLElement, to: HTMLElement | null) => void = () => {};
 
 function makeHud(): Hud {
-  const calloutEl = document.getElementById('callout')!;
+  const callouts = makeCallouts(document.getElementById('callout')!, () => FX.reduceMotion);
   const debugEl = document.getElementById('debug')!;
   const boonsEl = document.getElementById('boons')!;
   const pickEl = document.getElementById('pick')!;
@@ -192,7 +193,6 @@ function makeHud(): Hud {
   const view = new HudView();
   let level = 0;
   let held: Held[] = [];
-  let timer = 0;
   //screen juice (src/style.css): the card you picked pops while the others fall away; the shop deals its stock in
   //once on opening, pops a slot that changed, and floats what you spent off the cash
   let chosen = -1;
@@ -226,12 +226,7 @@ function makeHud(): Hud {
     },
     money: (cash, stoken) => view.money(cash, stoken),
     score: (score, combo, stoke, gnar, pending) => view.setScore(score, combo, stoke, gnar, pending),
-    callout: (text, kind = 'trick') => {
-      calloutEl.textContent = text;
-      calloutEl.className = `show ${kind}`;
-      clearTimeout(timer);
-      timer = window.setTimeout(() => (calloutEl.className = ''), 900);
-    },
+    callout: (text, kind = 'trick') => callouts.show(text, kind),
     debug: (text) => (debugEl.textContent = text),
     heat: (value) => {
       view.setHeat(value);
@@ -295,6 +290,7 @@ function makeHud(): Hud {
     gearTick: (p) => view.gearTick(p),
     pause: (on) => {
       pausedEl.hidden = !on;
+      callouts.pause(on);
       if (on) pausedEl.querySelector('.held')!.innerHTML = held.length ? held.map(chip).join('') : '<span class="none">no boons yet</span>';
     },
     boons: (h) => {
