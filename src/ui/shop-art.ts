@@ -8,7 +8,7 @@ const base = import.meta.env.BASE_URL;
 
 export type Pic =
   | 'board' | 'pop' | 'flip' | 'grind' | 'car' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe' | 'bearing'
-  | 'cruiser' | 'robotaxi' | 'bus' | 'boxtruck' | 'drone' | 'chopper' | 'wanted' | 'signal' | 'rocket';
+  | 'butter' | 'wax' | 'cruiser' | 'robotaxi' | 'bus' | 'boxtruck' | 'drone' | 'chopper' | 'wanted' | 'signal' | 'rocket';
 export type Glyph = 'up' | 'down' | 'right' | 'curl' | 'clock' | 'speed' | 'ring' | 'sparks' | 'plus' | 'flipv' | string;
 
 const MOD_ART: Record<ModId, [Pic, Glyph?]> = {

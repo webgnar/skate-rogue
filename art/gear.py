@@ -1,5 +1,5 @@
 # Builds the shop's gear models in Blender and exports art/cards/gear.glb: a truck, a wheel and a shoe, in more
-# detail than the game's board (art/board.py) can afford. They're only seen as card art (art/cards/render.ts bakes them
+# detail than the game's board (art/board.py) can afford, and the wax for the Ledge Butter and More Wax boon cards. They're only seen as card art (art/cards/render.ts bakes them
 # to public/sprites/cards/*.png), so the triangle count costs nothing in game.
 #
 #   python3 art/gear.py            (pip bpy; or blender -b -P art/gear.py)
@@ -23,6 +23,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else bpy.path.abspath('//')
 GLB = os.path.join(HERE, 'cards', 'gear.glb')  # not in public/: only the card renderer loads it
 BLEND = os.path.join(HERE, 'gear.blend')
+SERIF = next((f for f in ('/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf', '/Library/Fonts/Georgia Bold.ttf') if os.path.exists(f)), None)
 FONT = next((f for f in ('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf') if os.path.exists(f)), None)
 
 
@@ -585,6 +586,90 @@ def shoe(mats):
     return root
 
 
+# ---------------------------------------------------------------- wax (the GRIND boons' cards)
+# zack's photos (2026-10-30): Ledge Butter is three lime green sticks of skate wax with a blue outlined label wrapped
+# round them, one end bare; More Wax is a white slab of paraffin in front of its box. Our own words on both.
+
+
+def font(path, size):
+    return ImageFont.truetype(path, size) if path else ImageFont.load_default()
+
+
+def butter_tex():
+    """The stick's wrap, laid out along its length: bold outlined LEDGE BUTTER over a little slogan, the last fifth
+    of the stick bare wax."""
+    W, H = 1024, 256
+    im = Image.new('RGB', (W, H), (200, 228, 92))
+    d = ImageDraw.Draw(im)
+    d.rectangle((W * 0.8, 0, W, H), fill=(214, 238, 104))  # the bare end, a little brighter
+    d.text((W * 0.4, H * 0.42), 'LEDGE BUTTER', font=font(FONT, 90), fill=(212, 236, 110), stroke_width=7, stroke_fill=(24, 34, 120), anchor='mm')
+    d.text((W * 0.4, H * 0.82), '"GREASE THAT GRIND"', font=font(FONT, 38), fill=(24, 34, 120), anchor='mm')
+    return im
+
+
+def boxmap(bm, size, uv, end=(0.9, 0.5), tops=True):
+    """Planar UVs on a box: the long sides take the label along X (length; the top and bottom too unless tops is
+    False), the ends and anything unlabelled take the plain spot of the texture at end."""
+    lx, ly, lz = size
+    for f in bm.faces:
+        n = f.normal
+        for lp in f.loops:
+            co = lp.vert.co
+            if abs(n.x) > 0.7 or (not tops and abs(n.z) > 0.7):
+                lp[uv].uv = end
+            elif abs(n.y) > 0.7:
+                lp[uv].uv = (co.x / lx + 0.5, (co.z / lz + 0.5) if n.y < 0 else (0.5 - co.z / lz))
+            else:
+                lp[uv].uv = (co.x / lx + 0.5, (0.5 - co.y / ly) if n.z > 0 else (co.y / ly + 0.5))
+
+
+def block(name, size, at, mat, bevel, rot=0.0, parent=None, end=(0.9, 0.5), tops=True):
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.scale(bm, vec=size, verts=bm.verts)
+    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=bevel, segments=2, affect='EDGES', profile=0.5)
+    bm.normal_update()
+    uv = bm.loops.layers.uv.new('UVMap')
+    boxmap(bm, size, uv, end, tops)
+    bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(rot, 3, 'Z'))
+    bmesh.ops.translate(bm, verts=bm.verts, vec=at)
+    return link(name, bm, [mat], smooth=False, parent=parent)
+
+
+def ledge_butter(mats):
+    """Three sticks, two stacked behind and one lying in front at an angle, like the photo."""
+    root = bpy.data.objects.new('LedgeButter', None)
+    bpy.context.scene.collection.objects.link(root)
+    size = (9.0, 2.2, 2.2)
+    block('stick', size, (0.4, 2.6, 3.3), mats['butter'], 0.25, -0.08, root)
+    block('stick', size, (-0.3, 2.0, 1.1), mats['butter'], 0.25, -0.05, root)
+    block('stick', size, (0.8, -1.4, 1.1), mats['butter'], 0.25, -0.22, root)
+    return root
+
+
+def wax_tex():
+    """The box's printed side: big red MORE WAX outlined in blue, and the small print, all our own."""
+    W, H = 1024, 512
+    im = Image.new('RGB', (W, H), (246, 245, 240))
+    d = ImageDraw.Draw(im)
+    d.text((W * 0.5, H * 0.36), 'More Wax', font=font(SERIF, 160), fill=(222, 82, 52), stroke_width=6, stroke_fill=(34, 40, 110), anchor='mm')
+    d.text((W * 0.5, H * 0.62), 'CURB  &  LEDGE  PARAFFIN', font=font(FONT, 40), fill=(120, 120, 130), anchor='mm')
+    d.line((W * 0.08, H * 0.7, W * 0.92, H * 0.7), fill=(222, 82, 52), width=5)
+    d.text((W * 0.5, H * 0.79), 'FOR LEDGES, CURBS, RAILS AND MANY OTHER GRINDS', font=font(FONT, 30), fill=(40, 40, 50), anchor='mm')
+    for x, c in ((0.1, (200, 50, 46)), (0.86, (60, 80, 170))):  # a candle and a jar, like the old box's corner pictures
+        d.rounded_rectangle((W * x, H * 0.84, W * x + 60, H * 0.98), 8, fill=c)
+    return im
+
+
+def more_wax(mats):
+    """The paraffin slab lying in front of its open-topped box."""
+    root = bpy.data.objects.new('MoreWax', None)
+    bpy.context.scene.collection.objects.link(root)
+    block('box', (12.0, 7.0, 7.4), (0, 3.2, 3.7), mats['waxbox'], 0.12, 0.0, root, end=(0.5, 0.98), tops=False)
+    block('slab', (11.0, 6.0, 2.4), (1.2, -3.6, 1.2), mats['paraffin'], 0.45, -0.12, root)
+    return root
+
+
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     mats = {
@@ -606,14 +691,21 @@ def build():
         'lace': material('lace', 0xF7F7F7, 0.7),
         'eyelet': material('eyelet', 0xC9CDD3, 0.3, 1.0),
         'patch': textured('patch', patch_tex('GNAR'), 0.8),
+        'butter': textured('butter', butter_tex(), 0.4),
+        'waxbox': textured('waxbox', wax_tex(), 0.8),
+        'paraffin': material('paraffin', 0xF3F3EE, 0.35),
     }
     t = truck(mats)
     w = wheel(mats)
     s = shoe(mats)
     # side by side in the .blend; the card renderer frames each on its own
+    b = ledge_butter(mats)
+    x = more_wax(mats)
     w.location.x = 16
     s.location.x = 26
-    return [t, w, s]
+    b.location.x = 60
+    x.location.x = 80
+    return [t, w, s, b, x]
 
 
 def export():
