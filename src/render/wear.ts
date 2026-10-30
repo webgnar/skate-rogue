@@ -184,24 +184,44 @@ export function wearShoes(model: THREE.Object3D, condition: number): void {
   });
 }
 
-// paint the grip tape (src/board/grips.ts): its vertices in a merged board, or its own material. The colour goes into
-// the fresh copy too, so wear redraws over the new grip
+// the bar across the grip by the back truck (art/board.py 'gripbar'): bare maple, or near-black on a grip too light
+// for the wood to stand out against (white, yellow, lime, cyan, orange)
+const BAR_WOOD = 0xe2c08d;
+const BAR_DARK = 0x1c1c20;
+export function gripBarColor(grip: number): number {
+  const lum = (hex: number) => {
+    const c = new THREE.Color(hex); // linear, so these make a WCAG contrast ratio
+    return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  };
+  const [a, b] = [lum(grip), lum(BAR_WOOD)];
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) < 1.8 ? BAR_DARK : BAR_WOOD;
+}
+
+// paint the grip tape (src/board/grips.ts), and its bar to stand out from it: their vertices in a merged board, or
+// their own materials. The colour goes into the fresh copy too, so wear redraws over the new grip
 export function paintGrip(board: THREE.Object3D, color: number): void {
-  const c = new THREE.Color(color);
+  const paints: [string, THREE.Color][] = [
+    ['grip', new THREE.Color(color)],
+    ['gripbar', new THREE.Color(gripBarColor(color))],
+  ];
   board.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
-    if (mesh.userData.mat === 'grip' || (!col && mesh.userData.grip)) {
-      (mesh.material as THREE.MeshToonMaterial).color.copy(c);
-      return;
+    for (const [mat, c] of paints) {
+      if (mesh.userData.mat === mat || (mat === 'grip' && !col && mesh.userData.grip)) {
+        (mesh.material as THREE.MeshToonMaterial).color.copy(c);
+        return;
+      }
     }
     if (!col) return;
     const fresh = original(col);
-    for (const [a, b] of ranges(mesh, 'grip')) {
-      for (let i = a; i < b; i++) {
-        fresh.set([c.r, c.g, c.b], i * 3);
-        col.setXYZ(i, c.r, c.g, c.b);
+    for (const [mat, c] of paints) {
+      for (const [a, b] of ranges(mesh, mat)) {
+        for (let i = a; i < b; i++) {
+          fresh.set([c.r, c.g, c.b], i * 3);
+          col.setXYZ(i, c.r, c.g, c.b);
+        }
       }
     }
     col.needsUpdate = true;
