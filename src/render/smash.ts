@@ -6,7 +6,7 @@
 // material's own (glass glints, wood dust, metal sparks) on top. The prop itself is hidden the moment it breaks.
 import * as THREE from 'three';
 import { warmMesh } from './shader-keep';
-import type { Particles, Spray } from './particles';
+import type { Particles } from './particles';
 import { FX } from './fx-settings';
 
 export type SmashHow = 'roll' | 'land' | 'grind' | 'hop' | 'slam' | 'bomb' | 'car';
@@ -136,7 +136,7 @@ export class SmashFx {
     const chips = model ? [...palette(model), ...look.chips.slice(0, 1)] : look.chips;
     p.spray(hit.x, hit.y + 0.4, { z: hit.z, n: Math.round(12 * k), colors: chips, life: [0.4, 0.8], size: [0.08, 0.14], speed: [2, 5 * k], angle: dir ? [0.1, Math.PI * 0.75] : [Math.PI * 0.1, Math.PI * 0.9], grav: 16, drag: 0.8, ink: stuff !== 'glass', floor: hit.y });
     if (stuff === 'glass') p.spray(hit.x, hit.y + 0.4, { z: hit.z, n: 10, colors: look.chips, life: [0.25, 0.45], size: [0.06, 0.09], speed: [3, 6], grav: 10, drag: 1.5, alpha: 0.9 });
-    if (look.dust) p.spray(hit.x, hit.y + 0.15, { z: hit.z, n: 8, colors: look.dust, life: [0.5, 0.8], size: [0.18, 0.26], size1: 0.5, speed: [0.6, 1.8], angle: [0, Math.PI], drag: 3, grav: -0.3, alpha: 0.7, fadeFrom: 0 } as Spray);
+    if (look.dust) p.spray(hit.x, hit.y + 0.15, { z: hit.z, n: 5, colors: look.dust, life: [0.5, 0.85], size: [0.4, 0.55], size1: 1, speed: [0.8, 2.2], angle: [0, Math.PI], jitter: 0.2, drag: 3, grav: -0.3, alpha: 0.85, fadeFrom: 0.2, puff: true });
     if (look.sparks) p.spray(hit.x, hit.y + 0.4, { z: hit.z, n: 10, colors: [hex(0xffffff), hex(0xffe08a), hex(0xffb040)], life: [0.2, 0.4], size: [0.1, 0.15], speed: [3, 6], angle: [0.2, Math.PI - 0.2], grav: 14 });
     if (big) {
       this.fx.word(hit.x, hit.y + 1.1, look.words[Math.floor(Math.random() * look.words.length)]);

@@ -347,6 +347,7 @@ export class Game {
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
+    this.view.scene.add(this.particles.behind); // grind sparks: in the level's pass, so the skater draws over them
     this.ghostMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.12, 0.14),
       new THREE.MeshBasicMaterial({ color: 0x9ff3ff, transparent: true, opacity: 0.6 }),

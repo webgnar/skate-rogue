@@ -1,15 +1,21 @@
 // All the small stuff in one draw call: grind sparks, landing dust and slam debris. A fixed pool of square pixel
 // particles (matching QFS's pixel art) drawn as THREE.Points; debris gets an ink rim like the comic burst.
-// Grind sparks draw the original Gnar Run's spark sprites instead (public/sprites/fx/grind-sparks.png, three 16 px
-// frames: gold, white-hot, gold), flickering between frames and flipping like the old GameMaker o_grindspark.
+// Grind sparks draw the original Gnar Run's spark sprites instead (public/sprites/fx/particles.png: three 16 px
+// frames, gold, white-hot, gold, at 3x), flickering between frames and flipping like the old GameMaker o_grindspark.
+// Smash and wreck dust draws its dust puff (the atlas's fourth cell), tinted, turned a random way and swelling.
+// They draw in a second layer, `behind`: in the level's pass, so the skater and board always draw over them.
 import * as THREE from 'three';
 import { ParticlePool } from './particle-pool';
 import { FX } from './fx-settings';
 
 const MAX = 256;
-const SPARK_FRAMES = 3;
-// which frames each kind of grind spark flickers through: a metal rail flashes white-hot, a ledge stays gold
-const SPARK_CYCLE: Record<GrindStyle, number[]> = { metal: [1, 0, 1, 2], concrete: [0, 2] };
+const ATLAS_CELLS = 4;
+// the atlas cells each kind of sprite cycles through: a metal rail's sparks flash white-hot, a ledge's stay gold;
+// a dust puff is one still frame
+const CYCLES = [[1, 0, 1, 2], [0, 2], [3]];
+const METAL = 0;
+const CONCRETE = 1;
+const PUFF = 2;
 const NO_SPRITE = -1;
 
 // the sprite atlas, loaded once in the browser (tests build Particles under Node, with no images)
@@ -25,7 +31,7 @@ function sparkTexture(): THREE.Texture {
       tex.image = img;
       tex.needsUpdate = true;
     };
-    img.src = `${import.meta.env.BASE_URL}sprites/fx/grind-sparks.png`;
+    img.src = `${import.meta.env.BASE_URL}sprites/fx/particles.png`;
   }
   return tex;
 }
@@ -37,7 +43,9 @@ const vertex = /* glsl */ `
   attribute vec3 aColor;
   attribute float aSprite;
   attribute float aFlip;
+  attribute float aLayer;
   uniform float uScale;
+  uniform float uLayer;
   varying vec3 vColor;
   varying float vAlpha;
   varying float vInk;
@@ -49,6 +57,12 @@ const vertex = /* glsl */ `
     vInk = aInk;
     vSprite = aSprite;
     vFlip = aFlip;
+    if (abs(aLayer - uLayer) > 0.5) {
+      // drawn by the other layer's Points
+      gl_PointSize = 0.0;
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      return;
+    }
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_PointSize = aSize * uScale / -mv.z;
     gl_Position = projectionMatrix * mv;
@@ -72,7 +86,7 @@ const fragment = /* glsl */ `
       if (mod(floor(o / 2.0), 2.0) > 0.5) uv = -uv;
       if (o > 3.5) uv.x = -uv.x;
       uv += 0.5;
-      vec4 s = texture2D(uSparks, vec2((vSprite + uv.x) / ${SPARK_FRAMES}.0, 1.0 - uv.y));
+      vec4 s = texture2D(uSparks, vec2((vSprite + uv.x) / ${ATLAS_CELLS}.0, 1.0 - uv.y));
       if (s.a < 0.5) discard;
       gl_FragColor = vec4(s.rgb * vColor, vAlpha);
       return;
@@ -144,6 +158,7 @@ export interface Spray {
   ink?: boolean;
   floor?: number;
   z?: number; // depth to spawn at (0: the skater's lane)
+  puff?: boolean; // draw the dust-puff sprite (tinted by `colors`) instead of square pixels
 }
 
 const WATER = [
@@ -162,7 +177,8 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
 
 export class Particles {
-  readonly points: THREE.Points;
+  readonly points: THREE.Points; // over everything (the effects pass, src/render/scene.ts)
+  readonly behind: THREE.Points; // the same pool's grind sparks, in the level's pass: under the skater and board
   private readonly pool = new ParticlePool(MAX);
   private readonly alpha0 = new Float32Array(MAX);
   private readonly fadeFrom = new Float32Array(MAX); // life fraction where fading starts
@@ -173,7 +189,8 @@ export class Particles {
   private readonly ink: THREE.BufferAttribute;
   private readonly sprite: THREE.BufferAttribute;
   private readonly flip: THREE.BufferAttribute;
-  private readonly cycle = new Float32Array(MAX).fill(NO_SPRITE); // a SPARK_CYCLE index, or NO_SPRITE for a pixel
+  private readonly layer: THREE.BufferAttribute;
+  private readonly cycle = new Float32Array(MAX).fill(NO_SPRITE); // a CYCLES index, or NO_SPRITE for a pixel
   private readonly frame0 = new Float32Array(MAX); // where in its cycle this spark starts
   private readonly fps = new Float32Array(MAX); // how fast it flickers
   private readonly mat: THREE.ShaderMaterial;
@@ -194,6 +211,7 @@ export class Particles {
     this.ink = attr(1);
     this.sprite = attr(1);
     this.flip = attr(1);
+    this.layer = attr(1);
     geo.setAttribute('position', this.pos);
     geo.setAttribute('aColor', this.col);
     geo.setAttribute('aSize', this.size);
@@ -201,15 +219,25 @@ export class Particles {
     geo.setAttribute('aInk', this.ink);
     geo.setAttribute('aSprite', this.sprite);
     geo.setAttribute('aFlip', this.flip);
+    geo.setAttribute('aLayer', this.layer);
     this.mat = new THREE.ShaderMaterial({
       vertexShader: vertex,
       fragmentShader: fragment,
-      uniforms: { uScale: { value: 500 }, uSparks: { value: sparkTexture() } },
+      uniforms: { uScale: { value: 500 }, uSparks: { value: sparkTexture() }, uLayer: { value: 0 } },
       transparent: true,
       depthWrite: false,
     });
     this.points = new THREE.Points(geo, this.mat);
     this.points.frustumCulled = false;
+    const under = new THREE.ShaderMaterial({
+      vertexShader: vertex,
+      fragmentShader: fragment,
+      uniforms: { uScale: this.mat.uniforms.uScale, uSparks: this.mat.uniforms.uSparks, uLayer: { value: 1 } },
+      transparent: true,
+      depthWrite: false,
+    });
+    this.behind = new THREE.Points(geo, under);
+    this.behind.frustumCulled = false;
   }
 
   private spawn(x: number, y: number, z: number, life: number, rgb: number[], size0: number, size1: number, alpha: number, fadeFrom: number, ink: boolean): number {
@@ -227,6 +255,8 @@ export class Particles {
     this.ink.setX(i, ink ? 1 : 0);
     this.ink.needsUpdate = true;
     this.cycle[i] = NO_SPRITE;
+    this.layer.setX(i, 0);
+    this.layer.needsUpdate = true;
     return i;
   }
 
@@ -242,6 +272,7 @@ export class Particles {
       this.flareDebt--;
       const f = this.spawn(x, y + 0.03, 0.3, 0.07, metal ? [1, 1, 1] : pick(SPARK_TINT), metal ? rand(0.7, 0.9) : rand(0.55, 0.7), 0.35, 1, 0.6, false);
       this.sparkSprite(f, style);
+      this.under(f);
     }
     while (this.sparkDebt >= 1) {
       this.sparkDebt--;
@@ -252,6 +283,7 @@ export class Particles {
         p.vz[c] = rand(-0.3, 1);
         p.grav[c] = 14;
         p.floor[c] = y - 1.5;
+        this.under(c);
         continue;
       }
       // most are spark sprites; a metal rail also spits tiny white-hot pixels between them
@@ -260,6 +292,7 @@ export class Particles {
         ? this.spawn(x + rand(-0.05, 0.05), y + rand(0, 0.06), rand(0.05, 0.25), rand(0.12, 0.3), pick(SPARK_HOT), rand(0.07, 0.11), 0.02, 1, 0.5, false)
         : this.spawn(x + rand(-0.05, 0.05), y + rand(0, 0.06), rand(0.05, 0.25), metal ? rand(0.2, 0.42) : rand(0.16, 0.32), metal ? [1, 1, 1] : pick(SPARK_TINT), metal ? rand(0.45, 0.65) : rand(0.38, 0.52), 0.12, 1, 0.55, false);
       if (!ember) this.sparkSprite(i, style);
+      this.under(i);
       p.vx[i] = dir * rand(-2.5, 1.5) * (metal ? 1.2 : 0.8);
       p.vy[i] = rand(0.8, 3.6) * (metal ? 1.1 : 0.8);
       p.vz[i] = rand(-0.6, 1.6);
@@ -269,11 +302,23 @@ export class Particles {
     }
   }
 
+  // draw particle `i` in the `behind` layer, under the skater and board
+  private under(i: number): void {
+    this.layer.setX(i, 1);
+  }
+
   // draw particle `i` as a flickering spark sprite
   private sparkSprite(i: number, style: GrindStyle): void {
-    this.cycle[i] = style === 'metal' ? 0 : 1;
+    this.cycle[i] = style === 'metal' ? METAL : CONCRETE;
     this.frame0[i] = Math.floor(Math.random() * 8);
     this.fps[i] = rand(14, 26);
+  }
+
+  // draw particle `i` as a dust puff, turned a random way
+  private puff(i: number): void {
+    this.cycle[i] = PUFF;
+    this.frame0[i] = Math.floor(Math.random() * 8);
+    this.fps[i] = 0;
   }
 
   // the gnar state's sparkle trail: rainbow pixels shed behind the skater
@@ -407,6 +452,7 @@ export class Particles {
       p.grav[i] = o.grav ?? 0;
       p.drag[i] = o.drag ?? 1;
       if (o.floor !== undefined) p.floor[i] = o.floor;
+      if (o.puff) this.puff(i);
     }
   }
 
@@ -421,8 +467,13 @@ export class Particles {
     this.streams.set(key, debt);
   }
 
-  // a dust puff where the board touches down; size 1 for a normal landing
-  dust(x: number, y: number, size = 1): void {
+  // a dust puff where the board touches down; size 1 for a normal landing. `puff`: a cloud of the dust-puff sprite,
+  // bigger and fewer, for something breaking (a car hop or wreck, src/render/car-damage.ts)
+  dust(x: number, y: number, size = 1, puff = false): void {
+    if (puff) {
+      this.spray(x, y + 0.1, { n: Math.round(3 + 3 * size), colors: DUST, life: [0.5, 0.85], size: [0.4 * size, 0.6 * size], size1: 1.1 * size, speed: [0.8 * size, 2.6 * size], angle: [0, Math.PI], jitter: 0.25, drag: 4, grav: -0.4, alpha: 0.85, fadeFrom: 0.2, puff: true });
+      return;
+    }
     const p = this.pool;
     const n = Math.round(6 + 8 * size);
     for (let k = 0; k < n; k++) {
@@ -481,7 +532,7 @@ export class Particles {
         continue;
       }
       //flicker to the next frame, turned a new way each time
-      const frames = this.cycle[i] === 0 ? SPARK_CYCLE.metal : SPARK_CYCLE.concrete;
+      const frames = CYCLES[this.cycle[i]];
       const k = this.frame0[i] + Math.floor(p.age[i] * this.fps[i]);
       this.sprite.setX(i, frames[k % frames.length]);
       this.flip.setX(i, (k * 3) % 8);
