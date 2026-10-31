@@ -242,92 +242,146 @@ def chains(spec):
     return out
 
 
-# Keanu's hood as fabric (zack, 2026-10-31: "his hood on his head should be like the hair"): a shell round the head,
-# open at the face, cut into meridians that run from the face opening back over the head. Round the face it is held
-# to the head; behind that each meridian is a chain of bones (SpringHood<i>), and the game ties neighbouring chains
-# together into one sheet (springs.ts), so the back of the hood puffs off the head with speed and flops on landings.
+# Keanu's hood and sweatshirt as fabric (zack, 2026-10-31: "his hood on his head should be like the hair", then "not
+# capped on the back", "show more of his face, only cover a little more than half the top of the head" and the
+# sweatshirt "to have physics as well"). Each is a sheet cut into strips: held to a bone along one edge, and down each
+# strip a chain of bones (SpringHood<i>, SpringShirt<i>). The game ties neighbouring chains together, all the way
+# round where the strips close into a loop (springs.ts), so the sheet puffs out with speed and flops on landings.
+def cloth_bones(rig, name, at, cols, us, anchor):
+    """A chain per strip: bones from at(col, us[0]) to at(col, us[1]) and so on. The last bone only gives the one
+    before it a tail to aim at."""
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = rig.data.edit_bones
+    for i, col in enumerate(cols):
+        prev = eb[anchor]
+        for j, (u0, u1) in enumerate(zip(us, us[1:])):
+            b = eb.new(f'{name}{i}_{j}')
+            b.head, b.tail = at(col, u0), at(col, u1)
+            b.parent = prev
+            b.use_connect = j > 0
+            b.use_deform = j < len(us) - 2
+            prev = b
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def cloth_mesh(name, at, cols, us, rows, anchor, mat, centre, cap=None, thickness=0.014):
+    """The sheet over the strips (closed round into a loop), skinned to `anchor` down to the chains' roots and to the
+    chains below, with a strip between each pair of chains; `cap` closes the far end on one point. Faces turn out
+    from centre(point); then it is given thickness."""
+    n = len(cols)
+    step = 360 / n
+    mid = [cols[0] + step * k / 2 for k in range(2 * n)]
+    bm = bmesh.new()
+    grid = [[bm.verts.new(at(c, u)) for u in rows] for c in mid]
+    tip = bm.verts.new(cap) if cap is not None else None
+    for k in range(2 * n):
+        a, b = grid[k], grid[(k + 1) % (2 * n)]
+        for j in range(len(rows) - 1):
+            bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
+        if tip is not None:
+            bm.faces.new((a[-1], b[-1], tip))
+    for f in bm.faces:
+        c = f.calc_center_median()
+        if f.normal.dot(c - centre(c)) < 0:
+            f.normal_flip()
+    bm.normal_update()
+    bones = len(us) - 2  # deforming bones per chain
+    span = us[1] - us[0]
+    weights = {}  # vert -> {bone: weight}
+    for k in range(2 * n):
+        i, half = divmod(k, 2)
+        side = [(i, 1.0)] if not half else [(i, 0.5), ((i + 1) % n, 0.5)]
+        for j, u in enumerate(rows):
+            w = {}
+            if u <= us[0]:
+                w[anchor] = 1.0
+            else:
+                s = (u - us[0]) / span  # how far down the chain, in bones
+                along = [max(0.0, 1 - abs(s - (m + 0.5))) for m in range(bones)]
+                along[0] = max(along[0], 1.0 if s < 0.5 else 0.0)
+                along[-1] = max(along[-1], 1.0 if s > bones - 0.5 else 0.0)
+                tot = sum(along)
+                for col, cw in side:
+                    for m, x in enumerate(along):
+                        if x:
+                            key = f'{name}{col}_{m}'
+                            w[key] = w.get(key, 0) + cw * x / tot
+            weights[grid[k][j]] = w
+    if tip is not None:
+        weights[tip] = {f'{name}{i}_{bones - 1}': 1 / n for i in range(n)}
+    ob = lg.link(name.lower(), bm, [mat])
+    index = {v: k for k, v in enumerate(weights)}  # verts were made in this order, so their indices match
+    groups = {}
+    for v, w in weights.items():
+        for g_name, x in w.items():
+            g = groups.get(g_name) or ob.vertex_groups.new(name=g_name)
+            groups[g_name] = g
+            g.add([index[v]], x, 'REPLACE')
+    solid = ob.modifiers.new('solid', 'SOLIDIFY')
+    solid.thickness = thickness
+    solid.offset = 1
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=solid.name)
+    return ob
+
+
+# the hood: pushed back on the head, so the face and the front of the hair show. Its opening runs over the top of
+# the head a little behind the middle, down behind the ears, and under to the back of the neck, and it closes at the
+# back on a point. A strip's `u` runs from the opening (0) to the back (1).
 HOOD_C = HEAD_C + Vector((0, 0.012, 0.01))
 HOOD_R = HEAD_R + 0.035
 HOOD_S = Vector((1.0, 1.1, 1.1))  # a little baggy
-HOOD_RIM = 42  # degrees round from the front: the face opening
-HOOD_ROWS = (70, 100, 130, 160, 175)  # where each chain's bones start and end, degrees round from the front
-HOOD_COLS = [-125 + 25 * i for i in range(11)]  # meridians, degrees round from the top (+ to the lead side)
+HOOD_COLS = [-180 + 360 * i / 14 for i in range(14)]  # strips, degrees round from the top (+ to the lead side)
+HOOD_US = (0.25, 0.5, 0.75, 1.0, 1.15)  # chain bones' ends along a strip
+HOOD_ROWS = (0, 0.12, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0)
 
 
-def hood_at(col, t):
-    """A point on the hood: `t` degrees round from the face toward the back, on the meridian `col` from the top."""
-    a, t = math.radians(col), math.radians(t)
+def hood_open(col):
+    """How far round from the front of the head (degrees) the opening is on strip `col`."""
+    a = abs((col + 180) % 360 - 180)
+    return 80 + 15 * min(a, 90) / 90 + 35 * max(0, a - 90) / 90
+
+
+def hood_at(col, u):
+    t0 = hood_open(col)
+    a, t = math.radians(col), math.radians(t0 + u * (165 - t0))
     d = Vector((math.sin(t) * math.sin(a), -math.cos(t), math.sin(t) * math.cos(a)))
     return HOOD_C + Vector((d.x * HOOD_S.x, d.y * HOOD_S.y, d.z * HOOD_S.z)) * HOOD_R
 
 
 def hood_bones(rig):
-    bpy.context.view_layer.objects.active = rig
-    bpy.ops.object.mode_set(mode='EDIT')
-    eb = rig.data.edit_bones
-    for i, col in enumerate(HOOD_COLS):
-        prev = eb['Head']
-        for j, (t0, t1) in enumerate(zip(HOOD_ROWS, HOOD_ROWS[1:])):
-            b = eb.new(f'SpringHood{i}_{j}')
-            b.head, b.tail = hood_at(col, t0), hood_at(col, t1)
-            b.parent = prev
-            b.use_connect = j > 0
-            b.use_deform = j < len(HOOD_ROWS) - 2  # the last one only gives the one before it a tail to aim at
-            prev = b
-    bpy.ops.object.mode_set(mode='OBJECT')
+    cloth_bones(rig, 'SpringHood', hood_at, HOOD_COLS, HOOD_US, 'Head')
 
 
 def hood_mesh(mat):
-    """The hood shell, skinned to the head round the face and to the hood chains behind, then given thickness."""
-    cols = [HOOD_COLS[0] + 12.5 * k for k in range(2 * len(HOOD_COLS) - 1)]  # a meridian between each pair of chains
-    rows = [HOOD_RIM, 56] + [70 + 10 * k for k in range(10)]  # out to 160
-    bm = bmesh.new()
-    grid = [[bm.verts.new(hood_at(c, t)) for t in rows] for c in cols]
-    pole = bm.verts.new(hood_at(0, 180) + Vector((0, 0.035, 0.015)))  # the hood's point, sticking out behind
-    for a, b in zip(grid, grid[1:]):
-        for j in range(len(rows) - 1):
-            bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
-        bm.faces.new((a[-1], b[-1], pole))
-    for f in bm.faces:  # face out of the head
-        if f.normal.dot(f.calc_center_median() - HOOD_C) < 0:
-            f.normal_flip()
-    bm.normal_update()
-    weights = {}  # vert -> {bone: weight}
-    n = len(HOOD_ROWS) - 2  # deforming bones per chain
-    for ci, c in enumerate(cols):
-        i, f = divmod(ci, 2)
-        side = [(i, 1.0)] if not f else [(i, 0.5), (i + 1, 0.5)]
-        for j, t in enumerate(rows):
-            w = {}
-            if t <= HOOD_ROWS[0]:
-                w['Head'] = 1.0
-            else:
-                s = (t - HOOD_ROWS[0]) / (HOOD_ROWS[1] - HOOD_ROWS[0])  # how far along the chain, in bones
-                along = [max(0.0, 1 - abs(s - (k + 0.5))) for k in range(n)]
-                along[0] = max(along[0], 1.0 if s < 0.5 else 0.0)
-                along[-1] = max(along[-1], 1.0 if s > n - 0.5 else 0.0)
-                tot = sum(along)
-                for col, cw in side:
-                    for k, x in enumerate(along):
-                        if x:
-                            key = f'SpringHood{col}_{k}'
-                            w[key] = w.get(key, 0) + cw * x / tot
-            weights[grid[ci][j]] = w
-    weights[pole] = {f'SpringHood{i}_{n - 1}': 1 / len(HOOD_COLS) for i in range(len(HOOD_COLS))}
-    ob = lg.link('hood', bm, [mat])
-    index = {v: k for k, v in enumerate(weights)}  # verts were made in this order, so their indices match
-    groups = {}
-    for v, w in weights.items():
-        for name, x in w.items():
-            g = groups.get(name) or ob.vertex_groups.new(name=name)
-            groups[name] = g
-            g.add([index[v]], x, 'REPLACE')
-    solid = ob.modifiers.new('solid', 'SOLIDIFY')
-    solid.thickness = 0.014
-    solid.offset = 1
-    bpy.context.view_layer.objects.active = ob
-    bpy.ops.object.modifier_apply(modifier=solid.name)
-    return ob
+    tip = HOOD_C + Vector((0, HOOD_R * HOOD_S.y + 0.035, 0.015))  # the hood's point, sticking out behind
+    return cloth_mesh('SpringHood', hood_at, HOOD_COLS, HOOD_US, HOOD_ROWS, 'Head', mat, lambda p: HOOD_C, tip)
+
+
+# the sweatshirt's body: a loose band round the torso from the chest down past the waistband, hanging off the Spine
+# bone, that swings out with speed and flaps on landings over the skin-tight body underneath
+SHIRT_COLS = [30 * i for i in range(12)]  # degrees round the torso from the back (+ to the lead side)
+SHIRT_US = (0.4, 0.7, 1.0, 1.3)
+SHIRT_ROWS = (0, 0.2, 0.4, 0.55, 0.7, 0.85, 1.0)
+SHIRT_TOP, SHIRT_HEM = SPINE + 0.22, SPINE - 0.04
+
+
+def shirt_at(col, u, build=1.0):
+    a = math.radians(col)
+    # tucked inside the body's chest at the top, so there is no seam, then out to hang loose below
+    out = min(1.0, u / 0.35)
+    rx, ry = (0.142 + 0.026 * out + 0.006 * u) * build, (0.096 + 0.024 * out + 0.005 * u) * build
+    return Vector((math.sin(a) * rx, math.cos(a) * ry, SHIRT_TOP + (SHIRT_HEM - SHIRT_TOP) * u))
+
+
+def shirt_bones(rig, build):
+    cloth_bones(rig, 'SpringShirt', lambda c, u: shirt_at(c, u, build), SHIRT_COLS, SHIRT_US, 'Spine')
+
+
+def shirt_mesh(mat, build):
+    at = lambda c, u: shirt_at(c, u, build)
+    return cloth_mesh('SpringShirt', at, SHIRT_COLS, SHIRT_US, SHIRT_ROWS, 'Spine', mat, lambda p: Vector((0, 0, p.z)), thickness=0.012)
 
 
 def chain_bones(rig, specs):
@@ -420,11 +474,13 @@ def build(name, spec):
     chain_bones(rig, specs)  # after the body's automatic weights, so it never skins to them
     if spec['hair'] == 'hood':
         hood_bones(rig)
+        shirt_bones(rig, spec['build'])
     for part, bone in head(spec, mats) + feet(spec, mats) + lg.wear_decals(0.11, -0.06):
         lg.rigid(part, bone)
         part.select_set(True)
     if spec['hair'] == 'hood':
         hood_mesh(mats['top']).select_set(True)
+        shirt_mesh(mats['top'], spec['build']).select_set(True)
     for c in specs:
         chain_mesh(c, mats['top'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
     ob.select_set(True)
