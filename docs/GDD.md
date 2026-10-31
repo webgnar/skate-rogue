@@ -745,6 +745,11 @@ callout mid-run and swaps in the next mission right away. Missions carry over be
   Early ranks get the easy ones.
 - **A skip:** any mission can be skipped for a little Stoken, so nobody gets stuck on one they hate.
 
+Built Oct 31, 2026 (src/run/missions.ts, src/ui/missions-panel.ts): 44 missions in 7 tiers, each counted per combo,
+floor, run, across runs, or as a best. A rank pays 10 + 5 per rank Stoken (up to 50); ranks 2, 4, 6, 8 and 10 put a
+grip colour the shop never sells on the board (Gold, Camo, Navy, Teal, Chrome). A skip costs 3 Stoken. The playtest
+bot and the tutorial floor don't count.
+
 ### Spin tokens and the end-of-run payout (from Jetpack Joyride)
 
 Added Oct 31, 2026 (zack). **Spin tokens** turn up rarely: in a smashed prop now and then, at the end of a side line,
