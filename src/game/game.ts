@@ -1749,7 +1749,10 @@ export class Game {
         this.slam();
         break;
       case 'pickup':
-        this.pickups.take(e.index);
+        {
+          const at = this.pickups.take(e.index);
+          if (at) this.particles.coin(at.x, at.y, at.z);
+        }
         this.hud.money(this.run.cash, this.run.stoken);
         if (e.kind === 'stoken') this.hud.callout('STOKEN!', 'good');
         break;
