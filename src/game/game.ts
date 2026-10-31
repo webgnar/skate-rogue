@@ -31,6 +31,7 @@ import { ElView } from '../render/el-view';
 import { ChinatownView } from '../render/chinatown-view';
 import { CableView } from '../render/cable-view';
 import { Impacts } from '../render/impact';
+import { GrindImpacts } from '../render/grind-impact';
 import { WaterSplashes } from '../render/water-splash';
 import { Particles, TRICK_TRAIL } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
@@ -253,6 +254,7 @@ export class Game {
   private dripEdges: { x: number; y: number }[] = []; // roof corners water drips from
   private dripT = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
+  private readonly grindFlash = new GrindImpacts();
   private readonly splashes: WaterSplashes;
   private sink: { at: number; x: number; top: number; bubble: number } | null = null; // went into the canal: going under
   private readonly chopper = new ChopperView();
@@ -372,6 +374,7 @@ export class Game {
     this.skaterLight = new SkaterLight(this.sprite.mesh);
     this.view.front.add(this.skaterLight.group);
     this.view.over.add(this.speedLines.mesh);
+    this.view.withActor.add(this.grindFlash.group); // the grind-entry flash: the board cuts across it
     this.view.withActor.add(this.flipLines.mesh); // in depth with the skater: the board covers the lines (zack)
     this.impacts = new Impacts(() => this.view.resolution);
     this.splashes = new WaterSplashes(() => this.view.resolution);
@@ -818,7 +821,7 @@ export class Game {
     const y = -(level.streetY - level.startY) / TILE;
     this.view.promote(specKey(spec), level, this.seed, next.floor, x, y);
     this.trafficView.handOff(old);
-    for (const fx of [this.particles, this.impacts, this.splashes, this.words, this.smashFx]) fx.shift(-x, -y);
+    for (const fx of [this.particles, this.impacts, this.grindFlash, this.splashes, this.words, this.smashFx]) fx.shift(-x, -y);
     for (const ch of [this.chopper, this.topChopper]) ch.shift(-x, -y);
     const skater = this.skater;
     this.floor = next.floor;
@@ -1269,6 +1272,7 @@ export class Game {
     //stood still on the board under a menu, hands up when busted
     this.sprite.hold(this.state === 'caught' ? 'busted' : this.state === 'skate' ? null : 'idle');
     this.impacts.update(dt);
+    this.grindFlash.update(dt);
     this.splashes.update(realDt);
     this.chopper.update(this.level, this.sim.chopper, dt);
     const top = this.sim.sky.chopper;
@@ -1410,6 +1414,7 @@ export class Game {
     if (this.state !== 'skate' || (sk.mode !== 'rail' && sk.mode !== 'grind')) return;
     const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
     const rate = (sk.mode === 'rail' ? SPARKS_RAIL : SPARKS_LEDGE) * Math.min(2, Math.max(0.4, speed / PHYS.baseSpeed));
+    this.grindFlash.follow(...(SLIDES.has(sk.stance) ? this.deckMiddle() : this.backTruck()));
     //a slide shreds the deck's paint off its middle; rails are metal; ledges, roof edges and banks are concrete
     if (SLIDES.has(sk.stance)) this.particles.slide(...this.deckMiddle(), 1, rate * SLIDE_FLAKES, dt, this.paint);
     else this.particles.grind(...this.backTruck(), 1, rate, dt, sk.material);
@@ -1417,7 +1422,11 @@ export class Game {
 
   // a grind or slide locked on: sparks off the back truck, or a slide's burst of paint
   private grindStart(): void {
-    if (!SLIDES.has(this.skater.stance)) return this.particles.grindStart(...this.backTruck(), 1);
+    if (!SLIDES.has(this.skater.stance)) {
+      this.grindFlash.spawn(...this.backTruck());
+      return this.particles.grindStart(...this.backTruck(), 1);
+    }
+    this.grindFlash.spawn(...this.deckMiddle());
     this.paint = this.sprite.deckPaint(); // as worn now
     this.particles.slideStart(...this.deckMiddle(), 1, this.paint);
   }
