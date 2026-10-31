@@ -275,7 +275,8 @@ export class Game {
     const want = this.sewerStart;
     const s =
       all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate) || (want === 'stairs' && w.stairs?.length)) ?? all[0];
-    if (s) Object.assign(this.sim.skater, { x: s.drain[0] - 3 * TILE, y: this.level.streetY, mode: 'roll', surface: null, hsp: 3.5, carry: 0, vsp: 0 });
+    //(down on its floor, just past the way in: a few tiles up the street from a dig can be a hill's foot or a canal)
+    if (s) Object.assign(this.sim.skater, { x: s.drain[1] + TILE, y: s.y, mode: 'roll', surface: null, hsp: 4, carry: 0, vsp: 0 });
   }
 
   // ?shop: the run starts on act 1's escape, skating up to its gate with the shop picked: GNAR SUPPLY stands

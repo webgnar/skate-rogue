@@ -127,7 +127,7 @@ export class SewerSim {
           for (const r of pack.rats) {
             if (!r.alive) continue;
             r.x -= SEWER_SIM.ratSpeed;
-            if (r.x < s.x0) r.alive = false;
+            if (r.x < (s.stairs?.[0]?.x1 ?? s.x0)) r.alive = false;
             if (!mine) continue;
             if (Math.abs(r.x - sk.x) < half && low(SEWER_SIM.ratLow) && sk.mode !== 'bail') {
               r.alive = false;
