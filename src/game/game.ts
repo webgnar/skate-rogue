@@ -147,8 +147,8 @@ export type ShopPick = { stock: number } | { slot: number } | null;
 
 // the skater's ink outline in CSS px (the city's is INK.width, 2.2): thicker since Lou grew (zack, 2026-10-30)
 const SKATER_INK = 3;
-// the paper-white line round the skater's ink, as a fraction of the ink's width (zack: "half the thickness")
-const SKATER_HALO = 0.5;
+// the paper-white line round the skater's ink, as a fraction of the ink's width (zack: "half the thickness", then thinner: a third)
+const SKATER_HALO = 0.33;
 const PAPER = 0xfffaeb; // the flip lines' paper white (flip-lines.ts HALO_RGB)
 
 export interface ShopView {
