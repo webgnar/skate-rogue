@@ -68,6 +68,9 @@ export function buildSkyBeats(level: Level): THREE.Group {
   const ac = new THREE.MeshLambertMaterial({ color: 0xc8ccd4 });
   const wood = surface('planks', 0x9a6a40);
   const yellow = new THREE.MeshLambertMaterial({ color: 0xe8b020 });
+  const fan = new THREE.MeshLambertMaterial({ color: 0x2a2c34 });
+  const solar = new THREE.MeshLambertMaterial({ color: 0x24407a, emissive: 0x0a1430 });
+  const lamp = new THREE.MeshLambertMaterial({ color: 0xd8dce4, emissive: 0x403820 });
   const board = new THREE.MeshLambertMaterial({ map: adTexture() });
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -86,10 +89,24 @@ export function buildSkyBeats(level: Level): THREE.Group {
     const cx = (x0 + x1) / 2;
     const y = Y(s.y);
     if (s.sky === 'roofs') {
-      //a roof deck with a parapet along its back, an AC unit or two, on steel legs
+      //a tar roof with a parapet along its back (zack's rooftop refs): HVAC units with their fans on top, vent
+      //stacks, and now and then a row of solar panels tilted at the sky, all behind the lane
       box(w, 0.4, 2.6, cx, y - 0.2, -0.2, roof);
       box(w, 0.5, 0.2, cx, y + 0.25, -1.4, parapet);
-      for (let ax = x0 + 1.2; ax < x1 - 1; ax += 3.5) box(1, 0.7, 0.8, ax, y + 0.35, -1.0, ac);
+      box(w, 0.1, 0.1, cx, y - 0.02, 1.1, parapet); // the flashing along the front edge
+      const solarRow = (i + Math.round(x0)) % 3 === 0;
+      for (let ax = x0 + 1.2, k = 0; ax < x1 - 1; ax += 3.5, k++) {
+        if (solarRow && k % 2 === 1) {
+          for (let sx = -0.6; sx <= 0.6; sx += 1.2) box(1.1, 0.06, 0.8, ax + sx, y + 0.4, -0.95, solar).rotation.x = 0.55;
+          continue;
+        }
+        box(1.1, 0.75, 0.9, ax, y + 0.375, -1.0, ac);
+        const f = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 12), fan);
+        f.position.set(ax, y + 0.78, -1.0);
+        g.add(f);
+        box(0.12, 0.6, 0.12, ax + 0.9, y + 0.3, -0.75, steel); // a vent stack
+        box(0.22, 0.08, 0.22, ax + 0.9, y + 0.62, -0.75, steel);
+      }
       for (let lx = x0 + 0.6; lx < x1; lx += 3.5) leg(lx, y - 0.4);
     } else if (s.sky === 'billboard') {
       //the board under its catwalk rail, ad side out, on two posts
@@ -97,6 +114,13 @@ export function buildSkyBeats(level: Level): THREE.Group {
       adUv(face, i);
       box(w, 0.08, 0.08, cx, y - 0.04, 0, steel); // the rail you grind
       for (let lx = x0 + 0.4; lx < x1; lx += Math.max(1, w - 0.8)) box(0.06, 0.1, 0.6, lx, y - 0.1, -0.3, steel);
+      //the catwalk under the board (zack's refs): a steel grate on brackets, its lamps out on arms lighting the face
+      box(w, 0.06, 0.7, cx, y - 2.45, -0.15, steel);
+      box(w, 0.05, 0.05, cx, y - 1.95, 0.2, steel);
+      for (let lx = x0 + 0.8; lx < x1 - 0.4; lx += 1.8) {
+        box(0.05, 0.05, 0.9, lx, y - 2.4, 0.25, steel);
+        box(0.3, 0.16, 0.24, lx, y - 2.32, 0.7, lamp);
+      }
       for (const lx of [x0 + w * 0.25, x0 + w * 0.75]) leg(lx, y - 2.35, -0.6, 0.16);
     } else if (s.sky === 'tower') {
       //a wooden water tower: its lid is what you land on, a cone roof over the back of it
@@ -128,7 +152,8 @@ export function buildSkyBeats(level: Level): THREE.Group {
     box(2, 0.5, 0.8, mx - 1.4, my - 0.1, -0.6, steel); // the counterweight
   }
   //Chinatown's clotheslines: a thin line on a bracket at each end, washing pegged along it
-  const cloth = [0xe83a5a, 0xf2eef8, 0x2a6ad8, 0xffb020, 0x5fe8ff].map((c) => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
+  //(zack's refs: NYC Chinatown's washing is mostly white sheets and shirts, a bright one here and there)
+  const cloth = [0xf2eef8, 0xe8e4dc, 0xf2eef8, 0xdcd8e8, 0xe83a5a, 0xf2eef8, 0x2a6ad8, 0xf2eef8, 0xffb020].map((c) => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
   const line = new THREE.MeshBasicMaterial({ color: 0x1a1424 });
   lines.forEach((r, n) => {
     for (let k = 1; k < r.xs.length; k++) {
@@ -147,7 +172,12 @@ export function buildSkyBeats(level: Level): THREE.Group {
     for (let x = X(r.xs[0]) + 0.6; x < X(r.xs[r.xs.length - 1]) - 0.4; x += 0.9) {
       const top = Y(r.yAt(x * TILE) ?? r.ys[0]);
       const h = 0.5 + (i % 3) * 0.2;
-      box(0.6, h, 0.03, x, top - h / 2 - 0.05, -0.12, cloth[i++ % cloth.length]);
+      const m = cloth[i % cloth.length];
+      if (i++ % 2) {
+        //a shirt: its body and sleeves out either side
+        box(0.5, h, 0.03, x, top - h / 2 - 0.05, -0.12, m);
+        box(0.9, 0.2, 0.03, x, top - 0.15, -0.12, m);
+      } else box(0.7, h + 0.25, 0.03, x, top - (h + 0.25) / 2 - 0.05, -0.12, m).rotation.z = ((i % 5) - 2) * 0.04;
     }
   });
   return g;
