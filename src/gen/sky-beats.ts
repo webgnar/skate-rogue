@@ -9,6 +9,7 @@
 // - crane: a crane's boom, a long grind falling with the hill
 // - scaffold: three scaffold decks stepping down
 // - gap: open sky, with a Stoken in it now and then
+// - beam: a steel I-beam hoisted on a crane's cable, a short grind falling a little (zack, 2026-10-31)
 // Set pieces (zack, 2026-10-31, "build out the sky route"), at most one a floor:
 // - blimp: an ad blimp moored over the hill, its long back bobbing on the air, a calm cruise
 // - rig: a window washer's rig on a tower's face that drops under you once you land: pop off it quick onto the roof
@@ -27,13 +28,13 @@ import { PICKUPS } from './descent';
 import { editFloor } from './hills';
 import { floorEdit } from './level-edits';
 import { makeRng, randInt, type Rng } from './rng';
-import { busy, clearAt, groundAt } from './top-route';
+import { busy, clearAt, groundAt, TOP } from './top-route';
 import { cloudy, crestOf, lipOf, stairStart } from './clouds';
 
-export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | SkyPiece | 'lines';
+export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | 'beam' | SkyPiece | 'lines';
 export type SkyPiece = 'blimp' | 'rig' | 'swing' | 'bust';
 export const SKY_PIECES: SkyPiece[] = ['blimp', 'rig', 'swing', 'bust'];
-export const SKY_BEATS: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap', ...SKY_PIECES, 'lines'];
+export const SKY_BEATS: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap', 'beam', ...SKY_PIECES, 'lines'];
 
 export const SKY = {
   height: 4.5, // tiles over the highest ground behind: where a big ollie and a flip off a lip carries you at speed
@@ -46,6 +47,7 @@ export const SKY = {
   tower: 4, // the water tower's lid (room to land, take the impact and pop again)
   towerUp: 1.5, // tiles higher than the rest
   crane: [12, 16],
+  beam: [5, 7], // tiles: a steel I-beam hoisted on a crane's cable, to grind (zack, 2026-10-31: "we need some Grindable I-beams")
   craneFall: 7, // a crane boom falls at least a tile every this many along
   scaffold: 3, // each deck
   scaffoldGap: 1, // tiles between decks: a run of steps down, an ollie anywhere lands on one
@@ -86,17 +88,17 @@ const SKY_RECIPES: SkyBeat[][][] = [
   [],
   [],
   R('roofs gap billboard gap roofs'),
-  R('roofs/billboard gap tower bust/rig gap billboard roofs'),
-  R('billboard scaffold gap swing roofs gap tower crane'),
-  R('roofs tower gap blimp gap tower/billboard scaffold gap roofs'),
-  R('crane gap billboard bust/rig scaffold gap tower roofs'),
-  R('tower gap crane roofs swing/blimp gap billboard/scaffold crane'),
-  R('roofs billboard gap crane rig/bust scaffold tower gap roofs crane'),
-  R('crane tower gap blimp/swing scaffold billboard gap roofs crane'),
-  R('scaffold crane gap tower bust/rig roofs/billboard gap crane scaffold'),
-  R('crane/roofs tower scaffold gap swing/blimp billboard crane gap tower roofs'),
-  R('tower crane gap scaffold rig/bust/swing roofs billboard gap crane tower'),
-  R('crane scaffold tower gap blimp/swing/rig/bust roofs crane billboard gap scaffold crane'),
+  R('roofs/billboard beam gap tower bust/rig gap billboard roofs'),
+  R('beam scaffold gap swing roofs gap tower crane'),
+  R('roofs beam tower gap blimp gap billboard scaffold gap roofs'),
+  R('beam crane gap roofs bust/rig scaffold gap tower roofs'),
+  R('tower beam gap crane roofs swing/blimp gap billboard/scaffold crane'),
+  R('roofs beam gap crane rig/bust scaffold tower gap roofs crane'),
+  R('beam tower gap blimp/swing scaffold crane gap roofs billboard'),
+  R('scaffold beam crane gap tower bust/rig roofs gap crane scaffold'),
+  R('crane/roofs beam tower scaffold gap swing/blimp beam crane gap tower roofs'),
+  R('tower beam crane gap scaffold rig/bust/swing roofs beam gap billboard tower'),
+  R('crane beam scaffold tower gap blimp/swing/rig/bust roofs beam billboard gap scaffold crane'),
 ];
 
 export function skyRecipe(floor: number): SkyBeat[][] {
@@ -288,6 +290,37 @@ export function addSkyBeats(level: Level, seed: number): void {
           r.sky = 'crane';
           rails.push(r);
           coins(x, x + w, (cx) => pts[Math.min(pts.length - 1, Math.round((cx - x) / (TILE / 2)))][1]);
+        }
+        x += w;
+      } else if (beat === 'beam') {
+        //a steel I-beam hoisted on a crane's cable, its top flange the grind: falling a little along it, as a boom
+        //does (a flat grind bleeds your speed), nudged clear of the power line if it's crowded
+        const w = t(range(rng, SKY.beam));
+        const y0 = top(base, x, x + w);
+        const pts: [number, number][] = [];
+        for (let px = x; px <= x + w + 1; px += TILE / 2) pts.push([px, y0 + (px - x) / SKY.craneFall]);
+        //(crowded, by the power line or the hill: up or down a little, never over the ceiling nor within 2 tiles of
+        //the ground)
+        //(a rail counts only where it runs right there: a power line's height further along doesn't, as busy()'s would)
+        const bare = { ...level, rails: [] };
+        const wire = (px: number, py: number) =>
+          [...level.rails, ...rails].some((r) => r.xs.some((rx, k) => Math.abs(rx - px) < TILE && Math.abs(r.ys[k] - py) < TOP.clear));
+        const fits = (dy: number) =>
+          pts[0][1] + dy >= ceiling - 0.5 &&
+          pts.every(([px, py]) => !busy(bare, px, px + TILE / 2, py + dy) && !wire(px, py + dy) && py + dy <= (groundAt(level, px) ?? level.streetY) - 2 * TILE);
+        let dy: number | null = null;
+        for (let k = 0; k <= 12 && dy === null; k++) {
+          const d = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (TILE / 2);
+          if (fits(d)) dy = d;
+        }
+        //(and never out on its own past a hole the line left: it'd be a piece you can't reach)
+        const ends = [...surfaces.map((q) => q.x1), ...rails.map((q) => q.x1), ...movers.map((q) => q.x1)].filter((e) => e > a && e <= x + 1);
+        const alone = ends.length > 0 && x - Math.max(...ends) > 8 * TILE;
+        if (pts.length >= 4 && dy !== null && !alone) {
+          const r = polyRail(pts.map(([px, py]) => [px, py + dy!] as [number, number]));
+          r.sky = 'beam';
+          rails.push(r);
+          coins(x, x + w, (cx) => r.yAt(cx) ?? y0);
         }
         x += w;
       } else if (beat === 'lines') {

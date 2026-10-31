@@ -88,21 +88,27 @@ function mast(p: Parts, m: THREE.Material, x: number, z: number, y0: number, y1:
   }
 }
 
+// tiles past a cloud's ends its puffs may bulge: as far as you can land on it, a truck hanging over (FEEL.wheelbase / 2)
+const CLOUD_EDGE = 0.25;
+
 // a cloud you land on, its top along y = 0 from x = 0 to w (tiles): a row of puffs whose tops are the deck, fatter
 // darker ones bulging under them (zack's Mario refs: soft, round, comic)
 function cloud(p: Parts, top: THREE.Material, under: THREE.Material, w: number, seed: number, thin = false): void {
   const n = Math.max(2, Math.round(w / (thin ? 0.9 : 1.2)));
+  //(the puffs stay inside where you can land: the deck plus a truck's overhang, CLOUD_EDGE. Wider and they drew
+  //cloud you dropped straight through, zack 2026-10-31: "make sure the collisions on the clouds are legit")
+  const inside = (cx: number, half: number) => Math.min(Math.max(cx, half - CLOUD_EDGE), w + CLOUD_EDGE - half);
   for (let i = 0; i < n; i++) {
     const k = (seed * 7 + i * 13) % 5;
     const r = (thin ? 0.45 : 0.75) + k * 0.06;
-    const x = ((i + 0.5) / n) * w;
+    const x = inside(((i + 0.5) / n) * w, r * 1.25);
     const s = new THREE.SphereGeometry(r, 12, 8);
     s.scale(1.25, 0.8, 1);
     p.add(top, s, x, -r * 0.8 + 0.04 + (k % 3) * 0.06, 0.1 + (k % 2) * 0.15);
     if (!thin && i % 2 === 0) {
       const b = new THREE.SphereGeometry(r * 1.2, 12, 8);
       b.scale(1.3, 0.75, 1);
-      p.add(under, b, x + 0.3, -r * 1.55, -0.2);
+      p.add(under, b, inside(x + 0.3, r * 1.2 * 1.3), -r * 1.55, -0.2);
     }
   }
   //and a puff or two up behind, so it reads as a heap, not a slab

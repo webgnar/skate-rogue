@@ -8,7 +8,7 @@ const KEY = 'gnar-run-level-drafts';
 
 export const BEATS: Beat[] = ['hill', 'railHill', 'stairs', 'drop', 'gap', 'kicker', 'chase', 'cross', 'skitch'];
 
-export const SKY_BEAT_LIST: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap', 'blimp', 'rig', 'swing', 'bust', 'lines'];
+export const SKY_BEAT_LIST: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap', 'beam', 'blimp', 'rig', 'swing', 'bust', 'lines'];
 
 const isPair = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === 'number' && isFinite(n));
 const isNum = (v: unknown) => typeof v === 'number' && isFinite(v);
