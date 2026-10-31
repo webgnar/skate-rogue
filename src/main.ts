@@ -31,6 +31,7 @@ import { loadLevelDrafts } from './levels/drafts';
 import { useLevelEdits } from './gen/level-edits';
 import { dailySeed, dayKey, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
 import { loadSave, writeSave } from './run/save';
+import { resetAndReload, resetFromLink } from './run/reset';
 import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
 import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
@@ -384,6 +385,8 @@ function makeHud(): Hud {
 const loading = new Loading(document.getElementById('loading')!);
 
 async function start() {
+  //?reset wipes the saved progress and reloads without it (src/run/reset.ts)
+  if (resetFromLink()) return;
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
   applyWeatherParams(params);
@@ -587,6 +590,7 @@ async function start() {
     },
     unlockAll: all,
     setUnlockAll: (on) => reloadWith('unlockall', on),
+    reset: resetAndReload,
   });
   if (DEV.collision || params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
   showFps(DEV.fps);
