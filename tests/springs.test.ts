@@ -75,4 +75,45 @@ describe('springs (hair that trails the motion)', () => {
     expect(pop('SpringSpike0')).toBeLessThan(0.29);
     expect(pop('SpringSpike0')).toBeGreaterThan(pop('SpringHair0') + 0.02);
   });
+
+  it('fabric: neighbouring hood chains hold together as one sheet', () => {
+    expect(feelOf('SpringHood2_0').cloth).toBeGreaterThan(0);
+    // two chains side by side hanging off the head, 0.1 apart; only one of them is pulled hard by a pose change
+    const sheet = (prefix: string) => {
+      const root = new THREE.Group();
+      const head = new THREE.Bone();
+      head.name = 'Head';
+      root.add(head);
+      const tips: THREE.Bone[] = [];
+      const anchors: THREE.Bone[] = [];
+      for (const [c, x] of [[0, -0.05], [1, 0.05]] as const) {
+        const anchor = new THREE.Bone(); // what each chain hangs from, so a pose can turn one and not the other
+        anchor.position.set(x, 0, 0);
+        head.add(anchor);
+        anchors.push(anchor);
+        let parent: THREE.Bone = anchor;
+        for (let i = 0; i < 3; i++) {
+          const b = new THREE.Bone();
+          b.name = `${prefix}${c}_${i}`;
+          b.position.set(0, i ? -0.1 : 0, 0);
+          parent.add(b);
+          parent = b;
+        }
+        tips.push(parent);
+      }
+      root.updateMatrixWorld(true);
+      const s = new Springs(root, []);
+      s.update(1 / 60, 1);
+      // the second chain's root swings its rest out sideways, so its strand wants to hang away from the first
+      anchors[1].quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), 1.2);
+      for (let i = 0; i < 90; i++) {
+        root.updateMatrixWorld(true);
+        s.update(1 / 60, 1);
+      }
+      const chains = (s as unknown as { chains: { p: THREE.Vector3 }[][] }).chains;
+      return chains[0][2].p.distanceTo(chains[1][2].p);
+    };
+    expect(sheet('SpringHair')).toBeGreaterThan(0.2); // loose strands go their own ways
+    expect(sheet('SpringHood')).toBeLessThan(sheet('SpringHair') - 0.05); // fabric keeps them together
+  });
 });

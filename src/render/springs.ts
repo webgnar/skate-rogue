@@ -3,8 +3,10 @@
 // (art/skaters.py). Each bone's tail is a verlet particle in world space: it keeps its momentum, falls with gravity
 // and is pulled back toward where the pose would put it, held at the bone's length from the bone's head and pushed
 // out of the head and chest. So when the skater rolls, pops or falls, the hair lags behind and streams the other way.
-// The clips never key these bones. Hair, drawstrings and (later) a tee's hem are all just chains: each kind gets its
-// own feel from SPRING_KINDS by its bone name.
+// The clips never key these bones. Hair, drawstrings and fabric are all just chains: each kind gets its own feel from
+// SPRING_KINDS by its bone name. Fabric (zack, 2026-10-31: Keanu's hood "should be like the hair") is a row of chains
+// side by side, 'SpringHood0', 'SpringHood1'...: each tail is also tied to the same tail on the chains either side, so
+// the row moves as one sheet that balloons and flaps instead of a fringe of separate strands. A tee hem is next.
 import * as THREE from 'three';
 
 export const SPRING = {
@@ -16,13 +18,17 @@ export const SPRING = {
   jump: 3, // a head that moves more than this (rig units) in a frame was teleported: snap to rest
 };
 
-export type SpringFeel = Pick<typeof SPRING, 'stiffness' | 'drag' | 'gravity'>;
+export type SpringFeel = Pick<typeof SPRING, 'stiffness' | 'drag' | 'gravity'> & {
+  cloth?: number; // fabric: how hard each tail holds its distance to its neighbours' (0..1, per step)
+};
 
 // per kind of chain, by the start of its bones' names (the longest match wins); anything else feels like SPRING.
 // Anime spikes are gelled: they stand up against gravity and snap back, flicking at the tips on a pop or a landing.
 export const SPRING_KINDS: Record<string, Partial<SpringFeel>> = {
   SpringSpike: { stiffness: 0.22, drag: 0.2, gravity: 1 },
   SpringLock: { stiffness: 0.1, drag: 0.14, gravity: 4 }, // the locks framing the face
+  // a hood up over the head: soft, so it puffs back off the head with speed and flops on a landing
+  SpringHood: { stiffness: 0.035, drag: 0.08, gravity: 5, cloth: 0.6 },
 };
 
 export function feelOf(name: string): SpringFeel {
@@ -38,6 +44,14 @@ interface Link {
   tail: THREE.Vector3; // its tail in its own space (the next bone's head, or its length on along the chain)
   p: THREE.Vector3; // the tail particle, world space
   prev: THREE.Vector3;
+}
+
+// two neighbouring tails of a fabric sheet and how far apart they hang at rest (rig units)
+interface Tie {
+  a: Link;
+  b: Link;
+  len: number;
+  k: number;
 }
 
 interface Collider {
@@ -56,6 +70,7 @@ const q2 = new THREE.Quaternion();
 export class Springs {
   private readonly chains: Link[][] = [];
   private readonly feels: SpringFeel[] = [];
+  private readonly ties: Tie[] = [];
   private readonly colliders: Collider[] = [];
   private readonly head = new THREE.Vector3();
   private acc = 0;
@@ -82,6 +97,16 @@ export class Springs {
       this.chains.push(chain);
       this.feels.push(feelOf(root.name));
     }
+    // fabric: tie each chain of a sheet to the next one along ('SpringHood3' to 'SpringHood4'), tail to tail
+    const sheet = (name: string) => /^(Spring\D+)(\d+)_/.exec(name);
+    this.chains.forEach((chain, c) => {
+      const k = this.feels[c].cloth;
+      const m = sheet(chain[0].bone.name);
+      if (!k || !m) return;
+      const next = this.chains.find((o) => sheet(o[0].bone.name)?.[0] === `${m[1]}${Number(m[2]) + 1}_`);
+      if (!next) return;
+      for (let i = 0; i < Math.min(chain.length, next.length); i++) this.ties.push({ a: chain[i], b: next[i], len: 0, k });
+    });
     for (const c of colliders) {
       let bone: THREE.Object3D | undefined;
       model.traverse((o) => (bone ??= (o as THREE.Bone).isBone && o.name === c.bone ? o : undefined));
@@ -109,6 +134,7 @@ export class Springs {
     if (!this.fresh && v1.distanceTo(this.head) > SPRING.jump * scale) this.fresh = true;
     if (this.fresh) {
       for (const chain of this.chains) this.rest(chain);
+      for (const t of this.ties) t.len = t.a.p.distanceTo(t.b.p) / scale;
       this.head.copy(v1);
       this.fresh = false;
       this.acc = 0;
@@ -122,12 +148,15 @@ export class Springs {
     // of the way there, so a slow frame doesn't fling the hair ahead
     const move = v1.clone().sub(this.head);
     this.head.copy(v1);
-    this.chains.forEach((chain, c) => {
-      const feel = this.feels[c];
-      const g = feel.gravity * scale * SPRING.step * SPRING.step;
-      for (let s = 0; s < steps; s++) this.solve(chain, feel, g, scale, lag.copy(move).multiplyScalar(1 - (s + 1) / steps));
-      this.aim(chain);
-    });
+    for (let s = 0; s < steps; s++) {
+      lag.copy(move).multiplyScalar(1 - (s + 1) / steps);
+      this.chains.forEach((chain, c) => {
+        const feel = this.feels[c];
+        this.solve(chain, feel, feel.gravity * scale * SPRING.step * SPRING.step, scale, lag);
+      });
+      this.tie(scale);
+    }
+    for (const chain of this.chains) this.aim(chain);
   }
 
   private rest(chain: Link[]): void {
@@ -167,6 +196,21 @@ export class Springs {
       }
       l.prev.copy(l.p);
       l.p.copy(next);
+    }
+  }
+
+  // fabric: pull each pair of neighbouring tails back toward their rest spacing, both ends half way. Each chain's next
+  // step puts its bone lengths back, so the sheet settles between holding its width and hanging from its seams.
+  private tie(scale: number): void {
+    for (let n = 0; n < 2; n++) {
+      for (const t of this.ties) {
+        const d = v1.copy(t.b.p).sub(t.a.p);
+        const len = d.length();
+        if (len < 1e-6) continue;
+        d.multiplyScalar(((len - t.len * scale) / len) * 0.5 * t.k);
+        t.a.p.add(d);
+        t.b.p.sub(d);
+      }
     }
   }
 
