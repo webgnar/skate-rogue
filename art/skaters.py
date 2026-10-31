@@ -32,7 +32,7 @@ SKATERS = {
     },
     'keanu': {
         'skin': 0x6B4128, 'top': 0x8C8C92, 'sleeves': 'long', 'pants': 0x2E2E34, 'shoe': 0x1C1C22, 'sole': 0x2B44C8,
-        'hair': 'hood', 'hairColor': 0x1A1410, 'build': 1.04,
+        'hair': 'hood', 'hairColor': 0x1A1410, 'build': 1.04, 'smooth': True,
     },
     'roxy': {
         'skin': 0xF0C29E, 'top': 0x7A2FB8, 'crop': True, 'sleeves': 'none', 'pants': 0x2D4E9A, 'shoe': 0x6C2FA8,
@@ -97,7 +97,7 @@ def body(spec, mats):
         c = p.center
         if abs(c.x) > 0.205 and c.z > HIP_Z:  # arm, down to the wrist
             p.material_index = 1 if c.z > sleeve else 0
-        elif c.z > SPINE + 0.5:  # neck
+        elif c.z > SPINE + 0.5 and math.hypot(c.x, c.y) < 0.075:  # neck (not the tops of the shoulders round it)
             p.material_index = 0
         elif c.z > crop:
             p.material_index = 1
@@ -359,6 +359,45 @@ def hood_mesh(mat):
     return cloth_mesh('SpringHood', hood_at, HOOD_COLS, HOOD_US, HOOD_ROWS, 'Head', mat, lambda p: HOOD_C, tip)
 
 
+def cowl_mesh(mat, build):
+    """Where the hood meets the sweatshirt (zack: "connect the bottom of the hood to more the shoulders"): a skirt of
+    fabric from the hood's opening behind the ears and under the back of the head, down over the neck onto the
+    shoulders. Its top rides the head, its bottom the chest, so it stretches and twists between them as the head
+    turns."""
+    cols = [100 + 10 * k for k in range(17)]  # round the hood's opening from behind one ear, under the back, to the other
+    bm = bmesh.new()
+    grid = []
+    for a in cols:
+        top = hood_at(a, 0)
+        side = 180 - a  # + toward the lead side
+        t = math.radians(side * 1.45)  # round the shoulders, from the back (0) toward the collarbones
+        bottom = Vector((math.sin(t) * 0.158 * build, math.cos(t) * 0.098 * build, SPINE + 0.43))
+        mid = (top + bottom) / 2
+        out = Vector((mid.x, mid.y, 0))
+        mid += out.normalized() * 0.022 if out.length > 1e-4 else Vector()
+        grid.append([bm.verts.new(top), bm.verts.new(mid), bm.verts.new(bottom)])
+    for a, b in zip(grid, grid[1:]):
+        for j in range(2):
+            bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
+    for f in bm.faces:
+        c = f.calc_center_median()
+        if f.normal.dot(c - Vector((0, 0, c.z))) < 0:
+            f.normal_flip()
+    bm.normal_update()
+    ob = lg.link('cowl', bm, [mat])
+    groups = {b: ob.vertex_groups.new(name=b) for b in ('Head', 'Neck', 'Spine1')}
+    for k in range(len(cols)):
+        groups['Head'].add([3 * k], 1.0, 'REPLACE')
+        groups['Neck'].add([3 * k + 1], 1.0, 'REPLACE')
+        groups['Spine1'].add([3 * k + 2], 1.0, 'REPLACE')
+    solid = ob.modifiers.new('solid', 'SOLIDIFY')
+    solid.thickness = 0.012
+    solid.offset = 1
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=solid.name)
+    return ob
+
+
 # the sweatshirt's body: a loose band round the torso from the chest down past the waistband, hanging off the Spine
 # bone, that swings out with speed and flaps on landings over the skin-tight body underneath
 SHIRT_COLS = [30 * i for i in range(12)]  # degrees round the torso from the back (+ to the lead side)
@@ -475,21 +514,29 @@ def build(name, spec):
     if spec['hair'] == 'hood':
         hood_bones(rig)
         shirt_bones(rig, spec['build'])
+    # smooth shading on the body, the head and the clothes (zack, 2026-10-31: "clean up the texture on him"): the flat
+    # facets of the low-poly figure lit up as blotches under the toon light. Hair, shoes and shades stay faceted.
+    smooth = [ob] if spec.get('smooth') else []
     for part, bone in head(spec, mats) + feet(spec, mats) + lg.wear_decals(0.11, -0.06):
         lg.rigid(part, bone)
         part.select_set(True)
+        if spec.get('smooth') and part.name.split('.')[0] in ('head', 'handLeft', 'handRight', 'fringe'):
+            smooth.append(part)
     if spec['hair'] == 'hood':
-        hood_mesh(mats['top']).select_set(True)
-        shirt_mesh(mats['top'], spec['build']).select_set(True)
+        for part in (hood_mesh(mats['top']), cowl_mesh(mats['top'], spec['build']), shirt_mesh(mats['top'], spec['build'])):
+            part.select_set(True)
+            if spec.get('smooth'):
+                smooth.append(part)
     for c in specs:
         chain_mesh(c, mats['top'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
+    for part in smooth:
+        for p in part.data.polygons:
+            p.use_smooth = True
     ob.select_set(True)
     rig.select_set(False)
     bpy.context.view_layer.objects.active = ob
     bpy.ops.object.join()
     ob.name = ob.data.name = name.capitalize()
-    for p in ob.data.polygons:
-        p.use_smooth = False
     return rig, ob
 
 
@@ -513,5 +560,7 @@ if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     for name in args or SKATERS:
         rig, ob = build(name, SKATERS[name])
+        # the Blender file too, to look at or paint in; rebuilding from this script overwrites it
+        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(lg.HERE, f'{name}.blend'), compress=True)
         tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
         print(f'{name}: {len(ob.data.vertices)} verts, {tris} tris -> {export(name)}')
