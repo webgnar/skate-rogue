@@ -1,6 +1,6 @@
 // Chinatown's moving parts (src/traffic/hill-cross.ts, src/traffic/cab.ts): the cars driving straight across each
 // intersection on the way down, nose first, each with its light on the near corner, and the cabs on the cab flats,
-// yellow with a roof sign, turning off up the side street at the corner. Greybox: the Chinatown art comes from zack's
+// the Taxi model, turning off up the side street at the corner. Greybox: the Chinatown art comes from zack's
 // photos (Walled City streets, /mnt/project-files/chinatown/refs).
 import * as THREE from 'three';
 import type { Level } from '../physics/level';
@@ -70,12 +70,9 @@ export class ChinatownView {
   private makeCab(level: Level, cab: Cab): THREE.Group {
     const bottom = toY(level, cab.run.y);
     const w = toX(CAB.w);
-    const body = makeCar(0, w, bottom, toY(level, cab.box.roof), CAB_YELLOW, 'Sedan');
+    //the cab model (art/cars.py Taxi): checker band down the sides, lit roof sign
+    const body = makeCar(0, w, bottom, toY(level, cab.box.roof), CAB_YELLOW, 'Taxi');
     body.position.x = 0;
-    //the roof sign
-    const sign = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.3), new THREE.MeshBasicMaterial({ color: 0xfff6d0 }));
-    sign.position.set(-0.05, toY(level, cab.box.roof) + 0.11, 0);
-    body.add(sign);
     const beams = headlights(w);
     beams.position.y = bottom;
     body.add(beams);
@@ -91,7 +88,7 @@ export class ChinatownView {
   grab(level: Level, held: unknown): THREE.Vector3 | null {
     const c = this.cabs.find((k) => k.cab.box === held);
     if (!c) return null;
-    return new THREE.Vector3(toX(at(c.cab.box, 'x0')) + 0.05, toY(level, c.cab.run.y) + 0.75, 0.55);
+    return new THREE.Vector3(toX(at(c.cab.box, 'x0')) + 0.05, toY(level, c.cab.run.y) + 0.62, 0.55);
   }
 
   sync(level: Level, traffic: Traffic): void {

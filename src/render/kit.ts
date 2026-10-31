@@ -732,7 +732,7 @@ export function parkedPaint(level: Level, i: number): number {
 
 // the Blender hatchbacks (art/cars.py) are 2.3 long and 1.25 to the roof, for a 2 tile hitbox, and are stretched to
 // other hitboxes; the cruiser SUV only chases, so it keeps its own size
-export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser';
+export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser' | 'Taxi';
 const MODEL_LEN = 2.3;
 const MODEL_ROOF = 1.25;
 
