@@ -25,8 +25,11 @@ as text instead of writing the file (see Saving).
   stand across the gap as a dashed bar.
 - **The cloud layer** in white (CLOUD LAYER), way up over a long stretch of hill: the staircase up (`step`, `wisp`),
   clouds, thin clouds (faded, they puff away), drifting clouds, rainbows (pink arcs) and balloons.
-- **The sewer** in green under the street chases: the open drain and the outlet as yellow-edged holes in the street,
-  the tunnel, its floor and outlet ramp, its pipes and pools of runoff, named `SEWER · 24 tiles · 5 down`.
+- **The sewer** in green under the street chases: the way in (`dig ↓` at a construction spot or `plank ramp ↓` at the
+  foot of a hill) and the outlet as yellow-edged holes in the street, the tunnel, its floor and outlet ramp, its pipes
+  and runoff, named `SEWER · 30 tiles · 5 down`. Kick-outs are orange (`kick-out ↑` and the grate over them); the set
+  piece is named (rats, flood surge, full pipe bowl, subway gap); the alligator and a DIY stash crate are marked; the
+  tunnel to the gate says `SEWER ROAD → spot`, and the fork shows where the sewer road leads.
 - **show sky / clouds / sewer** at the top hide or show each layer. Each layer's panel has a **show me** button that
   scrolls the view to it.
 - **The bot's line**: the floor validator's reference bot (no boons) skating it. White is rolling, yellow is in the
@@ -67,7 +70,9 @@ much hill it needs, where the staircase starts, how high it climbs, the step ris
 chance of Stoken and a spin token.
 
 **Sewer.** As the code builds it, on, or off for this floor; and dial the tunnel's length (a short chase still shrinks
-it), depth, drain width, outlet ramp, pipes (how many, how long, how high), runoff, Stoken on pipes, and the clear
+it), depth, dig width, outlet ramp, the chance of a plank ramp way in, kick-outs (chance of a first and a second, and
+how hard they pop), set pieces (from which floor, how often, rats in a pack, time between subway trains), the
+alligator and the DIY stash (chances, from which floor), pipes (how many, how long, how high), runoff, Stoken on pipes, and the clear
 street before the drain and after the outlet. The result line counts the floor's sky pieces, clouds and tunnels and
 how long the bot spends down in the sewer.
 

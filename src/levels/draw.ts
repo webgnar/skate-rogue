@@ -107,7 +107,7 @@ export function sectionNotes(level: Level): { x: number; y: number; text: string
 export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; spawns?: Spawn[]; layers?: Layers } = {}): string {
   const lay = opts.layers ?? ALL_LAYERS;
   const minY = Math.min(L.startY, L.streetY, ...L.surfaces.map((s) => Math.min(s.y, s.y1 ?? s.y)), ...L.pickups.map((p) => p.y), ...(L.skyMovers ?? []).map((m) => m.y - 40)) - 70;
-  const maxY = Math.max(L.streetY + 100, ...(lay.sewer ? (L.sewers ?? []).map((s) => s.y + 70) : []));
+  const maxY = Math.max(L.streetY + 100, ...(lay.sewer ? (L.sewers ?? []).map((s) => s.y + 110) : []));
   const holeAt = (x: number) => (L.sewers ?? []).some((s) => (x >= s.drain[0] && x < s.drain[1]) || (x >= s.outlet[0] && x < s.outlet[1]));
   const showSky = (kind: string) => (inClouds(kind) ? lay.clouds : lay.sky);
   const W = L.width + 2 * TILE;
@@ -164,9 +164,32 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
       g.push(`<rect x="${f(X(sw.x0))}" y="${f(Y(L.streetY) + 40 * scale + 6)}" width="${f((sw.x1 - sw.x0) * scale)}" height="${f(Math.max(4, Y(sw.y) - Y(L.streetY) - 40 * scale - 6))}" fill="${C.sewer}"/>`);
       for (const [a, b] of [sw.drain, sw.outlet]) g.push(`<rect x="${f(X(a))}" y="${f(Y(L.streetY) - 2)}" width="${f((b - a) * scale)}" height="${f(40 * scale + 10)}" fill="#0c1612" stroke="#f2c230" stroke-width="1.2"/>`);
       for (const [a, b] of sw.wet) g.push(`<rect x="${f(X(a))}" y="${f(Y(sw.y) - 3)}" width="${f((b - a) * scale)}" height="3" fill="${C.runoff}"/>`);
-      text(X(sw.drain[0]), Y(L.streetY) - 6, 'drain ↓', '#f2c230');
-      text(X(sw.outlet[0]), Y(L.streetY) - 6, 'outlet ↑', '#f2c230');
-      text(X(sw.x0) + 4, Y(sw.y) + 14, `SEWER · ${Math.round((sw.x1 - sw.x0) / TILE)} tiles · ${Math.round((sw.y - L.streetY) / TILE)} down`, C.sewerEdge, i ? '' : 'data-anchor="sewer"');
+      text(X(sw.drain[0]), Y(L.streetY) - 6, sw.entry === 'ramp' ? 'plank ramp ↓' : 'dig ↓', '#f2c230');
+      text(X(sw.outlet[0]), Y(L.streetY) - 6, sw.gate ? 'SEWER ROAD → spot' : 'outlet ↑', '#f2c230');
+      //kick-outs: a quarterpipe up through a grate in the street
+      for (const k of sw.kicks ?? []) {
+        g.push(`<rect x="${f(X(k.grate[0]))}" y="${f(Y(L.streetY) - 1)}" width="${f((k.grate[1] - k.grate[0]) * scale)}" height="3" fill="none" stroke="${C.kicker}" stroke-dasharray="2 2"/>`);
+        g.push(`<line x1="${f(X((k.x0 + k.x1) / 2))}" y1="${f(Y(sw.y) - 4)}" x2="${f(X((k.x0 + k.x1) / 2))}" y2="${f(Y(L.streetY) - 14)}" stroke="${C.kicker}" stroke-dasharray="3 2" marker-end=""/>`);
+        text(X(k.x0), Y(sw.y) - 16, 'kick-out ↑', C.kicker);
+      }
+      //its set piece, the alligator
+      const p = sw.piece;
+      if (p) {
+        const [px, name] =
+          p.kind === 'rats' ? [p.x, `🐀 rats ×${p.n} ←`] : p.kind === 'surge' ? [p.x, '🌊 flood surge →'] : p.kind === 'bowl' ? [p.x0, 'full pipe bowl'] : [p.x0, '🚇 subway gap'];
+        text(X(px), Y(sw.y) - 30, name, C.runoff);
+        if (p.kind === 'subway') g.push(`<rect x="${f(X(p.x0))}" y="${f(Y(sw.y) - 1)}" width="${f((p.x1 - p.x0) * scale)}" height="${f(30 * scale + 4)}" fill="#0c1612" stroke="${C.runoff}" stroke-dasharray="2 2"/>`);
+      }
+      for (const pr of L.props ?? []) {
+        if (!pr.stash || pr.x < sw.x0 || pr.x >= sw.x1) continue;
+        g.push(`<rect x="${f(X(pr.x) - 4)}" y="${f(Y(sw.y) - 8)}" width="8" height="8" fill="${C.cash}" stroke="#000"/>`);
+        text(X(pr.x), Y(sw.y) - 58, `stash: ${pr.loot === 'gear' ? 'gear part' : 'spin token'}`, C.cash);
+      }
+      if (sw.gator) {
+        g.push(`<rect x="${f(X(sw.gator[0]))}" y="${f(Y(sw.y) - 8 * scale - 3)}" width="${f((sw.gator[1] - sw.gator[0]) * scale)}" height="${f(8 * scale + 3)}" rx="2" fill="#5fbf3f"/>`);
+        text(X(sw.gator[0]), Y(sw.y) - 44, '🐊 alligator', '#5fbf3f');
+      }
+      text(X(sw.x0) + 4, Y(sw.y) + 44 * scale + 18, `SEWER · ${Math.round((sw.x1 - sw.x0) / TILE)} tiles · ${Math.round((sw.y - L.streetY) / TILE)} down`, C.sewerEdge, i ? '' : 'data-anchor="sewer"');
     }
   }
   // the L overhead
@@ -290,6 +313,7 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
   if (L.fork) {
     text(X(L.fork.x0), Y(L.fork.y) - 8, `HIGH → ${label(L.fork.high)}`, C.cash);
     text(X(L.fork.x0), Y(L.streetY) - 6, `LOW → ${label(L.fork.low)}`, C.text);
+    if (L.fork.sewer && lay.sewer) text(X(L.fork.x0), Y(L.streetY) + 40 * scale + 20, `SEWER → ${label(L.fork.sewer)}`, C.sewerEdge);
   }
   g.push(`<rect x="${f(X(L.exitX))}" y="${f(Y(L.streetY - 90))}" width="4" height="${f(90 * scale)}" fill="${C.gate}"/>`);
   // section names
