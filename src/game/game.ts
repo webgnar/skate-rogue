@@ -366,7 +366,8 @@ export class Game {
     this.visor = new VisorGlint(this.sprite.mesh);
     this.skaterLight = new SkaterLight(this.sprite.mesh);
     this.view.front.add(this.skaterLight.group);
-    this.view.over.add(this.speedLines.mesh, this.flipLines.mesh);
+    this.view.over.add(this.speedLines.mesh);
+    this.view.withActor.add(this.flipLines.mesh); // in depth with the skater: the board covers the lines (zack)
     this.impacts = new Impacts(() => this.view.resolution);
     this.view.over.add(this.impacts.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
