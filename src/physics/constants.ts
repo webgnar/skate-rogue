@@ -44,6 +44,13 @@ export const PHYS = {
   impactFrames: 21, // Lou Gnar's IMPACT_DURATION, 350 ms: after a landing, no ollie until the knees are back up (zack)
   // the impact grows with the drop (zack, 2026-10-27): px fallen from the top of the air to the landing, and the
   // frames of no-ollie each tier gets. Small covers an ollie or a flip on flat (about 50 and 100 px up and down).
+  // Perfect landings (zack, 2026-10-31: style is speed; OlliOlli's tap right before touchdown, on our one tap): a
+  // flip thrown on the way down this close over what you land on (it pops you up and you come back down with the
+  // board just caught), or caught this few frames before the wheels touch, is PERFECT. Onto the ground it adds flow
+  // speed; onto a grind it starts you at grind speed and a bit over.
+  perfectHeight: 40, // px: thrown no higher than this over the landing (an ollie peaks at 50)
+  perfectFrames: 5,
+  perfectBoost: 0.75, // px/frame: a perfect landing rolls away at least this over cruising (base 3.5), about a fifth
   impactTiers: [
     { drop: 'small', under: 112, frames: 12 },
     { drop: 'medium', under: 224, frames: 21 },

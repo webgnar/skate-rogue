@@ -287,11 +287,13 @@ Input buffering (100 ms) and coyote time (80 ms) are on for everyone; touch late
   started). Heavy and sketchy landings cost flow speed only. Landing into a bank that falls away soaks up any drop.
   Details: openspec/changes/pf1-physics-feel.
 
-- **Perfect landings** (Oct 31, 2026, from OlliOlli World; not built yet): catch a flip *just* before you touch down
-  (only a few frames between the catch and the landing) and the landing is PERFECT, with a burst of speed and its own
-  callout. Catch it early and it's a clean landing as now; too late is the sketchy landing or slam we have. It needs
-  no new input: it rewards flipping late, so style is speed. Landing on a grind or rail right after a catch is a
-  PERFECT grind that starts at grind speed.
+- **Perfect landings** (Oct 31, 2026, from OlliOlli World; built the same day): OlliOlli's tap right before
+  touchdown, on our one tap. On the way down from an ollie, tap for the flip when you're nearly back on the ground
+  (within 40 px of where you land). It pops you up, the board comes round, and you land PERFECT. A flip caught within
+  5 frames of touching down counts too, for example flipped up onto a ledge. PERFECT rolls away at least a fifth over
+  cruising speed (not stacked on speed you already have, or the wheels would wear from it), with +100, a callout and
+  a burst. Flip at the top of the ollie and it's a plain clean landing. Onto a grind or rail, PERFECT starts you at
+  grind speed and a bit over. Tuning: PHYS.perfectHeight, perfectFrames and perfectBoost.
 
 ### Grinding
 

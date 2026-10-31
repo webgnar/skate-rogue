@@ -564,6 +564,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - **The guards shoot (2026-10-27, zack):** on chase floors the front guard aims for 0.7 s, then fires. During the aim there's a "!" over the gun, a red sight line blinking faster, and a red ring on you at the bullet's height. The bullet flies flat at waist height over the ground you're on (22 px), about 5 px/frame faster than you, and reaches you about 0.75 s after the bang. An ollie at the right moment puts your feet over it: DODGED! for 150 style. A hit is a slam (Bubble Pads take it), so the guards close in and Heat rises. They don't shoot while you're more than 2.5 tiles above the street, so a high line is safe. Shots come every 2.5 to 4.5 s, first 3 s into the chase, with 2 s of grace after a hit. The code is src/sim/shots.ts and src/render/shots-view.ts (first pass; the models thread does the pose and the shaders thread the flash and tracer). The test bot ollies bullets.
 
+- **Perfect landings (2026-10-31, zack):** a flip tapped within 40 px above the landing on the way down, or caught within 5 frames of touchdown, is PERFECT: at least cruising + 0.75 px/frame of flow speed, +100, a PERFECT! callout (this replaced the old CLUTCH! callout) and a burst. A first version stacked the boost on any speed, which pushed the bot's wheel wear past half on a floor, so it now tops up to a fifth over cruising instead.
+
 ## Models thread: animation
 
 - 2026-10-28: Backside 180 feet (zack: "a weird glitch with his feet on backside 180's"). Two causes, both fixed:

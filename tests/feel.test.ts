@@ -729,3 +729,65 @@ describe('no ollie during the impact', () => {
   });
 
 });
+
+// zack (2026-10-31): style is speed. A flip caught right before the wheels touch is a PERFECT landing: faster away
+describe('perfect landings', () => {
+  // falling onto flat from `up` px with a flip whose catch is `catchIn` frames away
+  function landing(catchIn: number, up = 30) {
+    const sk = new Skater(levelOf(FLAT));
+    const ground = sk.y;
+    Object.assign(sk, { mode: 'air', y: ground - up, vsp: 2, surface: null, trickCatch: 30, trickT: 30 - catchIn });
+    const speed = Math.abs(sk.hsp);
+    for (let f = 0; f < 60 && !lands(sk).length; f++) sk.step({ pressed: false, held: false });
+    return { land: lands(sk)[0], carry: sk.carry, speed };
+  }
+
+  it('caught just before touchdown: PERFECT, with flow speed on top', () => {
+    //from 30 px at 2 px/frame and gravity, it touches down in about 9 frames: catch it 1-5 frames before
+    const hits = [4, 6, 8].map((c) => landing(c));
+    expect(hits.some((h) => h.land.perfect)).toBe(true);
+    for (const h of hits.filter((h) => h.land.perfect)) expect(h.carry).toBeGreaterThanOrEqual(Math.max(h.speed, PHYS.baseSpeed + PHYS.perfectBoost) - 0.01);
+  });
+
+  it('onto a ledge just after the catch: a PERFECT grind, in at grind speed', () => {
+    const grind = (catchIn: number) => {
+      const base = levelOf(FLAT);
+      const top = base.streetY - 40;
+      const sk = new Skater(withExtras([{ kind: 'rail', x0: base.startX - 64, x1: base.startX + 400, y: top, row: 3 }]));
+      Object.assign(sk, { mode: 'air', y: top - 30, vsp: 2, hsp: PHYS.grindMin, surface: null, trickCatch: 30, trickT: 30 - catchIn });
+      for (let f = 0; f < 60 && !sk.events.some((e) => e.type === 'grind'); f++) sk.step({ pressed: false, held: false });
+      return { e: sk.events.find((e) => e.type === 'grind'), hsp: sk.hsp };
+    };
+    const hits = [4, 6, 8].map(grind);
+    const perfect = hits.find((h) => h.e?.type === 'grind' && h.e.perfect);
+    expect(perfect).toBeDefined();
+    expect(perfect!.hsp).toBeGreaterThan(PHYS.grindSpeed);
+    expect(grind(-20).e).not.toMatchObject({ perfect: true });
+  });
+
+  // ollie on flat, then tap for the flip once he's fallen back to `over` px above the street (or at the top)
+  function ollieThenFlip(over: number | 'top') {
+    const sk = new Skater(levelOf(FLAT));
+    const ground = sk.y;
+    sk.step({ pressed: true, held: true });
+    let flipped = false;
+    for (let f = 1; f < 200 && !lands(sk).length; f++) {
+      const now = !flipped && sk.mode === 'air' && (over === 'top' ? sk.vsp >= 0 : sk.vsp > 0 && ground - sk.y <= over);
+      if (now) flipped = true;
+      sk.step({ pressed: now, held: now || f < 20 }); // a full ollie, held through the pop
+    }
+    return lands(sk)[0];
+  }
+
+  it('the tap just before touchdown: flip low on the way down and it lands PERFECT', () => {
+    expect(ollieThenFlip(25)).toMatchObject({ quality: 'clean', perfect: true });
+    expect(ollieThenFlip('top').perfect).toBeUndefined();
+  });
+
+  it('caught early is a plain clean landing; not caught is sketchy or a slam', () => {
+    expect(landing(-20).land.perfect).toBeUndefined();
+    const late = landing(25).land;
+    expect(late.perfect).toBeUndefined();
+    expect(['sketchy', 'slam']).toContain(late.quality);
+  });
+});

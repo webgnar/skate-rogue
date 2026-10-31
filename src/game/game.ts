@@ -1635,6 +1635,12 @@ export class Game {
     this.view.shake(0.12);
   }
 
+  // a perfect landing or grind: a pop of light and a kick of speed lines
+  private perfectFx(): void {
+    this.burst(0.5, 0.06);
+    if (!FX.reduceMotion) this.view.zoom.trick();
+  }
+
   private burst(size: number, shake: number): void {
     this.impacts.spawn(toX(this.skater.x), toY(this.level, this.skater.y), size);
     this.view.shake(shake);
@@ -1696,12 +1702,10 @@ export class Game {
         this.hud.callout(trickName(e.name, e.fakie, e.nollie) + combo, 'trick');
         break;
       case 'grind':
-        this.grindStart();
-        this.hud.callout(this.sprite.grindName + combo, 'trick');
-        break;
       case 'rail':
         this.grindStart();
-        this.hud.callout(this.sprite.grindName + combo, 'trick');
+        if (e.perfect) this.perfectFx();
+        this.hud.callout((e.perfect ? 'PERFECT ' : '') + this.sprite.grindName + combo, 'trick');
         break;
       case 'hop':
         this.hud.callout('CAR HOP!' + combo, 'good');
@@ -1755,7 +1759,9 @@ export class Game {
         //a flip caught right before the wheels touch, or a landing flush into a falling slope: a callout (slow-mo
         //here felt like running into something, zack 2026-10-26)
         const moment = landCall(e.quality, e.spare, e.flush);
-        const called = moment === 'clutch' ? 'CLUTCH! ' : moment === 'flush' ? 'FLUSH! ' : '';
+        const called = e.perfect ? 'PERFECT! ' : moment === 'flush' ? 'FLUSH! ' : '';
+        //PERFECT: a flip caught right before the wheels touched rolls away faster (src/physics/skater.ts)
+        if (e.perfect) this.perfectFx();
         if (called && !bank) this.hud.callout(called.trim(), 'good');
         if (e.manual) this.hud.callout(this.sprite.manualName + combo, 'trick');
         if (bank) {
