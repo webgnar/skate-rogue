@@ -107,6 +107,7 @@ export class FloorSim {
   private frames = 0; // steps this floor, for how formed the puddles are
   private wading: object | null = null; // the puddle we're rolling through
   private grit = 0; // bearing wear from this step's smashes, for wear()
+  private knocks = 0; // deck wear from this step's smashes, for wear()
   readonly broken: boolean[]; // props smashed
   private fall = 0; // how fast we were falling before this step
   readonly gear: Gear; // worn down as you skate; the run takes it to the next floor
@@ -390,6 +391,8 @@ export class FloorSim {
       this.broken[i] = true;
       this.events.push({ type: 'smash', index: i, prop: p.name, x: p.x, y: p.y, how: by, ...(p.loot ? { loot: p.loot } : {}) });
       if (gritty(p.name)) this.grit += GEAR.smashGrit; // dust and shards in your bearings
+      //the board takes the hit (zack, 2026-10-31): harder landing on it, slamming or bombing into it
+      this.knocks += GEAR.smashDeck * (by === 'roll' || by === 'grind' ? 1 : GEAR.smashHard);
       if (p.ai) this.heat.add(-SMASH.aiCool);
     });
   }
@@ -410,8 +413,8 @@ export class FloorSim {
     });
   }
 
-  // gear wear: the deck from hard landings (most), ollies and puddles, the shoes from flip tricks, the trucks from
-  // grinding, the wheels from speed and glass, the bearings from puddles, dirt and the dust and shards of smashes
+  // gear wear: the deck from hard landings (most), smashing breakables, ollies and puddles, the shoes from flip
+  // tricks, the trucks from grinding, the wheels from speed and glass, the bearings from puddles, dirt and the dust and shards of smashes
   private wear(events: readonly SkaterEvent[]): void {
     const sk = this.skater;
     const use: Gear = { deck: 0, shoes: 0, trucks: 0, wheels: 0, bearings: 0 };
@@ -425,7 +428,8 @@ export class FloorSim {
       }
     }
     use.bearings += this.grit;
-    this.grit = 0;
+    use.deck += this.knocks;
+    this.grit = this.knocks = 0;
     if (sk.mode === 'roll') use.bearings += GEAR.rollSec / 60;
     //(the top route's power line is a long, smooth grind: it wears your trucks and wheels a lot less)
     const soft = sk.rail?.top ? TOP.wear : 1;
