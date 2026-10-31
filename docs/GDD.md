@@ -236,6 +236,30 @@ Not in yet: rats, coming up at the gate onto its own road (the underground spot)
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
 
+### Future direction: the build decides the path
+
+Goal for later (zack, Oct 31, 2026; not designed in detail, nothing built). The run should stop being a straight line of
+floors: the skater you curate with your boons decides where the run can go next. Today a fork shows you a reward and
+the route you reach it on is a skill check; later, your build opens and closes the roads themselves.
+
+Sketches, tied to what exists:
+
+- **POP builds take the sky.** Big Pop, Triple Threat or Mad Pop stacked deep could make the sky route reachable on
+  purpose, and a sky run could lead to its own chain of rooftop floors and escapes, away from the street.
+- **GRIND builds follow the wires and the L.** Rail Magnet, More Wax or Ghost Rail could open grind-only roads: a rail
+  line exit at the fork, a run of power-line floors, the L's track as a road of its own.
+- **COOL builds go underground.** Low Profile, Ghost Mode or Decoy could open sewer roads: chains of tunnels, the
+  underground spot, stashes, a quieter way through an act with less Heat and less cash.
+- **STREET and FLOW builds own the surface.** Roof Rider, Hood Pop or Kicker Boost could open hot streets and
+  rush-hour chases worth more, and different escape set pieces.
+- **Curses and duos as keys.** A duo boon or a curse could unlock a hidden road (Shredtoshi's mark) or lock one.
+
+How it might show: the fork's signs grey out a road your build can't take, or mark one only your build can. The map
+stays one step deep. Each road should still be skateable without the boons, just harder, so a run is never stuck.
+
+Open: how many separate paths (three, one per route?), whether they rejoin at each act's escape, and how strongly a
+build must lean before a path opens.
+
 ### 2. How a run ends: escape the city
 
 Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes when you win:
@@ -1002,6 +1026,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 
 ## Open questions
 
+- **Build-driven paths** (future direction under Run structure): how many paths, where they rejoin, how much a
+  build must lean to open one.
 - **The sewer route**: rats, its own road at the gate, and a way down on the hills (first version under Three routes).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
