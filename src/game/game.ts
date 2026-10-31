@@ -17,7 +17,7 @@ import { firstCloud } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
 import { NO_HEAD_START, prizeText, pullAll, type Pull } from '../run/slots';
-import { boonsOfType, Missions, statsOf, type MissionsView, type Stat } from '../run/missions';
+import { boonsOfType, Missions, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
@@ -190,6 +190,8 @@ export interface Hud {
   cont(view: ContinueView | null): void; // the continue card after a bail or a bust; null hides it
   continues(left: number): void; // continues left this run
   missions(view: MissionsView): void; // the three missions and Skater Rank (pause card and run summary)
+  missionTick?(t: MissionTick): void; // a mission moved on mid-run: the popup above the gear wear
+  missionDone?(t: MissionTick): void; // a mission finished mid-run: the popup goes gold
   slots(view: SlotsView | null): void; // the end-of-run slot machine, before the summary; null hides it
   slotsSkip(): void; // stop every reel where it lands
 }
@@ -1810,12 +1812,14 @@ export class Game {
   private mission(stat: Stat, n = 1): void {
     if (!this.missionsOn) return;
     const done = this.missions.add1(stat, n);
+    for (const t of this.missions.ticked) this.hud.missionTick?.(t);
     if (!done.length) return;
     const save = loadSave();
     let bank = save.stoken;
     let tape = save.tape;
     for (const d of done) {
-      this.hud.callout(`✔ ${d.text.toUpperCase()}`, 'good');
+      this.hud.missionDone?.({ text: d.text, count: d.goal, goal: d.goal });
+      this.sound?.play(MOMENT.pick);
       if (d.rank === undefined) continue;
       bank += d.pay ?? 0;
       this.hud.callout(`SKATER RANK ${d.rank}! +◆${d.pay}`, 'good');
@@ -1825,7 +1829,6 @@ export class Game {
         this.sprite.setGrip(gripDef(d.grip).color);
         this.hud.callout(`${gripDef(d.grip).name.toUpperCase()} GRIP!`, 'trick');
       }
-      this.sound?.play(MOMENT.pick);
     }
     writeSave({ ...save, stoken: bank, missions: this.missions.state, ...(tape ? { tape } : {}) });
     this.hud.missions(this.missions.view(bank));
@@ -1845,6 +1848,8 @@ export class Game {
     this.sound?.play(cueFor(e));
     const b = buzzFor(e);
     if (b) buzz(b);
+    //every event counts towards the missions first: smashes, door slams, wrecks and drones return early below
+    for (const st of statsOf(e)) this.mission(st);
     if (e.type === 'mod') return this.fire(e.effect, e.slot);
     if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type === 'smash') return this.smashed(e);
@@ -1921,7 +1926,6 @@ export class Game {
     const bank = this.run.onEvent(e, this.skater.hsp);
     if (e.type === 'pickup' && e.mult) this.skyBonus += Math.max(0, this.run.cash - cashBefore - SCORE.cashCoin);
     if (this.run.combo > before) this.bulletTime(this.run.combo);
-    for (const st of statsOf(e)) this.mission(st);
     if (bank) {
       this.mission('combo', bank.count);
       this.mission('bank', bank.points);

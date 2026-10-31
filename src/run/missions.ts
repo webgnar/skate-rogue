@@ -138,13 +138,23 @@ export interface MissionsView {
 // a mission finished, and what it paid if it finished a rank
 export interface MissionDone {
   text: string;
+  goal: number;
   rank?: number; // the new rank, when this one raised it
   pay?: number; // Stoken for the rank
   grip?: GripId; // a rank grip
 }
 
+// a mission that moved on but isn't done: what the in-run popup shows (src/ui/mission-toast.ts)
+export interface MissionTick {
+  text: string;
+  count: number;
+  goal: number;
+}
+
 export class Missions {
   state: MissionSave;
+  // the missions the last add1 moved on without finishing (the done ones come back from add1)
+  ticked: MissionTick[] = [];
   private live: number[]; // counts for this combo, floor or run (combo/floor/run missions)
   private rng: () => number;
 
@@ -194,13 +204,18 @@ export class Missions {
   // count a stat; returns the missions it finished (each swapped for a new one at once)
   add1(stat: Stat, n = 1): MissionDone[] {
     const done: MissionDone[] = [];
+    this.ticked = [];
     for (let i = 0; i < this.state.active.length; i++) {
       const d = this.def(i);
       if (d.stat !== stat) continue;
+      const was = this.count(i);
       if (d.scope === 'best') this.state.progress[i] = Math.max(this.state.progress[i], n);
       else if (d.scope === 'ever') this.state.progress[i] += n;
       else this.live[i] += n;
-      if (this.count(i) >= d.goal) done.push(this.finish(i));
+      const now = this.count(i);
+      if (now >= d.goal) done.push(this.finish(i));
+      //a 'best' that didn't beat the old best isn't news
+      else if (now > was) this.ticked.push({ text: d.text, count: now, goal: d.goal });
     }
     return done;
   }
@@ -210,7 +225,7 @@ export class Missions {
     const before = this.rank;
     this.state.done++;
     this.state.seen.push(d.id);
-    const out: MissionDone = { text: d.text };
+    const out: MissionDone = { text: d.text, goal: d.goal };
     if (this.rank > before) {
       out.rank = this.rank;
       out.pay = RANK.pay(this.rank);

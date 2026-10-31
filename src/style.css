@@ -1710,3 +1710,38 @@ html, body {
   #spin.many { --cell: 30px; }
   #spin .title { font-size: 30px; }
 }
+
+/* the in-run mission popup (src/ui/mission-toast.ts): above the gear wear, bottom right, clear of the callouts.
+   Cyan while a mission moves on, gold with MISSION COMPLETE! when one is done */
+#mission {
+  --edge: var(--cyan);
+  display: grid;
+  gap: calc(var(--u) * 0.25);
+  width: clamp(170px, 30vw, 250px);
+  margin-bottom: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.8) calc(var(--u) * 0.6);
+  background: linear-gradient(180deg, #24123c, var(--hud-bg));
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px var(--edge), 3px 4px 0 2px #000;
+  transform: skewX(-6deg);
+  opacity: 0;
+  translate: 40px 0;
+  transition: opacity 0.2s ease-out, translate 0.26s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+#mission[hidden] { display: none; }
+#mission.in { opacity: 1; translate: 0 0; }
+#mission > * { transform: skewX(6deg); }
+#mission .tag { margin: 0; font-size: calc(var(--u) * 1.15); color: var(--edge); letter-spacing: 0.1em; line-height: 1; }
+#mission .txt { font-family: system-ui, sans-serif; font-weight: 800; font-size: max(12px, calc(var(--u) * 1.25)); line-height: 1.15; color: #fff; letter-spacing: 0; }
+#mission .row { display: flex; align-items: center; gap: calc(var(--u) * 0.6); }
+#mission .bar { flex: 1; height: calc(var(--u) * 0.8); min-height: 6px; background: #3a3050; border: 1.5px solid #000; overflow: hidden; }
+#mission .bar i { display: block; height: 100%; background: var(--edge); transition: width 0.35s ease-out; }
+#mission .n { min-width: 2.4em; text-align: right; font-size: calc(var(--u) * 1.6); line-height: 1; color: var(--edge); -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+#mission .n.bump { animation: mbump 0.3s ease-out; }
+#mission.done { --edge: var(--yellow); }
+#mission.done.in { animation: mstamp 0.42s cubic-bezier(0.2, 1.6, 0.4, 1); }
+#mission.done .bar i { transition-duration: 0.55s; }
+@keyframes mbump { 40% { transform: scale(1.35); } }
+@keyframes mstamp { 0% { scale: 1; } 35% { scale: 1.14; } 100% { scale: 1; } }
+#app.calm #mission { translate: 0 0; transition: opacity 0.2s; }
+#app.calm #mission.done.in, #app.calm #mission .n.bump { animation: none; }

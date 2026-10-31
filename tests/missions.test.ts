@@ -80,4 +80,23 @@ describe('missions', () => {
     expect(statsOf({ type: 'rail', name: 'boardslide', perfect: true })).toEqual(['grind', 'rail', 'perfect']);
     expect(statsOf({ type: 'smash', index: 0, prop: 'cone', x: 0, y: 0, how: 'car' })).toEqual([]);
   });
+
+  it('reports the missions a stat moved on for the in-run popup, but not a best it did not beat', () => {
+    const m = new Missions({ active: ['smash10', 'combo8', 'door1'], progress: [2, 4, 0], done: 3, seen: [] }, 1);
+    m.add1('smash');
+    expect(m.ticked).toEqual([{ text: 'Smash 10 props', count: 3, goal: 10 }]);
+    m.add1('combo', 3);
+    expect(m.ticked).toEqual([]);
+    m.add1('combo', 6);
+    expect(m.ticked).toEqual([{ text: 'Land a x8 combo', count: 6, goal: 8 }]);
+    const done = m.add1('doorSlam');
+    expect(done.map((d) => [d.text, d.goal])).toEqual([['Slam a car door shut', 1]]);
+    expect(m.ticked).toEqual([]);
+  });
+
+  it('smashing a prop and slamming a door count (a car running a prop over does not)', () => {
+    expect(statsOf({ type: 'smash', index: 0, prop: 'crate', x: 0, y: 0, how: 'roll' })).toEqual(['smash']);
+    expect(statsOf({ type: 'smash', index: 0, prop: 'crate', x: 0, y: 0, how: 'car' })).toEqual([]);
+    expect(statsOf({ type: 'doorSlam', x: 0, y: 0 })).toEqual(['doorSlam']);
+  });
 });
