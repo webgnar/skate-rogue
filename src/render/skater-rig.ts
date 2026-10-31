@@ -1019,6 +1019,11 @@ export class SkaterRig {
     wearShoes(this.mesh, g.shoes);
   }
 
+  // the deck as drawn (origin at the middle of its top), for effects that follow the board (flip-lines.ts)
+  get deck(): THREE.Object3D {
+    return this.boardFace;
+  }
+
   // the colours a slide shreds off the deck (wear.ts deckPaint); the built-in board is plain red
   deckPaint(): number[][] {
     const paint = this.board ? deckPaint(this.board) : [];
