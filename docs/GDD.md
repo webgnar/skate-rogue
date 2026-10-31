@@ -241,6 +241,11 @@ by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9
   so most of the stretch is up in the cloud layer.
 - **Variety.** Each stretch runs its floor's recipe from its own place, so no two stretches play the same order.
 - **Nothing from the sky crosses in front of you**: scaffold tubes stand behind the lane.
+- **I-beams** (zack, Oct 31: "we need some Grindable I-beams"): red steel beams hoisted on a crane's cable, 5 to 7
+  tiles, their top flange a grind falling a tile in seven so it feeds your speed. One to three a floor from floor 5.
+- **Skyscrapers** (zack: "super tall sky scrapers that do go up to the height of the sky route"): every rooftop deck
+  up there is the top of a glass tower that runs all the way down to the city, behind the lane.
+- **Clouds are honest**: a cloud's puffs never draw past where you can land on it (its deck plus a truck's overhang).
 
 **The NO GROUND meter** (zack: "i need that to be visualy clear what its doing"). While a line is going, a panel under
 the combo shows NO GROUND, the live coin multiplier (it pops as it steps up), seven pips that turn gold at the x4 cap,

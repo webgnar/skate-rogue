@@ -90,7 +90,7 @@ export class CurvedRail {
   wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
   top = false; // the top route's power line (src/gen/top-route.ts)
   sewer = false; // a pipe in the sewer (src/gen/sewer.ts)
-  sky?: string; // a sky beat's grind (src/gen/sky-beats.ts): a crane's boom
+  sky?: string; // a sky beat's grind (src/gen/sky-beats.ts): a crane's boom, an I-beam
 
   constructor(
     readonly x0: number,
