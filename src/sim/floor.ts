@@ -36,7 +36,7 @@ export type FloorEvent =
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
   | { type: 'puddle'; x: number; y: number } // rolled into a puddle: it washes out the bearings
   | ShotEvent // the guards shooting at you on a chase (src/sim/shots.ts)
-  | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' }
+  | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' | 'spin' }
   // a car hop dented a car (src/traffic/damage.ts): x is its middle and y its roof, px; stage 3 is wrecked
   | { type: 'dent'; car: CarRef; kind: DamageKind; hits: number; health: number; stage: Stage; x: number; y: number };
 
@@ -405,7 +405,7 @@ export class FloorSim {
     const cars = [...this.traffic.inLane, ...this.traffic.crossing];
     if (!cars.length) return;
     props.forEach((p, i) => {
-      if (!p.breaks || this.broken[i] || p.loot === 'stoken' || Math.abs(p.y - this.level.streetY) > 2) return;
+      if (!p.breaks || this.broken[i] || p.loot === 'stoken' || p.loot === 'spin' || Math.abs(p.y - this.level.streetY) > 2) return;
       const w = (PROP_SIZE[p.name] ?? { w: 8 }).w;
       if (!cars.some((c) => c.x1 > p.x - w && c.x0 < p.x + w && c.bottom >= p.y - 2)) return;
       this.broken[i] = true;

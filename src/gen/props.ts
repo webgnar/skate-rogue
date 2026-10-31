@@ -16,7 +16,7 @@ export interface Prop {
   z: number; // tiles: 0 is the skate lane, negative is further back
   yaw: number;
   breaks: boolean; // a smashable in the lane; scenery doesn't
-  loot?: 'cash' | 'stoken'; // hidden inside: a few coins, or a floor's one golden prop's Stoken
+  loot?: 'cash' | 'stoken' | 'spin'; // hidden inside: a few coins, a floor's one golden prop's Stoken, or a spin token (src/gen/spin-tokens.ts)
   ai?: boolean; // the AI's stuff: smashing it cools Heat a little
 }
 

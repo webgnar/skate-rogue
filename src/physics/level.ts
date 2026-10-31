@@ -148,7 +148,7 @@ export class CurvedRail {
   }
 }
 
-export type PickupKind = 'cash' | 'stoken';
+export type PickupKind = 'cash' | 'stoken' | 'spin'; // spin: a spin token (src/gen/spin-tokens.ts)
 
 // cash and Stoken floating along lines: over gaps, along rails, up high on side lines
 export interface Pickup {
