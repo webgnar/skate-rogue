@@ -128,6 +128,12 @@ export class HudView {
     });
     this.gear({ deck: 100, trucks: 100, wheels: 100, bearings: 100, shoes: 100 });
     this.board([]);
+    //held boons sit just under the top bar, wherever it ends (zack: "upgrades shouldnt overlap stoke meter on mobile"):
+    //the bar's height changes with the screen, the font and how it wraps, so it is measured, not guessed
+    const top = $('top');
+    const below = () => top.parentElement?.style.setProperty('--top-b', `${top.offsetTop + top.offsetHeight}px`);
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(below).observe(top);
+    below();
   }
 
   setFloor(n: number, road: Road): void {

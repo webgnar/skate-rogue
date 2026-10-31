@@ -506,7 +506,7 @@ html, body {
 #app.noflash #gearbars .part.tick .icon { animation: none; }
 
 /* everything else that sits on the HUD */
-#boons { top: calc(var(--t) + var(--u) * 7.2); left: var(--l); right: auto; max-width: 26vw; }
+#boons { top: calc(var(--top-b, calc(var(--t) + var(--u) * 7.2)) + var(--u) * 0.6); left: var(--l); right: auto; max-width: 26vw; }
 #hint { bottom: calc(var(--b) + var(--u) * 7.6); font-size: calc(var(--u) * 1.25); font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; text-shadow: 2px 2px 0 var(--shadow); }
 /* the perf line only with ?debug; the seed is on the pause card */
 #debug { display: none; top: calc(var(--t) + var(--u) * 9); right: auto; left: 50%; bottom: auto; transform: translateX(-50%); white-space: nowrap; }
@@ -544,7 +544,7 @@ html, body {
   #gearbars { justify-content: space-between; }
   #gearbars .part { flex: 1; }
   #hint { bottom: calc(var(--b) + var(--u) * 13.5); }
-  #boons { top: calc(var(--t) + var(--u) * 13); max-width: 50vw; }
+  #boons { max-width: 50vw; }
 }
 
 /* the pause card */
