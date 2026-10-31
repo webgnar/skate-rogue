@@ -21,7 +21,7 @@ export class SewerView {
   private trains: { mesh: THREE.Group; light: THREE.Mesh; t: SewerSim['tunnels'][number] }[] = [];
   private gators: { mesh: THREE.Group; jaw: THREE.Object3D; t: SewerSim['tunnels'][number] }[] = [];
   private time = 0;
-  private readonly fur = new THREE.MeshLambertMaterial({ color: 0x6a6470 });
+  private readonly fur = new THREE.MeshLambertMaterial({ color: 0x6a5e58 });
   private readonly tail = new THREE.MeshLambertMaterial({ color: 0xe8a0a8 });
   private readonly eye = new THREE.MeshBasicMaterial({ color: 0xff3a3a });
   private readonly water = new THREE.MeshLambertMaterial({ color: 0x3f8f7c, emissive: 0x0c2a22, transparent: true, opacity: 0.82 });
@@ -30,7 +30,12 @@ export class SewerView {
   private readonly stripe = new THREE.MeshLambertMaterial({ color: 0x2a6ad8 });
   private readonly window = new THREE.MeshBasicMaterial({ color: 0xfff2b0 });
   private readonly beam = new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.35, depthWrite: false });
-  private readonly scales = new THREE.MeshLambertMaterial({ color: 0x3f7a3a });
+  //(the gator low-poly and faceted, bright green, like zack's ref)
+  private readonly scales = new THREE.MeshLambertMaterial({ color: 0x3fb03a, flatShading: true });
+  private readonly ridge = new THREE.MeshLambertMaterial({ color: 0x2a7a26, flatShading: true });
+  private readonly nose = new THREE.MeshLambertMaterial({ color: 0xe88a90 });
+  private readonly mouth = new THREE.MeshBasicMaterial({ color: 0x5a1018 });
+  private readonly gEye = new THREE.MeshBasicMaterial({ color: 0xffd23a });
   private readonly belly = new THREE.MeshLambertMaterial({ color: 0xc8c890 });
   private readonly teeth = new THREE.MeshLambertMaterial({ color: 0xffffff });
 
@@ -93,28 +98,49 @@ export class SewerView {
         const [g0, g1] = t.s.gator;
         const m = new THREE.Group();
         const len = (g1 - g0) / TILE;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(len * 0.6, 0.32, 0.6), this.scales);
-        body.position.set(len * 0.45, 0.16, 0);
-        const tail = new THREE.Mesh(new THREE.ConeGeometry(0.22, len * 0.4, 6).rotateZ(-Math.PI / 2), this.scales);
-        tail.position.set(len * 0.95, 0.12, 0);
-        const head = new THREE.Mesh(new THREE.BoxGeometry(len * 0.3, 0.16, 0.42), this.scales);
-        head.position.set(len * 0.03, 0.1, 0);
+        //a faceted body (low-segment, squashed spheres), its tail tapering off behind and a ridge of scutes down its back
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 7, 5), this.scales);
+        body.scale.set(len * 0.5, 0.28, 0.5);
+        body.position.set(len * 0.5, 0.2, 0);
+        const tail = new THREE.Mesh(new THREE.ConeGeometry(0.2, len * 0.55, 5).rotateZ(-Math.PI / 2), this.scales);
+        tail.position.set(len * 0.98, 0.14, 0);
+        tail.rotation.y = 0.25;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(len * 0.3, 0.14, 0.36), this.scales);
+        head.position.set(len * 0.08, 0.1, 0);
+        for (let k = 0; k < 6; k++) {
+          const sc = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), this.ridge);
+          sc.position.set(len * (0.3 + k * 0.13), 0.36 - k * 0.02, 0);
+          m.add(sc);
+        }
+        //four splayed legs
+        for (const lx of [0.28, 0.72]) {
+          for (const z of [-1, 1]) {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.12), this.scales);
+            leg.position.set(len * lx, 0.08, z * 0.3);
+            leg.rotation.x = z * 0.5;
+            m.add(leg);
+          }
+        }
+        //the top jaw hinges up, teeth along it, a red mouth inside
         const jaw = new THREE.Group();
-        const top = new THREE.Mesh(new THREE.BoxGeometry(len * 0.3, 0.14, 0.4), this.scales);
-        top.position.set(-len * 0.15, 0.07, 0);
-        const fangs = new THREE.Mesh(new THREE.BoxGeometry(len * 0.26, 0.06, 0.36), this.teeth);
-        fangs.position.set(-len * 0.15, -0.02, 0);
+        const top = new THREE.Mesh(new THREE.BoxGeometry(len * 0.34, 0.12, 0.34), this.scales);
+        top.position.set(-len * 0.17, 0.06, 0);
+        const fangs = new THREE.Mesh(new THREE.BoxGeometry(len * 0.3, 0.06, 0.3), this.teeth);
+        fangs.position.set(-len * 0.17, -0.02, 0);
         jaw.add(top, fangs);
-        jaw.position.set(len * 0.18, 0.18, 0);
+        jaw.position.set(len * 0.22, 0.17, 0);
+        const inside = new THREE.Mesh(new THREE.BoxGeometry(len * 0.26, 0.02, 0.26), this.mouth);
+        inside.position.set(len * 0.08, 0.175, 0);
         const under = new THREE.Mesh(new THREE.BoxGeometry(len * 0.6, 0.06, 0.5), this.belly);
         under.position.set(len * 0.45, 0.02, 0);
-        for (const z of [-0.18, 0.18]) {
-          const e = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), this.eye);
-          e.position.set(len * 0.12, 0.3, z);
+        for (const z of [-0.14, 0.14]) {
+          const e = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), this.gEye);
+          e.position.set(len * 0.2, 0.3, z);
           m.add(e);
         }
-        m.add(body, tail, head, jaw, under);
+        m.add(body, tail, head, jaw, inside, under);
         inkify(m);
+        m.scale.set(1, 1.4, 1.4);
         m.position.set(g0 / TILE, fy, 0.2);
         this.group.add(m);
         this.gators.push({ mesh: m, jaw, t });
@@ -122,18 +148,38 @@ export class SewerView {
     }
   }
 
+  // a hunched sewer rat (zack's ref): a humped grey body, a pointed snout with a pink nose and an open mouth, round
+  // ears, little legs and a long pink tail
   private rat(): THREE.Group {
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), this.fur);
-    body.scale.set(1.5, 0.8, 0.8);
-    body.position.y = 0.13;
-    const head = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.22, 6).rotateZ(Math.PI / 2), this.fur);
-    head.position.set(-0.28, 0.13, 0);
-    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, 0.4, 4).rotateZ(Math.PI / 2.4), this.tail);
-    tail.position.set(0.36, 0.1, 0);
-    const e = new THREE.Mesh(new THREE.SphereGeometry(0.03, 4, 3), this.eye);
-    e.position.set(-0.26, 0.18, 0.06);
-    g.add(body, head, tail, e);
+    body.scale.set(1.5, 0.95, 0.85);
+    body.position.set(0.04, 0.16, 0);
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.26, 7).rotateZ(Math.PI / 2), this.fur);
+    head.position.set(-0.3, 0.13, 0);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 4), this.nose);
+    nose.position.set(-0.44, 0.12, 0);
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.07), this.mouth);
+    jaw.position.set(-0.36, 0.07, 0);
+    jaw.rotation.z = 0.35;
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.03, 0.55, 4).rotateZ(Math.PI / 2.3), this.tail);
+    tail.position.set(0.44, 0.08, 0);
+    g.add(body, head, nose, jaw, tail);
+    for (const z of [-0.06, 0.06]) {
+      const ear = new THREE.Mesh(new THREE.CircleGeometry(0.05, 6), this.tail);
+      ear.position.set(-0.2, 0.25, z);
+      ear.rotation.y = z < 0 ? -0.6 : 0.6;
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.025, 4, 3), this.eye);
+      e.position.set(-0.3, 0.19, z);
+      g.add(ear, e);
+    }
+    for (const lx of [-0.14, 0.16]) {
+      for (const z of [-0.08, 0.08]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 0.04), this.tail);
+        leg.position.set(lx, 0.04, z);
+        g.add(leg);
+      }
+    }
     inkify(g);
     return g;
   }

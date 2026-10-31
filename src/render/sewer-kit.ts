@@ -52,6 +52,55 @@ function tags(): THREE.CanvasTexture {
   return tagTex;
 }
 
+let glowTex: THREE.CanvasTexture | null = null;
+// a soft round glow, white in the middle, fading out (tinted by the material)
+function glowDisc(): THREE.CanvasTexture {
+  if (glowTex) return glowTex;
+  const N = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, N / 2);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, N, N);
+  glowTex = new THREE.CanvasTexture(c);
+  return glowTex;
+}
+
+let latticeTex: THREE.CanvasTexture | null = null;
+// a pool of light through a manhole grate, seen from below: a glowing disc cut into diamonds (zack's ref)
+function lattice(): THREE.CanvasTexture {
+  if (latticeTex) return latticeTex;
+  const N = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(N / 2, N / 2, 4, N / 2, N / 2, N / 2);
+  grad.addColorStop(0, 'rgba(255,246,210,1)');
+  grad.addColorStop(0.7, 'rgba(255,230,160,0.8)');
+  grad.addColorStop(1, 'rgba(255,220,140,0)');
+  g.fillStyle = grad;
+  g.beginPath();
+  g.arc(N / 2, N / 2, N / 2, 0, Math.PI * 2);
+  g.fill();
+  g.globalCompositeOperation = 'destination-out';
+  g.strokeStyle = 'rgba(0,0,0,1)';
+  g.lineWidth = 5;
+  for (let k = -N; k < 2 * N; k += 16) {
+    g.beginPath();
+    g.moveTo(k, 0);
+    g.lineTo(k + N, N);
+    g.moveTo(k + N, 0);
+    g.lineTo(k, N);
+    g.stroke();
+  }
+  latticeTex = new THREE.CanvasTexture(c);
+  latticeTex.colorSpace = THREE.SRGBColorSpace;
+  return latticeTex;
+}
+
 // a sign painted on a board: big words over small ones
 function board(big: string, small: string, bg: string, fg: string): THREE.Mesh {
   const W = 256;
@@ -105,6 +154,20 @@ export function buildSewers(level: Level): THREE.Group {
   const rail = new THREE.MeshLambertMaterial({ color: 0xb8bcc8 });
   const tile = surface('concrete', 0x8a9a96);
   const tagMat = new THREE.MeshBasicMaterial({ map: tags(), transparent: true, depthWrite: false });
+  //(from zack's refs, 2026-10-31: red-orange brick arches with iron ribs, grates glowing from the street above, toxic
+  //green ooze out of pipe mouths, orange-and-white barrels and ROAD CLOSED / DETOUR boards at the digs, and Lower
+  //Wacker's pillared underground street at the gate)
+  const archBrick = surface('brick', 0x8a4a32);
+  const archDark = new THREE.MeshBasicMaterial({ color: 0x0c0a0c });
+  const iron = new THREE.MeshLambertMaterial({ color: 0x2c2826 });
+  const ooze = new THREE.MeshBasicMaterial({ color: 0x7cff4a });
+  const oozeGlow = new THREE.MeshBasicMaterial({ map: glowDisc(), color: 0x7cff4a, transparent: true, opacity: 0.45, depthWrite: false });
+  const grateGlow = new THREE.MeshBasicMaterial({ map: lattice(), transparent: true, opacity: 0.85, depthWrite: false });
+  const barrel = new THREE.MeshLambertMaterial({ color: 0xff6a1a });
+  const fence = new THREE.MeshBasicMaterial({ color: 0xff7a2a, transparent: true, opacity: 0.75, side: THREE.DoubleSide });
+  const pillar = surface('concrete', 0x9a948a);
+  const redLight = new THREE.MeshBasicMaterial({ color: 0xff3030 });
+  const ceilLight = new THREE.MeshBasicMaterial({ color: 0xfff4d0 });
   const box = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, m: THREE.Material) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m);
     b.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
@@ -195,6 +258,45 @@ export function buildSewers(level: Level): THREE.Group {
         }
       }
     }
+    //brick arches down the back wall, the tunnel running off into the dark through each, and iron ribs between them
+    //(zack's brick sewer refs); a toxic green pipe mouth now and then, oozing into the runoff
+    const lower = bowl || sub ? (x: number) => (bowl && x > X(bowl.x0) - 1.6 && x < X(bowl.x1) + 1.6) || (sub && x > X(sub.x0) - 1.6 && x < X(sub.x1) + 1.6) : () => false;
+    const archR = Math.min(1.5, (roof - fy) * 0.42);
+    for (let x = x0 + 5.5; x < ramp - 2; x += 9) {
+      if (lower(x)) continue;
+      const ring = new THREE.Mesh(new THREE.RingGeometry(archR, archR + 0.35, 14, 1, 0, Math.PI), archBrick);
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(archR, 14, 0, Math.PI), archDark);
+      for (const m of [ring, hole]) m.position.set(x, fy + archR * 0.9, BACK + 0.02);
+      hole.position.z = BACK + 0.015;
+      box(x - archR, x + archR, fy, fy + archR * 0.9, BACK + 0.01, BACK + 0.015, archDark);
+      for (const sx of [-1, 1]) box(x + sx * (archR + 0.175) - 0.175, x + sx * (archR + 0.175) + 0.175, fy, fy + archR * 0.9, BACK, BACK + 0.04, archBrick);
+      g.add(ring, hole);
+    }
+    for (let x = x0 + 1; x < ramp; x += 3) {
+      if (lower(x)) continue;
+      box(x - 0.08, x + 0.08, fy, roof, BACK, BACK + 0.1, iron);
+      box(x - 0.14, x + 0.14, roof - 0.18, roof, BACK, 0.6, iron);
+    }
+    for (let x = x0 + 9.5; x < ramp - 2; x += 13) {
+      if (lower(x) || rng() < 0.35) continue;
+      const py = fy + 0.9 + rng() * 0.6;
+      const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.5, 14).rotateX(Math.PI / 2), pipeMat);
+      mouth.position.set(x, py, BACK + 0.25);
+      const inner = new THREE.Mesh(new THREE.CircleGeometry(0.32, 14), archDark);
+      inner.position.set(x, py, BACK + 0.51);
+      const lipOoze = new THREE.Mesh(new THREE.CircleGeometry(0.32, 14, Math.PI, Math.PI), ooze);
+      lipOoze.position.set(x, py, BACK + 0.52);
+      lipOoze.scale.y = 0.35;
+      g.add(mouth, inner, lipOoze);
+      box(x - 0.12, x + 0.12, fy + 0.02, py - 0.05, BACK + 0.45, BACK + 0.55, ooze);
+      const puddle = new THREE.Mesh(new THREE.CircleGeometry(0.8, 12), ooze);
+      puddle.rotation.x = -Math.PI / 2;
+      puddle.scale.y = 0.7;
+      puddle.position.set(x, fy + 0.05, BACK + 0.8);
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), oozeGlow);
+      glow.position.set(x, py - 0.2, BACK + 0.06);
+      g.add(puddle, glow);
+    }
     //caged work lamps along the back wall, and graffiti between them
     for (let x = x0 + 2.5; x < ramp - 1; x += 6) {
       box(x - 0.18, x + 0.18, roof - 0.7, roof - 0.4, BACK, BACK + 0.12, cage);
@@ -228,6 +330,15 @@ export function buildSewers(level: Level): THREE.Group {
       for (let x = a + 0.3; x < b - 0.2; x += 0.32) box(x - 0.04, x + 0.04, -0.06, 0.01, STREET_BACK + 1, FRONT, dark);
       for (const z of [STREET_BACK + 1, -0.5, 1.5, FRONT - 0.1]) box(a, b, -0.08, 0.01, z - 0.05, z + 0.05, dark);
       box(a + 0.2, b - 0.2, fy, roof, -0.8, 0.8, shaft);
+      //(and the grate's light lies on the quarterpipe's floor in diamonds, like a manhole seen from below)
+      const pool = new THREE.Mesh(new THREE.PlaneGeometry(b - a + 0.6, 3.2), grateGlow);
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set((a + b) / 2 - 1.2, fy + 0.06, 0);
+      g.add(pool);
+      const under = new THREE.Mesh(new THREE.PlaneGeometry(b - a, 3), grateGlow);
+      under.rotation.x = Math.PI / 2;
+      under.position.set((a + b) / 2, roof - 0.01, 0);
+      g.add(under);
     }
     //the full pipe: a round chamber, its ring of tiles on the back wall
     if (bowl) {
@@ -270,6 +381,18 @@ export function buildSewers(level: Level): THREE.Group {
     }
     //the tunnel to the gate comes up into the underground spot
     if (s.gate) {
+      //Lower Wacker (zack's ref): the last stretch opens into a pillared underground street, concrete columns with
+      //steel bracing, strip lights under the deck and red signals off in the gloom
+      for (let x = ramp - 9; x < x1 - 1; x += 4) {
+        if (x < x0 + 1 || lower(x)) continue;
+        const base = x < ramp ? fy : fy + ((x - ramp) / SEWER.ramp) * (0 - fy);
+        box(x - 0.28, x + 0.28, base, roof, BACK + 0.02, BACK + 0.58, pillar);
+        box(x - 0.34, x + 0.34, base, base + 0.35, BACK + 0.02, BACK + 0.64, pillar);
+        const brace = box(x - 0.05, x + 0.05, fy, roof, BACK + 0.08, BACK + 0.12, iron);
+        brace.rotation.z = 0.5;
+        box(x + 1.6, x + 2.4, roof - 0.08, roof - 0.02, -1.4, 0.4, ceilLight);
+        if (rng() < 0.6) box(x + 1, x + 1.12, fy + 1.2, fy + 1.4, BACK + 0.05, BACK + 0.1, redLight);
+      }
       const sign = board('UNDERGROUND', 'DIY spot ▶', '#141018', '#ff4fa3');
       sign.scale.setScalar(0.7);
       sign.position.set(ramp - 1.5, roof - 1.1, BACK + 0.05);
@@ -291,6 +414,29 @@ export function buildSewers(level: Level): THREE.Group {
     //the barricade: two legs and a striped board
     for (const x of [a + 0.2, b - 0.2]) box(x - 0.05, x + 0.05, 0, 0.8, -1.95, -1.85, white);
     for (let x = a + 0.1; x < b - 0.1; x += 0.4) box(x, Math.min(b - 0.1, x + 0.2), 0.55, 0.78, -1.95, -1.9, x % 0.8 < 0.4 ? cone : white);
+    //orange-and-white barrels and a run of orange mesh fence behind the dig, ROAD CLOSED and a DETOUR arrow on posts
+    for (const x of [a - 1.4, b + 1.5]) {
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.33, 0.9, 12), barrel);
+      bar.position.set(x, 0.45, 2.4);
+      g.add(bar);
+      for (const y of [0.3, 0.6]) {
+        const band = new THREE.Mesh(new THREE.CylinderGeometry(0.315, 0.325, 0.1, 12), white);
+        band.position.set(x, y, 2.4);
+        g.add(band);
+      }
+      box(x - 0.42, x + 0.42, 0, 0.06, 2.0, 2.8, dark);
+    }
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(b - a + 3, 0.9), fence);
+    mesh.position.set((a + b) / 2, 0.45, -2.3);
+    g.add(mesh);
+    const closed = board('ROAD CLOSED', 'construction ahead', '#ffffff', '#141018');
+    closed.scale.setScalar(0.42);
+    closed.position.set(a - 0.4, 1.35, -2.0);
+    const detour = board('DETOUR ▼', 'sewer this way', '#ff7a1a', '#141018');
+    detour.scale.setScalar(0.42);
+    detour.position.set(a - 0.4, 1.8, -2.0);
+    g.add(closed, detour);
+    box(a - 0.44, a - 0.36, 0, 1.6, -2.06, -2.02, dark);
     //the trench plate, dragged off the hole and leaning on the back curb
     const p = box(b + 0.4, b + 2.2, 0.02, 0.08, -2.9, -1.9, plate);
     p.rotation.z = 0.12;
