@@ -54,6 +54,7 @@ const STREET: [string, number][] = [
   ['SandwichBoard', 2], ['DeliveryBot', 1], ['AIKiosk', 1], ['FlockPole', 1],
 ];
 const LEDGE: [string, number][] = [['Bottle', 4], ['Can', 3], ['Planter', 2], ['CardboardBox', 2]];
+const SEWER_JUNK: [string, number][] = [['Bottle', 3], ['Can', 4], ['CardboardBox', 2], ['Barrel', 1]]; // washed down the sewer
 const SCENERY: [string, number][] = [['Hydrant', 3], ['Bench', 2], ['TrashCan', 2], ['Mailbox', 1], ['Meter', 2], ['SignPole', 1]];
 const NEWS = ['NewsBoxRed', 'NewsBoxBlue', 'NewsBoxYellow'];
 const AI = new Set(['AIKiosk', 'DeliveryBot', 'FlockPole']);
@@ -118,7 +119,7 @@ export function placeProps(level: Level): Prop[] {
     const n = 1 + (s.x1 - s.x0 > 8 * TILE ? Math.floor(rng() * 3) : Math.floor(rng() * 2));
     for (let i = 0; i < n; i++) {
       const x = s.x0 + TILE + rng() * (s.x1 - s.x0 - 2 * TILE);
-      add(pick(rng, LEDGE), x, s.y, lane(), true);
+      add(pick(rng, s.sewer ? SEWER_JUNK : LEDGE), x, s.y, lane(), true);
     }
   }
   //one golden prop a floor holds a Stoken

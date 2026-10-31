@@ -6,7 +6,7 @@ import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { Tuck } from './tuck';
 import { LEDGE_GRINDS, MANUALS, NOSE_STANCES, RAIL_GRINDS, rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
-import { PIT, ceilingAt, currentAt, isStreetAt, pitAt, pits, sewerAt, sewerRoof, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { PIT, SEWER_FLOW, ceilingAt, currentAt, isStreetAt, pitAt, pits, sewerAt, sewerFloor, sewerFlow, sewerRoof, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
@@ -515,10 +515,13 @@ export class Skater {
       //a cable car climb: the cable takes you up at its own speed, the slope doesn't slow you
       if (tow > 0) this.carry = Math.max(this.carry, tow);
       //(a kicker's too short to slow you: you hit its lip at the speed you hit its foot)
-      else if (m !== 0 && !this.surface?.kicker) {
+      else if (m !== 0 && !this.surface?.kicker && !this.surface?.launch) {
         const pull = this.grav * FEEL.slopeGrav * (m / Math.hypot(1, m));
         this.carry = pull > 0 ? Math.max(this.carry, this.hsp) + pull : Math.max(0, this.carry + pull);
       }
+      //DOWNSTREAM: the sewer's runoff runs your way, and its current pushes you on past cruising speed
+      const flow = this.surface?.sewer ? sewerFlow(this.level, this.x, this.y) : 0;
+      if (flow) this.carry = Math.max(this.carry, Math.min(SEWER_FLOW.max, Math.max(this.carry, this.hsp) + flow));
       const excess = Math.max(0, this.carry - PHYS.baseSpeed);
       const bleed = Math.max(PHYS.carryBleedMin, excess * PHYS.carryDecay) * this.mods.carryBleedScale;
       this.carry = Math.max(0, this.carry - bleed);
@@ -596,7 +599,7 @@ export class Skater {
     if (this.mode === 'roll' || this.mode === 'grind') {
       //a kicker ramp standing on the street: you roll up onto it
       if (this.mode === 'roll' && (!this.surface || this.surface.kind === 'roof')) {
-        const ramp = this.level.surfaces.find((s) => s.kicker && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
+        const ramp = this.level.surfaces.find((s) => (s.kicker || s.launch) && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
         if (ramp && ramp !== this.surface) this.surface = ramp;
       }
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);
@@ -605,9 +608,19 @@ export class Skater {
         //rolled off the edge: fall, keeping both jumps (QFS); a slope throws you along its angle (bank kick)
         const fromRail = this.mode === 'grind';
         const slope = this.surface ? surfaceSlope(this.surface) : 0;
+        const launch = this.mode === 'roll' ? this.surface?.launch : undefined;
         this.leaveGround();
         this.vsp = slope * this.hsp;
         if (!fromRail) this.coyote = PHYS.coyoteFrames;
+        //a sewer kick-out: up its quarterpipe and straight up through the grate overhead, back to the street
+        if (launch) {
+          this.vsp = launch;
+          this.kicked = true;
+          this.coyote = 0;
+          this.jumps = this.maxJumps;
+          this.flipped = false;
+          this.events.push({ type: 'kicker' });
+        }
       }
     } else if (this.mode === 'air') {
       this.land(px, py);
@@ -618,7 +631,8 @@ export class Skater {
     this.checkHazards();
 
     //in the canal, or down a pit on the hill
-    const bottom = pitAt(this.level, this.x)?.floor ?? (sewerAt(this.level, this.x)?.y ?? this.level.streetY) + PHYS.bailDepth;
+    const sewer = sewerAt(this.level, this.x);
+    const bottom = pitAt(this.level, this.x)?.floor ?? (sewer ? sewerFloor(sewer, this.x) : this.level.streetY) + PHYS.bailDepth;
     if (this.mode === 'air' && this.y > bottom && this.tucks > 0) {
       //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
       this.tucks--;
@@ -670,9 +684,13 @@ export class Skater {
   // rolling off one piece of ground straight onto the next at the same height: terrace to stairs, bank to roof
   private rollOnto(): boolean {
     if (this.mode !== 'roll') return false;
+    //(down a steep slope in the sewer, a frame's drop runs further than that: the plank ramp in, the bowl, so you roll
+    //on down onto the floor instead of hopping off the end of the slope)
+    const on = this.surface;
+    const reach = on?.sewer && !on.launch ? 8 + Math.max(0, surfaceSlope(on)) * Math.abs(this.hsp) : 8;
     for (const s of this.level.surfaces) {
       if (s === this.surface || s.kind === 'rail' || this.x < s.x0 || this.x > s.x1 || this.gone.has(s)) continue;
-      if (Math.abs(surfaceY(s, this.x) - this.y) > 8) continue;
+      if (Math.abs(surfaceY(s, this.x) - this.y) > (s.sewer ? reach : 8)) continue;
       this.y = surfaceY(s, this.x);
       this.surface = s;
       if (s.kind === 'stairs') this.intoStairs(s);

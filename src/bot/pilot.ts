@@ -152,6 +152,27 @@ function flipNow(level: Level, near: Near, sk: Skater): boolean {
   return true;
 }
 
+// down in the sewer (src/gen/sewer.ts): ollie a kick-out (to stay down), the alligator, a rat pack running at you
+// and the subway's gap, at the last moment the ollie still clears it; ride the bowl, and ollie off the end of a pipe
+// (railEnd: the reference line's press there)
+function sewerPress(sim: FloorSim, railEnd: boolean): boolean {
+  const sk = sim.skater;
+  if (sk.mode === 'rail') return railEnd;
+  if (sk.mode !== 'roll' || sk.impactT > 0) return false;
+  const s = sewerAt(sim.level, sk.x);
+  if (!s) return false;
+  const v = Math.max(1, sk.hsp);
+  const ahead = (x: number, lo: number, hi: number) => x - sk.x > lo && x - sk.x < hi;
+  if (s.kicks?.some((k) => ahead(k.x0, 0, Math.max(10, 3 * v)))) return true;
+  const half = PHYS.width / 2;
+  if (s.gator && ahead(s.gator[0] - half, 0, 3 * v)) return true;
+  const p = s.piece;
+  if (p?.kind === 'subway' && ahead(p.x0, 0, Math.max(12, 3 * v))) return true;
+  const pack = sim.sewer.tunnels.find((t) => t.s === s)?.pack;
+  if (pack?.awake && pack.rats.some((r) => r.alive && ahead(r.x - half, 0, 3 * (v + 1.6)))) return true;
+  return false;
+}
+
 export class Pilot {
   private hold = 0;
   private readonly rng: () => number;
@@ -245,10 +266,12 @@ export class Pilot {
     }
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.boardY)) pressed = true;
+    //down in the sewer: no flips (the street's overhead), only an ollie over what's on the floor ahead
+    if (sim.down) return sewerPress(sim, pressed && sk.mode === 'rail');
     if (this.style === 'sewer') {
       //roll on into a drain ahead, and no flips on the way down (the street's underside is overhead)
-      const drain = level.sewers?.find((w) => w.drain[0] - sk.x > -TILE && w.drain[0] - sk.x < 80);
-      if (drain && sk.y <= level.streetY + 1 && sk.mode === 'roll' && !sk.surface) pressed = false;
+      const drain = level.sewers?.find((w) => w.drain[0] - sk.x > -TILE && w.drain[0] - sk.x < 4 * TILE);
+      if (drain && sk.y <= level.streetY + 1 && sk.mode === 'roll' && (!sk.surface || Math.abs(sk.surface.y - level.streetY) < 1)) pressed = false;
       if (sk.mode === 'air' && sewerAt(level, sk.x) && sk.y > level.streetY - 4) pressed = false;
       //and no big ollie off the top of a hill (that's the way up into the sky): roll on down where the hill goes on
       const on = sk.surface;

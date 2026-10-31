@@ -59,6 +59,7 @@ import { chinatownPuddles, puddleSpots } from '../render/puddles';
 import { FloorSim, type FloorEvent } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
 import { SkyView } from '../render/sky-view';
+import { SewerView } from '../render/sewer-view';
 import { EscapeFx } from '../render/escape-fx';
 import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
@@ -177,7 +178,7 @@ export interface Hud {
   over(result: RunResult | null): void;
   money(cash: number, stoken: number): void;
   score(score: number, combo: number, stoke: number, gnar: number, pending: number): void; // stoke and gnar 0..1; pending: the live combo's points
-  noGround?(n: number, mult: number, bonus: number, banked: boolean): void; // NO GROUND's meter (src/sim/sky.ts)
+  noGround?(n: number, mult: number, bonus: number, banked: boolean, label?: string): void; // NO GROUND's meter (src/sim/sky.ts), or DOWNSTREAM's (src/sim/floor.ts)
   pause(paused: boolean): void; // show or hide the pause card
   heat(value: number): void;
   warn(show: boolean): void; // an oncoming car is on its way
@@ -257,13 +258,30 @@ export class Game {
     this.view.follow(this.skater.x, this.skater.y);
   }
 
+  // ?sewer (or ?sewer=rats, surge, bowl, subway, gator, kick, gate): each new floor starts on the street just before
+  // the way into one of its sewers (src/gen/sewer.ts), the one with that piece if there is one, to try it straight away
+  startInSewer(want: string): void {
+    this.sewerStart = want || 'any';
+    this.toSewer();
+    this.view.follow(this.skater.x, this.skater.y);
+  }
+
+  private toSewer(): void {
+    const all = this.level.sewers ?? [];
+    const want = this.sewerStart;
+    const s =
+      all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate)) ?? all[0];
+    if (s) Object.assign(this.sim.skater, { x: s.drain[0] - 3 * TILE, y: this.level.streetY, mode: 'roll', surface: null, hsp: 3.5, carry: 0, vsp: 0 });
+  }
+
   private toClouds(): void {
     const c = firstCloud(this.level);
     if (c) Object.assign(this.sim.skater, { x: c.x0 + 8, y: c.y - 2, mode: 'air', hsp: 5, carry: 5, vsp: 0 });
   }
 
   private skyBonus = 0; // NO GROUND: extra cash the live line has paid
-  private skyBanked: { n: number; mult: number; bonus: number; t: number } | null = null; // the last line, held up a moment
+  private skyBanked: { n: number; mult: number; bonus: number; t: number; label?: string } | null = null; // the last line, held up a moment
+  private sewerStart = ''; // ?sewer: each new floor starts at the way into a sewer
   private cloudStart = false; // ?clouds: each new floor starts up on its cloud layer (src/gen/clouds.ts)
   paused = false; // frozen by the pause button, Esc / P, or the page going hidden
   sound: Sound | null = null; // set by main once the page is up
@@ -290,6 +308,7 @@ export class Game {
   private readonly chopper = new ChopperView();
   private readonly topChopper = new ChopperView(); // over the top route (src/sim/sky.ts)
   private readonly skyView = new SkyView();
+  private readonly sewerView = new SewerView();
   private readonly droneView = new DroneView();
   private readonly chaserView = new ChaserView();
   private readonly shotsView = new ShotsView();
@@ -398,6 +417,7 @@ export class Game {
     this.level = this.makeLevel();
     this.sim = new FloorSim(this.level);
     this.skyView.reset(this.sim.sky);
+    this.sewerView.reset(this.level, this.sim.sewer);
     this.view.actor.add(this.sprite.mesh);
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
@@ -415,7 +435,7 @@ export class Game {
     this.impacts = new Impacts(() => this.view.resolution);
     this.splashes = new WaterSplashes(() => this.view.resolution);
     this.view.over.add(this.impacts.group, this.splashes.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
-    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
+    this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.sewerView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
     this.view.scene.add(this.particles.behind); // grind sparks: in the level's pass, so the skater draws over them
@@ -642,8 +662,10 @@ export class Game {
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
     this.skyView.reset(this.sim.sky);
+    this.sewerView.reset(this.level, this.sim.sewer);
     if (from) this.sim.skater.carryOn(from.skater, from.dx, from.dy);
     else if (this.cloudStart) this.toClouds();
+    else if (this.sewerStart) this.toSewer();
     //the last escape ends the run at its gate; every other floor rolls on into the next
     this.sim.rollOn = this.following().length > 0;
     if (this.autopilot) {
@@ -720,7 +742,7 @@ export class Game {
       if (pay) this.escapeFx.bounty(this.sprite.mesh.position.x, this.sprite.mesh.position.y);
     }
     const fork = this.level.fork;
-    this.nextRoad = fork ? (this.sim.road === 'high' ? fork.high : fork.low) : FIRST_ROAD;
+    this.nextRoad = fork ? (this.sim.road === 'high' ? fork.high : this.sim.road === 'sewer' && fork.sewer ? fork.sewer : fork.low) : FIRST_ROAD;
     const road = this.road;
     if (road.kind === 'boon' || road.kind === 'hot') {
       if (road.kind === 'hot') this.run.addCash(ROADS.hotCash(this.floor));
@@ -827,7 +849,7 @@ export class Game {
     if (this.pending) return [{ ...this.pending, road: floorRoad(this.pending.road) }];
     if (this.road.kind === 'escape') return this.road.act >= ACTS ? [] : [this.next(this.nextRoad)];
     const fork = this.level.fork;
-    return fork ? [this.next(fork.high), this.next(fork.low)] : [this.next(FIRST_ROAD)];
+    return fork ? [this.next(fork.high), this.next(fork.low), ...(fork.sewer ? [this.next(fork.sewer)] : [])] : [this.next(FIRST_ROAD)];
   }
 
   private spec(n: { floor: number; road: Road }): FloorSpec {
@@ -848,7 +870,7 @@ export class Game {
     const all = this.following();
     if (!all.length) return this.view.showAhead(null);
     const road = this.sim.road ?? this.sim.roadAhead ?? 'low';
-    const pick = all.length === 1 ? all[0] : all[road === 'high' ? 0 : 1];
+    const pick = all.length === 1 ? all[0] : all[road === 'high' ? 0 : road === 'sewer' && all[2] ? 2 : 1];
     const key = specKey(this.spec(pick));
     //the picked road's floor builds first, then the other road's, so switching roads never waits on a build
     for (const n of [pick, ...all.filter((n) => n !== pick)]) {
@@ -1237,6 +1259,11 @@ export class Game {
     for (const f of sim.sky.flocks) keep(f, 'x', 'y');
     for (const p of sim.sky.pieces) keep(p, 'y', 'angle', 'x');
     for (const d of sim.swarm?.drones ?? []) keep(d, 'x', 'roof');
+    for (const t of sim.sewer.tunnels) {
+      for (const r of t.pack?.rats ?? []) keep(r, 'x');
+      if (t.surge) keep(t.surge, 'front');
+      if (t.train) keep(t.train, 't');
+    }
   }
 
   frame(now: number): void {
@@ -1402,6 +1429,7 @@ export class Game {
     const top = this.sim.sky.chopper;
     this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
     this.skyView.update(this.level, this.sim.sky, x, y, this.sim.up, dt, this.skater.gone);
+    this.sewerView.update(dt);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, dt, (this.sim.shooter?.aimT ?? 0) > 0);
     this.shotsView.update(this.level, this.sim.shooter, this.chaserView.x + SHOTS.gun / TILE, this.sprite.mesh.position.x, dt);
@@ -1442,12 +1470,15 @@ export class Game {
     this.flowFx(dt);
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs, this.run.comboPoints * this.run.combo);
     //NO GROUND's meter: the live line, or the one just banked for a moment after
-    const line = this.sim.skyLine;
-    if (line >= 2) this.hud.noGround?.(line, skyMult(line), this.skyBonus, false);
+    //(down in the sewer the same meter is DOWNSTREAM's)
+    const flow = this.sim.down ? this.sim.flowLine : 0;
+    const line = Math.max(this.sim.skyLine, flow);
+    const label = flow > this.sim.skyLine ? 'DOWNSTREAM' : 'NO GROUND';
+    if (line >= 2) this.hud.noGround?.(line, skyMult(line), this.skyBonus, false, label);
     else if (this.skyBanked && this.skyBanked.t > 0) {
       this.skyBanked.t -= dt;
-      this.hud.noGround?.(this.skyBanked.n, this.skyBanked.mult, this.skyBanked.bonus, true);
-    } else this.hud.noGround?.(0, 1, 0, false);
+      this.hud.noGround?.(this.skyBanked.n, this.skyBanked.mult, this.skyBanked.bonus, true, this.skyBanked.label ?? 'NO GROUND');
+    } else this.hud.noGround?.(0, 1, 0, false, label);
     if (line === 0) this.skyBonus = 0;
     this.hud.gear(this.sim.gear);
     this.view.zoom.update(dt, this.skater.mode);
@@ -1690,7 +1721,7 @@ export class Game {
       this.hud.callout('GOLDEN SMASH! STOKEN', 'good');
     } else if (e.loot === 'spin') {
       this.run.spins++;
-      this.hud.callout(this.level.props[e.index]?.stash ? 'SKY STASH! SPIN TOKEN' : 'SPIN TOKEN!', 'trick');
+      this.hud.callout(this.level.props[e.index]?.stash ? `${this.sim.down ? 'DIY' : 'SKY'} STASH! SPIN TOKEN` : 'SPIN TOKEN!', 'trick');
     }
     this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), z: this.level.props[e.index]?.z, how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
   }
@@ -1768,6 +1799,51 @@ export class Game {
       case 'dodge':
         this.shotsView.dodged(this.particles, x, y);
         this.hud.callout('DODGED!', 'good');
+        break;
+    }
+  }
+
+  // the sewer's moving pieces (src/sim/sewer.ts): rats cleared or tripped over, the surge, the alligator, the subway
+  private sewerFx(e: Extract<FloorSim['events'][number], { type: 'rats' | 'ratBump' | 'surge' | 'washed' | 'gator' | 'bite' | 'subway' }>): void {
+    const x = toX(e.x);
+    const y = toY(this.level, e.y);
+    switch (e.type) {
+      case 'rats':
+        this.run.addStyle(SCORE.drone);
+        this.hud.callout(`RAT HOP x${e.n}!`, 'good');
+        this.words.spawn(x, y + 0.6, 'SKREE!');
+        break;
+      case 'ratBump':
+        this.hud.callout('RATS!', 'bad');
+        this.words.spawn(x, y + 0.4, 'SQUEAK!');
+        this.view.shake(0.08);
+        break;
+      case 'surge':
+        this.hud.callout('FLOOD! OUTRUN IT!', 'bad');
+        this.view.shake(0.2);
+        break;
+      case 'washed':
+        this.hud.callout('WASHED OUT!', 'bad');
+        this.particles.splash(x, y, 1.6);
+        this.words.spawn(x, y + 0.6, 'SPLOOSH!');
+        this.hud.gearTick('deck');
+        this.view.shake(0.25);
+        break;
+      case 'gator':
+        //the sewer alligator: a spin token, in a burst of gold
+        this.run.spins++;
+        this.run.addStyle(SCORE.drone);
+        this.hud.callout('SEWER GATOR! SPIN TOKEN', 'trick');
+        this.particles.coin(x, y + 0.8, 0);
+        break;
+      case 'bite':
+        this.hud.callout('CHOMP!', 'bad');
+        this.words.spawn(x, y + 0.6, 'CHOMP!');
+        this.view.shake(0.25);
+        break;
+      case 'subway':
+        this.run.addStyle(SCORE.drone);
+        this.hud.callout('SUBWAY GAP!', 'good');
         break;
     }
   }
@@ -1894,15 +1970,27 @@ export class Game {
     }
     if (e.type === 'repair') {
       //a sky stash's fresh part: your most worn one, good as new
-      this.hud.callout(`SKY STASH! FRESH ${GEAR.names[e.part].toUpperCase()}`, 'good');
+      this.hud.callout(`${this.sim.down ? 'DIY' : 'SKY'} STASH! FRESH ${GEAR.names[e.part].toUpperCase()}`, 'good');
       this.hud.gear(this.sim.gear);
       return;
     }
     if (e.type === 'sewer') {
-      //into the sewer route: out of sight, the Heat cools; and back up through the outlet
-      this.hud.callout(e.down ? 'DOWN THE DRAIN!' : 'BACK UP!', 'good');
+      //into the sewer route: out of sight, the Heat cools; and back up through the outlet (or a kick-out's grate)
+      this.hud.callout(e.down ? 'DOWN THE DRAIN!' : e.kicked ? 'KICKED OUT!' : 'BACK UP!', e.kicked ? 'bad' : 'good');
       return;
     }
+    if (e.type === 'flowChain') {
+      //DOWNSTREAM: another sewer piece on the line, the coins down here worth more
+      this.hud.callout(`DOWNSTREAM! COINS x${e.mult}`, 'trick');
+      return;
+    }
+    if (e.type === 'flowBank') {
+      this.hud.callout(`FLOW LINE x${e.mult}! +$${this.skyBonus}`, 'good');
+      this.skyBanked = { n: e.n, mult: e.mult, bonus: this.skyBonus, t: 1.6, label: 'DOWNSTREAM' };
+      this.skyBonus = 0;
+      return;
+    }
+    if (e.type === 'rats' || e.type === 'ratBump' || e.type === 'surge' || e.type === 'washed' || e.type === 'gator' || e.type === 'bite' || e.type === 'subway') return this.sewerFx(e);
     if (e.type === 'doorSlam') {
       //BAM: the door slams shut under the hop, a puff off its edge and a jolt
       this.hud.callout('DOOR SLAM!', 'good');

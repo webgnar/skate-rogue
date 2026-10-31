@@ -107,13 +107,21 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     if (sliceDone()) yield;
     const isStreet = level.street[c];
     //over the sewer route the street is only a thin roof over its tunnel (sewer-kit.ts draws the tunnel and holes)
-    const under = (col: number) => sewerAt(level, (col + 0.5) * TILE) !== undefined;
-    const sewer = under(c);
+    //(a kick-out's grate is drawn by sewer-kit.ts too: bars you come up through)
+    const under = (col: number) => {
+      const px = (col + 0.5) * TILE;
+      const s = sewerAt(level, px);
+      return !s ? 0 : s.kicks?.some((k) => px >= k.grate[0] && px < k.grate[1]) ? 2 : 1;
+    };
+    const kind = under(c);
+    const sewer = kind !== 0;
     let end = c;
-    while (end + 1 < cols && level.street[end + 1] === isStreet && under(end + 1) === sewer) end++;
+    while (end + 1 < cols && level.street[end + 1] === isStreet && under(end + 1) === kind) end++;
     const n = end - c + 1;
     const x = c + n / 2;
-    if (isStreet) {
+    if (isStreet && kind === 2) {
+      //a sewer grate: sewer-kit.ts
+    } else if (isStreet) {
       //front face: QFS's 3-row city street with crumbled corners next to canals
       const front: number[][] = [[], [], []];
       const ground = skin.ground;
@@ -541,6 +549,16 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     bottom.userData.forkSign = 'low';
     bottom.position.set(sx, hy + 0.65, -1.25);
     kit.add(top, bottom);
+    //the sewer road (src/gen/sewer.ts): its sign stands over the way into the tunnel that runs to the gate
+    const gateway = level.sewers?.find((w) => w.gate);
+    if (fork.sewer && gateway) {
+      const under = roadSign(fork.sewer, false, true);
+      under.userData.forkSign = 'sewer';
+      under.position.set(toX(gateway.drain[0]) + 1.5, 1.9, -2.4);
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.12), postMat);
+      leg.position.set(toX(gateway.drain[0]) + 1.5, 0.7, -2.45);
+      kit.add(under, leg);
+    }
   }
 
   if (sliceDone()) yield;
@@ -904,14 +922,14 @@ export function makeCar(x0: number, x1: number, bottom: number, roof: number, pa
 const ROAD_COLORS: Record<Road['kind'], string> = { boon: '#ffd23f', cash: '#5fe08a', hot: '#ff4a3a', stash: '#b98cff', shop: '#4ad8ff', spot: '#9cf05a', escape: '#ff4a3a' };
 
 // a street sign for one road: arrow, where it leads, and its danger in car icons
-function roadSign(road: Road, high: boolean): THREE.Mesh {
+function roadSign(road: Road, high: boolean, sewer = false): THREE.Mesh {
   const W = 256;
   const H = 96;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const g = canvas.getContext('2d')!;
-  g.fillStyle = high ? '#1f6b3a' : '#20406e';
+  g.fillStyle = high ? '#1f6b3a' : sewer ? '#5a3a1e' : '#20406e';
   g.fillRect(0, 0, W, H);
   g.strokeStyle = '#ffffff';
   g.lineWidth = 4;
@@ -919,9 +937,9 @@ function roadSign(road: Road, high: boolean): THREE.Mesh {
   g.fillStyle = '#ffffff';
   g.font = 'bold 18px Arial Black, Arial, sans-serif';
   g.textBaseline = 'top';
-  g.fillText(high ? '\u25B2 HIGH ROAD' : '\u25B6 LOW ROAD', 14, 12);
+  g.fillText(high ? '\u25B2 HIGH ROAD' : sewer ? '\u25BC SEWER ROAD' : '\u25B6 LOW ROAD', 14, 12);
   g.font = '12px Arial, sans-serif';
-  g.fillText(high ? 'ollie + flip up' : 'keep rolling', 150, 16);
+  g.fillText(high ? 'ollie + flip up' : sewer ? 'roll in' : 'keep rolling', sewer ? 190 : 150, 16);
   g.fillStyle = road.kind === 'boon' ? BOON_COLORS[road.boonType] : ROAD_COLORS[road.kind];
   g.font = 'bold 26px Arial Black, Arial, sans-serif';
   g.fillText(label(road), 14, 38);

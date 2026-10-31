@@ -15,7 +15,7 @@ import { CHUNK_W, makeLayout, STREET_ROW } from './layout';
 import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
-import { addSewer, SEWER } from './sewer';
+import { addSewer, addSewerStash, SEWER } from './sewer';
 import { addSkyBeats, addSkyStash } from './sky-beats';
 import { addClouds, cloudMix, CLOUDS, type CloudBeat } from './clouds';
 import { bridgeSky } from './sky-line';
@@ -323,5 +323,6 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   level.props = placeProps(level);
   if (opts.hills && !opts.short) addSkyStash(level, level.layout.seed);
   addSpinTokens(level, spinSpots);
+  if (opts.hills && !opts.short) addSewerStash(level, level.layout.seed);
   return level;
 }
