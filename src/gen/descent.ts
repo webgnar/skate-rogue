@@ -1,6 +1,7 @@
 // Downhill floors (GDD: Floor shape). A floor starts high on the rooftops and works down to the street through
 // terraces, stair sets, big handrails, drop-offs, rooftop gaps and a few banks, then finishes on a short street
 // stretch built from QFS pieces (canals, curved rails, parked cars, traffic) with the exit gate.
+import { placeGrass } from './grass';
 import { placeProps } from './props';
 import { addSideLine } from './sidelines';
 import { applyTwist, districtPieces, type Twist } from './twists';
@@ -14,9 +15,13 @@ import { CHUNK_W, makeLayout, STREET_ROW } from './layout';
 import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
-import { addSkyBeats } from './sky-beats';
+import { addSewer, addSewerStash, SEWER } from './sewer';
+import { addSkyBeats, addSkyStash } from './sky-beats';
+import { addClouds, cloudMix, CLOUDS, type CloudBeat } from './clouds';
+import { bridgeSky } from './sky-line';
+import { addSpinTokens, type SpinSpots } from './spin-tokens';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
-import { floorEdit } from './level-edits';
+import { floorEdit, withDials } from './level-edits';
 import { elPlan } from '../traffic/el';
 
 export const DESCENT = {
@@ -294,17 +299,33 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   };
   //Chicago's L over the street, before the side line so the side line stays clear of it
   if (opts.hills) level.el = elPlan(level, level.layout.seed);
+  const sideFrom = level.pickups.length;
   addSideLine(level, level.layout.seed);
+  const topFrom = level.pickups.length;
   if (opts.hills && !opts.short) {
     addTopRoute(level, level.layout.seed);
     addSkyBeats(level, level.layout.seed);
+    //the cloud layer and the sewer take a floor's level-editor edits over their dials (docs/level-editor.md)
+    const fe = floorEdit(editFloor(level.layout.floor));
+    const cl = fe.clouds;
+    if (cl?.on !== false) withDials(CLOUDS, cl?.on ? { from: 1, ...cl } : cl, () => cloudMix(cl?.mix as CloudBeat[] | undefined, () => addClouds(level, level.layout.seed)));
+    bridgeSky(level);
+    if (fe.sewer?.on !== false) withDials(SEWER, fe.sewer, () => addSewer(level, level.layout.seed));
   }
+  const spinSpots: SpinSpots = { side: [sideFrom, topFrom], top: [topFrom, level.pickups.length] };
   applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);
   level.doors = doorPlan(level, level.layout.seed, level.busStops);
   const bounty = bountyPlan(level, level.layout.seed);
   if (bounty && !opts.short) level.bounty = bounty;
+  level.grass = placeGrass(level);
   level.props = placeProps(level);
+  if (opts.hills && !opts.short) addSkyStash(level, level.layout.seed);
+  addSpinTokens(level, spinSpots);
+  if (opts.hills && !opts.short) {
+    const sw = floorEdit(editFloor(level.layout.floor)).sewer;
+    if (sw?.on !== false) withDials(SEWER, sw, () => addSewerStash(level, level.layout.seed));
+  }
   return level;
 }

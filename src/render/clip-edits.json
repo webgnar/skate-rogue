@@ -1,1 +1,34 @@
-{}
+{
+  "grind2": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"yaw":0.4538,"hipY":0.72,"lean":-0.1,"head":0.2,"armLRaise":1.3,"armLElbow":0.4,"armRRaise":1.4,"armRElbow":0.3,"boardY":-0.09,"boardYaw":1.5708}},
+      {"t":0.3,"pose":{"yaw":1.2,"hipY":0.69,"lean":-0.13,"bend":0.14,"head":0.2,"armLRaise":1.4,"armLElbow":0.3,"armRRaise":1.3,"armRElbow":0.4,"boardY":-0.09,"boardYaw":1.5708}},
+      {"t":0.6,"pose":{"yaw":0.4538,"hipY":0.72,"lean":-0.1,"head":0.2,"armLRaise":1.3,"armLElbow":0.4,"armRRaise":1.4,"armRElbow":0.3,"boardY":-0.09,"boardYaw":1.5708}}
+    ]
+  },
+  "kickflip": {
+    "loop": false,
+    "keys": [
+      {"t":0,"pose":{"hipX":-0.1739,"hipY":0.8646,"hipZ":-0.1551,"bend":0.25,"armLRaise":0.0441,"armLFwd":0.2003,"armLElbow":0.5121,"armRRaise":0.1583,"armRFwd":-0.1141,"armRElbow":0.5446,"footFX":0.0453,"footFY":0.4272,"footFZ":-0.0954,"footFOn":0,"footFTurn":0.8954,"footFPitch":0.0733,"footFToe":-0.0314,"footFRoll":0.0279,"footBX":-0.4095,"footBY":0.4737,"footBZ":-0.0499,"footBOn":0,"footBTurn":-0.0995,"footBPitch":0.5794,"footBToe":0.4747,"footBRoll":-0.356,"boardY":0.3}},
+      {"t":0.05,"pose":{"hipX":-0.1274,"hipY":1.1288,"bend":0.3,"nod":0.4,"armLRaise":0.3945,"armLFwd":0.0509,"armLElbow":0.7293,"armRRaise":0.3929,"armRFwd":-0.2598,"armRElbow":1.0501,"footFX":0.52,"footFY":0.5,"footFZ":-0.11,"footFOn":0,"footFTurn":1.0175,"footFRoll":0.4817,"footBX":-0.38,"footBY":0.58,"footBOn":0,"boardY":0.3,"boardPitch":0.1274,"boardRoll":-0.7}},
+      {"t":0.1333,"pose":{"hipX":0.1298,"hipY":1.09,"hipZ":-0.1493,"lean":-0.08,"bend":0.38,"head":0.3,"nod":0.6,"armLRaise":1.0926,"armLFwd":0.256,"armLElbow":0.9799,"armRRaise":1.5707,"armRFwd":-0.4139,"armRElbow":1.6557,"footFX":0.78,"footFY":0.6,"footFZ":-0.12,"footFOn":0,"footFTurn":0.5,"footBX":-0.1812,"footBY":0.7286,"footBZ":0.05,"footBOn":0,"boardX":0.2495,"boardY":0.41,"boardZ":0.01,"boardPitch":-0.2391,"boardRoll":-3.6128}},
+      {"t":0.25,"pose":{"hipY":1.08,"hipZ":-0.1291,"lean":-0.08,"bend":0.38,"head":0.3,"nod":0.6,"armLRaise":1.3325,"armLFwd":0.5062,"armLElbow":0.8463,"armRRaise":1.5708,"armRFwd":-1.5953,"armRElbow":0.8956,"footFX":0.72,"footFY":0.6,"footFZ":-0.2461,"footFOn":0,"footFTurn":0.5,"footBX":-0.1367,"footBY":0.6736,"footBZ":0.1508,"footBOn":0,"boardX":0.2035,"boardY":0.3695,"boardPitch":-0.1169,"boardRoll":-5.4978}},
+      {"t":0.32,"pose":{"hipY":0.8773,"hipZ":-0.09,"bend":0.3,"nod":0.45,"armLRaise":0.9828,"armLFwd":0.5208,"armLElbow":1.0752,"armRRaise":0.833,"armRFwd":0.4755,"armRElbow":1.4727,"footFX":0.2424,"footFY":0.4217,"footFOn":0,"footBX":-0.2992,"boardY":0.28,"boardRoll":-6.2832}},
+      {"t":0.3533,"pose":{"hipY":0.98,"nod":0.3,"armLRaise":1,"armRRaise":1.3,"footFX":0.28,"footBX":-0.28,"boardY":0.26,"boardRoll":-6.2832}}
+    ]
+  },
+  "ollie": {
+    "loop": false,
+    "keys": [
+      {"t":0,"pose":{"hipY":0.84,"footBX":-0.2565}},
+      {"t":0.1,"pose":{"hipX":-0.1583,"hipY":0.6,"bend":0.5,"nod":-0.1,"armLRaise":0.3,"armLFwd":0.7,"armLElbow":0.3,"armRRaise":0.35,"armRFwd":0.55,"armRElbow":0.35,"footFX":0.12,"footBX":-0.4}},
+      {"t":0.1667,"pose":{"hipX":-0.1134,"hipY":0.9017,"bend":0.22,"armLRaise":0.9,"armLFwd":0.4,"armRRaise":1.7,"armRElbow":0.4,"footFX":0.22,"footFY":0.25,"footFZ":0.05,"footFTurn":-0.0122,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.58}},
+      {"t":0.27,"pose":{"hipX":-0.1064,"hipY":1.0595,"lean":-0.05,"nod":0.3,"armLRaise":1.1,"armLFwd":0.3,"armRRaise":2.8,"armRFwd":-0.1,"armRElbow":0.15,"footFX":0.3,"footBX":-0.4,"boardX":0.12,"boardY":0.026,"boardPivot":-0.475,"boardPitch":1}},
+      {"t":0.3667,"pose":{"hipY":1.14,"bend":0.32,"nod":0.35,"armLRaise":1.4,"armLFwd":0.35,"armRRaise":2.3,"armRElbow":0.3,"footFX":0.38,"footBX":-0.266,"boardY":0.5}},
+      {"t":0.4,"pose":{"hipY":1.1284,"bend":0.3161,"nod":0.3258,"armLRaise":1.4145,"armLFwd":0.3307,"armLElbow":0.4355,"armRRaise":2.2323,"armRElbow":0.3,"footFX":0.3625,"footBX":-0.2707,"boardX":0.1571,"boardY":0.5,"boardZ":0.02,"boardPivot":0.085,"boardPitch":-0.1693}},
+      {"t":0.54,"pose":{"hipY":1.02,"bend":0.28,"armLRaise":1.55,"armLElbow":0.3,"armRRaise":1.6,"armRElbow":0.3,"footFX":0.1995,"footBX":-0.3,"boardY":0.32,"boardPitch":-0.12}},
+      {"t":0.68,"pose":{"hipY":0.94,"bend":0.22,"armLRaise":1.2,"armRRaise":1.1,"boardY":0.08}}
+    ]
+  }
+}

@@ -7,7 +7,14 @@ export const PHYS = {
   grav: 0.25, // QFS global.grav
   maxFall: 10,
   ollie: -5, // QFS jump_spd
-  trick: -5, // QFS: the second jump is as strong as the first
+  trick: -5, // QFS: the second jump is as strong as the first (now the weakest a flip pops, see trickEarly)
+  // the flip pops harder the sooner you tap it (zack, 2026-10-31: "the flip trick second jump should make you ollie
+  // higher, but less the more you wait on the first ollie"): trickEarly up to trickEarlyFrames into the air, easing
+  // to trick by trickLateFrames (as the ollie snaps to its top), so a quick double tap goes highest and a late flip
+  // pops like before (and a late, low flip is the one that can land perfect)
+  trickEarly: -6, // -7 lets a quick double tap off a high rail reach the sky route's power line (tests/top-route.test.ts)
+  trickEarlyFrames: 3,
+  trickLateFrames: 14,
   jumpCut: 2.5, // QFS jump_dampner: let go while rising -> vsp = max(vsp, ollie / 2.5)
   // the ollie snaps up (zack, 2026-10-30: "skateboarding is fast, the mechanics of an ollie happen fast"): the pop
   // leaves popSnap times faster against popSnap^2 times the gravity, so it climbs to the same height in 1/popSnap of
@@ -44,6 +51,13 @@ export const PHYS = {
   impactFrames: 21, // Lou Gnar's IMPACT_DURATION, 350 ms: after a landing, no ollie until the knees are back up (zack)
   // the impact grows with the drop (zack, 2026-10-27): px fallen from the top of the air to the landing, and the
   // frames of no-ollie each tier gets. Small covers an ollie or a flip on flat (about 50 and 100 px up and down).
+  // Perfect landings (zack, 2026-10-31: style is speed; OlliOlli's tap right before touchdown, on our one tap): a
+  // flip thrown on the way down this close over what you land on (it pops you up and you come back down with the
+  // board just caught), or caught this few frames before the wheels touch, is PERFECT. Onto the ground it adds flow
+  // speed; onto a grind it starts you at grind speed and a bit over.
+  perfectHeight: 40, // px: thrown no higher than this over the landing (an ollie peaks at 50)
+  perfectFrames: 5,
+  perfectBoost: 0.75, // px/frame: a perfect landing rolls away at least this over cruising (base 3.5), about a fifth
   impactTiers: [
     { drop: 'small', under: 112, frames: 12 },
     { drop: 'medium', under: 224, frames: 21 },

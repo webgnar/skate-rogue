@@ -3,15 +3,18 @@
 // to shake out states the reference line never reaches. Pure, so the validator, the sim playtest and the game's
 // ?bot autopilot all press the same way.
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
+import { isStreetAt, sewerAt, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
 import type { Skater, StepInput } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
 import type { CrossCar } from '../traffic/cross';
 import { makeRng } from '../gen/rng';
 
-// 'high' is the reference bot going for the top route (src/gen/top-route.ts): it ollies off the end of each rooftop
-export type PilotStyle = 'ref' | 'mash' | 'high';
+// 'high' is the reference bot going for the top route (src/gen/top-route.ts): it ollies off the end of each rooftop;
+// 'sewer' goes for the sewer route (src/gen/sewer.ts): it rolls into each open drain and keeps its feet down there;
+// 'sky' stays up on the sky route's line (src/gen/sky-beats.ts, src/gen/clouds.ts): it ollies off the end of each
+// sky piece and flips when that's what reaches the next one, the line a good player skates
+export type PilotStyle = 'ref' | 'mash' | 'high' | 'sewer' | 'sky';
 
 function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: Car[], cross: CrossCar[]): boolean {
   for (let dx = 20; dx <= 70; dx += 4) {
@@ -110,10 +113,33 @@ function landsTop(level: Level, near: Near, sk: Skater, x: number, y: number, vs
   return false;
 }
 
+// follow a fall from the feet at (x, y) at vsp: does the board come down on a sky piece (a deck, a cloud, a wire,
+// a rainbow, or a moving deck's top)?
+function landsSky(level: Level, near: Near, decks: Surface[], sk: Skater, x: number, y: number, vsp: number, flip = false): boolean {
+  const tuck = sk.tuck.ahead(flip);
+  let by = y - sk.tuck.lift;
+  const sky = (s: Surface) => !!(s.sky || s.top);
+  for (let f = 0; f < 150 && by < level.streetY; f++) {
+    vsp = Math.min(vsp + sk.grav, PHYS.maxFall);
+    y += vsp;
+    tuck.step(true);
+    const ny = y - tuck.lift;
+    x += sk.hsp;
+    for (const s of [...near.surfaces, ...decks]) {
+      if (!sky(s) || x < s.x0 + EDGE || x > s.x1 - EDGE) continue;
+      const sy = surfaceY(s, x);
+      if (by <= sy && ny >= sy) return true;
+    }
+    if (near.rails.some((r) => (r.sky || r.top) && r !== sk.railIgnore && (r.yAt(x) ?? -1e9) >= by && (r.yAt(x) ?? 1e9) <= ny)) return true;
+    by = ny;
+  }
+  return false;
+}
+
 // falling with no street ahead: flip now, or hold it while a later flip still lands where this one wouldn't (at
 // full stoke's speed a flip straight away can sail over a short roof)
 function flipNow(level: Level, near: Near, sk: Skater): boolean {
-  const flip = PHYS.trick * sk.gear.trick;
+  const flip = sk.flipPop();
   if (landsOn(level, near, sk, sk.x, sk.y, flip, true, true)) return true;
   let { x, vsp } = sk;
   let y = sk.y;
@@ -124,6 +150,27 @@ function flipNow(level: Level, near: Near, sk: Skater): boolean {
     if (landsOn(level, near, sk, x, y, flip, true, true)) return false;
   }
   return true;
+}
+
+// down in the sewer (src/gen/sewer.ts): ollie a kick-out (to stay down), the alligator, a rat pack running at you
+// and the subway's gap, at the last moment the ollie still clears it; ride the bowl, and ollie off the end of a pipe
+// (railEnd: the reference line's press there)
+function sewerPress(sim: FloorSim, railEnd: boolean): boolean {
+  const sk = sim.skater;
+  if (sk.mode === 'rail') return railEnd;
+  if (sk.mode !== 'roll' || sk.impactT > 0) return false;
+  const s = sewerAt(sim.level, sk.x);
+  if (!s) return false;
+  const v = Math.max(1, sk.hsp);
+  const ahead = (x: number, lo: number, hi: number) => x - sk.x > lo && x - sk.x < hi;
+  if (s.kicks?.some((k) => ahead(k.x0, 0, Math.max(10, 3 * v)))) return true;
+  const half = PHYS.width / 2;
+  if (s.gator && ahead(s.gator[0] - half, 0, 3 * v)) return true;
+  const p = s.piece;
+  if (p?.kind === 'subway' && ahead(p.x0, 0, Math.max(12, 3 * v))) return true;
+  const pack = sim.sewer.tunnels.find((t) => t.s === s)?.pack;
+  if (pack?.awake && pack.rats.some((r) => r.alive && ahead(r.x - half, 0, 3 * (v + 1.6)))) return true;
+  return false;
 }
 
 export class Pilot {
@@ -139,12 +186,46 @@ export class Pilot {
 
   // the button for the sim's next step
   input(sim: FloorSim): StepInput {
-    const pressed = this.style === 'mash' ? this.mash() : this.ref(sim);
+    const pressed = this.style === 'mash' ? this.mash() : this.style === 'sky' ? this.sky(sim) : this.ref(sim);
     //hold through the pop: a flip let go at once is cut short, and the look-ahead counts on a full one
-    if (this.style !== 'mash' && pressed) this.hold = sim.skater.grounded ? 30 : 20;
+    if (this.style !== 'mash' && pressed) this.hold = sim.skater.grounded ? 30 : this.style === 'sky' ? Math.max(this.hold, 20) : 20;
     const held = this.hold > 0 || pressed;
     if (this.hold > 0) this.hold--;
     return { pressed, held };
+  }
+
+  // the sky line: off the end of each piece at the last moment the ollie still makes the next, flip if that's what
+  // makes it; down on the ground below it skates as the reference bot does
+  private sky(sim: FloorSim): boolean {
+    const sk = sim.skater;
+    const piece = sk.mode === 'rail' ? sk.rail?.sky || sk.rail?.top : sk.surface?.sky || sk.surface?.top;
+    //on the street or the hill: a big ollie when the first piece of the sky is just ahead and in reach (the flip comes
+    //in the air, below), else skate as the reference bot does
+    if (!piece && sk.mode !== 'air') {
+      const up = sim.level.surfaces.some((s) => s.sky && s.x0 - sk.x > 2.5 * sk.hsp * 6 && s.x0 - sk.x < 2.5 * sk.hsp * 9 && sk.y - s.y > TILE && sk.y - s.y < 3.5 * TILE);
+      if (up && sk.grounded && sk.mode !== 'rail') return true;
+      return this.ref(sim);
+    }
+    const level = sim.level;
+    const near = nearby(level, sk);
+    const decks = sim.sky.pieces.map((p) => p.ledge).filter((l) => l.x1 > sk.x);
+    if (sk.mode === 'rail' && sk.rail) {
+      if (sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) return true;
+      return false;
+    }
+    if (sk.grounded && sk.surface) {
+      //ollie off the end at the last few steps, as a good player does
+      return sk.surface.x1 - sk.x < Math.max(12, 3 * sk.hsp);
+    }
+    //rolled off the end while the landing still had the knees bent: the ollie's still there a moment after the edge
+    if (sk.mode === 'air' && sk.coyote > 0 && sk.jumps === sk.maxJumps) return true;
+    if (sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -2) {
+      if (landsSky(level, near, decks, sk, sk.x, sk.y, sk.vsp)) return false;
+      if (landsSky(level, near, decks, sk, sk.x, sk.y, sk.flipPop(), true)) return true;
+      //nothing to make yet: hold the flip for later in the fall, unless it's now or never
+      return sk.vsp > 3;
+    }
+    return false;
   }
 
   private mash(): boolean {
@@ -168,7 +249,7 @@ export class Pilot {
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) pressed = true;
     if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
     //flip near the top of an arc if that's what reaches the top route
-    if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, near, sk, sk.x, sk.y, sk.vsp) && landsTop(level, near, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true)) pressed = true;
+    if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, near, sk, sk.x, sk.y, sk.vsp) && landsTop(level, near, sk, sk.x, sk.y, sk.flipPop(), true)) pressed = true;
     //a guard's bullet coming up behind at waist height: ollie so it goes under (feet clear of it ~6-34 frames in)
     if (sk.grounded && sim.shooter?.bullets.some((b) => {
       const eta = (sk.x - PHYS.width / 2 - b.x) / Math.max(0.1, b.vx - Math.abs(sk.hsp));
@@ -181,10 +262,21 @@ export class Pilot {
     if (sk.mode === 'air' && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, false)) {
       if (sk.vsp > 0.5 && flipNow(level, near, sk)) pressed = true;
       //near the top of the arc: flip already if that lands on something and coming down as we are wouldn't
-      else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, near, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true, true) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
+      else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, near, sk, sk.x, sk.y, sk.flipPop(), true, true) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
     }
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.boardY)) pressed = true;
+    //down in the sewer: no flips (the street's overhead), only an ollie over what's on the floor ahead
+    if (sim.down) return sewerPress(sim, pressed && sk.mode === 'rail');
+    if (this.style === 'sewer') {
+      //roll on into a drain ahead, and no flips on the way down (the street's underside is overhead)
+      const drain = level.sewers?.find((w) => w.drain[0] - sk.x > -TILE && w.drain[0] - sk.x < 4 * TILE);
+      if (drain && sk.y <= level.streetY + 1 && sk.mode === 'roll' && (!sk.surface || Math.abs(sk.surface.y - level.streetY) < 1)) pressed = false;
+      if (sk.mode === 'air' && sewerAt(level, sk.x) && sk.y > level.streetY - 4) pressed = false;
+      //and no big ollie off the top of a hill (that's the way up into the sky): roll on down where the hill goes on
+      const on = sk.surface;
+      if (on && sk.mode === 'roll' && !on.sky && !on.top && on.x1 - sk.x < 30 && level.surfaces.some((o) => o !== on && !o.sky && !o.top && o.kind !== 'rail' && o.x0 <= on.x1 + 4 && o.x1 > on.x1 + 4 && Math.abs(surfaceY(o, on.x1 + 4) - surfaceY(on, on.x1)) < 10)) pressed = false;
+    }
     return pressed;
   }
 }

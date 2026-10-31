@@ -6,16 +6,16 @@ import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { Tuck } from './tuck';
 import { LEDGE_GRINDS, MANUALS, NOSE_STANCES, RAIL_GRINDS, rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
-import { PIT, ceilingAt, currentAt, isStreetAt, pitAt, pits, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { PIT, SEWER_FLOW, ceilingAt, currentAt, isStreetAt, pitAt, pits, sewerAt, sewerFloor, sewerFlow, sewerRoof, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
 export type SkaterEvent =
   | { type: 'ollie'; spin: 0 | 180; lip?: boolean; nose?: boolean } // lip: popped right at the edge of the ground (or just off it); nose: off a nose grind or nose manual
   | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean; nollie?: boolean } // fakie: the stance it was thrown from; nollie: in the air off the nose
-  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; drop?: ImpactTier; lock?: number; lined?: number; spare?: number; flush?: number; lost?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); drop: how big a drop it was, and lock: the frames of no-ollie it gave (not on a manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one); lost: px/frame of speed the landing cost you (only if any)
-  | { type: 'grind'; name: string } // name: the grind (its clip), LEDGE_GRINDS or RAIL_GRINDS
-  | { type: 'rail'; name: string }
+  | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; perfect?: boolean; drop?: ImpactTier; lock?: number; lined?: number; spare?: number; flush?: number; lost?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); perfect: a flip caught just before touchdown (PHYS.perfectFrames), worth a burst of speed; drop: how big a drop it was, and lock: the frames of no-ollie it gave (not on a manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one); lost: px/frame of speed the landing cost you (only if any)
+  | { type: 'grind'; name: string; perfect?: boolean } // name: the grind (its clip), LEDGE_GRINDS or RAIL_GRINDS; perfect: onto it just after a flip's catch
+  | { type: 'rail'; name: string; perfect?: boolean }
   | { type: 'hop' }
   | { type: 'kicker' } // launched off a box truck's tailgate
   | { type: 'skitch'; on: boolean } // grabbed a cab's back bumper (on), or let go of it
@@ -54,6 +54,8 @@ export class Skater {
   buffer = 0; // frames a press stays valid
   impactT = 0; // frames left of the landing's impact: no ollie, and a press then is lost (Lou Gnar's LANDING state)
   impactTaps = 0; // presses during this impact (Strong Legs: the second one ollies anyway)
+  flipLow: number | null = null; // where the last flip was thrown, if it was on the way down (px), for a PERFECT
+  airT = 0; // frames in this air, for how hard a flip pops
   topY = 0; // the highest point of this air (px; y points down), for how big the drop was
   coyote = 0;
   tricks = 0; // counts flip tricks, so the animation choice is deterministic
@@ -172,6 +174,9 @@ export class Skater {
   }
 
   private advance(input: StepInput): void {
+    //a wall slam only lasts while you drop: came up over the lip and landed anyway, you ride on and the button works
+    //again (zack, 2026-10-31: taps did nothing for the rest of the floor after a pit wall slam on floor 2)
+    if (this.walled && this.mode !== 'air') this.walled = false;
     if (input.pressed && !this.walled) this.buffer = PHYS.bufferFrames;
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
@@ -182,6 +187,7 @@ export class Skater {
     this.holdT = input.held && this.holdT > 0 ? this.holdT + 1 : 0;
 
     if (this.mode !== 'air') this.topY = this.y; // the drop is measured from the ground you left
+    this.airT = this.mode === 'air' ? this.airT + 1 : 0;
     //the button: ollie from the ground (or just after leaving it), flip trick in the air
     if (this.mode !== 'roll') this.impactT = 0;
     if (this.impactT > 0) {
@@ -230,6 +236,8 @@ export class Skater {
     this.impactT = from.impactT;
     this.impactTaps = from.impactTaps;
     this.topY = from.topY + dy;
+    this.airT = from.airT;
+    this.flipLow = from.flipLow === null ? null : from.flipLow + dy;
     this.coyote = from.coyote;
     this.tricks = from.tricks;
     this.floatT = from.floatT;
@@ -372,6 +380,19 @@ export class Skater {
     return depth === Infinity ? null : { angle, depth };
   }
 
+  // a PERFECT landing or grind: the flip caught, and either thrown low on the way down (a tap just before you'd have
+  // touched down) or caught right as the wheels touch
+  private perfectCatch(): boolean {
+    if (this.trickCatch <= 0 || this.trickT < this.trickCatch) return false;
+    if (this.trickT - this.trickCatch <= PHYS.perfectFrames) return true;
+    return this.flipLow !== null && Math.abs(this.y - this.flipLow) <= PHYS.perfectHeight;
+  }
+
+  // full grind speed, as worn gear and boons have it
+  private grindTop(): number {
+    return PHYS.grindSpeed * this.mods.grindScale * this.gear.grind;
+  }
+
   // how much of the flip in the air has been caught (1: none going, or caught)
   get caught(): number {
     return this.trickCatch > 0 ? Math.min(1, this.trickT / this.trickCatch) : 1;
@@ -395,7 +416,8 @@ export class Skater {
     this.snap = false;
     if (this.jumps > 0) this.jumps--;
     else this.spare -= 1;
-    this.vsp = PHYS.trick * this.gear.trick;
+    this.flipLow = this.vsp > 0 ? this.y : null;
+    this.vsp = this.flipPop();
     this.buffer = 0;
     this.flipped = true;
     if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
@@ -409,6 +431,17 @@ export class Skater {
     if (spin === 180) this.fakie = !this.fakie;
     //Sky Line: a ghost rail under your feet to come down on
     if (this.mods.skyLine) this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.skyLineTiles * TILE, y: this.y + PHYS.skyLineDrop, row: -1, ttl: PHYS.ghostFrames };
+  }
+
+  // the vsp a flip tapped now pops you to: harder the sooner after leaving the ground. It rides on top of the
+  // rise the ollie has left, so a quick double tap never throws the ollie's height away
+  flipPop(): number {
+    const t = Math.min(1, Math.max(0, (this.airT - PHYS.trickEarlyFrames) / (PHYS.trickLateFrames - PHYS.trickEarlyFrames)));
+    const pop = (PHYS.trickEarly + (PHYS.trick - PHYS.trickEarly) * t) * this.gear.trick;
+    if (this.vsp >= 0) return pop;
+    const g = this.snap ? this.grav * PHYS.popSnap ** 2 : this.grav;
+    const rise = (this.vsp * this.vsp) / (2 * g); // px the ollie would still climb
+    return -Math.sqrt(pop * pop + 2 * this.grav * rise);
   }
 
   private bankSpare(): void {
@@ -463,7 +496,17 @@ export class Skater {
   private baseSpeed(): number {
     //after a slam you're back to full speed over slamFrames
     const k = this.slamT > 0 ? 1 - (1 - PHYS.slamSpeed) * (this.slamT / PHYS.slamFrames) : 1;
-    return PHYS.baseSpeed * k * this.boost * this.mods.speedScale * this.gear.speed;
+    return PHYS.baseSpeed * k * this.boost * this.mods.speedScale * this.gear.speed * this.grassScale();
+  }
+
+  // rolling on a grass strip: good wheels take it in their stride, worn ones bog down, worse the more worn
+  get onGrass(): boolean {
+    return this.mode === 'roll' && !this.surface && !!this.level.grass?.some((g) => this.x >= g.x0 && this.x <= g.x1);
+  }
+
+  private grassScale(): number {
+    if (!this.onGrass) return 1;
+    return 1 - GEAR.grassSlow * Math.min(1, Math.max(0, 1 - (this.gear.grip * 100) / GEAR.roughFrom));
   }
 
   private stepMove(held: boolean): void {
@@ -475,15 +518,22 @@ export class Skater {
       //a cable car climb: the cable takes you up at its own speed, the slope doesn't slow you
       if (tow > 0) this.carry = Math.max(this.carry, tow);
       //(a kicker's too short to slow you: you hit its lip at the speed you hit its foot)
-      else if (m !== 0 && !this.surface?.kicker) {
+      else if (m !== 0 && !this.surface?.kicker && !this.surface?.launch) {
         const pull = this.grav * FEEL.slopeGrav * (m / Math.hypot(1, m));
         this.carry = pull > 0 ? Math.max(this.carry, this.hsp) + pull : Math.max(0, this.carry + pull);
       }
+      //DOWNSTREAM: the sewer's runoff runs your way, and its current pushes you on past cruising speed
+      const flow = this.surface?.sewer ? sewerFlow(this.level, this.x, this.y) : 0;
+      if (flow) this.carry = Math.max(this.carry, Math.min(SEWER_FLOW.max, Math.max(this.carry, this.hsp) + flow));
       const excess = Math.max(0, this.carry - PHYS.baseSpeed);
       const bleed = Math.max(PHYS.carryBleedMin, excess * PHYS.carryDecay) * this.mods.carryBleedScale;
       this.carry = Math.max(0, this.carry - bleed);
+      //grass with worn wheels eats flow speed too
+      if (this.grassScale() < 1) this.carry *= this.grassScale() ** (1 / 20);
       const cap = Math.max(this.baseSpeed(), this.carry);
-      this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : cap;
+      //(bogging down on grass eases you back over a few frames, not in one)
+      const bog = this.grassScale() < 1 && this.hsp > cap;
+      this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : bog ? Math.max(cap, this.hsp * 0.93) : cap;
       if (this.skitching) this.skitch();
     } else if (this.mode === 'grind') {
       this.onRailT++;
@@ -541,11 +591,18 @@ export class Skater {
       this.y = ceiling;
       this.vsp = Math.max(0, this.vsp);
     }
+    //down in the sewer the street is overhead: a quick double tap bumps your head on it
+    const roof = this.mode === 'air' ? sewerRoof(this.level, this.x, py) : undefined;
+    if (roof !== undefined && this.y < roof) {
+      this.feel.bounce(Math.max(0, -this.vsp), 0);
+      this.y = roof;
+      this.vsp = Math.max(0, this.vsp);
+    }
 
     if (this.mode === 'roll' || this.mode === 'grind') {
       //a kicker ramp standing on the street: you roll up onto it
       if (this.mode === 'roll' && (!this.surface || this.surface.kind === 'roof')) {
-        const ramp = this.level.surfaces.find((s) => s.kicker && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
+        const ramp = this.level.surfaces.find((s) => (s.kicker || s.launch) && this.x >= s.x0 && this.x <= s.x1 && Math.abs(surfaceY(s, this.x) - this.y) <= 8);
         if (ramp && ramp !== this.surface) this.surface = ramp;
       }
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);
@@ -554,9 +611,19 @@ export class Skater {
         //rolled off the edge: fall, keeping both jumps (QFS); a slope throws you along its angle (bank kick)
         const fromRail = this.mode === 'grind';
         const slope = this.surface ? surfaceSlope(this.surface) : 0;
+        const launch = this.mode === 'roll' ? this.surface?.launch : undefined;
         this.leaveGround();
         this.vsp = slope * this.hsp;
         if (!fromRail) this.coyote = PHYS.coyoteFrames;
+        //a sewer kick-out: up its quarterpipe and straight up through the grate overhead, back to the street
+        if (launch) {
+          this.vsp = launch;
+          this.kicked = true;
+          this.coyote = 0;
+          this.jumps = this.maxJumps;
+          this.flipped = false;
+          this.events.push({ type: 'kicker' });
+        }
       }
     } else if (this.mode === 'air') {
       this.land(px, py);
@@ -567,7 +634,8 @@ export class Skater {
     this.checkHazards();
 
     //in the canal, or down a pit on the hill
-    const bottom = pitAt(this.level, this.x)?.floor ?? this.level.streetY + PHYS.bailDepth;
+    const sewer = sewerAt(this.level, this.x);
+    const bottom = pitAt(this.level, this.x)?.floor ?? (sewer ? sewerFloor(sewer, this.x) : this.level.streetY) + PHYS.bailDepth;
     if (this.mode === 'air' && this.y > bottom && this.tucks > 0) {
       //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
       this.tucks--;
@@ -606,7 +674,7 @@ export class Skater {
   // a ruin starts to crumble once you're on it, and falls a moment later (you drop if you're still there)
   private stepRuins(): void {
     const s = this.surface;
-    if (s?.crumble && this.grounded && !this.crumbling.has(s) && !this.gone.has(s)) this.crumbling.set(s, PHYS.crumbleFrames);
+    if (s?.crumble && this.grounded && !this.crumbling.has(s) && !this.gone.has(s)) this.crumbling.set(s, s.crumbleFrames ?? PHYS.crumbleFrames);
     for (const [ruin, t] of this.crumbling) {
       if (t > 1) this.crumbling.set(ruin, t - 1);
       else {
@@ -619,9 +687,13 @@ export class Skater {
   // rolling off one piece of ground straight onto the next at the same height: terrace to stairs, bank to roof
   private rollOnto(): boolean {
     if (this.mode !== 'roll') return false;
+    //(down a steep slope in the sewer, a frame's drop runs further than that: the plank ramp in, the bowl, so you roll
+    //on down onto the floor instead of hopping off the end of the slope)
+    const on = this.surface;
+    const reach = on?.sewer && !on.launch ? 8 + Math.max(0, surfaceSlope(on)) * Math.abs(this.hsp) : 8;
     for (const s of this.level.surfaces) {
       if (s === this.surface || s.kind === 'rail' || this.x < s.x0 || this.x > s.x1 || this.gone.has(s)) continue;
-      if (Math.abs(surfaceY(s, this.x) - this.y) > 8) continue;
+      if (Math.abs(surfaceY(s, this.x) - this.y) > (s.sewer ? reach : 8)) continue;
       this.y = surfaceY(s, this.x);
       this.surface = s;
       if (s.kind === 'stairs') this.intoStairs(s);
@@ -772,6 +844,7 @@ export class Skater {
     const impact = normalImpact(this.hsp, this.vsp, m);
     const caught = this.caught;
     const spare = this.trickCatch > 0 && caught >= 1 ? this.trickT - this.trickCatch : -1;
+    const perfect = this.perfectCatch();
     const vsp = this.vsp;
     const before = Math.max(Math.abs(this.hsp), this.carry); // to see what the landing cost you
     this.trickCatch = 0;
@@ -788,10 +861,12 @@ export class Skater {
       this.onRailT = 0;
       const enter = this.mods.grindInstant ? PHYS.grindSpeed * this.mods.grindScale : PHYS.grindMin;
       this.hsp = Math.max(this.hsp, enter);
+      //a perfect catch onto it: straight in at grind speed, and a bit over
+      if (perfect) this.hsp = Math.max(this.hsp, this.grindTop()) + PHYS.perfectBoost / 2;
       this.bankSpare();
       this.feel.railEntry(impact, surfaceMaterial(s), this.looseTrucks);
       this.stance = s.row === -1 ? LEDGE_GRINDS[this.ledgeGrinds++ % LEDGE_GRINDS.length] : RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length];
-      this.events.push({ type: 'grind', name: this.stance });
+      this.events.push({ type: 'grind', name: this.stance, ...(perfect ? { perfect } : {}) });
     } else {
       this.spare = 0;
       this.mode = 'roll';
@@ -825,6 +900,10 @@ export class Skater {
       //a hard landing to flat costs flow speed (never base speed); Butter soaks it up, not a sketchy one
       if (quality === 'heavy' && m === 0 && !this.mods.butter) this.carry *= Math.max(0, 1 - FEEL.heavyScrub * (impact - FEEL.heavy));
       if (quality === 'sketchy') this.carry *= 1 - FEEL.sketchyScrub;
+      //PERFECT: the flip caught right before the wheels touched rolls away faster (style is speed)
+      const perfectLand = perfect && (quality === 'clean' || quality === 'heavy');
+      //(up to a fifth over cruising, not stacked on speed you already have: past that the wheels wear from speed)
+      if (perfectLand) this.carry = Math.max(this.carry, Math.abs(this.hsp), this.baseSpeed() + PHYS.perfectBoost);
       this.feel.land(impact, quality, this.looseWheels);
       //the speed the landing took off you: coming down against the slope, or hard to flat (it wears the deck)
       //(speed over the cap rides on carry: what's scrubbed off it goes on the next step)
@@ -835,7 +914,7 @@ export class Skater {
       //the bigger the drop, the longer the knees take to come back up before you can pop again
       const tier = impactTier(this.y - this.topY);
       const lock = manual ? undefined : tier.frames;
-      this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : { drop: tier.drop, lock }), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}), ...(lost > 0 ? { lost } : {}) });
+      this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : { drop: tier.drop, lock, ...(perfectLand ? { perfect: true } : {}) }), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}), ...(lost > 0 ? { lost } : {}) });
       if (!s?.manual || quality === 'slam') {
         this.impactT = tier.frames;
         this.impactTaps = 0;
@@ -900,12 +979,15 @@ export class Skater {
   private catchRail(rail: CurvedRail): void {
     const d = rail.dAtX(this.x);
     const t = rail.at(d);
+    const perfect = this.perfectCatch();
     this.rail = rail;
     this.railD = d;
     //speed along the rail: our velocity projected on its direction, always rolling forward
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.hsp * t.tx + this.vsp * t.ty));
     //Ledge Butter: straight up to full grind speed, the same as on a flat ledge
-    if (this.mods.grindInstant) this.railV = Math.min(PHYS.railMax, Math.max(this.railV, PHYS.grindSpeed * this.mods.grindScale * this.gear.grind));
+    if (this.mods.grindInstant) this.railV = Math.min(PHYS.railMax, Math.max(this.railV, this.grindTop()));
+    //a perfect catch onto it: straight in at grind speed, and a bit over
+    if (perfect) this.railV = Math.min(PHYS.railMax, Math.max(this.railV, this.grindTop()) + PHYS.perfectBoost / 2);
     this.feel.railEntry(Math.abs(this.vsp * t.tx - this.hsp * t.ty), rail.material, this.looseTrucks);
     this.trickCatch = 0;
     this.mode = 'rail';
@@ -917,7 +999,7 @@ export class Skater {
     this.vsp = 0;
     this.nose = false;
     this.stance = RAIL_GRINDS[this.railGrinds++ % RAIL_GRINDS.length];
-    this.events.push({ type: 'rail', name: this.stance });
+    this.events.push({ type: 'rail', name: this.stance, ...(perfect ? { perfect } : {}) });
   }
 
   private stepRail(): void {

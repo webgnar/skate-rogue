@@ -20,7 +20,7 @@ const ADS: [string, string, string][] = [
 ];
 let ads: THREE.Texture | null = null;
 // the billboards' faces: the ads side by side on one canvas, each board shows one (zack wrote the last two)
-function adTexture(): THREE.Texture {
+export function adTexture(): THREE.Texture {
   if (ads) return ads;
   const c = document.createElement('canvas');
   c.width = 64 * ADS.length;
@@ -45,11 +45,44 @@ function adTexture(): THREE.Texture {
   return ads;
 }
 
+// show ad k of the canvas on a mesh's face
+export function adUv(mesh: THREE.Mesh, k: number): void {
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  for (let v = 0; v < uv.count; v++) uv.setX(v, (k % ADS.length + uv.getX(v)) / ADS.length);
+}
+
+let glass: THREE.Texture | null = null;
+// a skyscraper's curtain wall, four storeys of four bays (a tile each), tiled up its face: dark glass in
+// steel mullions, a window lit here and there
+function glassTexture(): THREE.Texture {
+  if (glass) return glass;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#2a2440';
+  g.fillRect(0, 0, 64, 64);
+  const lit = ['#ffd77a', '#ff7ab8', '#7ae8ff'];
+  for (let j = 0; j < 4; j++)
+    for (let i = 0; i < 4; i++) {
+      const on = (i * 7 + j * 3) % 5 === 0;
+      g.fillStyle = on ? lit[(i + j) % lit.length] : j % 2 ? '#3a3f6a' : '#323660';
+      g.fillRect(i * 16 + 2, j * 16 + 3, 12, 10);
+    }
+  g.fillStyle = '#e83a8a'; // a neon band at each floor slab, the city's pink
+  g.fillRect(0, 62, 64, 2);
+  glass = new THREE.CanvasTexture(c);
+  glass.colorSpace = THREE.SRGBColorSpace;
+  glass.magFilter = THREE.NearestFilter;
+  glass.wrapS = glass.wrapT = THREE.RepeatWrapping;
+  return glass;
+}
+
 export function buildSkyBeats(level: Level): THREE.Group {
   const g = new THREE.Group();
   const sky = level.surfaces.filter((s) => s.sky);
-  const cranes = level.rails.filter((r) => r.sky);
-  if (!sky.length && !cranes.length) return g;
+  const cranes = level.rails.filter((r) => r.sky === 'crane');
+  const lines = level.rails.filter((r) => r.sky === 'lines');
+  if (!sky.length && !cranes.length && !lines.length) return g;
   const Y = (py: number) => (level.streetY - py) / TILE;
   const foot = (px: number) => {
     const gy = groundAt(level, px);
@@ -61,7 +94,12 @@ export function buildSkyBeats(level: Level): THREE.Group {
   const ac = new THREE.MeshLambertMaterial({ color: 0xc8ccd4 });
   const wood = surface('planks', 0x9a6a40);
   const yellow = new THREE.MeshLambertMaterial({ color: 0xe8b020 });
+  const girder = new THREE.MeshLambertMaterial({ color: 0xc8402a }); // red oxide primer, as hoisted steel is
+  const fan = new THREE.MeshLambertMaterial({ color: 0x2a2c34 });
+  const solar = new THREE.MeshLambertMaterial({ color: 0x24407a, emissive: 0x0a1430 });
+  const lamp = new THREE.MeshLambertMaterial({ color: 0xd8dce4, emissive: 0x403820 });
   const board = new THREE.MeshLambertMaterial({ map: adTexture() });
+  const tall = new THREE.MeshLambertMaterial({ map: glassTexture() });
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
     b.position.set(x, y, z);
@@ -79,19 +117,46 @@ export function buildSkyBeats(level: Level): THREE.Group {
     const cx = (x0 + x1) / 2;
     const y = Y(s.y);
     if (s.sky === 'roofs') {
-      //a roof deck with a parapet along its back, an AC unit or two, on steel legs
+      //a tar roof with a parapet along its back (zack's rooftop refs): HVAC units with their fans on top, vent
+      //stacks, and now and then a row of solar panels tilted at the sky, all behind the lane
       box(w, 0.4, 2.6, cx, y - 0.2, -0.2, roof);
       box(w, 0.5, 0.2, cx, y + 0.25, -1.4, parapet);
-      for (let ax = x0 + 1.2; ax < x1 - 1; ax += 3.5) box(1, 0.7, 0.8, ax, y + 0.35, -1.0, ac);
-      for (let lx = x0 + 0.6; lx < x1; lx += 3.5) leg(lx, y - 0.4);
+      box(w, 0.1, 0.1, cx, y - 0.02, 1.1, parapet); // the flashing along the front edge
+      const solarRow = (i + Math.round(x0)) % 3 === 0;
+      for (let ax = x0 + 1.2, k = 0; ax < x1 - 1; ax += 3.5, k++) {
+        if (solarRow && k % 2 === 1) {
+          for (let sx = -0.6; sx <= 0.6; sx += 1.2) box(1.1, 0.06, 0.8, ax + sx, y + 0.4, -0.95, solar).rotation.x = 0.55;
+          continue;
+        }
+        box(1.1, 0.75, 0.9, ax, y + 0.375, -1.0, ac);
+        const f = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 12), fan);
+        f.position.set(ax, y + 0.78, -1.0);
+        g.add(f);
+        box(0.12, 0.6, 0.12, ax + 0.9, y + 0.3, -0.75, steel); // a vent stack
+        box(0.22, 0.08, 0.22, ax + 0.9, y + 0.62, -0.75, steel);
+      }
+      //a super tall skyscraper under it, all the way down to the city (zack, 2026-10-31: "super tall sky scrapers
+      //that do go up to the height of the sky route"), behind the lane so it never hides the street below
+      const base = Math.min(foot(x0 * TILE), foot(x1 * TILE)) - 6;
+      const h = y - 0.4 - base;
+      const body = box(w, h, 3, cx, base + h / 2, -3.0, tall);
+      //(the glass tiled a tile to a bay: its uvs stretched to the box's size)
+      const uv = body.geometry.getAttribute('uv') as THREE.BufferAttribute;
+      for (let v = 0; v < uv.count; v++) uv.setXY(v, (uv.getX(v) * w) / 4, (uv.getY(v) * h) / 4);
+      box(w + 0.2, 0.3, 3.2, cx, y - 0.25, -3.0, parapet); // its crown
     } else if (s.sky === 'billboard') {
       //the board under its catwalk rail, ad side out, on two posts
       const face = box(w, 2.2, 0.15, cx, y - 1.25, -0.6, board);
-      const uv = face.geometry.getAttribute('uv') as THREE.BufferAttribute;
-      const k = i % ADS.length;
-      for (let v = 0; v < uv.count; v++) uv.setX(v, (k + uv.getX(v)) / ADS.length);
+      adUv(face, i);
       box(w, 0.08, 0.08, cx, y - 0.04, 0, steel); // the rail you grind
       for (let lx = x0 + 0.4; lx < x1; lx += Math.max(1, w - 0.8)) box(0.06, 0.1, 0.6, lx, y - 0.1, -0.3, steel);
+      //the catwalk under the board (zack's refs): a steel grate on brackets, its lamps out on arms lighting the face
+      box(w, 0.06, 0.7, cx, y - 2.45, -0.15, steel);
+      box(w, 0.05, 0.05, cx, y - 1.95, 0.2, steel);
+      for (let lx = x0 + 0.8; lx < x1 - 0.4; lx += 1.8) {
+        box(0.05, 0.05, 0.9, lx, y - 2.4, 0.25, steel);
+        box(0.3, 0.16, 0.24, lx, y - 2.32, 0.7, lamp);
+      }
       for (const lx of [x0 + w * 0.25, x0 + w * 0.75]) leg(lx, y - 2.35, -0.6, 0.16);
     } else if (s.sky === 'tower') {
       //a wooden water tower: its lid is what you land on, a cone roof over the back of it
@@ -102,10 +167,25 @@ export function buildSkyBeats(level: Level): THREE.Group {
       for (const dy of [-0.4, -1.6]) box(w + 0.05, 0.1, 0.2, cx, y + dy, 0.35, steel); // its hoops, seen from the front
       for (const [dx, dz] of [[-0.6, -0.4], [0.6, -0.4], [-0.6, -1.2], [0.6, -1.2]]) leg(cx + dx * r, y - 2, -0.6 + dz + 0.4, 0.09, wood);
     } else if (s.sky === 'scaffold') {
-      //planks on a tube frame
+      //planks on a tube frame (its tubes behind the lane, so none ever crosses in front of you)
       box(w, 0.18, 1.6, cx, y - 0.09, -0.3, wood);
-      for (const lx of [x0 + 0.15, x1 - 0.15]) for (const z of [0.3, -0.9]) leg(lx, y - 0.18, z, 0.05);
+      for (const lx of [x0 + 0.15, x1 - 0.15]) for (const z of [-0.25, -0.95]) leg(lx, y - 0.18, z, 0.05);
       box(w, 0.05, 0.05, cx, y + 0.6, -0.9, steel); // the guard rail at the back
+    } else if (s.sky === 'step') {
+      //the staircase up into the clouds: steel girders hoisted on crane cables, nothing under them down to the city
+      //(zack, 2026-10-31: "in all those screen shots its stuff connected to the ground, i want sky route to go really
+      //tall"), a hook block over each and its two slings up out of sight
+      box(w, 0.32, 1.1, cx, y - 0.16, -0.25, girder);
+      box(w, 0.08, 1.3, cx, y - 0.04, -0.25, girder); // its top flange
+      box(w, 0.08, 1.3, cx, y - 0.3, -0.25, girder);
+      const hook = y + 2.2;
+      box(0.35, 0.5, 0.35, cx, hook, -0.45, yellow);
+      for (const lx of [x0 + 0.3, x1 - 0.3]) {
+        const len = Math.hypot(cx - lx, hook - y);
+        const sling = box(0.04, len, 0.04, (cx + lx) / 2, (hook + y) / 2, -0.45, steel);
+        sling.rotation.z = Math.atan2(lx - cx, hook - y);
+      }
+      box(0.05, 30, 0.05, cx, hook + 15, -0.45, steel); // the crane's cable, up out of the top of the frame
     }
   });
   //a tower crane's boom along each crane grind, its mast down to the hill at the high end
@@ -122,5 +202,34 @@ export function buildSkyBeats(level: Level): THREE.Group {
     box(1.2, 1, 1, mx, my + 0.3, -0.9, yellow); // the cab
     box(2, 0.5, 0.8, mx - 1.4, my - 0.1, -0.6, steel); // the counterweight
   }
+  //Chinatown's clotheslines: a thin line on a bracket at each end, washing pegged along it
+  //(zack's refs: NYC Chinatown's washing is mostly white sheets and shirts, a bright one here and there)
+  const cloth = [0xf2eef8, 0xe8e4dc, 0xf2eef8, 0xdcd8e8, 0xe83a5a, 0xf2eef8, 0x2a6ad8, 0xf2eef8, 0xffb020].map((c) => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
+  const line = new THREE.MeshBasicMaterial({ color: 0x1a1424 });
+  lines.forEach((r, n) => {
+    for (let k = 1; k < r.xs.length; k++) {
+      const [ax, ay, bx, by] = [X(r.xs[k - 1]), Y(r.ys[k - 1]), X(r.xs[k]), Y(r.ys[k])];
+      const seg = box(Math.hypot(bx - ax, by - ay), 0.05, 0.05, (ax + bx) / 2, (ay + by) / 2 - 0.03, 0, line);
+      seg.rotation.z = Math.atan2(by - ay, bx - ax);
+    }
+    for (const k of [0, r.xs.length - 1]) {
+      const x = X(r.xs[k]);
+      const y = Y(r.ys[k]);
+      box(0.12, 0.6, 0.5, x, y + 0.1, -0.25, steel);
+      leg(x, y - 0.2, -0.5, 0.08);
+    }
+    //washing: shirts and sheets, behind the line so the board's on the line, not in them
+    let i = n * 3;
+    for (let x = X(r.xs[0]) + 0.6; x < X(r.xs[r.xs.length - 1]) - 0.4; x += 0.9) {
+      const top = Y(r.yAt(x * TILE) ?? r.ys[0]);
+      const h = 0.5 + (i % 3) * 0.2;
+      const m = cloth[i % cloth.length];
+      if (i++ % 2) {
+        //a shirt: its body and sleeves out either side
+        box(0.5, h, 0.03, x, top - h / 2 - 0.05, -0.12, m);
+        box(0.9, 0.2, 0.03, x, top - 0.15, -0.12, m);
+      } else box(0.7, h + 0.25, 0.03, x, top - (h + 0.25) / 2 - 0.05, -0.12, m).rotation.z = ((i % 5) - 2) * 0.04;
+    }
+  });
   return g;
 }

@@ -1,7 +1,13 @@
 # Builds the QFS skaters (Webster, Keanu, Roxy, Goldie) on Lou Gnar's rig and exports public/models/<name>.glb.
 #
-#   blender -b -P art/skaters.py                 (all four)
+#   blender -b -P art/skaters.py                 (all four, from their .blend files)
 #   blender -b -P art/skaters.py -- roxy         (one)
+#   blender -b -P art/skaters.py -- --rebuild roxy
+#                                                (from this script, over the .blend: hand edits there are lost)
+#
+# Once a skater's .blend exists it is the source (zack, 2026-10-31: "i might modify the meshes a bit too"): edit or
+# paint it in Blender, and the export writes the GLB from it as it is. Change a skater's look in this script only with
+# --rebuild, and only for a skater nobody has edited by hand; otherwise make the change in the .blend.
 #
 # Each skater is one skinned mesh on the same 20-bone armature and bind pose as art/lou_gnar.py, so the game plays
 # Lou's clips (the actions in lou-gnar.glb) on them unchanged; their GLBs carry no animation. Looks follow the QFS
@@ -17,6 +23,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lou_gnar as lg  # noqa: E402  (the rig, the bind pose and the mesh helpers)
+import paint  # noqa: E402  (art/tex/<skater>.png on the model)
 from lou_gnar import ANKLE_Z, ARM_X, ELBOW_Z, HAND_Z, HEAD_Z, HIP_X, HIP_Z, KNEE_Z, PELVIS, SHOULDER_Z, SPINE  # noqa: E402
 
 OUT = os.path.join(lg.ROOT, 'public', 'models')
@@ -32,7 +39,7 @@ SKATERS = {
     },
     'keanu': {
         'skin': 0x6B4128, 'top': 0x8C8C92, 'sleeves': 'long', 'pants': 0x2E2E34, 'shoe': 0x1C1C22, 'sole': 0x2B44C8,
-        'hair': 'hood', 'hairColor': 0x1A1410, 'build': 1.04,
+        'hair': 'hood', 'hairColor': 0x1A1410, 'build': 1.04, 'smooth': True,
     },
     'roxy': {
         'skin': 0xF0C29E, 'top': 0x7A2FB8, 'crop': True, 'sleeves': 'none', 'pants': 0x2D4E9A, 'shoe': 0x6C2FA8,
@@ -97,7 +104,7 @@ def body(spec, mats):
         c = p.center
         if abs(c.x) > 0.205 and c.z > HIP_Z:  # arm, down to the wrist
             p.material_index = 1 if c.z > sleeve else 0
-        elif c.z > SPINE + 0.5:  # neck
+        elif c.z > SPINE + 0.5 and math.hypot(c.x, c.y) < 0.075:  # neck (not the tops of the shoulders round it)
             p.material_index = 0
         elif c.z > crop:
             p.material_index = 1
@@ -128,10 +135,7 @@ def head(spec, mats):
             parts.append((lg.box(f'eye{s}', (0.028, 0.02, 0.03), HEAD_C + Vector((s * 0.042, -0.115, 0.02)), mats['eye']), 'Head'))
     hair = mats['hair']
     if spec['hair'] == 'hood':
-        # a grey hood up over the head, open round the face, and spiky dark bangs poking out over the brow
-        def open_face(p):
-            return not (p.y < -0.05 and -0.13 < p.z < 0.1 and abs(p.x) < 0.11)
-        parts.append((sphere('hood', HEAD_R + 0.035, HEAD_C + Vector((0, 0.012, 0.01)), mats['top'], (0.95, 1.05, 1.1), open_face), 'Head'))
+        # the grey hood up over the head is fabric (hood_mesh, on its own bones); spiky dark bangs poke out over the brow
         parts.append((sphere('fringe', HEAD_R + 0.008, HEAD_C, hair, (0.9, 1, 1.12), lambda p: p.z > 0.07), 'Head'))
         parts.append((spikes('bangs', bangs(spec, 5, 0.1, 0.05, 36), hair), 'Head'))
     else:
@@ -239,10 +243,202 @@ def chains(spec):
             root, _ = scalp(180 - s * 70, 20, -0.005)
             out.append((f'SpringLock{i}', 'Head', root, Vector((s * 0.15, -0.1, -1)), 0.2, 0.035, 0.014, 1.0, 2))
     if spec['hair'] == 'hood':
-        # the hoodie's drawstrings, hanging down the chest from either side of the neck
-        for i, x in enumerate((-0.045, 0.045)):
-            out.append((f'SpringString{i}', 'Spine1', Vector((x, -0.105, SPINE + 0.47)), Vector((0, -0.08, -1)), 0.2, 0.007, 0.007, 0.2, 2))
+        # the hoodie's drawstrings (zack, 2026-10-31: "two drawstrings in the front by the collar"): white cords out
+        # of the collar either side of the throat, hanging down the chest
+        for i, x in enumerate((-0.05, 0.05)):
+            out.append((f'SpringString{i}', 'Spine1', Vector((x, -0.112, SPINE + 0.49)), Vector((x * 0.6, -0.14, -1)), 0.26, 0.012, 0.012, 0.0, 3))
     return out
+
+
+# Keanu's hood and sweatshirt as fabric (zack, 2026-10-31: "his hood on his head should be like the hair", then "not
+# capped on the back", "show more of his face, only cover a little more than half the top of the head" and the
+# sweatshirt "to have physics as well"). Each is a sheet cut into strips: held to a bone along one edge, and down each
+# strip a chain of bones (SpringHood<i>, SpringShirt<i>). The game ties neighbouring chains together, all the way
+# round where the strips close into a loop (springs.ts), so the sheet puffs out with speed and flops on landings.
+def cloth_bones(rig, name, at, cols, us, anchor):
+    """A chain per strip: bones from at(col, us[0]) to at(col, us[1]) and so on. The last bone only gives the one
+    before it a tail to aim at."""
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = rig.data.edit_bones
+    for i, col in enumerate(cols):
+        prev = eb[anchor]
+        for j, (u0, u1) in enumerate(zip(us, us[1:])):
+            b = eb.new(f'{name}{i}_{j}')
+            b.head, b.tail = at(col, u0), at(col, u1)
+            b.parent = prev
+            b.use_connect = j > 0
+            b.use_deform = j < len(us) - 2
+            prev = b
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def cloth_mesh(name, at, cols, us, rows, anchor, mat, centre, cap=None, thickness=0.014):
+    """The sheet over the strips (closed round into a loop), skinned to `anchor` down to the chains' roots and to the
+    chains below, with a strip between each pair of chains; `cap` closes the far end on one point. Faces turn out
+    from centre(point); then it is given thickness."""
+    n = len(cols)
+    step = 360 / n
+    mid = [cols[0] + step * k / 2 for k in range(2 * n)]
+    bm = bmesh.new()
+    grid = [[bm.verts.new(at(c, u)) for u in rows] for c in mid]
+    tip = bm.verts.new(cap) if cap is not None else None
+    for k in range(2 * n):
+        a, b = grid[k], grid[(k + 1) % (2 * n)]
+        for j in range(len(rows) - 1):
+            bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
+        if tip is not None:
+            bm.faces.new((a[-1], b[-1], tip))
+    for f in bm.faces:
+        c = f.calc_center_median()
+        if f.normal.dot(c - centre(c)) < 0:
+            f.normal_flip()
+    bm.normal_update()
+    bones = len(us) - 2  # deforming bones per chain
+    span = us[1] - us[0]
+    weights = {}  # vert -> {bone: weight}
+    for k in range(2 * n):
+        i, half = divmod(k, 2)
+        side = [(i, 1.0)] if not half else [(i, 0.5), ((i + 1) % n, 0.5)]
+        for j, u in enumerate(rows):
+            w = {}
+            if u <= us[0]:
+                w[anchor] = 1.0
+            else:
+                s = (u - us[0]) / span  # how far down the chain, in bones
+                along = [max(0.0, 1 - abs(s - (m + 0.5))) for m in range(bones)]
+                along[0] = max(along[0], 1.0 if s < 0.5 else 0.0)
+                along[-1] = max(along[-1], 1.0 if s > bones - 0.5 else 0.0)
+                tot = sum(along)
+                for col, cw in side:
+                    for m, x in enumerate(along):
+                        if x:
+                            key = f'{name}{col}_{m}'
+                            w[key] = w.get(key, 0) + cw * x / tot
+            weights[grid[k][j]] = w
+    if tip is not None:
+        weights[tip] = {f'{name}{i}_{bones - 1}': 1 / n for i in range(n)}
+    ob = lg.link(name.lower(), bm, [mat])
+    index = {v: k for k, v in enumerate(weights)}  # verts were made in this order, so their indices match
+    groups = {}
+    for v, w in weights.items():
+        for g_name, x in w.items():
+            g = groups.get(g_name) or ob.vertex_groups.new(name=g_name)
+            groups[g_name] = g
+            g.add([index[v]], x, 'REPLACE')
+    solid = ob.modifiers.new('solid', 'SOLIDIFY')
+    solid.thickness = thickness
+    solid.offset = 1
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=solid.name)
+    return ob
+
+
+# the hood: pushed back on the head, so the face and the front of the hair show. Its opening runs over the top of
+# the head a little behind the middle, down behind the ears, and under to the back of the neck, and it closes at the
+# back on a point. A strip's `u` runs from the opening (0) to the back (1).
+HOOD_C = HEAD_C + Vector((0, 0.012, 0.01))
+HOOD_R = HEAD_R + 0.035
+HOOD_S = Vector((1.0, 1.1, 1.1))  # a little baggy
+HOOD_COLS = [-180 + 360 * i / 14 for i in range(14)]  # strips, degrees round from the top (+ to the lead side)
+HOOD_US = (0.25, 0.5, 0.75, 1.0, 1.15)  # chain bones' ends along a strip
+HOOD_ROWS = (0, 0.12, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0)
+
+
+def hood_open(col):
+    """How far round from the front of the head (degrees) the opening is on strip `col`."""
+    a = abs((col + 180) % 360 - 180)
+    return 80 + 15 * min(a, 90) / 90 + 35 * max(0, a - 90) / 90
+
+
+def hood_at(col, u):
+    t0 = hood_open(col)
+    a, t = math.radians(col), math.radians(t0 + u * (165 - t0))
+    d = Vector((math.sin(t) * math.sin(a), -math.cos(t), math.sin(t) * math.cos(a)))
+    return HOOD_C + Vector((d.x * HOOD_S.x, d.y * HOOD_S.y, d.z * HOOD_S.z)) * HOOD_R
+
+
+def hood_bones(rig):
+    cloth_bones(rig, 'SpringHood', hood_at, HOOD_COLS, HOOD_US, 'Head')
+
+
+def hood_mesh(mat):
+    tip = HOOD_C + Vector((0, HOOD_R * HOOD_S.y + 0.035, 0.015))  # the hood's point, sticking out behind
+    return cloth_mesh('SpringHood', hood_at, HOOD_COLS, HOOD_US, HOOD_ROWS, 'Head', mat, lambda p: HOOD_C, tip)
+
+
+def cowl_mesh(mat, build):
+    """Where the hood meets the sweatshirt (zack: "connect the bottom of the hood to more the shoulders"): a skirt of
+    fabric from the hood's opening behind the ears and under the back of the head, down over the neck onto the
+    shoulders. Its top rides the head, its bottom the chest, so it stretches and twists between them as the head
+    turns."""
+    cols = [100 + 10 * k for k in range(17)]  # round the hood's opening from behind one ear, under the back, to the other
+    bm = bmesh.new()
+    grid = []
+    for a in cols:
+        top = hood_at(a, 0)
+        side = 180 - a  # + toward the lead side
+        t = math.radians(side * 1.45)  # round the shoulders, from the back (0) toward the collarbones
+        bottom = Vector((math.sin(t) * 0.158 * build, math.cos(t) * 0.098 * build, SPINE + 0.43))
+        mid = (top + bottom) / 2
+        out = Vector((mid.x, mid.y, 0))
+        mid += out.normalized() * 0.022 if out.length > 1e-4 else Vector()
+        grid.append([bm.verts.new(top), bm.verts.new(mid), bm.verts.new(bottom)])
+    for a, b in zip(grid, grid[1:]):
+        for j in range(2):
+            bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
+    for f in bm.faces:
+        c = f.calc_center_median()
+        if f.normal.dot(c - Vector((0, 0, c.z))) < 0:
+            f.normal_flip()
+    bm.normal_update()
+    ob = lg.link('cowl', bm, [mat])
+    groups = {b: ob.vertex_groups.new(name=b) for b in ('Head', 'Neck', 'Spine1')}
+    for k in range(len(cols)):
+        groups['Head'].add([3 * k], 1.0, 'REPLACE')
+        groups['Neck'].add([3 * k + 1], 1.0, 'REPLACE')
+        groups['Spine1'].add([3 * k + 2], 1.0, 'REPLACE')
+    solid = ob.modifiers.new('solid', 'SOLIDIFY')
+    solid.thickness = 0.012
+    solid.offset = 1
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_apply(modifier=solid.name)
+    return ob
+
+
+# A shirt's body: a loose band round the torso, tucked into the body at the top so there is no seam, then out to hang
+# loose over the skin-tight figure underneath. It swings out with speed and flaps on landings. Keanu's sweatshirt
+# hangs from the chest down past the waistband; Roxy's and Goldie's crop tops from under the arms to above the navel.
+SHIRT_COLS = [30 * i for i in range(12)]  # degrees round the torso from the back (+ to the lead side)
+SHIRT_US = (0.4, 0.7, 1.0, 1.3)
+SHIRT_ROWS = (0, 0.2, 0.4, 0.55, 0.7, 0.85, 1.0)
+SHIRTS = {
+    # top and hem heights, the band's half-width and half-depth tucked in at the top, how far it flares, the bone
+    'sweatshirt': {'top': SPINE + 0.22, 'hem': SPINE - 0.04, 'r': (0.142, 0.096), 'flare': (0.026, 0.024), 'bone': 'Spine'},
+    'crop': {'top': SPINE + 0.36, 'hem': SPINE + 0.17, 'r': (0.146, 0.097), 'flare': (0.022, 0.022), 'bone': 'Spine1'},
+}
+
+
+def shirt_of(spec):
+    return 'sweatshirt' if spec['hair'] == 'hood' else 'crop' if spec.get('crop') and spec['top'] != 'skin' else None
+
+
+def shirt_at(kind, col, u, build=1.0):
+    k = SHIRTS[kind]
+    a = math.radians(col)
+    out = min(1.0, u / 0.35)
+    rx = (k['r'][0] + k['flare'][0] * out + 0.006 * u) * build
+    ry = (k['r'][1] + k['flare'][1] * out + 0.005 * u) * build
+    return Vector((math.sin(a) * rx, math.cos(a) * ry, k['top'] + (k['hem'] - k['top']) * u))
+
+
+def shirt_bones(rig, kind, build):
+    cloth_bones(rig, 'SpringShirt', lambda c, u: shirt_at(kind, c, u, build), SHIRT_COLS, SHIRT_US, SHIRTS[kind]['bone'])
+
+
+def shirt_mesh(mat, kind, build):
+    at = lambda c, u: shirt_at(kind, c, u, build)
+    return cloth_mesh('SpringShirt', at, SHIRT_COLS, SHIRT_US, SHIRT_ROWS, SHIRTS[kind]['bone'], mat, lambda p: Vector((0, 0, p.z)), thickness=0.012)
 
 
 def chain_bones(rig, specs):
@@ -321,6 +517,8 @@ def build(name, spec):
     if spec.get('shades'):
         colors['shades'] = spec['shades']
     colors['eye'] = 0x16121A
+    if spec['hair'] == 'hood':
+        colors['string'] = 0xF2F0EA
     mats = {('hair' if k == 'hairColor' else k): lg.material(k, v) for k, v in colors.items()}
     rig = lg.armature()
     rig.name = rig.data.name = f'{name}Rig'
@@ -333,24 +531,44 @@ def build(name, spec):
     bpy.ops.object.select_all(action='DESELECT')
     specs = chains(spec)
     chain_bones(rig, specs)  # after the body's automatic weights, so it never skins to them
+    shirt = shirt_of(spec)
+    if spec['hair'] == 'hood':
+        hood_bones(rig)
+    if shirt:
+        shirt_bones(rig, shirt, spec['build'])
+    # smooth shading on the body, the head and the clothes (zack, 2026-10-31: "clean up the texture on him"): the flat
+    # facets of the low-poly figure lit up as blotches under the toon light. Hair, shoes and shades stay faceted.
+    smooth = [ob] if spec.get('smooth') else []
     for part, bone in head(spec, mats) + feet(spec, mats) + lg.wear_decals(0.11, -0.06):
         lg.rigid(part, bone)
         part.select_set(True)
+        if spec.get('smooth') and part.name.split('.')[0] in ('head', 'handLeft', 'handRight', 'fringe'):
+            smooth.append(part)
+    clothes = [hood_mesh(mats['top']), cowl_mesh(mats['top'], spec['build'])] if spec['hair'] == 'hood' else []
+    if shirt:
+        clothes.append(shirt_mesh(mats['top'], shirt, spec['build']))
+    for part in clothes:
+        part.select_set(True)
+        if spec.get('smooth'):
+            smooth.append(part)
     for c in specs:
-        chain_mesh(c, mats['top'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
+        chain_mesh(c, mats['string'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
+    for part in smooth:
+        for p in part.data.polygons:
+            p.use_smooth = True
     ob.select_set(True)
     rig.select_set(False)
     bpy.context.view_layer.objects.active = ob
     bpy.ops.object.join()
     ob.name = ob.data.name = name.capitalize()
-    for p in ob.data.polygons:
-        p.use_smooth = False
     return rig, ob
 
 
 def export(name):
     path = os.path.join(OUT, f'{name}.glb')
-    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in bpy.data.objects:  # the rig and what hangs on it, not whatever else is in the file
+        ob.select_set(ob.type == 'ARMATURE' or (ob.type == 'MESH' and ob.parent and ob.parent.type == 'ARMATURE'))
     bpy.ops.export_scene.gltf(
         filepath=path,
         export_format='GLB',
@@ -366,7 +584,16 @@ def export(name):
 
 if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    for name in args or SKATERS:
-        rig, ob = build(name, SKATERS[name])
+    rebuild = '--rebuild' in args
+    for name in [a for a in args if not a.startswith('--')] or SKATERS:
+        blend = os.path.join(lg.HERE, f'{name}.blend')
+        if rebuild or not os.path.exists(blend):
+            rig, ob = build(name, SKATERS[name])
+            paint.texture(name, ob)
+            bpy.ops.wm.save_as_mainfile(filepath=blend, compress=True)
+        else:
+            bpy.ops.wm.open_mainfile(filepath=blend)
+            ob = bpy.data.objects[name.capitalize()]
+        paint.check(ob)
         tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
         print(f'{name}: {len(ob.data.vertices)} verts, {tris} tris -> {export(name)}')

@@ -108,8 +108,20 @@ export function busy(level: Level, x0: number, x1: number, y: number): boolean {
   for (const s of level.surfaces) if (s.x1 > x0 && s.x0 < x1 && s.kind !== 'overpass' && near(Math.min(s.y, s.y1 ?? s.y))) return true;
   for (const r of level.rails) if (r.x1 > x0 && r.x0 < x1 && r.ys.some(near)) return true;
   //and the L: its trains' roofs are a way along up there already (src/traffic/el.ts)
-  if ((level.el ?? []).some((e) => e.x1 > x0 - 2 * TILE && e.x0 < x1 + 2 * TILE)) return true;
+  //(up to a few tiles over its trains' roofs: the sky route's pieces way up over it are clear of it)
+  if ((level.el ?? []).some((e) => e.x1 > x0 - 2 * TILE && e.x0 < x1 + 2 * TILE && y > e.y - 6 * TILE)) return true;
   return false;
+}
+
+// the nearest height to y, up or down by half tiles up to two tiles, where [x0, x1] is clear of everything up
+// there (null: crowded all the way); up first, at each step
+// (no higher than `highest`, if given)
+export function clearAt(level: Level, x0: number, x1: number, y: number, highest = -Infinity): number | null {
+  for (let k = 0; k <= 8; k++) {
+    const dy = (k % 2 ? -1 : 1) * Math.ceil(k / 2) * (TILE / 2);
+    if (y + dy >= highest && !busy(level, x0, x1, y + dy)) return y + dy;
+  }
+  return null;
 }
 
 // rooftop ledges at the top route's height over the street from x0 to x1, with gaps to ollie between

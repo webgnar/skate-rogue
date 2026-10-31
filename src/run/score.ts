@@ -26,6 +26,7 @@ export const SCORE = {
   nearMiss: 200, // a close call: over a vehicle with a few px to spare, or one passing right under you
   drone: 250, // stomping a drone out of the sky, on top of the hop
   dodge: 150, // a guard's bullet went under you
+  perfect: 100, // a flip caught just before touchdown, onto the ground or a grind
   smash: 25, // a prop smashed: a little style, never worth more than skating well
   smashCash: 3, // a prop hiding coins
   stoken: 100,
@@ -58,6 +59,7 @@ export class RunScore {
   score = 0;
   cash = 0;
   stoken = 0;
+  spins = 0; // spin tokens found: each pulls the slot machine once at the run's end (src/run/slots.ts)
   combo = 0; // tricks in the current combo
   comboPoints = 0;
   stoke = 0; // 0..1
@@ -100,10 +102,10 @@ export class RunScore {
         this.add(SCORE.trick * (e.fakie ? SCORE.fakieMult : e.nollie ? SCORE.nollieMult : 1) + (e.spin ? SCORE.spin : 0));
         break;
       case 'grind':
-        this.add(SCORE.grindStart);
+        this.add(SCORE.grindStart + (e.perfect ? SCORE.perfect : 0));
         break;
       case 'rail':
-        this.add(SCORE.railStart);
+        this.add(SCORE.railStart + (e.perfect ? SCORE.perfect : 0));
         break;
       case 'hop':
         this.add(SCORE.carHop);
@@ -135,6 +137,7 @@ export class RunScore {
           return null;
         }
         if (e.quality === 'heavy') this.add(SCORE.bigDrop);
+        if (e.perfect) this.add(SCORE.perfect);
         return this.bank(hsp, e.quality === 'sketchy' ? 'sketchy' : e.quality === 'heavy' ? 'big' : undefined);
       case 'slam':
       case 'tuck':
@@ -147,9 +150,11 @@ export class RunScore {
         if (!this.gnar) this.stoke = Math.max(0, this.stoke - SCORE.slamStoke);
         break;
       case 'pickup':
-        if (e.kind === 'cash') this.addCash(SCORE.cashCoin);
+        //(NO GROUND's multiplier up in the sky: coins by it, Stoken by its whole part)
+        if (e.kind === 'cash') this.addCash(SCORE.cashCoin * (e.mult ?? 1));
+        else if (e.kind === 'spin') this.spins++;
         else {
-          this.stoken += this.stokenScale;
+          this.stoken += this.stokenScale * Math.floor(e.mult ?? 1);
           this.score += SCORE.stoken;
         }
         break;

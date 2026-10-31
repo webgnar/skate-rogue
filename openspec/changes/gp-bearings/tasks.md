@@ -6,4 +6,4 @@
 - [x] HUD bar, shop tile and card art
 - [x] Bearings on the board, rusting with wear
 - [x] Tests: gear, puddle wear, wear looks, feel; balance stays 2 to 3 worn at the first shop
-- [ ] Grass patches (waiting on zack)
+- [x] Grass strips (zack approved 2026-10-31): src/gen/grass.ts, GEAR.grassSlow, drawn in kit.ts

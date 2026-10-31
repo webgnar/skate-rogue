@@ -564,6 +564,14 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - **The guards shoot (2026-10-27, zack):** on chase floors the front guard aims for 0.7 s, then fires. During the aim there's a "!" over the gun, a red sight line blinking faster, and a red ring on you at the bullet's height. The bullet flies flat at waist height over the ground you're on (22 px), about 5 px/frame faster than you, and reaches you about 0.75 s after the bang. An ollie at the right moment puts your feet over it: DODGED! for 150 style. A hit is a slam (Bubble Pads take it), so the guards close in and Heat rises. They don't shoot while you're more than 2.5 tiles above the street, so a high line is safe. Shots come every 2.5 to 4.5 s, first 3 s into the chase, with 2 s of grace after a hit. The code is src/sim/shots.ts and src/render/shots-view.ts (first pass; the models thread does the pose and the shaders thread the flash and tracer). The test bot ollies bullets.
 
+- **Perfect landings (2026-10-31, zack):** a flip tapped within 40 px above the landing on the way down, or caught within 5 frames of touchdown, is PERFECT: at least cruising + 0.75 px/frame of flow speed, +100, a PERFECT! callout (this replaced the old CLUTCH! callout) and a burst. A first version stacked the boost on any speed, which pushed the bot's wheel wear past half on a floor, so it now tops up to a fifth over cruising instead.
+
+- 2026-10-31 (zack): three routes, sky, surface and sewer, stacked through every floor. Sky and surface exist; the sewer is drafted in the GDD (Three routes) and waits on zack before it's built.
+
+- 2026-10-31 (zack): the flip pops higher the sooner you tap it after the ollie (PHYS.trickEarly -6 easing to the old -5 by frame 24), riding on the ollie's remaining rise. Kept at -6 so it can't reach the sky route's wire; wheel wear per fast second trimmed 1.0 to 0.96 for the balance test. The official roadmap is in the GDD.
+
+- 2026-10-31: sewer route first version built from the GDD draft (zack handed over the roadmap: build it, ask only for blockers). Choices: drains are in the street chases only (not the hills), entered by rolling in; runoff soaks the deck only; Heat cools 4/s down there; the sewer comes back up before the gate (no own road yet). Flip pop eases back to the old pop by frame 14 (was 24) so ollie-top flips stay the same; wheel wear per fast second 0.92.
+
 ## Models thread: animation
 
 - 2026-10-28: Backside 180 feet (zack: "a weird glitch with his feet on backside 180's"). Two causes, both fixed:

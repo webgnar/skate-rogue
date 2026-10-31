@@ -16,8 +16,10 @@ export const GEAR = {
   ollie: 0.4, // deck, per ollie: the pop is the small part of what a deck takes
   // deck, per landing (zack, 2026-10-30: impact from gravity wears the deck the most, worst landing against your
   // momentum so you lose speed): per px/frame of impact over a kiss (FEEL.soft), plus per px/frame of speed lost
-  land: 0.25,
-  landLost: 0.55,
+  land: 0.18,
+  landLost: 0.4,
+  smashDeck: 0.15, // deck, per breakable you smash (zack, 2026-10-31), times smashHard landed, hopped, slammed or bombed
+  smashHard: 2,
   puddleDeck: 2, // deck, per puddle: the water soaks into the wood (zack, 2026-10-26; kept 2026-10-30)
   puddle: 12, // bearings, per puddle rolled through: water washes the grease out and rusts the races (zack, 2026-10-30)
   rollSec: 0.3, // bearings, per second rolling on the ground: dirt works into them
@@ -25,7 +27,7 @@ export const GEAR = {
   glass: 8, // wheels, per stretch of broken glass rolled over: it chunks the urethane
   flip: 1.25, // shoes, per flip trick
   grindSec: 1.4, // trucks, per second on a rail or ledge
-  fastSec: 1.0, // wheels, per second going faster than fastOver x cruising speed
+  fastSec: 0.92, // wheels, per second going faster than fastOver x cruising speed
   fastOver: 1.25,
   wornFrom: 50, // below this a part starts to cost you
   busted: 15, // the HUD flashes it from here
@@ -33,10 +35,11 @@ export const GEAR = {
   // ollie pop, flip pop, grind speed, cruising speed (bearings the most, wheels a little; they multiply)
   max: { deck: 0.3, shoes: 0.3, trucks: 0.3, wheels: 0.07, bearings: 0.2 } as Gear,
   roughFrom: 50, // wheels under this can't roll over broken glass: it stops them dead, a slam
+  grassSlow: 0.4, // cruising speed grass takes off you on dead wheels (none at roughFrom or better)
   puddleDrag: { fresh: 0.06, dead: 0.45 }, // speed a puddle takes off you, fresh wheels to dead ones
-  price: { deck: 25, shoes: 15, trucks: 20, wheels: 15, bearings: 15 } as Gear,
+  price: { deck: 80, shoes: 90, trucks: 70, wheels: 50, bearings: 80 } as Gear, // zack, 2026-10-31
   names: { deck: 'Deck', shoes: 'Shoes', trucks: 'Trucks', wheels: 'Wheels', bearings: 'Bearings' } as Record<GearPart, string>,
-  wornBy: { deck: 'hard landings', shoes: 'flip tricks', trucks: 'grinding', wheels: 'speed and rough ground', bearings: 'puddles, dirt and smashing' } as Record<GearPart, string>,
+  wornBy: { deck: 'hard landings and smashing', shoes: 'flip tricks', trucks: 'grinding', wheels: 'speed and rough ground', bearings: 'puddles, dirt and smashing' } as Record<GearPart, string>,
 };
 
 export function freshGear(): Gear {

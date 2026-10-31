@@ -93,6 +93,8 @@ export class FloorChecks {
       //(not one that pulled out of the lane this step: half into the back lane it's no longer under you, src/traffic)
       for (const { at: c, car } of this.movers) {
         if (!sk.movers.includes(car)) continue;
+        //(nor a crane jib that slewed out of the lane this step, src/sim/sky.ts: you drop off it, by design)
+        if (car.x1 < c.x0 || car.x0 > c.x1) continue;
         const cx = crossAt(this.px, this.py, sk.x, sk.boardY, 0, c.roof, 0);
         if (cx !== null && cx >= c.x0 && cx <= c.x1) this.add('fell-through', `fell through the top of a moving ${c.model ?? 'car or drone'}`, 'mover');
       }

@@ -2,7 +2,7 @@
 // every grip colour the shop sells, so you can always tell the tail from the nose.
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { GRIPS } from '../src/board/grips';
+import { GRIPS, RANK_GRIPS } from '../src/board/grips';
 import { gripBarColor } from '../src/render/wear';
 
 const lum = (hex: number) => {
@@ -21,6 +21,6 @@ describe('grip bar', () => {
   });
 
   it('stands out from every grip colour', () => {
-    for (const g of GRIPS) expect(contrast(g.color, gripBarColor(g.color)), g.id).toBeGreaterThan(1.8);
+    for (const g of [...GRIPS, ...RANK_GRIPS]) expect(contrast(g.color, gripBarColor(g.color)), g.id).toBeGreaterThan(1.8);
   });
 });

@@ -81,3 +81,46 @@ describe('pits on the hill', () => {
     expect(sk.x).toBeGreaterThanOrEqual(p.x1);
   });
 });
+
+// zack, 2026-10-31: taps stopped doing anything until a refresh. A flip trick just under the far lip slams you into the
+// wall on the way up, but you keep rising, come up over the lip and land on it. The slam's "no more pops" stuck to you
+// for the rest of the floor: you rode on and every tap was ignored. Landing anywhere ends the slam.
+describe('a wall slam that ends up on the lip', () => {
+  it('clears once you land, so the next tap ollies', () => {
+    let checked = 0;
+    for (let floor = 2; floor <= 15; floor++) {
+      const l = chicago(floor * 13, floor);
+      for (const p of pits(l)) {
+        const sim = new FloorSim(l, NO_MODS);
+        const sk = sim.skater;
+        sk.mode = 'air' as Mode;
+        sk.surface = null;
+        sk.x = p.x1 - 5;
+        sk.y += p.lip + 16 - sk.boardY; // falling past the far lip, just under it
+        sk.hsp = 4.2;
+        sk.vsp = 4.5;
+        sk.jumps = 1;
+        let slammed = false;
+        let f = 0;
+        for (; f < 120 && (f === 0 || sk.mode === 'air') && sim.state === 'skate'; f++) {
+          sim.step({ pressed: f === 0, held: false }); // a flip trick right at the wall: the tuck lifts the board over
+          if (sim.events.some((e) => e.type === 'slam')) slammed = true;
+        }
+        if (!slammed || sk.mode !== 'roll') continue; // dropped to the bail, as it should
+        checked++;
+        // ride out any landing impact, then one tap pops an ollie
+        for (let i = 0; i < 40; i++) sim.step({ pressed: false, held: false });
+        if (sk.mode !== 'roll') continue;
+        sim.step({ pressed: true, held: false });
+        let popped = sim.events.some((e) => e.type === 'ollie');
+        for (let i = 0; i < 6 && !popped; i++) {
+          sim.step({ pressed: false, held: false });
+          popped = sim.events.some((e) => e.type === 'ollie');
+        }
+        expect(sk.walled, `floor ${floor} pit ${p.x0}`).toBe(false);
+        expect(popped, `floor ${floor} pit ${p.x0}`).toBe(true);
+      }
+    }
+    expect(checked).toBeGreaterThan(3);
+  });
+});

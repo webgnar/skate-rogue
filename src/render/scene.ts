@@ -25,6 +25,7 @@ import { Bay } from './bay';
 import { biasCamera, GHOST, ghostMaterial } from './ghost';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
+import { ShopFront } from './shop-front';
 
 // keep everything: a clipping plane this far out cuts nothing
 const NO_CUT = 1e6;
@@ -76,6 +77,8 @@ function clipKit(kit: THREE.Object3D, planes: THREE.Plane[]): void {
 
 // free a kit's geometry, materials and their textures
 function disposeKit(kit: THREE.Object3D): void {
+  //the shop's front is kept from floor to floor (shop-front.ts): off the kit before it goes
+  kit.getObjectByName('shopFront')?.removeFromParent();
   kit.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
     //outlines share their geometry with what they outline (bar the merged one), and the outline material
@@ -117,6 +120,10 @@ export class StreetView {
   readonly front = new THREE.Scene();
   readonly actor = new THREE.Group();
   readonly over = new THREE.Group();
+  // effects that sit in depth with the skater, so his board and legs can cover them (flip lines), but that skip
+  // his dithered ghost
+  readonly withActor = new THREE.Group();
+  ghostOff = false; // no ghost: he's gone under the water, hidden for real (game.ts sinking)
   private readonly ghost = ghostMaterial();
   private readonly actorCam = new THREE.PerspectiveCamera();
   private readonly louAt = new THREE.Vector3();
@@ -135,6 +142,7 @@ export class StreetView {
   night = new NightCity(); // these three are the floor being skated's: the next floor's take over at the join
   gates = new GateFx();
   sirens = new SirenFx();
+  private readonly shopFront = new ShopFront(); // GNAR SUPPLY, behind the gate that leads to the shop
   readonly ambience = new Ambience();
   private wet = 0;
   private backdrop: { mesh: THREE.Mesh; parallax: number; w: number; y: number; off: number }[] = [];
@@ -201,7 +209,7 @@ export class StreetView {
       this.suns.push(sun);
     }
     this.scene.add(this.sky, this.bay.mesh, this.puddles.mesh, this.night.group, this.gates.group, this.sirens.group, this.ambience.points);
-    this.front.add(this.actor, this.over);
+    this.front.add(this.actor, this.withActor, this.over);
     this.over.add(this.rain.mesh);
     this.renderer.autoClear = false;
   }
@@ -299,6 +307,12 @@ export class StreetView {
     for (const s of [this.sirens, ...[...this.aheads.values()].map((a) => a.sirens)]) s.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
     this.flash = 99;
+  }
+
+  // the shop's front behind this floor's gate when it leads to the shop (x tiles, shop-front.ts shopSpot); null
+  // leaves it where it is (behind the floor before, if it was there, until that floor goes)
+  standShop(x: number | null): void {
+    if (x !== null) this.shopFront.place(this.kit, x);
   }
 
   // this floor's street kit (its parked cars show car-hop damage, car-damage.ts); null while it builds
@@ -735,16 +749,20 @@ export class StreetView {
       this.over.visible = false;
       this.ghost.uniforms.uColor.value.setHex(GHOST.colors[FX.ghost]);
       this.ghost.uniforms.uCell.value = Math.max(1, Math.round(GHOST.cell * this.pixelRatio));
-      this.front.overrideMaterial = this.ghost;
-      r.render(this.front, cam);
-      this.front.overrideMaterial = null;
+      if (!this.ghostOff) {
+        this.front.overrideMaterial = this.ghost;
+        this.withActor.visible = false;
+        r.render(this.front, cam);
+        this.front.overrideMaterial = null;
+      }
+      this.withActor.visible = true;
       r.render(this.front, cam);
       //then the effects over everything
       r.clearDepth();
       this.over.visible = true;
-      this.actor.visible = false;
+      this.actor.visible = this.withActor.visible = false;
       r.render(this.front, this.camera);
-      this.actor.visible = true;
+      this.actor.visible = this.withActor.visible = true;
     });
     this.compiled += this.keep.pin();
   }

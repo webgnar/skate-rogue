@@ -23,6 +23,33 @@ export interface FloorEdit {
   sky?: SkyBeat[][]; // the sky beats over each stretch of hill (src/gen/sky-beats.ts), slots as the hill recipe's
   skyHeight?: number; // tiles the sky beats stand over the ground behind
   skyStart?: number; // how far down each stretch of hill (0-1) they start
+  clouds?: LayerEdit; // the cloud layer (src/gen/clouds.ts): on/off, its CLOUDS dials, which cloud beats it picks from
+  sewer?: LayerEdit; // the sewer route (src/gen/sewer.ts): on/off and its SEWER dials
+}
+
+// a route layer's edits: `on` turns it on or off for the floor, `mix` (clouds) the beats it picks from, and the rest
+// overlay the layer's dials object (CLOUDS, SEWER) by key while the floor is built (see withDials)
+export interface LayerEdit {
+  on?: boolean;
+  mix?: string[];
+  [dial: string]: number | [number, number] | boolean | string[] | undefined;
+}
+
+// build with a layer's dials overlaid by a floor's edits, then put them back: the code's dials stay the defaults,
+// so a key the layer adds later is editable without touching this file
+export function withDials<T extends object, R>(dials: T, edit: LayerEdit | undefined, fn: () => R): R {
+  const keep: [string, unknown][] = [];
+  const d = dials as Record<string, unknown>;
+  for (const [k, v] of Object.entries(edit ?? {})) {
+    if (k === 'on' || k === 'mix' || !(k in d) || v === undefined) continue;
+    keep.push([k, d[k]]);
+    d[k] = v;
+  }
+  try {
+    return fn();
+  } finally {
+    for (const [k, v] of keep) d[k] = v;
+  }
 }
 
 export interface LevelEdits {

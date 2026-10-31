@@ -434,28 +434,40 @@ export class Aura {
 // model... the board should actually have its own outline"). Per-mesh hulls also draw where one part sits over
 // another (the hair over the face, an arm over the chest), so the body marks its pixels in the stencil (1) and the
 // board its own (2); the body's hulls then draw only where neither is, and the board's anywhere but on the board,
-// so the board is outlined against the legs as well as the street. The hulls draw after the meshes (renderOrder 1).
+// so the board is outlined against the legs as well as the street. The hulls draw after the meshes (renderOrder 2).
 // `ink` is the hulls' current material (inkify's shared one); body and board hulls get bodyInk and boardInk.
-export function silhouetteInk(root: THREE.Object3D, board: THREE.Object3D, ink: THREE.Material, bodyInk: THREE.Material, boardInk: THREE.Material): void {
+// `halo`, body and board: a wider hull round each black one (zack, 2026-10-31: "an outline around the black of white,
+// half the thickness of the black"). The black marks the stencil where it draws, and the halos draw after it only
+// where nothing has, so the white shows just past the black and never inside the figure, over the board or in the
+// gaps between the body's parts that the black fills.
+export function silhouetteInk(root: THREE.Object3D, board: THREE.Object3D, ink: THREE.Material, bodyInk: THREE.Material, boardInk: THREE.Material, halo?: [THREE.Material, THREE.Material]): void {
   const onBoard = new Set<THREE.Object3D>();
   board.traverse((o) => onBoard.add(o));
+  const halos: THREE.Mesh[] = [];
   for (const [mat, ref, func] of [
     [bodyInk, 0, THREE.EqualStencilFunc],
     [boardInk, 2, THREE.NotEqualStencilFunc],
+    ...(halo ? ([[halo[0], 0, THREE.EqualStencilFunc], [halo[1], 0, THREE.EqualStencilFunc]] as const) : []),
   ] as const) {
-    mat.stencilWrite = true; // turns the stencil test on; the ops keep the marks as they are
+    mat.stencilWrite = true; // turns the stencil test on
     mat.stencilRef = ref;
     mat.stencilFunc = func;
-    mat.stencilZPass = THREE.KeepStencilOp;
+    //the black marks where it drew (0 to 1, 1 to 2) when there's a halo to keep off it; the halos keep the marks
+    mat.stencilZPass = halo && (mat === bodyInk || mat === boardInk) ? THREE.IncrementStencilOp : THREE.KeepStencilOp;
   }
+  const drop: THREE.Object3D[] = [];
   root.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
     const isBoard = onBoard.has(m);
     if (m.userData.ink) {
       if (m.material !== ink) return; // the gnar shards and the night rim keep their own
+      //the deck's ply edge is an open band round the deck: its far side's hull stood above the deck as a stray line
+      //(zack, 2026-10-31). The deck's own hull already outlines it
+      if (m.parent?.userData.mat === 'plies') return void drop.push(m);
       m.material = isBoard ? boardInk : bodyInk;
-      m.renderOrder = 1;
+      m.renderOrder = 2;
+      if (halo) halos.push(m);
       return;
     }
     for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
@@ -466,4 +478,13 @@ export function silhouetteInk(root: THREE.Object3D, board: THREE.Object3D, ink: 
       mat.stencilZPass = THREE.ReplaceStencilOp;
     }
   });
+  for (const m of drop) m.removeFromParent();
+  for (const m of halos) {
+    if (!m.parent) continue;
+    const h = m.clone(); // a skinned hull keeps its skeleton and bind
+    h.material = m.material === boardInk ? halo![1] : halo![0];
+    h.renderOrder = 3;
+    h.userData.halo = true;
+    m.parent.add(h);
+  }
 }

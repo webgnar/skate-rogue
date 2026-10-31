@@ -30,6 +30,19 @@ the enforcers shut you down. The QFS skaters (Webster, Keanu, Roxy, Goldie) are 
 The world tells this story while you skate, without cutscenes: robotaxis everywhere, AI propaganda billboards
 about social credit, cameras that turn to follow you, and sirens that grow louder when you slow down.
 
+## What the game is
+
+Settled Oct 31, 2026 (zack, after looking at Jetpack Joyride, Alto's Odyssey and OlliOlli World). Gnar Run is a
+**one-touch phone skate runner where style is speed**:
+
+- Clean timing and combos keep you fast and alive. Sloppy skating slows you down, and slow gets you caught.
+- The city is a playground of lines to read: rails, ledges, wires, cars, rooftops.
+- Every floor has three routes stacked on top of each other: **sky, surface and sewer** (see Three routes).
+- Runs are short, with a quick restart.
+- A light meta (missions, the end-of-run payout, the shop) brings you back.
+
+New ideas are measured against this, and anything that bloats it stays out.
+
 ## Design pillars
 
 1. **The board is the weapon.** No combat. Every verb is a skate verb: ollie, flip, grind, car-hop.
@@ -117,7 +130,7 @@ them), boons are about skate physics, and the run adds a shop and a board build 
 1. **Floor** (30–90 s). Skate from the start to the exit portal across a generated stretch of street, rooftops,
    rails, gaps and traffic. Grab cash (run currency) and Stoken (meta currency). Land tricks for stoke.
 2. **Boon pick.** Three cards; take one. Reroll costs cash.
-3. **Fork:** pick the next road (high or low) by skating, toward a boon, cash, a shop or an event.
+3. **Fork:** pick the next road (sky, surface or sewer) by skating, toward a boon, cash, a shop or an event.
 4. **Act change** after 3 floors and an escape set piece: a new district with its own 3D kit, gravity and traffic.
 5. **Run over.** Fall into a gap, or let the AI's Heat catch you, and the run ends. Score, deepest floor and Stoken earned are shown and posted.
 6. **Between runs**, spend Stoken on the unlock tree, then go again. Restart is one tap.
@@ -172,8 +185,140 @@ helicopter is on you: clean skating and grinding don't cool your Heat, and it cl
 Pigeons sit on the rooftops and the wire, so ollie them or take a bird strike, which costs speed and a little Heat.
 Airliners cross the sky behind. Code: `src/gen/top-route.ts`, `src/sim/sky.ts`.
 
+**Building out the sky route** (zack, Oct 31, 2026: the sky was the thinnest route, with nothing unique to do or
+find up there). Higher than the power line on each stretch of hill, from floor 4, the sky beats (`src/gen/sky-beats.ts`)
+lay a run of rooftop decks, billboard catwalks, water towers, crane booms and scaffolds to land on. On top of that,
+built the same day (greybox, waiting on zack's reference images in the shared folder's `sky/refs/` for the art pass):
+
+- **NO GROUND.** Chain sky pieces (the wire, rooftops, decks, booms, a blimp's back) without touching the ground below
+  and the coins up there multiply: x1.5 at two pieces, up to x4 (Stoken by the whole part). Air between pieces keeps
+  the line; touching the ground below banks it ("SKY LINE x5!"); a bail loses it. It's the reason to stay up there.
+- **Set pieces, one a floor at most, from floor 5:** an **ad blimp** moored over the hill, its long back a calm
+  cruise; a **window washer's rig** that drops under you once you land, so you pop off it quick onto the roof
+  ahead; a **tower crane** whose jib slews out of the lane and back (land early, or it swings away under you); and a
+  **paper billboard** across the gap between two decks that you burst through for cash.
+- **Finds:** a **stash crate** on a floor's first water tower (a spin token, or a fresh gear part that replaces your
+  most worn one); now and then a **golden pigeon** on a deck (clear it from just above for a spin token; skate into
+  it and it's a bird strike); and on Chinatown's stretch, **clotheslines** strung between the tenements, short
+  sagging wires with the washing on them, to chain.
+
+All of it is physics and tap-only: nothing lifts you up there (zack owns the way up). Code: `src/gen/sky-beats.ts`
+(placement and the SKY dials), `src/sim/sky.ts` (the moving decks, busts, golden pigeon, NO GROUND's multiplier),
+`src/render/sky-pieces-view.ts` and `src/render/sky-kit.ts` (drawing); the level editor lists the new beats.
+
+**The cloud layer** (zack, Oct 31, 2026: "i want sky route to go really tall. we could use the clouds and the rainbow...
+if we can put as much love into the sky as we did the ground"). From floor 5, way over the hill, far above the
+rooftops and cranes with nothing reaching down to the city: big puffy clouds to land on, drifting clouds that wander
+there and back, thin clouds that puff away a moment after you land (0.66 s: time to take the landing's knock and pop
+off), rainbows to grind up and over (one a floor may hide a spin token at the top), and hot air balloons whose
+baskets bob. The layer falls gently with the hill. The way up is a **staircase** (zack picked it): 30% of the way down
+from the crest the sky beats give way to red steel girders hoisted on crane cables and then wisps of cloud, each 1.5
+tiles over the last (an ollie and a flip), about 9 tiles of climb. Only a long run down has room for it (95 tiles from
+the crest), so it's mostly a floor's first stretch, down from the top; the stretches after keep their city sky all the
+way down. Still physics only. Code: `src/gen/clouds.ts` (the CLOUDS dials); `?clouds` starts a floor on the
+staircase for testing.
+
+**Sky level design** (zack, Oct 31, 2026: "make sure sky layer is payed as much attention to with level design as the
+ground"). Up there there's no ground to fall back to, so the line is laid to rules a good player can trust, checked
+by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9 stretches in 10 end to end):
+- **The way in is the crest.** The sky starts where the hill crests (the big ollie and flip at the top), not on the
+  climb out of the cross street before it. Its first piece stands at most 2.5 tiles over the hill's lip (where the
+  ground starts to fall away), so a big ollie and a flip off the lip lands on it; the line climbs from there.
+- **Every piece within a flip of the last.** Measured in the sim: at base speed an ollie carries about 4 tiles to the
+  same height, an ollie and a flip about 6.5, two tiles up about 5.5, and a tile further for every two you drop. The
+  line asks for at most 4.5 tiles at the same height (`src/gen/sky-line.ts`, REACH), nothing more than a flip (1.5
+  tiles) over where you leave the last piece, and nothing more than 3 tiles under it (a long drop is a long landing
+  lockout). A big gap (with a Stoken over it) drops the next piece 1.5 tiles so the flip carries you over.
+- **Speed.** The decks are flat, so you're soon at base speed up there; crane booms always fall at least a tile in
+  seven, so a grind feeds your speed, and off the end of one the next piece is never higher (the pop's weak off a
+  falling rail).
+- **Room to land.** Water towers 4 tiles, girders 4 to 5, no stub decks: you land, take the knock, and pop again.
+  Scaffolds are a flight of steps down, a tile apart, so an ollie anywhere lands on one.
+- **No holes.** A piece that's crowded (by the power line) nudges up or down instead of vanishing, and any gap left
+  past reach gets a small deck (a rooftop, or a puff of cloud up in the clouds), all the way across however long the
+  hole is (where there's no room for another, the last deck runs on toward the next piece).
+- **The clouds are the long part.** On a cloudy stretch the staircase up starts about a fifth of the way down the hill,
+  so most of the stretch is up in the cloud layer.
+- **Variety.** Each stretch runs its floor's recipe from its own place, so no two stretches play the same order.
+- **Nothing from the sky crosses in front of you**: scaffold tubes stand behind the lane.
+- **I-beams** (zack, Oct 31: "we need some Grindable I-beams", "can we make the i beams slowly swinging?"): red steel
+  beams, 5 to 7 tiles, hung on a crane's cable, swinging slowly along the lane (a tile and a quarter either way, 5 s
+  there and back, rising a little at each end). Their top flange is a grind, and it carries you with it. Moving
+  grindables: these and the tower crane's slewing jib.
+- **Skyscrapers** (zack: "super tall sky scrapers that do go up to the height of the sky route"): every rooftop deck
+  up there is the top of a glass tower that runs all the way down to the city, behind the lane.
+- **Clouds are honest**: a cloud's puffs never draw past where you can land on it (its deck plus a truck's overhang).
+
+**The NO GROUND meter** (zack: "i need that to be visualy clear what its doing"). While a line is going, a panel under
+the combo shows NO GROUND, the live coin multiplier (it pops as it steps up), seven pips that turn gold at the x4 cap,
+and the bonus the line has added so far. Touch the ground and it reads BANKED +$N; the callout says SKY LINE x3! +$N.
+
+### Three routes: sky, surface, sewer
+
+Decided Oct 31, 2026 (zack): the game has **three routes**, stacked vertically through every floor. Sky is built
+(the top route above); surface is the street; the sewer's first version was built the same day. The rules that hold
+for all three:
+
+- **All physics.** You get onto a route by how you skate, never by something that lifts or drops you for you.
+- **You can always see the other routes.** The camera frames the one you're on, with the others in view above or
+  below, so switching is a read you make, not a guess.
+- **Each route has its own trade.** Reward and danger differ, so picking one is a real choice:
+
+| Route | Where | How you get on | Danger | Reward | Built |
+| --- | --- | --- | --- | --- | --- |
+| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and spin tokens | Yes |
+| **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
+| **Sewer** | A storm tunnel under each street chase | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's spin tokens; the sewer road to the underground spot | Yes |
+
+**The sewer route** (first version Oct 31, 2026; built out the same day from zack's "build all of it"; code:
+`src/gen/sewer.ts`, moving pieces `src/sim/sewer.ts`, drawn by `src/render/sewer-kit.ts` and `src/render/sewer-view.ts`).
+Under each street chase where the street is clear runs a brick storm tunnel, drawn as a cutaway under a thin street.
+
+- **Ways in are construction spots** (zack: "the ways down from surface to sewer are construction spots"): a 3-tile dig
+  in the street with hazard paint, cones, a striped barricade, the trench plate dragged aside, a dirt pile and a little
+  excavator. Ollie it and you stay on the street; roll on and you drop 5 tiles in. Half the time the way in is at the
+  **foot of a hill** instead: a plank ramp you roll straight down off the hill, picking up speed (the GDD's "way down on
+  the hills").
+- **DOWNSTREAM** (the sewer's trade: the sky pays more, the sewer is faster): the runoff on the floor runs your way and
+  its current pushes you past street speed (up to 6.8 px/frame; it still soaks the deck). Each new piece you ride down
+  there (a pipe grind, a stretch of runoff, a rat pack or the alligator cleared, the bowl carved, the subway crossed)
+  adds to the line and multiplies the coins, as NO GROUND does up top; the same meter reads DOWNSTREAM. Coming back up
+  banks it (FLOW LINE xN); a trip, a slam or the surge loses it.
+- **Kick-outs** (zack: "a quarterpipe up against a wall that shoots the player straight up through a one way platform to
+  the street again. players will accidentally get shot back up, maybe try to go deeper next time"): a concrete
+  quarterpipe under a grate in the street. Roll into it and it throws you up through the grate onto the street (KICKED
+  OUT!); ollie over it to stay down. Up to two a tunnel.
+- **One set piece a tunnel** (from floor 2): a **rat pack** that runs at you (ollie it, RAT HOP; roll into it and you
+  wobble and lose speed), the **flood surge** (the storm gate behind you bursts and a wall of water chases you down the
+  tunnel a little faster than cruising: the current or a grind outruns it, else WASHED OUT, a slam and a soaked deck),
+  a **full pipe** bowl the floor dips through and carves you out of, or a **subway crossing** (zack: "subway train cars
+  that act as cross traffic"): a gap onto the tracks where trains cross under the tunnel; hop off a train's roof or
+  ollie the gap, drop in with no train and you bail.
+- **Finds:** the **sewer alligator** (now and then; its jaws open as you come up; ollie it for a spin token, roll into it
+  and it bites) and a **DIY stash** crate on the floor (a spin token or a fresh gear part, like the sky's).
+- **The sewer road:** on a floor with a fork, the last street chase's tunnel runs to the gate and comes up at it: take
+  it and you're on the third road, to the underground spot (a SEWER ROAD sign stands over its way in).
+- Pipes to grind (an ollie gets on), caged work lamps, graffiti, light falling through the holes and grates. The
+  street is the roof: a plain ollie fits, a quick double tap bonks your head. Heat cools 4 a second on top of the usual,
+  nobody shoots and the helicopter can't see you. `?bot=sewer` plays it; `?sewer` (or `?sewer=rats`, `surge`, `bowl`,
+  `subway`, `gator`, `kick`, `gate`) starts you at the way into one.
+
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
+
+### Future direction: the build decides the path
+
+**Unconfirmed early idea** (zack, Oct 31, 2026: "i DONT KNOW for sure yet which is why the idea is half baked"; not
+decided, not designed, nothing built). A goal for later. The run should eventually be a non-linear
+progression: the boon path you take and the type of skater you curate decide the path forward through the run.
+
+zack (Oct 31, 2026): "entire whole levels of sky street sewer, as acts in the run", and "whole sky/street/sewers would
+be designed differently FOR those boons". So a whole act could be a sky, street or sewer level, each built for the
+boons that lead there. This may change the current design, where the three routes are stacked through every floor.
+
+zack: "players like to choose thier path".
+
+Open: which boons lead to which kind of act, and how each kind of act is designed for them.
 
 ### 2. How a run ends: escape the city
 
@@ -264,6 +409,13 @@ Input buffering (100 ms) and coyote time (80 ms) are on for everyone; touch late
 ### Ollie and tricks
 
 - **Jumps**: start with 2. Ground or rail ollie spends 1; an air flip trick spends 1 and gives a smaller hop.
+- **Flip pop by timing** (zack, Oct 31, 2026): the sooner you tap the flip after the ollie, the higher it pops you.
+  A quick double tap goes about 4.6 tiles up (148 px; the old best was about 2.8); a flip at the top of the ollie
+  pops like before. The pop rides on top of the rise the ollie still has, so tapping early never wastes the ollie.
+  It trades against perfect landings, which want the flip late and low. A quick double tap can't reach the sky
+  route's power line yet (PHYS.trickEarly -6, easing to the old pop by frame 14; -7 would let one off a high rail
+  reach it). The bots can still reach the wire on a few floors, falling onto it from a high hill ledge or rail, with
+  the old flip too.
   Jumps refill on landing, on any grind, on a car-hop, and on riding off a curved rail.
 - **Jump charge**: jumps are a number, not an integer (Lou Gnar's 1.75). A partial jump gives a partial hop.
   Several boons add or drain fractions.
@@ -274,6 +426,14 @@ Input buffering (100 ms) and coyote time (80 ms) are on for everyone; touch late
   flat), sketchy (5.5+ tiles to flat, or a flip landed late in its catch) or a slam (stairs, or a flip barely
   started). Heavy and sketchy landings cost flow speed only. Landing into a bank that falls away soaks up any drop.
   Details: openspec/changes/pf1-physics-feel.
+
+- **Perfect landings** (Oct 31, 2026, from OlliOlli World; built the same day): OlliOlli's tap right before
+  touchdown, on our one tap. On the way down from an ollie, tap for the flip when you're nearly back on the ground
+  (within 40 px of where you land). It pops you up, the board comes round, and you land PERFECT. A flip caught within
+  5 frames of touching down counts too, for example flipped up onto a ledge. PERFECT rolls away at least a fifth over
+  cruising speed (not stacked on speed you already have, or the wheels would wear from it), with +100, a callout and
+  a burst. Flip at the top of the ollie and it's a plain clean landing. Onto a grind or rail, PERFECT starts you at
+  grind speed and a bit over. Tuning: PHYS.perfectHeight, perfectFrames and perfectBoost.
 
 ### Grinding
 
@@ -622,10 +782,10 @@ Oct 30), each worn by the thing it takes the beating from:
 
 | Part | Worn by | When it's worn |
 | --- | --- | --- |
-| **Deck** | Hard landings most (zack, Oct 30: impact from gravity, worst landing against your momentum so it costs you speed: 0.25 per px/frame of impact over a soft landing, plus 0.55 per px/frame of speed lost), then ollies (0.4 each) and puddles (2 each) | Ollies pop lower, down to −30% at 0 |
+| **Deck** | Hard landings most (zack, Oct 30: impact from gravity, worst landing against your momentum so it costs you speed: 0.18 per px/frame of impact over a soft landing, plus 0.4 per px/frame of speed lost), smashing breakables (zack, Oct 31: 0.15 each rolled or ground through, 0.3 landed, hopped, slammed or bombed), ollies (0.4 each) and puddles (2 each) | Ollies pop lower, down to −30% at 0 |
 | **Shoes** | Flip tricks (the flick scuffs the grip side) | Flip tricks in the air pop lower, down to −30% |
 | **Trucks** | Grinding (every second on a rail, ledge or roof edge) | Grinds settle slower, down to −30% |
-| **Wheels** | Going fast (every second above 1.25× cruising speed: rail exits, bombs, kickers), and broken glass (8 a stretch) | Under 50, broken glass slams you instead of crunching under the wheels; puddles bog you down more (6% of your speed on fresh wheels, 45% on dead ones); cruising speed drops a little, down to −7% |
+| **Wheels** | Going fast (every second above 1.25× cruising speed: rail exits, bombs, kickers), and broken glass (8 a stretch) | Under 50, broken glass slams you instead of crunching under the wheels, and grass strips across the street bog you down (up to −40% on dead wheels, none at 50 or better); puddles bog you down more (6% of your speed on fresh wheels, 45% on dead ones); cruising speed drops a little, down to −7% |
 | **Bearings** | Puddles (12 each), dirt (0.3 every second rolling on the ground), and the dust and shards of smashing wood, stone or glass props or rolling over broken glass (1 each) | Cruising speed drops, down to −20%: the main speed part (zack, Oct 30) |
 
 - **Condition** runs from 100 (fresh) to 0. A part costs you nothing until it's half worn; below 50 the cost grows
@@ -637,8 +797,9 @@ Oct 30), each worn by the thing it takes the beating from:
   (the bot grinds little); its bearings sit around 83, since balance runs have no rain. A part you lean on loses about 20 to 40 a floor. Your build decides what wears: a grind
   build eats trucks, a flip build eats shoes. `npm run balance` prints the first-shop count.
 - **The run keeps it:** wear carries from floor to floor and resets with a new run. Fresh gear every run.
-- **The shop** always has a gear row under the mod stock: New Deck $25, New Shoes $15, New Trucks $20, New Wheels
-  $15, New Bearings $15. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
+- **The shop** always has a gear row under the mod stock: New Deck $80, New Shoes $90, New Trucks $70, New Wheels
+  $50, New Bearings $80 (zack, 2026-10-31; were $25/15/20/15/15). The bot reaches the first shop with about $260
+  (pickups plus act 1's $45) and about $215 of worn parts to replace, so fixing everything leaves little for mods. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
   a new mod, or keep your setup rolling.
 - **HUD:** five bars in the GEAR WEAR panel, bottom right (DECK, TRUCKS, WHEELS, BEARINGS, SHOES), green while fresh,
   yellow once a part starts costing you and red, blinking, from 15. A callout fires when a part wears past half
@@ -679,6 +840,46 @@ come. See docs/overnight-decisions.md.
 
 Small permanent stat buffs are kept rare and capped (for example Heat starts 10% lower, a free reroll per run), so
 skill and builds stay the point, not grinding the tree. Unlocking is mostly *more variety*, not *more power*.
+
+### Missions (from Jetpack Joyride)
+
+Added Oct 31, 2026 (zack picked it from the Jetpack Joyride ideas). Three missions are always showing, on the pause
+card and the run summary, like "grind 3 rails in one combo", "dodge 5 guard bullets", "land a nollie heelflip off a
+nosegrind", "smash 10 props in one floor" or "car-hop 4 cars without touching the street". Finishing one pops a
+callout mid-run and swaps in the next mission right away. Missions carry over between runs until they're done.
+
+- **Skater Rank:** every 3 missions done raise your rank. Each rank pays Stoken, and some unlock a cosmetic (a board
+  graphic, a colourway, a trail). Ranks give no stat power, in line with "more variety, not more power".
+- **The pool** is written so each mission teaches something the game already has: tricks and stances (fakie,
+  nollie, 180 flips), grinds and manuals, traffic (car-hops, close calls, door slams), the chase (bullets, Heat),
+  the high routes, boons ("finish a floor with 3 GRIND boons") and gear ("clear a floor without busting a part").
+  Early ranks get the easy ones.
+- **A skip:** any mission can be skipped for a little Stoken, so nobody gets stuck on one they hate.
+
+Built Oct 31, 2026 (src/run/missions.ts, src/ui/missions-panel.ts): 44 missions in 7 tiers, each counted per combo,
+floor, run, across runs, or as a best. A rank pays 10 + 5 per rank Stoken (up to 50); ranks 2, 4, 6, 8 and 10 put a
+grip colour the shop never sells on the board (Gold, Camo, Navy, Teal, Chrome). A skip costs 3 Stoken. The playtest
+bot and the tutorial floor don't count.
+
+### Spin tokens and the end-of-run payout (from Jetpack Joyride)
+
+Added Oct 31, 2026 (zack). **Spin tokens** turn up rarely: in a smashed prop now and then, at the end of a side line,
+and on the top route. When the run ends, before the summary, each token pulls a three-reel slot machine once. It pays:
+
+- Stoken (most pulls, small amounts),
+- a head start for the next run (cash, a fresh deck, or a free boon pick),
+- a free continue held for the next run,
+- now and then a cosmetic.
+
+Three of a kind pays big. Runs that end badly still pay something, so losing stings less, and smashing props and
+taking the risky lines are worth more. The machine skips with a tap and plays every pull at once when you have many.
+
+Built Oct 31, 2026 (src/gen/spin-tokens.ts, src/run/slots.ts, src/ui/slots-panel.ts): a token is a red casino chip
+with a gold star. A floor has a 15% chance of one prop hiding a token, the side line's prize is a token a quarter of
+the time, and one of the top route's Stoken can be a token. A plain pull pays 2 to 5 Stoken; three ◆ pay 25 Stoken,
+three $ a $40 head start, three ⚡ a free boon at the next run's start, three ♥ a saved continue (2 held at most), and
+three ★ a grip colour. A tap stops the reels, the next goes on to the summary. Tokens found on a floor you continue
+from are lost with the rest of that floor.
 
 ## Scoring and stoke
 
@@ -840,6 +1041,30 @@ src/
   ui/          HUD, cards (HTML/CSS over the canvas)
 ```
 
+## Roadmap
+
+The official roadmap (zack, Oct 31, 2026). Each item is checked against "What the game is" before it's built.
+
+**Now**
+1. The sewer route, so all three routes (sky, surface, sewer) exist.
+2. A one-tap "Again" on the game-over screen.
+3. Flip pop tuning (a quicker flip pops higher) and a dynamic zoom option.
+
+**Next**
+4. Missions and Skater Rank.
+5. Spin tokens and the end-of-run slot machine.
+
+**Then**
+6. The Chinatown downhill: skitch cabs and cross traffic.
+7. Tee physics, and Blender texture painting for the models.
+8. Grass strips that punish worn wheels.
+9. Wall rides, only if they earn their place.
+
+**Ship**
+10. A performance pass for small iPhones.
+11. Release on ad-supported web game portals (zack still picks which).
+12. App store builds with Capacitor, if wanted.
+
 ## Milestones
 
 | | Goal | Done when |
@@ -860,6 +1085,20 @@ gate. No traffic and no Heat. Through the gate, the run starts fresh on floor 1.
 The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays live in excaliburSkate until M2 is better than it.
 
 ## Open questions
+
+- **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
+  to each, and how each is designed for them.
+- **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
+- **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
+  ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
+- **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
+  ollie. For now it stays tap only, until the controls are hashed out.
+- Alto's Odyssey ideas not taken: zen mode and the wingsuit (neither fits a one-button escape). The rest is already
+  in: speed from combos (the gnar state), day, night and weather, goals in threes (missions).
+- OlliOlli World ideas not taken: manuals anywhere and pushing (they need more than one button). Already in:
+  branching routes, challenges (missions) and seeded levels.
+- Jetpack Joyride ideas not taken (Oct 31, 2026): vehicle pickups as an extra life (maybe a rare boon later), a
+  pre-run gadget loadout (too much permanent power), and instant restart (partly there already).
 
 1. ~~How much steering?~~ Decided: pure auto-run, one button (see Controls).
 2. ~~Which 3D?~~ Decided: 2.5D side view (see Presentation).

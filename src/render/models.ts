@@ -14,9 +14,9 @@ export function missingModels(): { files: string[]; parts: string[] } {
   return { files: [...FILES.filter((f) => !loaded.includes(f)), ...failed.filter((f) => LATER.includes(f))], parts: [...missing] };
 }
 
-const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb', 'airliner.glb'];
+const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb', 'airliner.glb', 'skateshop.glb'];
 // materials that glow instead of taking light
-const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen', 'elCarSign', 'elCarLamp']); // the sheriff gold is reflective livery
+const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen', 'elCarSign', 'elCarLamp', 'taxiSign']); // the sheriff gold is reflective livery
 
 // models the game can start without: car-hop damage (art/car_damage.py). The loading screen loads them with the
 // rest now (a model loading mid-run was a hitch); if they fail, a dented car just shows its clean model

@@ -341,6 +341,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **Board wires (ui7-board-wires):** in the shop and on the in-run board, a purple wire runs under the slots from each trigger to the effects it fires. Anything nothing fires (an effect left of every trigger, a trigger with nothing after it) is dimmed with a red X. Under YOUR BOARD the shop spells it out, e.g. "OLLIE ▸ ×2 KICK". Check it on desktop and on the phone both ways round.
 - [ ] **Drag preview (ui8-drag-preview):** in the shop, drag a card (or a board slot) and hold it over a slot without letting go. The wires pulse and redraw for the board you would get, and the words under YOUR BOARD read "IF YOU DROP IT: ...". Slide off the slots and the real board comes back. Try it on desktop and on the phone both ways round.
 - [ ] **Boons under the meters (ui9-boons-below-meters):** hold a few boons and look at the top left on a phone held upright and sideways. The boon chips start under the HEAT meter and never cover STOKE or HEAT.
+- [ ] **Again (ui10-again-button):** die, then tap the big AGAIN button under the score. A new run starts straight away with no menu. Check it on a phone held upright and sideways: AGAIN and UNLOCKS both fit on screen.
 - [ ] **Gear models (art/gear.py):** the NEW TRUCKS, NEW WHEELS and NEW SHOES cards and the YOUR GEAR tiles show the detailed models: a polished truck upside down with its kingpin nut and red bushings, a cream wheel with the black and silver swirl and a ring of GNAR RUN text, a black suede mid-top on a white sole with white laces and stitching. No real brand names or logos anywhere.
 - [ ] **Grip bar:** a band across the grip just inside the back truck's bolts, so you can tell the tail from the nose. It's bare maple on dark grips (black, pink, red, purple) and near-black on light ones (white, yellow, lime, cyan, orange). Buy a grip colour in the shop and the bar changes with it. After a 180 or shove-it the bar stays on the board's own tail.
 
@@ -683,12 +684,20 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Every floor's street ends with a side street just before the next floor starts. With the cruiser on your tail as you roll into the next floor, it turns up that side street behind you instead of vanishing.
 - [ ] The helicopter follows you smoothly (no stepping), and it doesn't bob up and down with every ollie.
 - [ ] The helicopter over the top route and the high-Heat drone drop in from the sky and stay above the hill, never down inside it. When you come down off the top route the helicopter climbs away.
+- [ ] Sky route (floor 5+, e.g. `?seed=1&floor=5` rig + clotheslines, `floor=6` crane, `floor=7` blimp, `floor=8` billboard bust): chaining sky pieces calls NO GROUND! COINS x1.5 and up, and touching the ground below calls SKY LINE xN.
+- [ ] Cloud layer (floor 5+, try `?seed=1&floor=5&clouds`, which starts on the staircase): a staircase of red girders hoisted on crane cables and then cloud wisps climbs an ollie and a flip at a time into the clouds; puffs, drifting clouds, thin clouds that puff away, rainbows to grind and bobbing balloon baskets are all landable. No props sit on the clouds.
+- [ ] Sky line (`?seed=1&floor=6&bot=sky` watches the bot skate it): an ollie and a big flip off the top of a hill reaches the sky; every gap up there is makeable with an ollie and a flip at cruising speed; no pole or tube crosses in front of the skater.
+- [ ] NO GROUND meter: while chaining, a panel under the combo shows the multiplier (pops on each step), the pips (gold at x4) and +$N BONUS; touching the ground shows BANKED +$N and the SKY LINE xN! +$N callout. Check portrait and landscape.
+- [ ] The window washer's rig drops as soon as you land on it; popping off early makes the roof ahead, waiting drops you short.
+- [ ] The crane's jib swings out of the lane and back; landing as it swings away drops you off it.
+- [ ] Jumping the billboard's gap bursts it (RRIP!) with cash; the sheet is gone after.
+- [ ] A stash crate on a water tower lid pays a spin token or a fresh part (your most worn one fills up). A golden pigeon pays a spin token when you ollie over it.
 - [ ] Traffic, cross street cars, the L trains, the cable car, the chaser, drones and birds all glide as smoothly as the skater (no stepping, best seen on a 120 Hz screen). With `?debug=collision` the player's box and the car boxes stay glued to their sprites.
 
 ## Continues
 
 - [ ] The HUD shows three pink hearts beside the floor name at the start of a run.
-- [ ] Bail into a gap, or get busted: a DUNZO or BUSTED card says "3 CONTINUES LEFT". Tap CONTINUE and you're back at the start of that floor, with the score, cash and gear you had when you got there, and one heart fewer.
+- [ ] Bail into a gap, or get busted: a DEAD or BUSTED card says "3 CONTINUES LEFT". Tap CONTINUE and you're back at the start of that floor, with the score, cash and gear you had when you got there, and one heart fewer.
 - [ ] END RUN on the card goes straight to the run summary.
 - [ ] After the third continue there are no hearts, and the next fall ends the run. The summary says "3 continues used".
 - [ ] A new run gives you three hearts again.
@@ -717,6 +726,13 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Impact by drop: after an ollie on flat you can pop again almost at once. After a stair set or a car drop there's a medium crouch. After a roof drop there's a deep crouch, and taps during it are lost until he stands up.
 
 - [ ] Guards shoot (`?escape=3`): about 3 s into the chase you see a "!" over the front guard and a red line to you, then a bang and a yellow tracer. Ollie just before it reaches you and you get DODGED!. Stay on the ground and you get BLAM! and a slam. Up on a high line they don't shoot.
+
+- [ ] Perfect landing: ollie, and tap for the flip just before you'd land. You get PERFECT! with a pop of light and a little speed. Tap at the top of the ollie and it's a normal landing. Flip onto a rail just before touching it and the callout says PERFECT plus the grind name.
+
+- [ ] Flip pop by timing: double tap fast (ollie then flip right away) and you go much higher than flipping at the top of the ollie; the later the flip, the smaller the extra pop.
+
+- [ ] Sewer route: on a street chase, roll into the open drain (yellow and black paint) and you drop into the tunnel with DOWN THE DRAIN!; the Heat bar falls while you're down there; roll through the blue runoff and the deck ticks (SPLSH!); ollie onto a pipe and grind it; a quick double tap bonks the roof; the ramp at the end brings you up with BACK UP!. Ollie the drain and you stay on the street. `?bot=sewer` shows it.
+- [ ] Sewer build-out (`?sewer=rats`, `surge`, `bowl`, `subway`, `gator`, `kick`, `gate`): the way in is a construction spot (cones, barricade, excavator), or a plank ramp at a hill's foot you roll down; ride the runoff and you speed up, with the meter reading DOWNSTREAM and coins x2 and up; roll into a kick-out under a grate and you're thrown up onto the street (KICKED OUT!), ollie it to stay down; rats running at you trip you unless you ollie them (RAT HOP); the flood gate bursts (FLOOD!) and the water catches you if you're slow (WASHED OUT!); the full pipe dips and carves you out; a subway train under the gap you can hop off, or ollie the gap; the alligator opens its jaws, ollie it for a spin token, roll into it and CHOMP!; on a fork floor the SEWER ROAD sign is over the last tunnel's way in, and staying down to the gate takes you to the underground spot.
 
 ## Performance
 

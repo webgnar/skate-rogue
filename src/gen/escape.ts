@@ -7,6 +7,7 @@
 // The helicopter (act 2) hunts you along the street; the drone swarm (act 4) dives into the lane in patterns to be
 // stomped (src/sim/drones.ts). The finale (act 5) doubles the roadblock under the helicopter, and its gate is the
 // way out of the city: clear it and the run is won.
+import { placeGrass } from './grass';
 import { TILE } from '../physics/constants';
 import { buildLevel, type Car, type EscapeKind, type Level } from '../physics/level';
 import { EXIT_PIECE, PIECES, START_PIECE, type Piece } from './pieces';
@@ -135,6 +136,7 @@ export function buildEscape(seed: number, act: number): Level {
 }
 
 function withProps(level: Level): Level {
+  level.grass = placeGrass(level);
   level.props = placeProps(level);
   return level;
 }

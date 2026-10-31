@@ -11,7 +11,9 @@ import { Pilot } from '../src/bot/pilot';
 import { isFloorEdit } from '../src/levels/drafts';
 
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
-const skyOf = (l: ReturnType<typeof chicago>) => [...l.surfaces.filter((s) => s.sky), ...l.rails.filter((r) => r.sky)];
+// (the cloud layer and its staircase are their own, src/gen/clouds.ts)
+const LAYER = new Set(['cloud', 'thin', 'wisp', 'step', 'rainbow']);
+const skyOf = (l: ReturnType<typeof chicago>) => [...l.surfaces.filter((s) => s.sky && !LAYER.has(s.sky)), ...l.rails.filter((r) => r.sky && !LAYER.has(r.sky))];
 
 afterEach(() => useLevelEdits(SAVED_EDITS));
 
@@ -33,7 +35,7 @@ describe('sky beats', () => {
           for (let i = 0; i < w.xs.length; i++) if (w.xs[i] >= s.x0 && w.xs[i] <= s.x1) expect(Math.abs(w.ys[i] - s.y)).toBeGreaterThan(20);
       }
       //a crane boom never climbs
-      for (const r of l.rails.filter((x) => x.sky)) for (let i = 1; i < r.ys.length; i++) expect(r.ys[i]).toBeGreaterThanOrEqual(r.ys[i - 1] - 0.01);
+      for (const r of l.rails.filter((x) => x.sky === 'crane')) for (let i = 1; i < r.ys.length; i++) expect(r.ys[i]).toBeGreaterThanOrEqual(r.ys[i - 1] - 0.01);
     }
   });
 

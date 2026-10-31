@@ -22,6 +22,7 @@ export interface Surface {
   manual?: boolean; // a manual pad (buildLevel): you ride it in a manual
   side?: boolean; // part of a floor's side line (src/gen/sidelines.ts)
   crumble?: boolean; // Greece's ruins: it falls a moment after you land on it
+  crumbleFrames?: number; // and how long that moment is, if not PHYS.crumbleFrames (a thin cloud, src/gen/clouds.ts)
   conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
   el?: boolean; // the L's running rails (src/traffic/el.ts): drawn with the track, not as a bar on posts
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road
@@ -29,6 +30,8 @@ export interface Surface {
   tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
   sky?: string; // a sky beat (src/gen/sky-beats.ts): roofs, billboard, tower or scaffold, drawn by src/render/sky-kit.ts
   top?: boolean; // part of the top route (src/gen/top-route.ts): a rooftop up where the helicopter sees you
+  sewer?: boolean; // the sewer route's floor and outlet ramp (src/gen/sewer.ts), drawn by src/render/sewer-kit.ts
+  launch?: number; // a sewer kick-out (src/gen/sewer.ts): roll off its top and it throws you up at this vsp (px/frame)
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
@@ -87,6 +90,7 @@ export class CurvedRail {
   material: Material = 'metal'; // handrails and curved rails are steel
   wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
   top = false; // the top route's power line (src/gen/top-route.ts)
+  sewer = false; // a pipe in the sewer (src/gen/sewer.ts)
   sky?: string; // a sky beat's grind (src/gen/sky-beats.ts): a crane's boom
 
   constructor(
@@ -148,7 +152,7 @@ export class CurvedRail {
   }
 }
 
-export type PickupKind = 'cash' | 'stoken';
+export type PickupKind = 'cash' | 'stoken' | 'spin'; // spin: a spin token (src/gen/spin-tokens.ts)
 
 // cash and Stoken floating along lines: over gaps, along rails, up high on side lines
 export interface Pickup {
@@ -164,6 +168,7 @@ export interface ForkSite {
   y: number;
   high: Road;
   low: Road;
+  sewer?: Road; // the sewer road: a tunnel that runs to the gate and comes up into the underground spot (src/gen/sewer.ts)
 }
 
 // an act's escape set piece (GDD: How a run ends): which one, and where its scripted part is
@@ -189,6 +194,7 @@ export interface Level {
   rails: CurvedRail[];
   cars: Car[];
   glass: Glass[];
+  grass?: Glass[]; // strips of grass across the street (src/gen/grass.ts): worn wheels bog down on them
   startX: number;
   startY: number;
   finaleX: number; // where the street begins (after a descent); 0 for a street-only floor
@@ -215,7 +221,93 @@ export interface Level {
   chinatown?: [number, number][]; // Chinatown's blocks of hill, px (src/gen/hills.ts)
   hillCross?: { x: number; y: number }[]; // their intersections with cross traffic: the cross street's middle, the ground (src/traffic/hill-cross.ts)
   cabs?: CabRun[]; // their cab flats (src/traffic/cab.ts)
+  sewers?: Sewer[]; // the sewer route under the street chases (src/gen/sewer.ts)
+  skyMovers?: SkyMover[]; // the sky's moving set pieces (src/gen/sky-beats.ts, stepped by src/sim/sky.ts)
+  busts?: SkyBust[]; // paper billboards across the lane up in the sky: skate through one and it bursts
 }
+
+// a sky set piece that moves (zack, 2026-10-31: "along with the set pieces"), px. x0..x1 and y are its deck as
+// built: a blimp's back bobs on the air, a window washer's rig drops under you once you land on it (down to
+// `floor`), a tower crane's jib swings out of the lane and back
+export interface SkyMover {
+  kind: 'blimp' | 'rig' | 'swing' | 'cloud' | 'balloon' | 'beam'; // cloud, balloon: up in the cloud layer (src/gen/clouds.ts)
+  x0: number;
+  x1: number;
+  y: number;
+  floor?: number; // rig: the lowest its deck sinks to
+  phase?: number; // swing, beam: frames into its swing at the start of the floor
+  mast?: number; // swing: the mast's x, what the jib slews round
+}
+
+// a paper billboard standing across the lane between two sky decks: top (y0) to bottom (y1), px
+export interface SkyBust {
+  x: number;
+  y0: number;
+  y1: number;
+}
+
+// a stretch of the sewer route, px: a construction spot in the street drops you in, a tunnel runs under the street,
+// and a storm outlet ramps you back up through a hole further on. y is the tunnel's floor; the street's underside is
+// its roof. Along it: kick-outs that throw you back up through a grate, one set piece, and sometimes the alligator
+export interface Sewer {
+  x0: number; // the tunnel's start (just before the way in)
+  x1: number; // its end (the top of the outlet ramp)
+  y: number;
+  drain: [number, number]; // the construction spot's hole in the street
+  outlet: [number, number]; // the outlet's hole in the street, over the top of its ramp
+  wet: [number, number][]; // stretches of runoff on the floor: they soak the deck, and their current pushes you on
+  entry?: 'dig' | 'ramp'; // an open dig you drop into, or (at the foot of a hill) a plank ramp you roll down
+  kicks?: SewerKick[];
+  piece?: SewerPiece;
+  gator?: [number, number]; // the sewer alligator, nose to tail: ollie it for a spin token, roll into it and it bites
+  gate?: boolean; // it runs to the gate and comes up into the underground spot: the sewer road
+}
+
+// a kick-out (zack, 2026-10-31): a quarterpipe against the tunnel wall that throws you straight up through a grate
+// in the street. Ollie over it to stay down. x0..x1: the ramp; grate: the grate's columns over it, px
+export interface SewerKick {
+  x0: number;
+  x1: number;
+  grate: [number, number];
+}
+
+// a sewer's set piece: a rat pack running at you, a flood surge that chases you down the tunnel from its storm gate,
+// a full pipe bowl the floor dips through, or a subway line crossing under the tunnel
+export type SewerPiece =
+  | { kind: 'rats'; x: number; n: number } // where the pack starts, and how many
+  | { kind: 'surge'; x: number } // the storm gate the water bursts out of
+  | { kind: 'bowl'; x0: number; x1: number; depth: number } // the dip, and how far down its bottom is (px)
+  | { kind: 'subway'; x0: number; x1: number; phase: number }; // the gap over the tracks, and the trains' timing (frames)
+
+// the sewer under x, if there is one
+export function sewerAt(level: Level, x: number): Sewer | undefined {
+  return level.sewers?.find((s) => x >= s.x0 && x < s.x1);
+}
+
+// the lowest your feet can go up at x in the sewer (a y), when you're down in it: the street's underside overhead,
+// except under its holes and grates. undefined up on the street, or with nothing overhead
+export function sewerRoof(level: Level, x: number, y: number): number | undefined {
+  const s = sewerAt(level, x);
+  if (!s || x >= s.drain[0] && x < s.drain[1] || x >= s.outlet[0]) return undefined;
+  if (s.kicks?.some((k) => x >= k.grate[0] && x < k.grate[1])) return undefined;
+  const roof = level.streetY + SEWER_ROOF + PHYS.height;
+  return y >= roof - 1 ? roof : undefined;
+}
+export const SEWER_ROOF = 12; // px: the street's thickness over the tunnel
+
+// the deepest the sewer's floor goes at x (the full pipe's bowl dips under the rest), for where a fall ends
+export function sewerFloor(s: Sewer, x: number): number {
+  const p = s.piece;
+  return p?.kind === 'bowl' && x >= p.x0 && x < p.x1 ? s.y + p.depth : s.y;
+}
+
+// the runoff's current at x on the sewer's floor (y): px/frame it adds to your flow speed, 0 off it
+export function sewerFlow(level: Level, x: number, y: number): number {
+  const s = sewerAt(level, x);
+  if (!s || Math.abs(y - s.y) > 2 || !s.wet.some(([w0, w1]) => x >= w0 && x < w1)) return 0;
+  return SEWER_FLOW.push;
+}
+export const SEWER_FLOW = { push: 0.09, max: 6.8 }; // DOWNSTREAM (zack, 2026-10-31): the current pushes you up to max px/frame
 
 // a Chinatown cab flat: where the cab waits rolling (its back), the ground's height, where it turns off and lets go
 // (its front), and the kicker's lip just past that

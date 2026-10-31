@@ -53,8 +53,8 @@ interface Gate {
 export class GateFx {
   readonly group = new THREE.Group();
   private gates: Gate[] = [];
-  private signs: { mesh: THREE.Mesh; road: 'high' | 'low'; base: THREE.Vector3 }[] = [];
-  private road: 'high' | 'low' | null = null;
+  private signs: { mesh: THREE.Mesh; road: 'high' | 'low' | 'sewer'; base: THREE.Vector3 }[] = [];
+  private road: 'high' | 'low' | 'sewer' | null = null;
   private t = 0;
   private claimable = false;
   bounty = 0; // 0..1, how far the portals have turned to the bounty's colours
@@ -101,7 +101,7 @@ export class GateFx {
   }
 
   // the road the skater is on past the fork (FloorSim.roadAhead): its sign swells, the other dims
-  setRoad(road: 'high' | 'low' | null): void {
+  setRoad(road: 'high' | 'low' | 'sewer' | null): void {
     this.road = road;
   }
 

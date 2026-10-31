@@ -18,8 +18,9 @@ export const BAY = {
   wide: 700, // across, world units: it follows the camera, so this only has to fill a wide lens
   below: 0.5, // under the skyline cards' feet, so they stand in it
   blue: 0x8fcdf2, // the water, mixed with the sky's horizon colour
-  mixSky: 0.55, // how much of the sky's horizon colour it takes
-  deeper: 0.9, // and a touch darker than it, so the shoreline reads against the sky
+  mixSky: 0.3, // how much of the sky's horizon colour it takes (less than half: at dusk more read as a pale blank
+  // when you drop out of the clouds, 2026-10-31)
+  deeper: 0.82, // and a touch darker than it, so the shoreline reads against the sky
   dash: [3.2, 1.1], // ripple cells, world units across and deep
   drift: 0.35, // world units a second the chop drifts
 };

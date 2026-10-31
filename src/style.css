@@ -195,7 +195,16 @@ html, body {
 #over .held { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 520px; }
 #over .held .chip { font-size: 13px; }
 #over .none { opacity: 0.6; }
-#over .again { font-size: 16px; opacity: 0.85; margin-top: 6px; }
+/* one tap straight into a new run (zack's roadmap, 2026-10-31); a tap anywhere else on the card still works too */
+#over .go { all: unset; box-sizing: border-box; cursor: pointer; font-family: 'Bangers', 'Arial Black', sans-serif; letter-spacing: 0.08em; padding: 8px 40px; background: var(--good); color: #000; font-size: clamp(28px, 6vw, 40px); border: 2.5px solid #000; box-shadow: 4px 4px 0 #000; transform: skewX(-8deg); text-shadow: none; }
+#over .go:active { transform: skewX(-8deg) translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+/* a phone on its side: the card is short, so it packs tighter and AGAIN stays big */
+@media (max-height: 420px) {
+  #over { gap: 6px; }
+  #over .reached { font-size: 16px; }
+  #over .best { font-size: 12px; }
+  #over .go { font-size: 30px; padding: 4px 36px; }
+}
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(24px); } }
 
@@ -366,6 +375,28 @@ html, body {
 #combobox .c { font-size: calc(var(--u) * 2.2); line-height: 1; color: var(--pink); -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
 #combo { font-style: normal; color: var(--yellow); font-size: 1.15em; }
 #pending { font-size: calc(var(--u) * 1.4); color: #fff; line-height: 1.1; }
+/* NO GROUND (src/sim/sky.ts): up on the sky route, the coin multiplier, a pip per sky piece chained (filling to the
+   cap), and the extra cash it's paid so far; it flashes when it steps up and when it banks */
+#ngbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--u) * 0.2) calc(var(--u) * 1.1) calc(var(--u) * 0.35);
+  border-color: #5fe8ff;
+  transition: opacity 0.2s, transform 0.2s;
+}
+#ngbox[data-live='0'] { opacity: 0; transform: skewX(-10deg) scale(0.85); }
+#ngbox[data-banked='1'] { border-color: var(--yellow); }
+#ngbox .c { font-size: calc(var(--u) * 1.15); line-height: 1; color: #5fe8ff; letter-spacing: 0.06em; }
+#ngbox .m { font-size: calc(var(--u) * 1.9); line-height: 1; color: #fff; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+#ngmult { font-style: normal; color: var(--yellow); font-size: 1.2em; display: inline-block; }
+#ngbox.step #ngmult { animation: ngstep 0.35s ease-out; }
+@keyframes ngstep { 0% { transform: scale(1.8); } 100% { transform: scale(1); } }
+#ngpips { display: flex; gap: calc(var(--u) * 0.25); margin-top: calc(var(--u) * 0.25); }
+#ngpips b { width: calc(var(--u) * 0.9); height: calc(var(--u) * 0.9); border: 1.5px solid #000; background: #2a2c3a; transform: skewX(-10deg); }
+#ngpips b.on { background: #5fe8ff; }
+#ngbox[data-cap='1'] #ngpips b.on { background: var(--yellow); }
+#ngbonus { font-size: calc(var(--u) * 1.2); color: #1fd67a; line-height: 1.2; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
 
 #right { display: flex; gap: calc(var(--u) * 1); align-items: flex-start; }
 #money {
@@ -533,6 +564,7 @@ html, body {
   #center { justify-content: center; }
   #scorebox { min-width: calc(var(--u) * 8); padding: calc(var(--u) * 0.2) calc(var(--u) * 0.9) calc(var(--u) * 0.3); }
   #combobox { position: absolute; top: calc(100% + var(--u) * 0.8); left: 50%; translate: -50% 0; }
+  #ngbox { position: absolute; top: calc(100% + var(--u) * 6.6); left: 50%; translate: -50% 0; }
   #money { flex-direction: column; align-items: flex-start; gap: calc(var(--u) * 0.2); font-size: calc(var(--u) * 1.7); padding: calc(var(--u) * 0.3) calc(var(--u) * 0.9); }
   #meters { grid-column: 1 / 4; flex-direction: column; gap: calc(var(--u) * 0.5); padding: 0 calc(var(--u) * 0.6); }
   #stoke, #heat { justify-content: flex-start; }
@@ -1268,7 +1300,7 @@ html, body {
   #pick .card, #under .card { flex: 1 1 calc(var(--u) * 15); max-width: calc(var(--u) * 17); min-height: calc(var(--u) * 24); }
 }
 
-/* the run-over and continue headline: DUNZO (zack, 2026-10-26) in the shop's graffiti style, over a red spray */
+/* the run-over and continue headline: DEAD (zack, 2026-10-31; was DUNZO) in the shop's graffiti style, over a red spray */
 #over > b, #cont > b {
   position: relative;
   isolation: isolate;
@@ -1574,3 +1606,144 @@ html, body {
 @keyframes wirepulse { from { filter: brightness(1); } to { filter: brightness(1.8) drop-shadow(0 0 4px var(--trigger)); } }
 @media (prefers-reduced-motion: reduce) { #shop .slots.preview .wire { animation: none; filter: brightness(1.6); } }
 #shop[data-over] .ghost { opacity: 0.4; transition: opacity 0.1s; }
+
+/* missions and Skater Rank (src/ui/missions-panel.ts), on the pause card and the run summary */
+#over { overflow-y: auto; justify-content: safe center; box-sizing: border-box; }
+.missions { display: flex; flex-direction: column; gap: 5px; width: min(440px, 92vw); font-family: 'Bangers', 'Arial Black', sans-serif; letter-spacing: 0.05em; text-shadow: none; }
+.missions:empty { display: none; }
+.missions .rank { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--trick); font-size: 16px; -webkit-text-stroke: 0; }
+.missions .rank .tag { color: #fff; opacity: 0.85; }
+.missions .rank .num { font-size: 24px; color: var(--trick); -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+.missions .pips { display: flex; gap: 4px; }
+.missions .pips i { width: 12px; height: 12px; border: 2px solid #000; background: #3a3050; transform: rotate(45deg) scale(0.8); }
+.missions .pips i.on { background: var(--trick); }
+.missions .mission {
+  display: grid;
+  grid-template-columns: 1fr 54px auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  font-size: 15px;
+  color: #fff;
+}
+.missions .txt { font-family: system-ui, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0; line-height: 1.15; }
+.missions .bar { height: 8px; background: #3a3050; border: 1.5px solid #000; overflow: hidden; }
+.missions .bar i { display: block; height: 100%; background: var(--good); }
+.missions .n { min-width: 2.6em; text-align: right; color: var(--good); }
+.missions button {
+  all: unset;
+  cursor: pointer;
+  padding: 3px 8px;
+  font-size: 13px;
+  color: #000;
+  background: var(--trick);
+  border: 2px solid #000;
+  transform: skewX(-8deg);
+}
+.missions button[disabled] { opacity: 0.35; cursor: default; }
+/* a short screen (a phone on its side): tighter rows */
+@media (max-height: 460px) {
+  .missions { gap: 3px; }
+  .missions .rank { font-size: 14px; }
+  .missions .rank .num { font-size: 18px; }
+  .missions .mission { padding: 1px 4px 1px 8px; font-size: 13px; }
+  .missions .txt { font-size: 12px; }
+  .missions button { padding: 1px 7px; font-size: 12px; }
+  #over { gap: 5px; }
+  #over b { font-size: 30px; }
+  #over .final { font-size: 22px; }
+  #over .reached { font-size: 15px; }
+  #over .best { font-size: 12px; }
+  #over .held:has(.none) { display: none; }
+  #over .metabtn { min-height: 34px; padding: 5px 14px; font-size: 17px; }
+  #over .again { margin-top: 0; font-size: 14px; }
+}
+
+/* the end-of-run slot machine (src/ui/slots-panel.ts): one machine per spin token */
+#spin {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(18, 12, 30, 0.8);
+  font-family: 'Bangers', 'Arial Black', sans-serif;
+  letter-spacing: 0.06em;
+  animation: fade 0.2s ease-out;
+  --cell: 54px;
+}
+#spin.many { --cell: 36px; gap: 8px; }
+#spin .title { font-size: clamp(30px, 8vw, 52px); color: #ff3b4e; -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; transform: skewX(-8deg); }
+#spin .machines { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 16px; max-width: 760px; }
+#spin .machine { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#spin .reels {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: #e8203a;
+  border: 3px solid #000;
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px #ffd84a, 4px 5px 0 3px #000;
+}
+#spin .reel { width: var(--cell); height: var(--cell); overflow: hidden; background: #fffaeb; border: 2px solid #000; border-radius: 4px; box-shadow: inset 0 6px 8px rgba(0, 0, 0, 0.35), inset 0 -6px 8px rgba(0, 0, 0, 0.35); }
+#spin .strip { display: flex; flex-direction: column; }
+#spin .sym { flex: none; height: var(--cell); display: grid; place-items: center; font: 900 calc(var(--cell) * 0.62) / 1 "Arial Black", sans-serif; -webkit-text-stroke: 3px #000; paint-order: stroke fill; }
+#spin .sym.stoken { color: #b98cff; }
+#spin .sym.cash { color: #3fd46a; }
+#spin .sym.boon { font-size: calc(var(--cell) * 0.5); -webkit-text-stroke: 0; }
+#spin .sym.heart { color: #ff3b4e; }
+#spin .sym.star { color: #ffd84a; }
+#spin .prize { font-size: 20px; color: var(--good); text-shadow: 2px 2px 0 #000; }
+#spin .machine.big .prize { font-size: 26px; color: var(--trick); }
+#spin.many .prize { font-size: 15px; }
+#spin.many .machine.big .prize { font-size: 18px; }
+#spin .again { font: 15px system-ui, sans-serif; opacity: 0.8; }
+@media (max-height: 460px) {
+  #spin { --cell: 44px; gap: 8px; }
+  #spin.many { --cell: 30px; }
+  #spin .title { font-size: 30px; }
+}
+
+/* the in-run mission popup (src/ui/mission-toast.ts): above the gear wear, bottom right, clear of the callouts.
+   Cyan while a mission moves on, gold with MISSION COMPLETE! when one is done */
+#mission {
+  --edge: var(--cyan);
+  display: grid;
+  gap: calc(var(--u) * 0.25);
+  width: clamp(170px, 30vw, 250px);
+  margin-bottom: calc(var(--u) * 0.6);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 0.8) calc(var(--u) * 0.6);
+  background: linear-gradient(180deg, #24123c, var(--hud-bg));
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px var(--edge), 3px 4px 0 2px #000;
+  transform: skewX(-6deg);
+  opacity: 0;
+  translate: 40px 0;
+  transition: opacity 0.2s ease-out, translate 0.26s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+#mission[hidden] { display: none; }
+#mission.in { opacity: 1; translate: 0 0; }
+#mission > * { transform: skewX(6deg); }
+#mission .tag { margin: 0; font-size: calc(var(--u) * 1.15); color: var(--edge); letter-spacing: 0.1em; line-height: 1; }
+#mission .txt { font-family: system-ui, sans-serif; font-weight: 800; font-size: max(12px, calc(var(--u) * 1.25)); line-height: 1.15; color: #fff; letter-spacing: 0; }
+#mission .row { display: flex; align-items: center; gap: calc(var(--u) * 0.6); }
+#mission .bar { flex: 1; height: calc(var(--u) * 0.8); min-height: 6px; background: #3a3050; border: 1.5px solid #000; overflow: hidden; }
+#mission .bar i { display: block; height: 100%; background: var(--edge); transition: width 0.35s ease-out; }
+#mission .n { min-width: 2.4em; text-align: right; font-size: calc(var(--u) * 1.6); line-height: 1; color: var(--edge); -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+#mission .n.bump { animation: mbump 0.3s ease-out; }
+#mission.done { --edge: var(--yellow); }
+#mission.done.in { animation: mstamp 0.42s cubic-bezier(0.2, 1.6, 0.4, 1); }
+#mission.done .bar i { transition-duration: 0.55s; }
+@keyframes mbump { 40% { transform: scale(1.35); } }
+@keyframes mstamp { 0% { scale: 1; } 35% { scale: 1.14; } 100% { scale: 1; } }
+#app.calm #mission { translate: 0 0; transition: opacity 0.2s; }
+#app.calm #mission.done.in, #app.calm #mission .n.bump { animation: none; }
+#paused .settings.dev .reset b { color: #ff8a8a; }
+#paused .settings.dev .reset.on { background: #b02a3a; }

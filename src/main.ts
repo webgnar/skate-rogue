@@ -19,6 +19,7 @@ import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { makeCallouts } from './ui/callouts';
+import { makeMissionToast } from './ui/mission-toast';
 import { clampUserZoom, initCam } from './render/camera';
 import { initBullet } from './game/bullet-time';
 import { isBiome } from './render/biomes';
@@ -30,6 +31,7 @@ import { loadLevelDrafts } from './levels/drafts';
 import { useLevelEdits } from './gen/level-edits';
 import { dailySeed, dayKey, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
 import { loadSave, writeSave } from './run/save';
+import { resetAndReload, resetFromLink } from './run/reset';
 import { GNAR_RULES, gnarOpen, MAX_GNAR } from './run/gnar';
 import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
@@ -44,6 +46,8 @@ import { Sound } from './audio/sound';
 import { SETTINGS, buzz, loadSettings, saveSettings } from './ui/settings';
 import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
+import { bindMissions } from './ui/missions-panel';
+import { SlotsPanel } from './ui/slots-panel';
 
 const base = import.meta.env.BASE_URL;
 
@@ -186,9 +190,12 @@ function gearTone(c: number): string {
 
 // set up by makeHud: the drag preview, drawn on the shop it holds
 let shopPreview: (card: HTMLElement, to: HTMLElement | null) => void = () => {};
+// set once the game is up: a mission's SKIP
+let skipMission: (i: number) => void = () => {};
 
 function makeHud(): Hud {
   const callouts = makeCallouts(document.getElementById('callout')!, () => FX.reduceMotion);
+  const missionToast = makeMissionToast(document.getElementById('mission')!);
   const debugEl = document.getElementById('debug')!;
   const boonsEl = document.getElementById('boons')!;
   const pickEl = document.getElementById('pick')!;
@@ -201,6 +208,8 @@ function makeHud(): Hud {
   const pausedEl = document.getElementById('paused')!;
   const hintEl = document.getElementById('hint')!;
   const view = new HudView();
+  const slots = new SlotsPanel(document.getElementById('spin')!, () => FX.reduceMotion);
+  const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
   let level = 0;
   let held: Held[] = [];
   //screen juice (src/style.css): the card you picked pops while the others fall away; the shop deals its stock in
@@ -236,6 +245,7 @@ function makeHud(): Hud {
     },
     money: (cash, stoken) => view.money(cash, stoken),
     score: (score, combo, stoke, gnar, pending) => view.setScore(score, combo, stoke, gnar, pending),
+    noGround: (n, mult, bonus, banked, label) => view.setNoGround(n, mult, bonus, banked, label),
     callout: (text, kind = 'trick') => callouts.show(text, kind),
     debug: (text) => (debugEl.textContent = text),
     heat: (value) => {
@@ -344,15 +354,20 @@ function makeHud(): Hud {
     cont: (v) => {
       contEl.hidden = !v;
       if (!v) return;
-      contEl.querySelector('b')!.textContent = v.caught ? 'BUSTED' : 'DUNZO';
+      contEl.querySelector('b')!.textContent = v.caught ? 'BUSTED' : 'DEAD';
       contEl.querySelector('.left')!.textContent = `${v.left} CONTINUE${v.left === 1 ? '' : 'S'} LEFT`;
     },
+    missions: (v) => drawMissions(v),
+    missionTick: (t) => missionToast.tick(t),
+    missionDone: (t) => missionToast.done(t),
+    slots: (v) => slots.show(v),
+    slotsSkip: () => slots.skip(),
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
     over: (result) => {
       overEl.hidden = !result;
       if (!result) return;
       overEl.classList.toggle('won', result.won);
-      overEl.querySelector('b')!.textContent = result.won ? 'YOU ESCAPED!' : result.caught ? 'BUSTED' : 'DUNZO';
+      overEl.querySelector('b')!.textContent = result.won ? 'YOU ESCAPED!' : result.caught ? 'BUSTED' : 'DEAD';
       overEl.querySelector('.reached')!.textContent = result.won
         ? `Out of the city in ${result.floor} floors · escape #${result.wins}`
         : `You made it to act ${result.act}, floor ${result.floor}`;
@@ -370,6 +385,8 @@ function makeHud(): Hud {
 const loading = new Loading(document.getElementById('loading')!);
 
 async function start() {
+  //?reset wipes the saved progress and reloads without it (src/run/reset.ts)
+  if (resetFromLink()) return;
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
   applyWeatherParams(params);
@@ -433,7 +450,7 @@ async function start() {
   await loading.paint();
   const input = new OneButton(document.getElementById('app')!);
   //test URLs (src/bot/repro.ts): ?escape=2 starts on act 2's escape, ?boons=bigPop,grease holds those, ?danger=3 is rush-hour traffic
-  const escape = Math.min(ACTS, Math.max(0, Math.floor(Number(params.get('escape')) || 0)));
+  const escape = Math.min(ACTS, Math.max(0, Math.floor(Number(params.get('escape')) || (params.has('shop') ? 1 : 0)))); // ?shop: act 1's escape, to the shop
   const startAt = escape ? escape * FLOORS_PER_ACT : Math.max(1, Math.floor(Number(params.get('floor')) || 1));
   const danger = Math.min(3, Math.max(1, Math.floor(Number(params.get('danger')) || 1)));
   //a new phone starts on the tutorial floor (?tutorial shows it again; a test URL skips it)
@@ -454,11 +471,16 @@ async function start() {
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
+  skipMission = (i) => game.skipMission(i);
   built();
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
+  if (params.has('clouds')) game.startOnClouds();
+  //?sewer (or ?sewer=rats, surge, bowl, subway, gator, kick, gate) starts at the way into a sewer (src/gen/sewer.ts)
+  if (params.has('sewer')) game.startInSewer(params.get('sewer') ?? '');
+  if (params.has('shop')) game.startAtShop();
   const bot = params.get('bot');
   if (bot !== null) {
-    game.setAutopilot(bot === 'mash' || bot === 'high' ? bot : 'ref');
+    game.setAutopilot(bot === 'mash' || bot === 'high' || bot === 'sewer' || bot === 'sky' ? bot : 'ref');
     game.timeScale = Math.min(8, Math.max(1, Number(params.get('turbo')) || 1));
   }
   //?debug (and ?bot) expose the game for headless checks: the playtest runner reads game.playtest and window.rig
@@ -577,6 +599,7 @@ async function start() {
     },
     unlockAll: all,
     setUnlockAll: (on) => reloadWith('unlockall', on),
+    reset: resetAndReload,
   });
   if (DEV.collision || params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
   showFps(DEV.fps);

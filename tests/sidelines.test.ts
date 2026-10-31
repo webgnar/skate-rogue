@@ -7,7 +7,7 @@ import { FloorSim } from '../src/sim/floor';
 const floors = (floor: number, n = 10) => Array.from({ length: n }, (_, s) => validatedFloor((s + 1) * 97, floor).level);
 
 describe('side lines', () => {
-  it('turn up on most floors from floor 2, clear of anything tall, with a Stoken at the top', () => {
+  it('turn up on most floors from floor 2, clear of anything tall, with a Stoken (or a spin token) at the top', () => {
     for (const l of floors(1)) expect(l.surfaces.some((s) => s.side)).toBe(false);
     const ls = floors(5, 20); // (12 was too few: which roll of a floor validates shifts with the feel, 2026-10-27)
     const withLine = ls.filter((l) => l.surfaces.some((s) => s.side));
@@ -18,7 +18,7 @@ describe('side lines', () => {
       const x0 = line[0].x0;
       const x1 = line[line.length - 1].x1;
       expect(l.cars.some((c) => c.x1 > x0 && c.x0 < x1 && (c.model || c.roof < l.streetY - SIDE.clear))).toBe(false);
-      expect(l.pickups.some((p) => p.kind === 'stoken' && p.x > x0 && p.x < x1 && p.y < line[line.length - 1].y)).toBe(true);
+      expect(l.pickups.some((p) => (p.kind === 'stoken' || p.kind === 'spin') && p.x > x0 && p.x < x1 && p.y < line[line.length - 1].y)).toBe(true);
     }
   });
 

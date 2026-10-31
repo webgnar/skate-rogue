@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE, BOARD, CLIPS, clipLength, deckPoint, footTarget, kneePoint, mix, sample, type Pose } from '../src/render/poses';
+import { BASE, BOARD, CLIPS, CODE_CLIPS, clipLength, deckPoint, footTarget, kneePoint, mix, sample, type Pose } from '../src/render/poses';
 import { boardHalfTurn, mirrorPose, onNose, stanceYaw, switchName, SPINS } from '../src/render/poses';
 
 const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) =>
@@ -52,14 +52,15 @@ describe('rig poses', () => {
     expect(hf.footFOn + hf.footBOn).toBe(0);
     expect(CLIPS.kickflip.keys[1].pose.footFZ!).toBeLessThan(0); // flicked off the heel side
     expect(CLIPS.heelflip.keys[1].pose.footFZ!).toBeGreaterThan(0); // kicked off the toe side
-    // mid-flip the legs split wide over the board: front foot out past the nose, both feet well above the deck
-    const mid = sample(CLIPS.kickflip, 0.2);
+    // mid-flip the legs split wide over the board: front foot out past the nose, both feet well above the deck (the
+    // code clip: zack keys his own in ?editor, clip-edits.json)
+    const mid = sample(CODE_CLIPS.kickflip, 0.2);
     expect(mid.footFX).toBeGreaterThan(BOARD.tail);
     expect(mid.footFX - mid.footBX).toBeGreaterThan(1.0);
     expect(Math.min(mid.footFY, mid.footBY) - (mid.boardY + BOARD.deckTop)).toBeGreaterThan(0.25);
     expect(mid.armRRaise).toBeGreaterThan(2.3); // back arm up overhead
     // the back foot catches first
-    const catchKey = CLIPS.kickflip.keys.find((k) => k.pose.footBOn === 1)!;
+    const catchKey = CODE_CLIPS.kickflip.keys.find((k) => k.pose.footBOn === 1)!;
     expect(catchKey.pose.footFOn).toBe(0);
   });
 
@@ -135,7 +136,7 @@ describe('rig poses', () => {
   });
 
   it('boardslide: board across the rail on its middle, feet either side, chest down the rail', () => {
-    const p = sample(CLIPS.grind2, 0);
+    const p = sample(CODE_CLIPS.grind2, 0); // the code clip: zack's edit sways the chest round (clip-edits.json)
     expect(p.boardYaw).toBeCloseTo(Math.PI / 2);
     expect(footTarget(p, true).z).toBeLessThan(-0.2);
     expect(footTarget(p, false).z).toBeGreaterThan(0.2);
@@ -202,6 +203,7 @@ describe('rig poses', () => {
     const m = mirrorPose(p);
     expect([m.kneeBX, m.kneeBY, m.kneeBZ]).toEqual([-0.3, -0.2, 0.1]);
     expect(m.kneeFX).toBeCloseTo(0.4);
+    expect(mirrorPose({ ...BASE, armLTwist: 0.7 }).armRTwist).toBe(0.7);
   });
 
   it('blends between clips take the short way round for spun boards', () => {

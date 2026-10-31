@@ -18,12 +18,14 @@ export interface DevHooks {
   jump(target: number): void; // reloads
   unlockAll: boolean;
   setUnlockAll(on: boolean): void; // reloads
+  reset(): void; // wipes the saved progress, reloads as a fresh player
 }
 
 export class DevPanel {
   private readonly body: HTMLElement;
   private readonly bar = document.createElement('div');
   private target: number;
+  private confirmReset = 0; // when the first tap on RESET PROGRESS was; a second tap within 4 s wipes
 
   constructor(
     head: HTMLElement,
@@ -39,6 +41,7 @@ export class DevPanel {
         <button class="row" data-dev="momentum"><span>MOMENTUM</span><b></b></button>
         <button class="row" data-dev="pilot"><span>AUTOPILOT</span><b></b></button>
         <button class="row" data-dev="unlock"><span>UNLOCK ALL</span><b></b></button>
+        <button class="row reset" data-dev="reset"><span>RESET PROGRESS</span><b></b></button>
         <div class="row jump"><span>JUMP</span><button data-dev="prev">◀</button><b></b><button data-dev="next">▶</button><button data-dev="go">GO</button></div>
       </div>`,
     );
@@ -61,7 +64,12 @@ export class DevPanel {
       else if (key === 'prev') this.target = (this.target + n - 1) % n;
       else if (key === 'next') this.target = (this.target + 1) % n;
       else if (key === 'go') hooks.jump(this.target);
-      else return;
+      else if (key === 'reset') {
+        //two taps: the first asks, the second (within 4 s) wipes and reloads
+        if (performance.now() - this.confirmReset < 4000) return hooks.reset();
+        this.confirmReset = performance.now();
+        setTimeout(() => this.render(), 4000);
+      } else return;
       saveDev();
       this.render();
     });
@@ -94,6 +102,8 @@ export class DevPanel {
     const pilot = this.hooks.pilot();
     set('pilot', pilot ? pilot.toUpperCase() : 'OFF', !!pilot);
     onOff('unlock', this.hooks.unlockAll);
+    const asking = performance.now() - this.confirmReset < 4000;
+    set('reset', asking ? 'TAP AGAIN' : 'WIPE', asking);
     this.body.querySelector('.jump b')!.textContent = this.hooks.targets[this.target].toUpperCase();
     this.bar.hidden = !DEV.collision && speed === 1;
     const slow = this.bar.querySelector<HTMLElement>('[data-c="slow"]')!;

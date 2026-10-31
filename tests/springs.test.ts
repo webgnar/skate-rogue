@@ -75,4 +75,69 @@ describe('springs (hair that trails the motion)', () => {
     expect(pop('SpringSpike0')).toBeLessThan(0.29);
     expect(pop('SpringSpike0')).toBeGreaterThan(pop('SpringHair0') + 0.02);
   });
+
+  it('fabric: neighbouring hood chains hold together as one sheet', () => {
+    expect(feelOf('SpringHood2_0').cloth).toBeGreaterThan(0);
+    // two chains side by side hanging off the head, 0.1 apart; only one of them is pulled hard by a pose change
+    const sheet = (prefix: string) => {
+      const root = new THREE.Group();
+      const head = new THREE.Bone();
+      head.name = 'Head';
+      root.add(head);
+      const tips: THREE.Bone[] = [];
+      const anchors: THREE.Bone[] = [];
+      for (const [c, x] of [[0, -0.05], [1, 0.05]] as const) {
+        const anchor = new THREE.Bone(); // what each chain hangs from, so a pose can turn one and not the other
+        anchor.position.set(x, 0, 0);
+        head.add(anchor);
+        anchors.push(anchor);
+        let parent: THREE.Bone = anchor;
+        for (let i = 0; i < 3; i++) {
+          const b = new THREE.Bone();
+          b.name = `${prefix}${c}_${i}`;
+          b.position.set(0, i ? -0.1 : 0, 0);
+          parent.add(b);
+          parent = b;
+        }
+        tips.push(parent);
+      }
+      root.updateMatrixWorld(true);
+      const s = new Springs(root, []);
+      s.update(1 / 60, 1);
+      // the second chain's root swings its rest out sideways, so its strand wants to hang away from the first
+      anchors[1].quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), 1.2);
+      for (let i = 0; i < 90; i++) {
+        root.updateMatrixWorld(true);
+        s.update(1 / 60, 1);
+      }
+      const chains = (s as unknown as { chains: { p: THREE.Vector3 }[][] }).chains;
+      return chains[0][2].p.distanceTo(chains[1][2].p);
+    };
+    expect(sheet('SpringHair')).toBeGreaterThan(0.2); // loose strands go their own ways
+    expect(sheet('SpringHood')).toBeLessThan(sheet('SpringHair') - 0.05); // fabric keeps them together
+  });
+
+  it('fabric that closes round into a loop ties its last strip back to its first; an open sheet does not', () => {
+    const ties = (around: number) => {
+      const root = new THREE.Group();
+      const spine = new THREE.Bone();
+      spine.name = 'Spine';
+      root.add(spine);
+      for (let c = 0; c < 6; c++) {
+        const a = (c / 6) * around;
+        let parent: THREE.Bone = spine;
+        for (let i = 0; i < 2; i++) {
+          const b = new THREE.Bone();
+          b.name = `SpringShirt${c}_${i}`;
+          b.position.set(i ? 0 : Math.sin(a) * 0.15, i ? -0.1 : 0, i ? 0 : Math.cos(a) * 0.15);
+          parent.add(b);
+          parent = b;
+        }
+      }
+      root.updateMatrixWorld(true);
+      return (new Springs(root, []) as unknown as { ties: unknown[] }).ties.length;
+    };
+    expect(ties(Math.PI * 2)).toBe(6 * 2); // round the waist
+    expect(ties(Math.PI)).toBe(5 * 2); // half way round: open at the ends
+  });
 });

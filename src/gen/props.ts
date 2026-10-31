@@ -9,6 +9,8 @@ import { makeRng, type Rng } from './rng';
 import { CROSS } from '../traffic/cross';
 import { DOOR } from '../traffic/street';
 
+export type Loot = 'cash' | 'stoken' | 'spin' | 'gear';
+
 export interface Prop {
   name: string; // the Blender part in props.glb (art/props.py)
   x: number; // px, the middle of its base
@@ -16,8 +18,9 @@ export interface Prop {
   z: number; // tiles: 0 is the skate lane, negative is further back
   yaw: number;
   breaks: boolean; // a smashable in the lane; scenery doesn't
-  loot?: 'cash' | 'stoken'; // hidden inside: a few coins, or a floor's one golden prop's Stoken
+  loot?: Loot; // hidden inside: a few coins, a floor's one golden prop's Stoken, a spin token (src/gen/spin-tokens.ts), or a fresh gear part (a sky stash, src/gen/sky-beats.ts)
   ai?: boolean; // the AI's stuff: smashing it cools Heat a little
+  stash?: boolean; // a sky stash's tagged crate on a water tower's lid (src/gen/sky-beats.ts)
 }
 
 // the hit box: half-width and height in px
@@ -51,6 +54,7 @@ const STREET: [string, number][] = [
   ['SandwichBoard', 2], ['DeliveryBot', 1], ['AIKiosk', 1], ['FlockPole', 1],
 ];
 const LEDGE: [string, number][] = [['Bottle', 4], ['Can', 3], ['Planter', 2], ['CardboardBox', 2]];
+const SEWER_JUNK: [string, number][] = [['Bottle', 3], ['Can', 4], ['CardboardBox', 2], ['Barrel', 1]]; // washed down the sewer
 const SCENERY: [string, number][] = [['Hydrant', 3], ['Bench', 2], ['TrashCan', 2], ['Mailbox', 1], ['Meter', 2], ['SignPole', 1]];
 const NEWS = ['NewsBoxRed', 'NewsBoxBlue', 'NewsBoxYellow'];
 const AI = new Set(['AIKiosk', 'DeliveryBot', 'FlockPole']);
@@ -109,11 +113,13 @@ export function placeProps(level: Level): Prop[] {
   //bottles, cans and planters on ledges and roofs, away from their ends
   for (const s of level.surfaces) {
     if ((s.kind !== 'ledge' && s.kind !== 'roof') || s.side || s.y1 !== undefined || s.x1 - s.x0 < PROPS.ledgeMin) continue;
+    //(nothing left lying about up on the cloud layer or its staircase, src/gen/clouds.ts)
+    if (s.sky === 'cloud' || s.sky === 'thin' || s.sky === 'wisp' || s.sky === 'step') continue;
     if (s.x0 < level.startX + 4 * TILE) continue;
     const n = 1 + (s.x1 - s.x0 > 8 * TILE ? Math.floor(rng() * 3) : Math.floor(rng() * 2));
     for (let i = 0; i < n; i++) {
       const x = s.x0 + TILE + rng() * (s.x1 - s.x0 - 2 * TILE);
-      add(pick(rng, LEDGE), x, s.y, lane(), true);
+      add(pick(rng, s.sewer ? SEWER_JUNK : LEDGE), x, s.y, lane(), true);
     }
   }
   //one golden prop a floor holds a Stoken

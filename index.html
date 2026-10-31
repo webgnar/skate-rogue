@@ -48,6 +48,7 @@
           <div id="center">
             <div id="scorebox" class="panel"><small>SCORE</small><span id="score">0</span></div>
             <div id="combobox" class="panel" data-live="0"><span class="c">COMBO <em id="combo"></em></span><span id="pending"></span></div>
+            <div id="ngbox" class="panel" data-live="0"><span class="c" id="nglabel">NO GROUND</span><span class="m">COINS <em id="ngmult">x1</em></span><span id="ngpips"></span><span id="ngbonus"></span></div>
           </div>
           <div id="right">
             <div id="money" class="panel">
@@ -68,7 +69,7 @@
           </div>
         </div>
         <div id="board"><span class="tag">BOARD MODS</span><div id="slots"></div></div>
-        <div id="gear"><span class="tag">GEAR WEAR</span><div id="gearbars"></div></div>
+        <div id="gear"><div id="mission" hidden></div><span class="tag">GEAR WEAR</span><div id="gearbars"></div></div>
         <div id="callout"></div>
         <div id="hint">TAP / HOLD = OLLIE &middot; TAP IN THE AIR = FLIP</div>
         <div id="boons"></div>
@@ -79,6 +80,7 @@
       <div id="paused" hidden>
         <div class="title">PAUSED</div>
         <div class="held"></div>
+        <div class="missions"></div>
         <button id="resume">RESUME &#9654;</button>
         <div class="settings"></div>
         <button id="devhead">DEV TOOLS</button>
@@ -112,18 +114,25 @@
         <img class="deco right" src="sprites/cards/board.png" alt="" draggable="false" />
       </div>
       <div id="cont" hidden>
-        <b>DUNZO</b>
+        <b>DEAD</b>
         <span class="left"></span>
         <button class="go" data-continue>CONTINUE &#9654;</button>
         <span class="note">back to the start of this floor, as you were when you got here</span>
         <button class="giveup" data-giveup>END RUN</button>
       </div>
+      <div id="spin" hidden>
+        <div class="title">SPIN TOKEN</div>
+        <div class="machines"></div>
+        <span class="again">tap to collect</span>
+      </div>
       <div id="over" hidden>
-        <b>DUNZO</b>
+        <b>DEAD</b>
         <span class="final"></span>
+        <button class="go" data-again>AGAIN &#9654;</button>
         <span class="reached"></span>
         <span class="best"></span>
         <div class="held"></div>
+        <div class="missions"></div>
         <div class="metarow">
           <button class="metabtn" data-open-meta>UNLOCKS</button>
           <button class="metabtn" data-daily hidden>DAILY RUN</button>
@@ -131,7 +140,6 @@
           <button class="metabtn" data-gnar hidden>GNAR OFF</button>
         </div>
         <span class="gnarrules" data-gnar-rules></span>
-        <span class="again">tap for a new run</span>
       </div>
       <div id="scores" hidden>
         <div class="tabs"></div>

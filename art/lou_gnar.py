@@ -1,12 +1,14 @@
 # Builds Lou Gnar's astronaut (the Gnar Run player model) in Blender and exports public/models/lou-gnar.glb.
 #
-#   blender -b -P art/lou_gnar.py            (or run it from Blender's Text Editor; it rebuilds the scene)
-#   blender -b art/lou-gnar.blend -P art/lou_gnar.py -- --export-only
-#                                            (after editing the actions in Blender: writes the GLB from the file)
+#   blender -b -P art/lou_gnar.py            (writes the GLB from art/lou-gnar.blend as it is)
+#   blender -b -P art/lou_gnar.py -- --rebuild
+#                                            (from this script, over the .blend: hand edits there are lost)
 #
-# The clips: art/bake_clips.cjs records them from the game into art/anim/clips.json, this script keys them as one
-# action per clip, and the GLB carries them to the game, which plays them in place of the code clips. Rebuilding
-# from scratch re-keys every action from clips.json, so after hand edits in Blender use --export-only.
+# The .blend is the source: edit the mesh, paint it (art/paint.py) or edit the actions in Blender, and the export
+# writes the GLB from it. The clips: art/bake_clips.cjs records them from the game into art/anim/clips.json, this
+# script keys them as one action per clip, and the GLB carries them to the game, which plays them in place of the
+# code clips. Rebuilding re-keys every action from clips.json and remakes the mesh, so changes after a hand edit go
+# into the .blend, the way --add-scarf did.
 #
 # Everything is in the skater rig's own units (see openspec/changes/m6-skinned-skater/design.md): Blender +X is the
 # way you skate (the lead, left side), Blender -Y faces the game camera, Z is up. The model is in the bind pose:
@@ -49,6 +51,7 @@ COLORS = {
     'shoe': 0x17171B,
     'sole': 0xEEEEEE,
     'VisorGlint': 0xFFFFFF,
+    'scarf': 0xD8262E,
 }
 
 # name: (head, tail, parent)
@@ -283,6 +286,102 @@ def wear_decals(shoe_w=0.12, shoe_y=-0.06):
     return [(scuff, 'LeftFoot'), (hole, 'LeftToeBase')]  # the hole is worn through the toe cap
 
 
+# Lou's scarf (zack, 2026-10-31): a red wrap round the neck under the helmet, knotted at the back on the trailing side,
+# with two tails that stream out behind with speed and flap on pops and landings. Each tail is a strip of fabric on two
+# chains of bones, one down each edge (SpringScarfA0/A1, B0/B1), that the game ties together into a sheet (springs.ts).
+SCARF_Z = HEAD_Z - 0.055
+SCARF_KNOT = Vector((-0.07, 0.15, SCARF_Z - 0.005))  # back of the neck, toward the trailing side (-X)
+# direction, length: out over the top of the backpack and down its back
+SCARF_TAILS = {'A': (Vector((-0.35, 0.9, -1)), 0.44), 'B': (Vector((-0.1, 1.1, -1)), 0.34)}
+SCARF_BONES = 3  # bones along each edge, plus a last one for the one before it to aim at
+
+
+def scarf_tail(name, d, length):
+    """(edge chain points, across) for a tail: two edges either side of the strip's middle line."""
+    d = d.normalized()
+    across = d.cross(Vector((0, 0, 1))).normalized() * 0.036
+    edges = []
+    for side in (-1, 1):
+        root = SCARF_KNOT + across * side
+        edges.append([root + d * length * k / SCARF_BONES for k in range(SCARF_BONES + 2)])
+    return edges, across
+
+
+def scarf_bones(rig):
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = rig.data.edit_bones
+    for t, (d, length) in SCARF_TAILS.items():
+        edges, _ = scarf_tail(t, d, length)
+        for i, pts in enumerate(edges):
+            prev = eb['Neck']
+            for j in range(SCARF_BONES + 1):
+                b = eb.new(f'SpringScarf{t}{i}_{j}')
+                b.head, b.tail = pts[j], pts[j + 1]
+                b.parent = prev
+                b.use_connect = j > 0
+                b.use_deform = j < SCARF_BONES
+                prev = b
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def scarf(mat):
+    """The wrap (held to the neck) and the two tails (skinned down their edge chains), with a little thickness."""
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=False, segments=16, radius1=1, radius2=0.88, depth=0.07)
+    bmesh.ops.scale(bm, vec=(0.165, 0.14, 1), verts=bm.verts)
+    bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0.005, SCARF_Z))
+    wrap = link('scarfWrap', bm, [mat])
+    rigid(wrap, 'Neck')
+    parts = [wrap]
+    rows = 9
+    for t, (d, length) in SCARF_TAILS.items():
+        edges, across = scarf_tail(t, d, length)
+        bm = bmesh.new()
+        grid = []
+        for r in range(rows):
+            u = r / (rows - 1)  # along the tail, 0 at the knot
+            a = edges[0][0].lerp(edges[0][SCARF_BONES], u)
+            b = edges[1][0].lerp(edges[1][SCARF_BONES], u)
+            taper = 1 - 0.25 * u
+            mid = (a + b) / 2
+            grid.append([bm.verts.new(mid + (p - mid) * taper) for p in (a, mid, b)])
+        for r0, r1 in zip(grid, grid[1:]):
+            for k in range(2):
+                bm.faces.new((r0[k], r0[k + 1], r1[k + 1], r1[k]))
+        ob = link(f'scarf{t}', bm, [mat])
+        for r in range(rows):
+            s = r / (rows - 1) * SCARF_BONES  # how far along, in bones
+            along = [max(0.0, 1 - abs(s - (m + 0.5))) for m in range(SCARF_BONES)]
+            along[0] = max(along[0], 1.0 if s < 0.5 else 0.0)
+            along[-1] = max(along[-1], 1.0 if s > SCARF_BONES - 0.5 else 0.0)
+            tot = sum(along)
+            for k, edge_w in enumerate(((1, 0), (0.5, 0.5), (0, 1))):
+                for i, ew in enumerate(edge_w):
+                    for m, x in enumerate(along):
+                        if ew and x:
+                            g = ob.vertex_groups.get(f'SpringScarf{t}{i}_{m}') or ob.vertex_groups.new(name=f'SpringScarf{t}{i}_{m}')
+                            g.add([3 * r + k], ew * x / tot, 'ADD')
+        parts.append(ob)
+    for ob in parts:
+        solid = ob.modifiers.new('solid', 'SOLIDIFY')
+        solid.thickness = 0.012
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.modifier_apply(modifier=solid.name)
+    return parts
+
+
+def add_scarf(rig, suit, mat):
+    """Puts the scarf on: its bones on the rig and its meshes joined into the suit."""
+    scarf_bones(rig)
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in scarf(mat):
+        ob.select_set(True)
+    suit.select_set(True)
+    bpy.context.view_layer.objects.active = suit
+    bpy.ops.object.join()
+
+
 def rigid(ob, bone):
     vg = ob.vertex_groups.new(name=bone)
     vg.add(list(range(len(ob.data.vertices))), 1.0, 'REPLACE')
@@ -311,6 +410,7 @@ def build():
     suit.name = suit.data.name = 'LouGnar'
     for p in suit.data.polygons:
         p.use_smooth = False
+    add_scarf(rig, suit, mats['scarf'])
     return rig, suit
 
 
@@ -332,6 +432,10 @@ def export():
         export_apply=True,
         export_materials='EXPORT',
     )
+    # the scarf's Spring bones are swung by the game, not the clips: drop their sampled rest pose from every action
+    sys.path.insert(0, HERE)
+    import glb_strip
+    glb_strip.strip(GLB)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
 
@@ -418,10 +522,29 @@ def actions(rig):
     return made
 
 
-if __name__ == '__main__' and '--export-only' in sys.argv:
+def open_blend():
+    if 'LouGnarRig' not in bpy.data.objects:
+        bpy.ops.wm.open_mainfile(filepath=BLEND)
+    return bpy.data.objects['LouGnarRig'], bpy.data.objects['LouGnar']
+
+
+def texture(suit):
+    # Lou on his own painted texture, art/tex/lou-gnar.png (zack, 2026-10-31: "might as well get lou set up")
+    sys.path.insert(0, HERE)
+    import paint
+    if not paint.painted('lou-gnar'):  # once only: the export saves it into the .blend
+        paint.texture('lou-gnar', suit)
+    paint.check(suit)
+
+
+if __name__ == '__main__' and '--add-scarf' in sys.argv:
+    # blender -b art/lou-gnar.blend -P art/lou_gnar.py -- --add-scarf: the scarf onto the saved model and its actions
+    rig, suit = open_blend()
+    if 'SpringScarfA0_0' not in rig.data.bones:  # once only: the export saves it into the .blend
+        add_scarf(rig, suit, material('scarf', COLORS['scarf']))
     export()
     print('wrote', GLB)
-elif __name__ == '__main__':
+elif __name__ == '__main__' and '--rebuild' in sys.argv:
     rig, suit = build()
     tris = sum(len(p.vertices) - 2 for p in suit.data.polygons)
     print(f'LouGnar: {len(suit.data.vertices)} verts, {tris} tris, {len(rig.data.bones)} bones')
@@ -430,5 +553,11 @@ elif __name__ == '__main__':
     acts = actions(rig)
     print(f'{len(acts)} actions, board {"in" if deck else "missing"}')
     rig.animation_data.action = None
+    texture(suit)
+    export()
+    print('wrote', GLB)
+elif __name__ == '__main__':
+    rig, suit = open_blend()
+    texture(suit)
     export()
     print('wrote', GLB)

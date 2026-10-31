@@ -53,6 +53,7 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
       { f: 'armLRaise', label: 'raise', min: -0.5, max: 3.2, angle: true },
       { f: 'armLFwd', label: 'swing fwd', min: -2, max: 2, angle: true },
       { f: 'armLElbow', label: 'elbow', min: 0, max: 2.6, angle: true },
+      { f: 'armLTwist', label: 'elbow swing', min: -PI, max: PI, angle: true },
     ],
   },
   {
@@ -61,6 +62,7 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
       { f: 'armRRaise', label: 'raise', min: -0.5, max: 3.2, angle: true },
       { f: 'armRFwd', label: 'swing fwd', min: -2, max: 2, angle: true },
       { f: 'armRElbow', label: 'elbow', min: 0, max: 2.6, angle: true },
+      { f: 'armRTwist', label: 'elbow swing', min: -PI, max: PI, angle: true },
     ],
   },
   {
@@ -119,7 +121,9 @@ const DEFS = new Map(GROUPS.flatMap((g) => g.fields).map((d) => [d.f, d]));
 const DEG = 180 / PI;
 const ROLL_SPEED = 6; // tiles a second the ground scrolls by with "roll" on
 
-type Handle = 'hips' | 'footF' | 'footB' | 'kneeF' | 'kneeB' | 'board' | 'handL' | 'handR' | 'head';
+type Handle = 'hips' | 'footF' | 'footB' | 'kneeF' | 'kneeB' | 'board' | 'handL' | 'handR' | 'elbowL' | 'elbowR' | 'head';
+const POLES = ['kneeF', 'kneeB', 'elbowL', 'elbowR'] as const; // the diamonds: pole targets
+const ELBOW_OUT = 0.3; // the elbow's diamond sits this far out from the elbow, the way it bends
 const HANDLES: { id: Handle; color: number; label: string }[] = [
   { id: 'hips', color: 0xffd23a, label: 'hips' },
   { id: 'footF', color: 0x4ad8ff, label: 'front foot' },
@@ -129,6 +133,8 @@ const HANDLES: { id: Handle; color: number; label: string }[] = [
   { id: 'board', color: 0xff8a2a, label: 'board' },
   { id: 'handL', color: 0x7df0a0, label: 'front hand' },
   { id: 'handR', color: 0xb98cff, label: 'back hand' },
+  { id: 'elbowL', color: 0x7df0a0, label: 'front elbow aim' },
+  { id: 'elbowR', color: 0xb98cff, label: 'back elbow aim' },
   { id: 'head', color: 0xffffff, label: 'head' },
 ];
 // what the less obvious clips are for, in the clip menu
@@ -321,6 +327,7 @@ export async function startEditor(base: string): Promise<void> {
   status.textContent = 'loading the skater…';
   const rig = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar');
   inkify(rig.mesh, { toon: false });
+  if (params.has('debug')) Object.assign(window, { editorRig: rig });
   scene.add(rig.mesh);
   // the ghost: the same rig, see-through, showing the key before the playhead
   const ghost = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar');
@@ -341,9 +348,9 @@ export async function startEditor(base: string): Promise<void> {
   // drag handles, in the rig's own space (children of its mesh)
   const handles = new Map<Handle, THREE.Mesh>();
   for (const h of HANDLES) {
-    const knee = h.id.startsWith('knee');
+    const knee = h.id.startsWith('knee') || h.id.startsWith('elbow');
     const m = new THREE.Mesh(
-      // the knees' pole targets are diamonds in their foot's colour
+      // the knees' and elbows' pole targets are diamonds in their foot's or hand's colour
       knee ? new THREE.OctahedronGeometry(0.06) : new THREE.SphereGeometry(h.id === 'hips' ? 0.07 : 0.055, 16, 12),
       new THREE.MeshBasicMaterial({ color: h.color, depthTest: false, transparent: true, opacity: 0.9 }),
     );
@@ -353,11 +360,11 @@ export async function startEditor(base: string): Promise<void> {
     rig.mesh.add(m);
     handles.set(h.id, m);
   }
-  // a line from each knee to its pole target, so it reads which knee a diamond steers
-  const poleLines = [0, 1].map((i) => {
+  // a line from each knee and elbow to its pole target, so it reads which joint a diamond steers
+  const poleLines = POLES.map((id) => {
     const line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
-      new THREE.LineDashedMaterial({ color: HANDLES.find((h) => h.id === (i ? 'kneeB' : 'kneeF'))!.color, dashSize: 0.04, gapSize: 0.03, depthTest: false, transparent: true, opacity: 0.8 }),
+      new THREE.LineDashedMaterial({ color: HANDLES.find((h) => h.id === id)!.color, dashSize: 0.04, gapSize: 0.03, depthTest: false, transparent: true, opacity: 0.8 }),
     );
     line.renderOrder = 9;
     line.userData.inked = true;
@@ -382,6 +389,7 @@ export async function startEditor(base: string): Promise<void> {
       edit('drag:head', { nod: e.x, head: e.y, headTilt: -e.z });
     } else if (active === 'hips') edit('drag:hips', { hipX: p.x, hipY: p.y, hipZ: p.z });
     else if (active === 'handL' || active === 'handR') edit(`drag:${active}`, reach(pose, active === 'handL' ? 0 : 1, p));
+    else if (active === 'elbowL' || active === 'elbowR') edit(`drag:${active}`, rig.swivel(pose, active === 'elbowL' ? 0 : 1, p));
     else if (active === 'kneeF' || active === 'kneeB') {
       // the offset from where the knee aims by itself (SkaterRig.poleAt), which doesn't move while only this does
       const front = active === 'kneeF';
@@ -629,14 +637,27 @@ export async function startEditor(base: string): Promise<void> {
     handles.get('footB')!.position.set(b.x, b.y, b.z);
     handles.get('board')!.position.set(pose.boardX, pose.boardY + BOARD.deckTop, pose.boardZ);
     ([0, 1] as const).forEach((i) => handles.get(i ? 'kneeB' : 'kneeF')!.position.copy(rig.poleAt(i).target));
+    // the elbows' diamonds: out from the elbow, away from the shoulder-hand line (the arm stores angles, so the
+    // diamond only says which way the elbow points; dragging it swings the elbow round with the hand held still)
+    ([0, 1] as const).forEach((i) => {
+      const hand = rig.handFor(pose, i);
+      const { shoulder, elbow } = rig.jointsFor(pose, i);
+      const axis = hand.clone().sub(shoulder).normalize();
+      const out = elbow.clone().sub(shoulder);
+      out.addScaledVector(axis, -out.dot(axis));
+      if (out.lengthSq() < 1e-6) out.set(0, 0, 1);
+      handles.get(i ? 'elbowR' : 'elbowL')!.position.copy(elbow).addScaledVector(out.normalize(), ELBOW_OUT);
+    });
   }
 
-  // the dashed lines from the knees to their diamonds, wherever the diamonds are (while dragging too)
-  function drawPoleLines(): void {
-    ([0, 1] as const).forEach((i) => {
-      const line = poleLines[i];
+  // the dashed lines from the knees and elbows to their diamonds, wherever the diamonds are (while dragging too)
+  function drawPoleLines(pose: Pose): void {
+    POLES.forEach((id, k) => {
+      const line = poleLines[k];
+      const i = (k % 2) as 0 | 1;
+      const joint = k < 2 ? rig.kneeAt(i) : rig.jointsFor(pose, i).elbow;
       line.visible = handles.get('hips')!.visible;
-      line.geometry.setFromPoints([rig.kneeAt(i), handles.get(i ? 'kneeB' : 'kneeF')!.position]);
+      line.geometry.setFromPoints([joint, handles.get(id)!.position]);
       line.computeLineDistances();
     });
   }
@@ -644,7 +665,7 @@ export async function startEditor(base: string): Promise<void> {
   function updateHint(): void {
     const h = HANDLES.find((x) => x.id === active);
     hint.innerHTML = h
-      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along and across the deck; lift it up off the deck and it steps off, "on board" puts it back)' : h.id.startsWith('hand') ? ' (the shoulder and elbow follow)' : h.id.startsWith('knee') ? ' (the pole target: the knee bends toward it; double-click "Knees" values to put it back)' : ''} · esc to let go`
+      ? `dragging the <b>${h.label}</b>${h.id.startsWith('foot') ? ' (on the board it slides along and across the deck; lift it up off the deck and it steps off, "on board" puts it back)' : h.id.startsWith('hand') ? ' (the shoulder and elbow follow)' : h.id.startsWith('knee') ? ' (the pole target: the knee bends toward it; double-click "Knees" values to put it back)' : h.id.startsWith('elbow') ? ' (the pole target: the elbow swings toward it, the hand stays put; "elbow swing" holds it)' : ''} · esc to let go`
       : `click a dot to move it: ${HANDLES.map((x) => `<b style="color:#${x.color.toString(16).padStart(6, '0')}">${x.label}</b>`).join(' ')} · drag to orbit, scroll to zoom, h hides the dots`;
   }
   updateHint();
@@ -836,7 +857,7 @@ export async function startEditor(base: string): Promise<void> {
     const pose = sampleNow();
     rig.preview(pose, name);
     if (!gizmo.dragging) placeHandles(pose);
-    drawPoleLines();
+    drawPoleLines(pose);
     // the ghost: the last key before the playhead (or the one before the key under it)
     const prev = [...clip.keys].reverse().find((k) => k.t < t - 1e-6);
     ghost.mesh.visible = ghostOn && !!prev;

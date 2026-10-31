@@ -1,6 +1,7 @@
 // Builds a floor's 3D kit from the physics level: street slabs, canals, buildings under rooftops, ledges, rails,
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { run, sliceDone } from './slice';
 import { railBar, railMetal, railUv } from './rail-metal';
 import { BOON_COLORS } from '../boons/defs';
@@ -11,23 +12,26 @@ import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
 import { ARCADE, STREET_Z, streetBuilding } from '../traffic/traffic';
 import { TURN_OFF, turnOff } from '../traffic/tunnel';
-import { inHill, type Level } from '../physics/level';
+import { inHill, sewerAt, SEWER_ROOF, type Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
 import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
 import { buildSkyBeats } from './sky-kit';
+import { buildSewers } from './sewer-kit';
 import { buildForegroundSteps, buildHillSteps } from './hillside';
 import { buildElTrack, elCuts, setColumn } from './el-view';
 import { quarters, type Quarter } from './quarters';
 import { projectSurfaces, surface } from './surfaces';
+import { SHOP_FRONT, shopSpot } from './shop-front';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
+export const WATER_TOP = -0.6; // the canals' water, this far under the street (the splash and the sink: game.ts)
 const WALK = STREET_Z.curb - STREET_BACK; // the back sidewalk's depth, wall to curb
 const LANDMARK_W = 8; // art/landmarks.py's are up to 8 wide
 const PLAZA = ['Flamingo', 'Picasso'];
@@ -103,11 +107,22 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   while (c < cols) {
     if (sliceDone()) yield;
     const isStreet = level.street[c];
+    //over the sewer route the street is only a thin roof over its tunnel (sewer-kit.ts draws the tunnel and holes)
+    //(a kick-out's grate is drawn by sewer-kit.ts too: bars you come up through)
+    const under = (col: number) => {
+      const px = (col + 0.5) * TILE;
+      const s = sewerAt(level, px);
+      return !s ? 0 : s.kicks?.some((k) => px >= k.grate[0] && px < k.grate[1]) ? 2 : 1;
+    };
+    const kind = under(c);
+    const sewer = kind !== 0;
     let end = c;
-    while (end + 1 < cols && level.street[end + 1] === isStreet) end++;
+    while (end + 1 < cols && level.street[end + 1] === isStreet && under(end + 1) === kind) end++;
     const n = end - c + 1;
     const x = c + n / 2;
-    if (isStreet) {
+    if (isStreet && kind === 2) {
+      //a sewer grate: sewer-kit.ts
+    } else if (isStreet) {
       //front face: QFS's 3-row city street with crumbled corners next to canals
       const front: number[][] = [[], [], []];
       const ground = skin.ground;
@@ -146,16 +161,19 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
           for (let px = (c * 8) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
         }
       });
-      const mesh = slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
-      mesh.position.set(x, -1.5, STREET_BACK + STREET_DEPTH / 2);
+      const roof = SEWER_ROOF / TILE;
+      const mesh = sewer
+        ? slab(n, roof, STREET_DEPTH, lambert(tileTexture([front[0]])), lambert(top), sideMat)
+        : slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
+      mesh.position.set(x, sewer ? -roof / 2 : -1.5, STREET_BACK + STREET_DEPTH / 2);
       kit.add(mesh);
-    } else if (!inHill(level, (c + n / 2) * TILE)) {
+    } else if (!sewer && !inHill(level, (c + n / 2) * TILE)) {
       //canal: water a bit below the street, QFS's clean water tiles (a stretch of hill draws its own ground)
       const pit = skin.pit === 'city' ? { top: CITY.waterTop, fill: CITY.water } : skin.pit;
       const front = [new Array(n).fill(pit.top), new Array(n).fill(pit.fill), new Array(n).fill(pit.fill)];
       const tex = tileTexture(front, skin.pit === 'city' ? cityTiles() : undefined);
       const water = slab(n, 2.4, STREET_DEPTH, lambert(tex), surface('water', 0x3a5fb0), sideMat);
-      water.position.set(x, -1.8, STREET_BACK + STREET_DEPTH / 2);
+      water.position.set(x, WATER_TOP - 1.2, STREET_BACK + STREET_DEPTH / 2);
       kit.add(water);
     }
     c = end + 1;
@@ -178,13 +196,16 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   const hillCuts = (level.hillSpans ?? []).slice(1).map(([a, b]) => [toX(a), toX(b)]);
   const cuts = [...gaps, ...elCuts(level), ...hillCuts];
   const inGap = (x0: number, x1: number) => cuts.some(([g0, g1]) => x1 > g0 - 0.2 && x0 < g1 + 0.2);
+  //where the shop's front may stand (shop-front.ts): that piece of wall is its own mesh, hidden when it does
+  const shopAt = shopSpot(level);
+  const shopWall = shopAt === null ? null : [Math.floor(shopAt - SHOP_FRONT.wall), Math.ceil(shopAt + SHOP_FRONT.wall)];
   let w0 = first;
   for (const [g0, g1] of [...cuts, [cols, cols]].sort((a, b) => a[0] - b[0])) {
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
     //split where a quarter's own wall takes over (its block tiles)
     if (sliceDone()) yield;
-    const cutsAt = [a0, ...fused.flatMap((q) => [q.x0, q.x1]).filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
+    const cutsAt = [a0, ...[...fused.flatMap((q) => [q.x0, q.x1]), ...(shopWall ?? [])].filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
     for (let k = 0; k + 1 < cutsAt.length; k++) {
       const [b0, b1] = [cutsAt[k], cutsAt[k + 1]];
       if (b1 <= b0) continue;
@@ -192,6 +213,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
       const rows = q ? [0, 1].map((r) => Array.from({ length: b1 - b0 }, (_, i) => q.skin.block.fill[((b0 + i) * (r ? 5 : 7) + r * 3) % q.skin.block.fill.length])) : wallRows.map((row) => row.slice(b0, b1));
       const wall = slab(b1 - b0, 2, 0.5, lambert(q ? tileTexture(rows, q.sheet) : tileTexture(rows)), surface('pavers', q ? q.skin.side : city ? 0x6b5a55 : skin.side), sideMat);
       wall.position.set((b0 + b1) / 2, 1, STREET_BACK - 0.25);
+      if (shopWall && b0 >= shopWall[0] && b1 <= shopWall[1]) wall.userData = { keep: true, shopWall: true };
       kit.add(wall);
     }
     w0 = g1;
@@ -255,7 +277,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
     //the L's running rails are part of its track; the sky beats are drawn on their own (sky-kit.ts)
-    if (s.el || s.sky) continue;
+    if (s.el || s.sky || s.sewer) continue; // (and the sewer's floor and ramp: sewer-kit.ts)
     //the hill draws its own ground
     if (level.hills && inHill(level, s.x0) && !s.side && !s.kicker && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
     if (s.kind === 'roof') {
@@ -389,7 +411,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   //--- curved rails ---------------------------------------------------------------------------
   for (const rail of level.rails) {
     if (sliceDone()) yield;
-    if (rail.wire || rail.sky) continue; // a power line: the hillside draws it with its poles; a crane: sky-kit.ts
+    if (rail.wire || rail.sky || rail.sewer) continue; // (a sewer pipe: sewer-kit.ts) a power line: the hillside draws it with its poles; a crane: sky-kit.ts
     const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
     const curve = new THREE.CatmullRomCurve3(pts);
     const tube = new THREE.Mesh(railUv(new THREE.TubeGeometry(curve, 64, 0.07, 6), curve.getLength()), railMetal());
@@ -420,6 +442,9 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
       kit.add(shard);
     }
   }
+
+  //--- grass strips across the street (src/gen/grass.ts): a mat of turf with tufts sticking up, one mesh a floor ----
+  if (level.grass?.length) kit.add(buildGrass(level, rng));
 
   //--- the L over Chicago's street, round its bends into the city (el-view.ts) -----------------
   buildElTrack(level, kit);
@@ -529,12 +554,23 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     bottom.userData.forkSign = 'low';
     bottom.position.set(sx, hy + 0.65, -1.25);
     kit.add(top, bottom);
+    //the sewer road (src/gen/sewer.ts): its sign stands over the way into the tunnel that runs to the gate
+    const gateway = level.sewers?.find((w) => w.gate);
+    if (fork.sewer && gateway) {
+      const under = roadSign(fork.sewer, false, true);
+      under.userData.forkSign = 'sewer';
+      under.position.set(toX(gateway.drain[0]) + 1.5, 1.9, -2.4);
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.12), postMat);
+      leg.position.set(toX(gateway.drain[0]) + 1.5, 0.7, -2.45);
+      kit.add(under, leg);
+    }
   }
 
   if (sliceDone()) yield;
   projectSurfaces(kit);
   if (sliceDone()) yield;
   kit.add(buildSkyBeats(level));
+  kit.add(buildSewers(level));
   return kit;
 }
 
@@ -727,7 +763,7 @@ export function parkedPaint(level: Level, i: number): number {
 
 // the Blender hatchbacks (art/cars.py) are 2.3 long and 1.25 to the roof, for a 2 tile hitbox, and are stretched to
 // other hitboxes; the cruiser SUV only chases, so it keeps its own size
-export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser';
+export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser' | 'Taxi';
 const MODEL_LEN = 2.3;
 const MODEL_ROOF = 1.25;
 
@@ -891,14 +927,14 @@ export function makeCar(x0: number, x1: number, bottom: number, roof: number, pa
 const ROAD_COLORS: Record<Road['kind'], string> = { boon: '#ffd23f', cash: '#5fe08a', hot: '#ff4a3a', stash: '#b98cff', shop: '#4ad8ff', spot: '#9cf05a', escape: '#ff4a3a' };
 
 // a street sign for one road: arrow, where it leads, and its danger in car icons
-function roadSign(road: Road, high: boolean): THREE.Mesh {
+function roadSign(road: Road, high: boolean, sewer = false): THREE.Mesh {
   const W = 256;
   const H = 96;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const g = canvas.getContext('2d')!;
-  g.fillStyle = high ? '#1f6b3a' : '#20406e';
+  g.fillStyle = high ? '#1f6b3a' : sewer ? '#5a3a1e' : '#20406e';
   g.fillRect(0, 0, W, H);
   g.strokeStyle = '#ffffff';
   g.lineWidth = 4;
@@ -906,9 +942,9 @@ function roadSign(road: Road, high: boolean): THREE.Mesh {
   g.fillStyle = '#ffffff';
   g.font = 'bold 18px Arial Black, Arial, sans-serif';
   g.textBaseline = 'top';
-  g.fillText(high ? '\u25B2 HIGH ROAD' : '\u25B6 LOW ROAD', 14, 12);
+  g.fillText(high ? '\u25B2 HIGH ROAD' : sewer ? '\u25BC SEWER ROAD' : '\u25B6 LOW ROAD', 14, 12);
   g.font = '12px Arial, sans-serif';
-  g.fillText(high ? 'ollie + flip up' : 'keep rolling', 150, 16);
+  g.fillText(high ? 'ollie + flip up' : sewer ? 'roll in' : 'keep rolling', sewer ? 190 : 150, 16);
   g.fillStyle = road.kind === 'boon' ? BOON_COLORS[road.boonType] : ROAD_COLORS[road.kind];
   g.font = 'bold 26px Arial Black, Arial, sans-serif';
   g.fillText(label(road), 14, 38);
@@ -923,4 +959,32 @@ function roadSign(road: Road, high: boolean): THREE.Mesh {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return new THREE.Mesh(new THREE.PlaneGeometry(4, 1.5), new THREE.MeshBasicMaterial({ map: tex }));
+}
+
+// The floor's grass strips as one mesh, coloured per vertex: a low mat of turf across the lane, ragged at the ends,
+// and tufts poking up out of it, light green against the dark street so they read on a phone
+function buildGrass(level: Level, rng: () => number): THREE.Mesh {
+  const geos: THREE.BufferGeometry[] = [];
+  const tint = (g: THREE.BufferGeometry, hex: number) => {
+    const c = new THREE.Color(hex);
+    g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: g.attributes.position.count }, () => [c.r, c.g, c.b]).flat(), 3));
+    return g;
+  };
+  const TUFTS = [0x7ed957, 0x5fbf3f, 0x9be86a];
+  for (const g of level.grass ?? []) {
+    const x0 = toX(g.x0);
+    const w = toX(g.x1) - x0;
+    geos.push(tint(new THREE.BoxGeometry(w, 0.04, 1.9).translate(x0 + w / 2, 0.02, 0).toNonIndexed(), 0x3f8a2e));
+    for (let i = 0; i < w * 9; i++) {
+      const h = 0.1 + rng() * 0.14;
+      const tuft = new THREE.ConeGeometry(0.035 + rng() * 0.03, h, 4).toNonIndexed();
+      tuft.rotateZ((rng() - 0.5) * 0.6);
+      tuft.translate(x0 + rng() * w, 0.04 + h / 2, (rng() - 0.5) * 1.8);
+      geos.push(tint(tuft, TUFTS[Math.floor(rng() * TUFTS.length)]));
+    }
+  }
+  const geo = mergeGeometries(geos.map((g) => { g.deleteAttribute('uv'); return g; }))!;
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.name = 'Grass';
+  return mesh;
 }

@@ -33,9 +33,11 @@ export interface Pose {
   armLRaise: number; // lead (left, +x) arm: 0 hanging, 1.57 straight out sideways
   armLFwd: number; // swing toward the camera
   armLElbow: number;
+  armLTwist: number; // upper arm turned about its own length: swings the elbow round the shoulder-hand line
   armRRaise: number; // trailing (right, -x) arm
   armRFwd: number;
   armRElbow: number;
+  armRTwist: number;
   footFX: number; // front (left) foot along the board
   footFY: number; // used when the foot is off the board
   footFZ: number;
@@ -83,9 +85,11 @@ export const BASE: Pose = {
   armLRaise: 0.45,
   armLFwd: 0.15,
   armLElbow: 0.45,
+  armLTwist: 0,
   armRRaise: 0.45,
   armRFwd: 0.1,
   armRElbow: 0.45,
+  armRTwist: 0,
   footFX: BOARD.bolts,
   footFY: BOARD.deckTop,
   footFZ: 0,
@@ -161,6 +165,7 @@ function nosePop(k: Key, spinBoard = false): Key {
   if (k.boardPivot !== undefined) out.boardPivot = -k.boardPivot;
   if (k.boardPitch !== undefined) out.boardPitch = -k.boardPitch;
   if (k.boardX !== undefined) out.boardX = -k.boardX;
+  if (k.hipX !== undefined) out.hipX = -k.hipX; // the weight over the popping foot, now the front one
   if (k.lean !== undefined) out.lean = -k.lean;
   // a shove-it scooped from the nose: the nose goes round the way the tail would have, so the board spins the other
   // way under the body (not for the 180s, where the board turns with the body)
@@ -666,6 +671,17 @@ export const CLIPS: Record<string, Clip> = {
       { t: 1.6, pose: { yaw: 0.7, hipY: 0.8, hipZ: -0.1, lean: 0.15, bend: 0.15, head: 0.2, nod: 0.05, armLRaise: 0.84, armLFwd: -1.84, armLElbow: 1.2, armRRaise: 0.9, armRFwd: 0.3, armRElbow: 0.5 } },
     ],
   },
+  // skitching a Chinatown cab (zack, 2026-10-30): squatted low behind its back bumper, chest down toward the car,
+  // head up watching the road, the front arm stretched out to the bumper (pinned there with arm IK like towed), the
+  // back arm flung out behind for balance; a small bob from the road buzzing up through the wheels
+  skitch: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { yaw: 0.2, hipX: -0.06, hipY: 0.56, lean: 0.06, bend: 0.75, head: 0.15, nod: -0.25, footFX: 0.26, footBX: -0.24, armLRaise: 1.3, armLFwd: 1.2, armLElbow: 0.15, armRRaise: 1.5, armRFwd: -1.2, armRElbow: 0.35 } },
+      { t: 0.2, pose: { yaw: 0.2, hipX: -0.06, hipY: 0.54, lean: 0.07, bend: 0.78, head: 0.15, nod: -0.22, footFX: 0.26, footBX: -0.24, armLRaise: 1.3, armLFwd: 1.2, armLElbow: 0.15, armRRaise: 1.6, armRFwd: -1.25, armRElbow: 0.3 } },
+      { t: 0.4, pose: { yaw: 0.2, hipX: -0.06, hipY: 0.56, lean: 0.06, bend: 0.75, head: 0.15, nod: -0.25, footFX: 0.26, footBX: -0.24, armLRaise: 1.3, armLFwd: 1.2, armLElbow: 0.15, armRRaise: 1.5, armRFwd: -1.2, armRElbow: 0.35 } },
+    ],
+  },
   // airborne off a drop or after a trick: standing on the board, knees soft, arms up for balance
   air: {
     loop: true,
@@ -725,9 +741,11 @@ export function mirrorPose(p: Pose): Pose {
     armLRaise: p.armRRaise,
     armLFwd: p.armRFwd,
     armLElbow: p.armRElbow,
+    armLTwist: p.armRTwist,
     armRRaise: p.armLRaise,
     armRFwd: p.armLFwd,
     armRElbow: p.armLElbow,
+    armRTwist: p.armLTwist,
     footFX: -p.footBX,
     footFY: p.footBY,
     footFZ: p.footBZ,

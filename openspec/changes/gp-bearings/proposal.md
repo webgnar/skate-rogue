@@ -32,3 +32,9 @@ a Swiss-style bearing box (black shields, red ring) and an open bronze ceramic b
   each wood, stone or glass prop you smash (src/sim/stuff.ts `gritty`), and 1 per stretch of broken glass rolled
   over, on top of dirt from rolling (0.3/s) and puddles (12).
 - Rebalanced: the bot's first shop has 2.44 parts worn (deck about 39, wheels 34, shoes 50, bearings 58).
+
+## Follow-up (zack, 2026-10-31)
+- "Deck should wear out by hitting breakables." Every prop you smash knocks the deck: GEAR.smashDeck 0.15 rolled or
+  ground through, twice that landed on, hopped, slammed or bombed. Landing wear is down to 0.18 / 0.4 to make room.
+  The bot smashes about 60 props by the first shop, so smashing is roughly a quarter of its deck wear. First shop:
+  2.50 parts worn.

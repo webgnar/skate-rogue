@@ -3,19 +3,21 @@
 // Grind sparks draw the original Gnar Run's spark sprites instead (public/sprites/fx/particles.png: three 16 px
 // frames, gold, white-hot, gold, at 3x), flickering between frames and flipping like the old GameMaker o_grindspark.
 // Smash and wreck dust draws its dust puff (the atlas's fourth cell), tinted, turned a random way and swelling.
+// A collected coin bursts into gold pixel sparkles (cells five to nine: stars and crosses), twinkling between shapes.
 // They draw in a second layer, `behind`: in the level's pass, so the skater and board always draw over them.
 import * as THREE from 'three';
 import { ParticlePool } from './particle-pool';
 import { FX } from './fx-settings';
 
 const MAX = 256;
-const ATLAS_CELLS = 4;
+const ATLAS_CELLS = 9;
 // the atlas cells each kind of sprite cycles through: a metal rail's sparks flash white-hot, a ledge's stay gold;
-// a dust puff is one still frame
-const CYCLES = [[1, 0, 1, 2], [0, 2], [3]];
+// a dust puff is one still frame; a coin's sparkle twinkles from a full star down to a glint and back
+const CYCLES = [[1, 0, 1, 2], [0, 2], [3], [4, 5, 6, 7, 8, 7, 6, 5]];
 const METAL = 0;
 const CONCRETE = 1;
 const PUFF = 2;
+const SPARKLE = 3;
 const NO_SPRITE = -1;
 
 // the sprite atlas, loaded once in the browser (tests build Particles under Node, with no images)
@@ -365,6 +367,38 @@ export class Particles {
       p.vx[i] = rand(-1.5, -0.3);
       p.vy[i] = rand(-0.3, 0.6);
       p.drag[i] = 2;
+    }
+  }
+
+  // a coin collected: it bursts into gold pixel sparkles flung out all round, slowing, twinkling and shrinking away,
+  // with a few loose gold pixels
+  coin(x: number, y: number, z: number): void {
+    const p = this.pool;
+    const n = FX.tier === 'low' ? 5 : 9;
+    const a0 = Math.random() * Math.PI * 2;
+    for (let k = 0; k < n; k++) {
+      const a = a0 + (k / n) * Math.PI * 2 + rand(-0.25, 0.25);
+      const sp = rand(2, 3.6);
+      const i = this.spawn(x, y, z + 0.05, rand(0.45, 0.7), [1, 1, 1], rand(0.5, 0.7), 0.15, 1, 0.55, false);
+      p.vx[i] = Math.cos(a) * sp;
+      p.vy[i] = Math.sin(a) * sp + 0.6;
+      p.vz[i] = rand(-0.3, 0.3);
+      p.grav[i] = 3;
+      p.drag[i] = 5;
+      this.cycle[i] = SPARKLE;
+      this.frame0[i] = Math.floor(Math.random() * 8);
+      this.fps[i] = rand(10, 16);
+      this.under(i);
+    }
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = rand(0.8, 2.4);
+      const i = this.spawn(x, y, z + 0.05, rand(0.25, 0.45), pick(SPARK.slice(0, 2)), rand(0.06, 0.09), 0.03, 1, 0.4, false);
+      p.vx[i] = Math.cos(a) * sp;
+      p.vy[i] = Math.sin(a) * sp + 0.4;
+      p.grav[i] = 4;
+      p.drag[i] = 4;
+      this.under(i);
     }
   }
 
