@@ -97,11 +97,24 @@ const BEATS: [CloudBeat, number][] = [['puff', 5], ['thin', 2], ['drift', 2], ['
 
 const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo + 1));
 
+// (a floor's level-editor edits can narrow the mix, src/gen/descent.ts)
+let mix: CloudBeat[] | null = null;
+export function cloudMix<R>(only: CloudBeat[] | undefined, fn: () => R): R {
+  const was = mix;
+  mix = only?.length ? only : null;
+  try {
+    return fn();
+  } finally {
+    mix = was;
+  }
+}
+
 function pick(rng: Rng): CloudBeat {
-  const total = BEATS.reduce((s, [, w]) => s + w, 0);
+  const beats = mix ? BEATS.filter(([b]) => mix!.includes(b)) : BEATS;
+  const total = beats.reduce((s, [, w]) => s + w, 0);
   let r = rng() * total;
-  for (const [b, w] of BEATS) if ((r -= w) < 0) return b;
-  return 'puff';
+  for (const [b, w] of beats) if ((r -= w) < 0) return b;
+  return beats[0]?.[0] ?? 'puff';
 }
 
 export function addClouds(level: Level, seed: number): void {

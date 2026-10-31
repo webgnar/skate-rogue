@@ -15,13 +15,13 @@ import { CHUNK_W, makeLayout, STREET_ROW } from './layout';
 import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } from './pieces';
 import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
-import { addSewer } from './sewer';
+import { addSewer, SEWER } from './sewer';
 import { addSkyBeats, addSkyStash } from './sky-beats';
-import { addClouds } from './clouds';
+import { addClouds, cloudMix, CLOUDS, type CloudBeat } from './clouds';
 import { bridgeSky } from './sky-line';
 import { addSpinTokens, type SpinSpots } from './spin-tokens';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
-import { floorEdit } from './level-edits';
+import { floorEdit, withDials } from './level-edits';
 import { elPlan } from '../traffic/el';
 
 export const DESCENT = {
@@ -305,9 +305,12 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   if (opts.hills && !opts.short) {
     addTopRoute(level, level.layout.seed);
     addSkyBeats(level, level.layout.seed);
-    addClouds(level, level.layout.seed);
+    //the cloud layer and the sewer take a floor's level-editor edits over their dials (docs/level-editor.md)
+    const fe = floorEdit(editFloor(level.layout.floor));
+    const cl = fe.clouds;
+    if (cl?.on !== false) withDials(CLOUDS, cl?.on ? { from: 1, ...cl } : cl, () => cloudMix(cl?.mix as CloudBeat[] | undefined, () => addClouds(level, level.layout.seed)));
     bridgeSky(level);
-    addSewer(level, level.layout.seed);
+    if (fe.sewer?.on !== false) withDials(SEWER, fe.sewer, () => addSewer(level, level.layout.seed));
   }
   const spinSpots: SpinSpots = { side: [sideFrom, topFrom], top: [topFrom, level.pickups.length] };
   applyTwist(level, opts.twist, level.layout.seed);

@@ -118,3 +118,15 @@
 }
 #levels .lv-out { width: 100%; min-height: 160px; background: var(--panel); color: var(--text); border: 1px solid var(--line); font: 12px ui-monospace, Menlo, monospace; }
 #levels [hidden] { display: none !important; }
+/* the route layers: sky, clouds, sewer */
+#levels .lv-layers { display: flex; gap: 8px; align-items: center; color: var(--dim); }
+#levels .ly-sky { color: #7af0c8 !important; }
+#levels .ly-clouds { color: #eef4ff !important; }
+#levels .ly-sewer { color: #7fd17a !important; }
+#levels .lv-layer .lv-head .lv-goto { margin-left: auto; }
+#levels .lv-layer .lv-head .lv-goto + button { margin-left: 0; }
+#levels .lv-head .lv-goto + button { margin-left: 0; }
+#levels .lv-onoff, #levels .lv-mix { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+#levels .lv-mixlab { color: var(--dim); font-size: 12px; margin-right: 4px; }
+#levels #lv-sewer .beat.lit { background: #7fd17a; }
+#levels #lv-clouds .beat.lit { background: #eef4ff; }
