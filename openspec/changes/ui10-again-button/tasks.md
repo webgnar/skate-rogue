@@ -1,0 +1,3 @@
+- [x] AGAIN button under the score
+- [x] Tight layout on short landscape screens
+- [x] Headless tap test on phone portrait and landscape

@@ -195,7 +195,16 @@ html, body {
 #over .held { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 520px; }
 #over .held .chip { font-size: 13px; }
 #over .none { opacity: 0.6; }
-#over .again { font-size: 16px; opacity: 0.85; margin-top: 6px; }
+/* one tap straight into a new run (zack's roadmap, 2026-10-31); a tap anywhere else on the card still works too */
+#over .go { all: unset; box-sizing: border-box; cursor: pointer; font-family: 'Bangers', 'Arial Black', sans-serif; letter-spacing: 0.08em; padding: 8px 40px; background: var(--good); color: #000; font-size: clamp(28px, 6vw, 40px); border: 2.5px solid #000; box-shadow: 4px 4px 0 #000; transform: skewX(-8deg); text-shadow: none; }
+#over .go:active { transform: skewX(-8deg) translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+/* a phone on its side: the card is short, so it packs tighter and AGAIN stays big */
+@media (max-height: 420px) {
+  #over { gap: 6px; }
+  #over .reached { font-size: 16px; }
+  #over .best { font-size: 12px; }
+  #over .go { font-size: 30px; padding: 4px 36px; }
+}
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(24px); } }
 
