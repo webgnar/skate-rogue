@@ -11,7 +11,8 @@ const COIN_R = 0.2;
 const COIN_T = 0.06;
 const COIN_Z = 0.25; // pickups float this far toward the camera from the skater's lane
 
-// The Stoken coin face from Quest For Stoken (QFSHIVE sprites/s_stoken_rotate, frame 0), on both faces of the coin.
+// The Stoken coin from Quest For Stoken's title screen (QFSHIVE sprites/s_stokencoin_mainmenu, frame 0), its emblem
+// lines darkened so it reads at coin size, on both faces of the coin.
 // Loaded once in the browser (tests build PickupView under Node, with no images).
 let coinFace: THREE.Texture | null = null;
 function coinTexture(): THREE.Texture {
@@ -43,7 +44,7 @@ function coinMesh(count: number): THREE.InstancedMesh {
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), 1 - uv.getX(i));
   }
   const geo = coinGeo;
-  const face = new THREE.MeshLambertMaterial({ map: coinTexture(), emissive: 0x3a2800 });
+  const face = new THREE.MeshLambertMaterial({ map: coinTexture(), emissive: 0x181000 });
   const edge = new THREE.MeshLambertMaterial({ color: 0xc08a18, emissive: 0x3a2800 });
   return new THREE.InstancedMesh(geo, [edge, face, face], count);
 }
