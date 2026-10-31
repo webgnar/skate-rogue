@@ -34,6 +34,9 @@ export const SKY = {
   swingOut: 1.3, // radians it slews out to
   swingIn: 0.3, // radians: past this it's out of the lane, and you drop off it
   bustCash: 5, // cash in a billboard you burst through
+  driftFrames: 420, // a drifting cloud's wander there and back (src/gen/clouds.ts)
+  balloonBob: 6, // px a hot air balloon's basket rides up and down
+  balloonBobFrames: 200,
 };
 
 // NO GROUND (zack, 2026-10-31): chain sky pieces (wires, rooftops, billboards, booms, a blimp's back) without
@@ -51,6 +54,7 @@ export class SkyPieceSim {
   readonly ledge: Surface;
   y: number;
   angle = 0; // a crane jib's slew, radians (0 = along the lane)
+  x = 0; // a drifting cloud's wander from where it was built, px
   v = 0; // a rig's drop, px/frame
   dropping = false;
 
@@ -67,8 +71,13 @@ export class SkyPieceSim {
 
   step(frame: number, sk: Skater): void {
     const s = this.site;
+    let dx = 0;
     if (s.kind === 'blimp') this.y = s.y + SKY.blimpBob * Math.sin((frame / SKY.blimpBobFrames) * Math.PI * 2);
-    else if (s.kind === 'rig') {
+    else if (s.kind === 'balloon') this.y = s.y + SKY.balloonBob * Math.sin(((frame + (s.phase ?? 0)) / SKY.balloonBobFrames) * Math.PI * 2);
+    else if (s.kind === 'cloud') {
+      dx = CLOUD_DRIFT * Math.sin(((frame + (s.phase ?? 0)) / SKY.driftFrames) * Math.PI * 2);
+      this.x = dx;
+    } else if (s.kind === 'rig') {
       if (!this.dropping && sk.surface === this.ledge) {
         this.dropping = true;
         this.v = SKY.rigV;
@@ -77,17 +86,19 @@ export class SkyPieceSim {
         this.v = Math.min(SKY.rigMax, this.v + SKY.rigAccel);
         this.y = Math.min(s.floor ?? s.y, this.y + this.v);
       }
-    } else this.angle = swingAt(frame + (s.phase ?? 0));
+    } else if (s.kind === 'swing') this.angle = swingAt(frame + (s.phase ?? 0));
     this.box.roof = this.ledge.y = this.y;
     this.box.bottom = this.y + 2 * TILE;
     //a jib slewed out of the lane isn't under you: nothing to land on, and you drop off it
     const here = this.inLane;
-    this.box.x0 = this.ledge.x0 = here ? s.x0 : -1e6;
-    this.box.x1 = this.ledge.x1 = here ? s.x1 : -1e6;
+    this.box.x0 = this.ledge.x0 = here ? s.x0 + dx : -1e6;
+    this.box.x1 = this.ledge.x1 = here ? s.x1 + dx : -1e6;
     //riding it: your feet go up and down with it
     if (sk.surface === this.ledge && sk.grounded) sk.y = this.y;
   }
 }
+
+const CLOUD_DRIFT = 1.5 * TILE; // CLOUDS.driftBy (src/gen/clouds.ts), px
 
 // a crane jib's slew at frame t: held in the lane, eased out, held out, eased back
 export function swingAt(t: number): number {

@@ -17,6 +17,7 @@ import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
 import { addSewer } from './sewer';
 import { addSkyBeats, addSkyStash } from './sky-beats';
+import { addClouds } from './clouds';
 import { addSpinTokens, type SpinSpots } from './spin-tokens';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
 import { floorEdit } from './level-edits';
@@ -303,6 +304,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   if (opts.hills && !opts.short) {
     addTopRoute(level, level.layout.seed);
     addSkyBeats(level, level.layout.seed);
+    addClouds(level, level.layout.seed);
     addSewer(level, level.layout.seed);
   }
   const spinSpots: SpinSpots = { side: [sideFrom, topFrom], top: [topFrom, level.pickups.length] };

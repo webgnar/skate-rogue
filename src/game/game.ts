@@ -12,7 +12,8 @@ import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { RunScore, SCORE } from '../run/score';
-import { SKY } from '../sim/sky';
+import { SKY, skyMult } from '../sim/sky';
+import { firstCloud } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
 import { NO_HEAD_START, prizeText, pullAll, type Pull } from '../run/slots';
@@ -176,6 +177,7 @@ export interface Hud {
   over(result: RunResult | null): void;
   money(cash: number, stoken: number): void;
   score(score: number, combo: number, stoke: number, gnar: number, pending: number): void; // stoke and gnar 0..1; pending: the live combo's points
+  noGround?(n: number, mult: number, bonus: number, banked: boolean): void; // NO GROUND's meter (src/sim/sky.ts)
   pause(paused: boolean): void; // show or hide the pause card
   heat(value: number): void;
   warn(show: boolean): void; // an oncoming car is on its way
@@ -248,6 +250,21 @@ export class Game {
   private floor = 1;
   private boons: Held[] = [];
   private state: State = 'skate';
+  // ?clouds: each new floor starts up on its cloud layer's first cloud, to try it without the climb
+  startOnClouds(): void {
+    this.cloudStart = true;
+    this.toClouds();
+    this.view.follow(this.skater.x, this.skater.y);
+  }
+
+  private toClouds(): void {
+    const c = firstCloud(this.level);
+    if (c) Object.assign(this.sim.skater, { x: c.x0 + 8, y: c.y - 2, mode: 'air', hsp: 5, carry: 5, vsp: 0 });
+  }
+
+  private skyBonus = 0; // NO GROUND: extra cash the live line has paid
+  private skyBanked: { n: number; mult: number; bonus: number; t: number } | null = null; // the last line, held up a moment
+  private cloudStart = false; // ?clouds: each new floor starts up on its cloud layer (src/gen/clouds.ts)
   paused = false; // frozen by the pause button, Esc / P, or the page going hidden
   sound: Sound | null = null; // set by main once the page is up
   private menuAt = 0;
@@ -626,6 +643,7 @@ export class Game {
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
     this.skyView.reset(this.sim.sky);
     if (from) this.sim.skater.carryOn(from.skater, from.dx, from.dy);
+    else if (this.cloudStart) this.toClouds();
     //the last escape ends the run at its gate; every other floor rolls on into the next
     this.sim.rollOn = this.following().length > 0;
     if (this.autopilot) {
@@ -1217,7 +1235,7 @@ export class Game {
     if (sim.chopper) keep(sim.chopper, 'x');
     keep(sim.sky.chopper, 'x');
     for (const f of sim.sky.flocks) keep(f, 'x', 'y');
-    for (const p of sim.sky.pieces) keep(p, 'y', 'angle');
+    for (const p of sim.sky.pieces) keep(p, 'y', 'angle', 'x');
     for (const d of sim.swarm?.drones ?? []) keep(d, 'x', 'roof');
   }
 
@@ -1383,7 +1401,7 @@ export class Game {
     this.chopper.update(this.level, this.sim.chopper, dt);
     const top = this.sim.sky.chopper;
     this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
-    this.skyView.update(this.level, this.sim.sky, x, y, this.sim.up, dt);
+    this.skyView.update(this.level, this.sim.sky, x, y, this.sim.up, dt, this.skater.gone);
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, dt, (this.sim.shooter?.aimT ?? 0) > 0);
     this.shotsView.update(this.level, this.sim.shooter, this.chaserView.x + SHOTS.gun / TILE, this.sprite.mesh.position.x, dt);
@@ -1423,6 +1441,14 @@ export class Game {
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
     this.flowFx(dt);
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs, this.run.comboPoints * this.run.combo);
+    //NO GROUND's meter: the live line, or the one just banked for a moment after
+    const line = this.sim.skyLine;
+    if (line >= 2) this.hud.noGround?.(line, skyMult(line), this.skyBonus, false);
+    else if (this.skyBanked && this.skyBanked.t > 0) {
+      this.skyBanked.t -= dt;
+      this.hud.noGround?.(this.skyBanked.n, this.skyBanked.mult, this.skyBanked.bonus, true);
+    } else this.hud.noGround?.(0, 1, 0, false);
+    if (line === 0) this.skyBonus = 0;
     this.hud.gear(this.sim.gear);
     this.view.zoom.update(dt, this.skater.mode);
     this.view.follow(x, y, dt, realDt * this.timeScale * devSpeed());
@@ -1671,7 +1697,7 @@ export class Game {
 
   // burst through a paper billboard up in the sky: it tears away in a comic burst, with cash in it
   private bustFx(e: Extract<FloorEvent, { type: 'bust' }>): void {
-    this.run.addCash(SKY.bustCash * e.mult);
+    this.skyBonus += Math.max(0, this.run.addCash(SKY.bustCash * e.mult) - SKY.bustCash);
     this.run.addStyle(SCORE.smash * 4);
     this.hud.money(this.run.cash, this.run.stoken);
     this.hud.callout('BILLBOARD BUST!', 'trick');
@@ -1853,7 +1879,9 @@ export class Game {
       return;
     }
     if (e.type === 'skyBank') {
-      this.hud.callout(`SKY LINE x${e.n}!`, 'good');
+      this.hud.callout(`SKY LINE x${e.mult}! +$${this.skyBonus}`, 'good');
+      this.skyBanked = { n: e.n, mult: e.mult, bonus: this.skyBonus, t: 1.6 };
+      this.skyBonus = 0;
       return;
     }
     if (e.type === 'bust') return this.bustFx(e);
@@ -1889,7 +1917,9 @@ export class Game {
     }
     const wasGnar = this.run.gnar;
     const before = this.run.combo;
+    const cashBefore = this.run.cash;
     const bank = this.run.onEvent(e, this.skater.hsp);
+    if (e.type === 'pickup' && e.mult) this.skyBonus += Math.max(0, this.run.cash - cashBefore - SCORE.cashCoin);
     if (this.run.combo > before) this.bulletTime(this.run.combo);
     for (const st of statsOf(e)) this.mission(st);
     if (bank) {

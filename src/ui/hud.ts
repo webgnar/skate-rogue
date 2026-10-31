@@ -14,6 +14,7 @@ import { whole } from '../run/save';
 export const STOKE_SEGS = 10;
 export const HEAT_SEGS = 10;
 export const WEAR_SEGS = 5;
+export const NG_PIPS = 7; // NO GROUND's pieces to the cap (SKY_LINE, src/sim/sky.ts)
 export const HEAT_STARS = [25, 50, 75, 90]; // Heat for each star
 export const GEAR_ORDER: GearPart[] = ['deck', 'trucks', 'wheels', 'bearings', 'shoes']; // the mockup's order, bearings by the wheels
 
@@ -111,11 +112,17 @@ export class HudView {
   private readonly stoke: Meter;
   private readonly heat: Meter;
   private readonly slotsEl = $('slots');
+  private readonly ngBox = new Cell($('ngbox'));
+  private readonly ngMult = new Cell($('ngmult'));
+  private readonly ngBonus = new Cell($('ngbonus'));
+  private readonly ngPips: Meter;
+  private ngLast = 0;
   private boardKey = '';
   private readonly gearBars: Partial<Record<GearPart, { meter: Meter; box: Cell }>> = {};
 
   constructor() {
     this.stoke = new Meter($('stokebar'), STOKE_SEGS, (i) => mix([255, 226, 58], [255, 47, 180], i / (STOKE_SEGS - 1)));
+    this.ngPips = new Meter($('ngpips'), NG_PIPS, () => '');
     this.heat = new Meter($('heatbar'), HEAT_SEGS, (i) => mix([255, 120, 70], [255, 30, 60], i / (HEAT_SEGS - 1)));
     $('stars').innerHTML = HEAT_STARS.map(() => '<i>★</i>').join('');
     const gear = $('gearbars');
@@ -159,6 +166,29 @@ export class HudView {
     const isGnar = gnar > 0;
     this.stokeBox.data('gnar', isGnar ? '1' : '0');
     this.stoke.set(segments(isGnar ? gnar : stoke, STOKE_SEGS));
+  }
+
+  // NO GROUND: n sky pieces chained (shown from 2), the coin multiplier, the extra cash it's paid; banked holds
+  // the last line up a moment in gold after you touch down
+  setNoGround(n: number, mult: number, bonus: number, banked: boolean): void {
+    this.ngBox.data('live', n >= 2 ? '1' : '0');
+    this.ngBox.data('banked', banked ? '1' : '0');
+    this.ngBox.data('cap', n >= NG_PIPS ? '1' : '0');
+    if (n < 2) {
+      this.ngLast = 0;
+      return;
+    }
+    this.ngMult.text(`x${mult}`);
+    this.ngBonus.text(banked ? `BANKED +$${bonus}` : bonus > 0 ? `+$${bonus} BONUS` : 'LAND ON THE NEXT ONE');
+    this.ngPips.set(Math.min(NG_PIPS, n));
+    //each step up, the multiplier pops
+    if (n > this.ngLast && !banked) {
+      const el = this.ngBox.el as HTMLElement;
+      el.classList?.remove('step');
+      void el.offsetWidth;
+      el.classList?.add('step');
+    }
+    this.ngLast = n;
   }
 
   setHeat(value: number): void {

@@ -206,6 +206,19 @@ All of it is physics and tap-only: nothing lifts you up there (zack owns the way
 (placement and the SKY dials), `src/sim/sky.ts` (the moving decks, busts, golden pigeon, NO GROUND's multiplier),
 `src/render/sky-pieces-view.ts` and `src/render/sky-kit.ts` (drawing); the level editor lists the new beats.
 
+**The cloud layer** (zack, Oct 31, 2026: "i want sky route to go really tall. we could use the clouds and the rainbow...
+if we can put as much love into the sky as we did the ground"). From floor 5, way over each stretch of hill, far above
+the rooftops and cranes with nothing reaching down to the city: big puffy clouds to land on, drifting clouds that
+wander there and back, thin clouds that puff away a moment after you land, rainbows to grind up and over (one a
+floor may hide a spin token at the top), and hot air balloons whose baskets bob. The layer falls gently with the hill.
+The way up is a **staircase** (zack picked it): about 40% down each stretch the sky beats give way to scaffold decks
+and then wisps of cloud, each 1.25 tiles over the last and an ollie apart, about 10 tiles of climb. Still physics
+only. Code: `src/gen/clouds.ts` (the CLOUDS dials); `?clouds` starts a floor on the first cloud for testing.
+
+**The NO GROUND meter** (zack: "i need that to be visualy clear what its doing"). While a line is going, a panel under
+the combo shows NO GROUND, the live coin multiplier (it pops as it steps up), seven pips that turn gold at the x4 cap,
+and the bonus the line has added so far. Touch the ground and it reads BANKED +$N; the callout says SKY LINE x3! +$N.
+
 ### Three routes: sky, surface, sewer
 
 Decided Oct 31, 2026 (zack): the game has **three routes**, stacked vertically through every floor. Sky is built

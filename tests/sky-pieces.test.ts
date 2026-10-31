@@ -10,7 +10,7 @@ import { TILE } from '../src/physics/constants';
 import type { Level } from '../src/physics/level';
 
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
-const piecesOf = (l: Level) => [...(l.skyMovers ?? []).map((m) => m.kind), ...(l.busts ?? []).map(() => 'bust')];
+const piecesOf = (l: Level) => [...(l.skyMovers ?? []).filter((m) => m.kind !== 'cloud' && m.kind !== 'balloon').map((m) => m.kind), ...(l.busts ?? []).map(() => 'bust')];
 
 // the first floor (by seed) whose sky has this
 function find(test: (l: Level) => boolean): Level {
