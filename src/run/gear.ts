@@ -37,7 +37,7 @@ export const GEAR = {
   roughFrom: 50, // wheels under this can't roll over broken glass: it stops them dead, a slam
   grassSlow: 0.4, // cruising speed grass takes off you on dead wheels (none at roughFrom or better)
   puddleDrag: { fresh: 0.06, dead: 0.45 }, // speed a puddle takes off you, fresh wheels to dead ones
-  price: { deck: 25, shoes: 15, trucks: 20, wheels: 15, bearings: 15 } as Gear,
+  price: { deck: 80, shoes: 90, trucks: 70, wheels: 50, bearings: 80 } as Gear, // zack, 2026-10-31
   names: { deck: 'Deck', shoes: 'Shoes', trucks: 'Trucks', wheels: 'Wheels', bearings: 'Bearings' } as Record<GearPart, string>,
   wornBy: { deck: 'hard landings and smashing', shoes: 'flip tricks', trucks: 'grinding', wheels: 'speed and rough ground', bearings: 'puddles, dirt and smashing' } as Record<GearPart, string>,
 };
