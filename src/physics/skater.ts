@@ -174,6 +174,9 @@ export class Skater {
   }
 
   private advance(input: StepInput): void {
+    //a wall slam only lasts while you drop: came up over the lip and landed anyway, you ride on and the button works
+    //again (zack, 2026-10-31: taps did nothing for the rest of the floor after a pit wall slam on floor 2)
+    if (this.walled && this.mode !== 'air') this.walled = false;
     if (input.pressed && !this.walled) this.buffer = PHYS.bufferFrames;
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
