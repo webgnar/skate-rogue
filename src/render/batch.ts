@@ -160,6 +160,8 @@ export function* batchSteps(root: THREE.Object3D): Generator<void, number> {
     }
     const out = new THREE.Mesh(merged, material);
     out.name = 'batch';
+    //cut-out cards that carry their own ink (trees.ts) stay that way merged
+    if (list.every((m) => m.userData.inked)) out.userData.inked = true;
     root.add(out);
     saved += list.length - 1;
   }

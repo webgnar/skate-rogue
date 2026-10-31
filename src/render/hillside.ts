@@ -19,6 +19,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
 import { surfaceTexture } from './surfaces';
 import { TUNNEL, mouths } from '../traffic/tunnel';
+import { plantTree, treeWarm } from './trees';
 import { cables, chinatownAtlas, chinatownGlowMap, chinatownRng, tenement } from './chinatown-art';
 
 const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
@@ -582,7 +583,7 @@ function trap(m: Mesher, x0: number, x1: number, e: number, z: number, d: number
   m.quad('house', at(p0, yb), at(p3, yb), at(p2, yb), at(p1, yb), face.cap);
 }
 
-// an octagonal prism: trunks, poles' transformers, and stacked up, a tree's canopy
+// an octagonal prism: poles and their transformers, and stacked up, a shrub
 function oct(m: Mesher, cx: number, cz: number, r: number, yb: number, yt: number, uv: [number, number][], rt = r): void {
   const at = (i: number, rr: number, y: number): V3 => {
     const th = (i * Math.PI) / 4 + Math.PI / 8;
@@ -595,22 +596,6 @@ function oct(m: Mesher, cx: number, cz: number, r: number, yb: number, yt: numbe
     m.quad('house', top, at(i, rt, yt), at(i + 1, rt, yt), at(i + 1, rt, yt), uv);
     m.quad('house', bot, at(i + 1, r, yb), at(i, r, yb), at(i, r, yb), uv);
   }
-}
-
-// a street tree (photos 2 and 3): a trunk and a two-tier canopy; or a tall cypress
-function tree(m: Mesher, x: number, z: number, base: number, h: number, kind: 'leaf' | 'cypress'): void {
-  const bark = rectUv(SWATCH.pole);
-  if (kind === 'cypress') {
-    oct(m, x, z, 0.12, base, base + 1, bark);
-    const leaf = rectUv(SWATCH.cypress);
-    oct(m, x, z, 0.75, base + 0.8, base + h * 0.6, leaf, 0.9);
-    oct(m, x, z, 0.9, base + h * 0.6, base + h, leaf, 0.35);
-    return;
-  }
-  const leaf = rectUv(SWATCH.leaf);
-  oct(m, x, z, 0.14, base, base + h * 0.5, bark, 0.1);
-  oct(m, x, z, 0.9, base + h * 0.4, base + h * 0.75, leaf, 1.25);
-  oct(m, x + 0.15, z, 1.25, base + h * 0.75, base + h, leaf, 0.6);
 }
 
 // a shrub or a bougainvillea by a door (photo 2)
@@ -881,6 +866,8 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   const atPortal = (xa: number, xb: number) => portals.some(([a, b]) => xb > a - 0.3 && xa < b + 0.3);
   //row houses stepping down the hill behind the back sidewalk, and a row further up it
   const rng = makeRng(level.layout.seed * 53 + level.layout.floor * 7);
+  const trng = makeRng(level.layout.seed * 71 + level.layout.floor * 13); // the trees' own shapes
+  group.add(treeWarm());
   const lane = (x: number) => laneHeight(ground, hill, x);
   //each stretch of hill, tiles: the opening descent from off the left of the screen
   const stretches = hillStretches(level);
@@ -891,8 +878,12 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   for (const [s0, s1] of stretches) {
     yield* houseRowSteps(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, (a, b) => cut(a, b) || atPortal(a, b) || inChina(a, b), { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
     yield* houseRowSteps(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, (a, b) => cut(a, b) || inChina(a, b), { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
-    //cypresses between the rows, standing over the back row's roofs now and then
-    for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) if (!inChina(x - 1, x + 1)) tree(m, x, (bz1 + uz0) / 2, lane(x) + up * 0.5, 7 + rng() * 2.5, 'cypress');
+    //tall palms and big shade trees between the rows, standing over the back row's roofs now and then (trees.ts)
+    for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) {
+      if (inChina(x - 1, x + 1)) continue;
+      const k = rng(); // (the hill's rng, drawn as it was for the old cypresses, so the houses don't move)
+      plantTree(group, trng, k < 0.6 ? 'palm' : 'leafy', k < 0.6 ? 'tall' : 'big', x, lane(x) + up * 0.5, (bz1 + uz0) / 2);
+    }
   }
   //Chinatown: tenements along the street with their shops, taller ones crowding up the hill behind, cables strung
   //in bundles along the street and from the street's blocks up to the ones behind
@@ -959,7 +950,12 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
     const [xa] = poles[i - 1];
     const [xb] = poles[i];
     const x = (xa + xb) / 2 + (rng() - 0.5) * 2;
-    if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2) && !atPortal(x - 1.2, x + 1.2) && !inChina(x - 1.2, x + 1.2)) tree(m, x, P.z + 0.3, lane(x) + c, 3.2 + rng() * 1.6, 'leaf');
+    if (xb - xa > 7 && xb - xa < 20 && rng() < 0.55 && !cut(x - 1.2, x + 1.2) && !atPortal(x - 1.2, x + 1.2) && !inChina(x - 1.2, x + 1.2)) {
+      //street palms and leafy street trees, under the wires (trees.ts)
+      const k = rng(); // (drawn as it was for the old trees' height, so the rest of the hill doesn't move)
+      const [kind, size] = k < 0.4 ? (['palm', trng() < 0.5 ? 'short' : 'bent'] as const) : (['leafy', k < 0.75 ? 'round' : 'small'] as const);
+      plantTree(group, trng, kind, size, x, lane(x) + c, P.z + 0.3);
+    }
   }
   //where the night city bolts street lights onto the poles (street-lights.ts): under the wires, over the road
   group.userData.poleLamps = poles.map(([x, top]) => ({ x, y: top - 1.9, z: P.z, ground: lane(x), slope: (lane(x + 1) - lane(x - 1)) / 2 }));
