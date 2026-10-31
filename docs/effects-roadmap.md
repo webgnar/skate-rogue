@@ -19,6 +19,7 @@ Shaders and visual effects for Gnar Run. Each item is an OpenSpec change in `ope
 | fx13-biome-looks | A colour grade and ambient drift per GDD biome; ?biome= preview | Built (first pass, waits on biome kits) |
 | fx14-smash | Smashable props: pieces, chips, dust, words, kick, by material | Built and wired to the sim's smash events; visor glint added |
 | kit-merge | Street kit draw calls: split building faces to batch, one merged outline | Built (about 190 to 60 draws on floor 1) |
+| water-death | Canal falls: a blue comic splash (crown, column, ripples, SPLOOSH!) in `view.over`, the skater sinks out of sight with the ghost off, continue card waits 1.7 s (src/render/water-splash.ts) | Live |
 
 Budget rules for all of it: one draw call per effect type, no full-screen passes beyond the brief slam lines,
 fake lights (additive meshes) instead of real ones, and nothing that strobes the whole screen.

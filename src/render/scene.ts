@@ -119,6 +119,7 @@ export class StreetView {
   // effects that sit in depth with the skater, so his board and legs can cover them (flip lines), but that skip
   // his dithered ghost
   readonly withActor = new THREE.Group();
+  ghostOff = false; // no ghost: he's gone under the water, hidden for real (game.ts sinking)
   private readonly ghost = ghostMaterial();
   private readonly actorCam = new THREE.PerspectiveCamera();
   private readonly louAt = new THREE.Vector3();
@@ -729,10 +730,12 @@ export class StreetView {
       this.over.visible = false;
       this.ghost.uniforms.uColor.value.setHex(GHOST.colors[FX.ghost]);
       this.ghost.uniforms.uCell.value = Math.max(1, Math.round(GHOST.cell * this.pixelRatio));
-      this.front.overrideMaterial = this.ghost;
-      this.withActor.visible = false;
-      r.render(this.front, cam);
-      this.front.overrideMaterial = null;
+      if (!this.ghostOff) {
+        this.front.overrideMaterial = this.ghost;
+        this.withActor.visible = false;
+        r.render(this.front, cam);
+        this.front.overrideMaterial = null;
+      }
       this.withActor.visible = true;
       r.render(this.front, cam);
       //then the effects over everything
