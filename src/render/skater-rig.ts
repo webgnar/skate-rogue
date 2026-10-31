@@ -444,7 +444,7 @@ export class SkaterRig {
       }
     });
     const scale = this.mesh.getWorldScale(new THREE.Vector3()).x;
-    const springs = new Springs(model, bodyColliders((name) => this.bindPos.get(name), scale));
+    const springs = new Springs(model, bodyColliders((name) => this.bindPos.get(name), scale, !!model.getObjectByName('LouGnar')));
     if (springs.count) this.springs = springs;
     model.traverse((o) => {
       if ((o as THREE.Bone).isBone && o.name === 'Board') this.boardBone = o as THREE.Bone;

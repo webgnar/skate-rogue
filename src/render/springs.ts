@@ -32,6 +32,8 @@ export const SPRING_KINDS: Record<string, Partial<SpringFeel>> = {
   SpringHood: { stiffness: 0.035, drag: 0.08, gravity: 5, cloth: 0.6 },
   // a sweatshirt's body hanging off the chest: a little firmer, so it swings out and settles rather than drapes
   SpringShirt: { stiffness: 0.06, drag: 0.1, gravity: 5, cloth: 0.7 },
+  // Lou's scarf tails: light and loose, so they stream out behind at speed and whip on a pop
+  SpringScarf: { stiffness: 0.025, drag: 0.06, gravity: 4, cloth: 0.8 },
 };
 
 export function feelOf(name: string): SpringFeel {
@@ -118,7 +120,7 @@ export class Springs {
       // the last chain of a sheet closes a loop when it hangs as close to the first as the first does to the second
       const first = named(0);
       const second = named(1);
-      if (!next && first && second && first !== chain) {
+      if (!next && first && second && first !== chain && second !== chain) {
         const gap = (a: Link[], b: Link[]) => a[0].bone.getWorldPosition(v1).distanceTo(b[0].bone.getWorldPosition(v2));
         if (gap(chain, first) < gap(first, second) * 1.5) next = first;
       }
@@ -252,7 +254,8 @@ export class Springs {
 
 // where a skater's body pushes hair out: world positions at the bind pose from the bones' (art/lou_gnar.py sizes,
 // rig units; `scale` is the rig's world scale)
-export function bodyColliders(bindPos: (name: string) => THREE.Vector3 | undefined, scale: number): { bone: string; at: THREE.Vector3; r: number }[] {
+// `pack`: Lou's backpack, which his scarf tails hang over (art/lou_gnar.py gear: the back is -Z here)
+export function bodyColliders(bindPos: (name: string) => THREE.Vector3 | undefined, scale: number, pack = false): { bone: string; at: THREE.Vector3; r: number }[] {
   const out: { bone: string; at: THREE.Vector3; r: number }[] = [];
   const head = bindPos('Head');
   const chest = bindPos('Spine1');
@@ -261,5 +264,6 @@ export function bodyColliders(bindPos: (name: string) => THREE.Vector3 | undefin
   if (chest) out.push({ bone: 'Spine1', at: chest.clone().add(new THREE.Vector3(0, 0.08 * scale, 0)), r: 0.17 });
   // a sweatshirt's body hangs round the waist, and doesn't sink into it
   if (waist) out.push({ bone: 'Spine', at: waist.clone().add(new THREE.Vector3(0, 0.02 * scale, 0)), r: 0.12 });
+  if (pack && chest) for (const up of [0.18, -0.04]) out.push({ bone: 'Spine1', at: chest.clone().add(new THREE.Vector3(0, up * scale, -0.13 * scale)), r: 0.15 });
   return out;
 }

@@ -236,9 +236,10 @@ def chains(spec):
             root, _ = scalp(180 - s * 70, 20, -0.005)
             out.append((f'SpringLock{i}', 'Head', root, Vector((s * 0.15, -0.1, -1)), 0.2, 0.035, 0.014, 1.0, 2))
     if spec['hair'] == 'hood':
-        # the hoodie's drawstrings, hanging down the chest from either side of the neck
-        for i, x in enumerate((-0.045, 0.045)):
-            out.append((f'SpringString{i}', 'Spine1', Vector((x, -0.105, SPINE + 0.47)), Vector((0, -0.08, -1)), 0.2, 0.007, 0.007, 0.2, 2))
+        # the hoodie's drawstrings (zack, 2026-10-31: "two drawstrings in the front by the collar"): white cords out
+        # of the collar either side of the throat, hanging down the chest
+        for i, x in enumerate((-0.05, 0.05)):
+            out.append((f'SpringString{i}', 'Spine1', Vector((x, -0.112, SPINE + 0.49)), Vector((x * 0.6, -0.14, -1)), 0.26, 0.012, 0.012, 0.0, 3))
     return out
 
 
@@ -509,6 +510,8 @@ def build(name, spec):
     if spec.get('shades'):
         colors['shades'] = spec['shades']
     colors['eye'] = 0x16121A
+    if spec['hair'] == 'hood':
+        colors['string'] = 0xF2F0EA
     mats = {('hair' if k == 'hairColor' else k): lg.material(k, v) for k, v in colors.items()}
     rig = lg.armature()
     rig.name = rig.data.name = f'{name}Rig'
@@ -542,7 +545,7 @@ def build(name, spec):
         if spec.get('smooth'):
             smooth.append(part)
     for c in specs:
-        chain_mesh(c, mats['top'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
+        chain_mesh(c, mats['string'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
     for part in smooth:
         for p in part.data.polygons:
             p.use_smooth = True
