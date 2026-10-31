@@ -6,7 +6,12 @@
 //
 // Three levels of it, finer to chunkier (zack: "alternate between the different poly types to the beat of the
 // song"): the game steps it on each beat of the soundtrack, low, lower, lowest, lower, low...
+//
+// And it dances to the music (zack, 2026-10-31: "play with the gnar mode outline as like a music visualizer", picked
+// bass, mids and highs): the bass swells the glow, the mids grow the shards about their middles, the highs brighten
+// the colour.
 import * as THREE from 'three';
+import type { Bands } from '../audio/bands';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 import { glowMaterial, inkNormals, INK } from './toon';
 
@@ -14,6 +19,9 @@ export const SHARDS = {
   glow: 6.5, // CSS px the glow reaches past the hulls at full
   edge: 3, // and the black edge past that
   minVerts: 12, // bones that move fewer vertices than this get no shard of their own (fingers, toe tips)
+  bass: 0.9, // the glow's width grows by this much of itself on a full bass hit
+  mid: 0.14, // the shards grow by this much on full mids
+  high: 0.25, // and the colour's lightness rises this much on full highs (kept soft: no strobing)
 };
 
 const both = (axes: number[][]) =>
@@ -137,8 +145,13 @@ export class ShardAura {
   }
 
   private add(parent: THREE.Object3D, geo: THREE.BufferGeometry, level: number): void {
+    //centred on its own middle, so the mids grow it in place
+    geo.computeBoundingBox();
+    const mid = geo.boundingBox!.getCenter(new THREE.Vector3());
+    geo.translate(-mid.x, -mid.y, -mid.z);
     for (const mat of [this.edge, this.glow]) {
       const hull = new THREE.Mesh(geo, mat);
+      hull.position.copy(mid);
       hull.userData.ink = true; // not a body part: the ink, rims and wear leave it alone
       hull.frustumCulled = false;
       hull.visible = false;
@@ -153,8 +166,9 @@ export class ShardAura {
     this.step = (this.step + 1) % STEPS.length;
   }
 
-  // amount 0..1 grows it in; t (seconds) cycles the colour gold, magenta, cyan (as the old Aura did)
-  set(amount: number, t: number, pixelRatio: number): void {
+  // amount 0..1 grows it in; t (seconds) cycles the colour gold, magenta, cyan (as the old Aura did); bands, the
+  // music's (null with reduce motion: a gentle steady pulse instead)
+  set(amount: number, t: number, pixelRatio: number, bands: Bands | null = null): void {
     const on = amount > 0.01;
     if (!on) this.step = 0; // each gnar starts on the finest
     const level = STEPS[this.step];
@@ -162,9 +176,12 @@ export class ShardAura {
       for (const h of hulls) h.visible = on && l === level;
     });
     if (!on) return;
-    const glow = SHARDS.glow * amount * (0.85 + 0.15 * Math.sin(t * 12));
+    const pulse = bands ? 0.75 + SHARDS.bass * bands.bass : 0.85 + 0.15 * Math.sin(t * 12);
+    const glow = SHARDS.glow * amount * pulse;
     this.glow.uniforms.uWidth.value = glow * pixelRatio;
     this.edge.uniforms.uWidth.value = (glow + SHARDS.edge * amount) * pixelRatio;
-    (this.glow.uniforms.uColor.value as THREE.Color).setHSL((0.13 + t * 0.35) % 1, 1, 0.6);
+    const grow = 1 + SHARDS.mid * (bands?.mid ?? 0) * amount;
+    for (const h of this.hulls[level]) h.scale.setScalar(grow);
+    (this.glow.uniforms.uColor.value as THREE.Color).setHSL((0.13 + t * 0.35) % 1, 1, 0.6 + SHARDS.high * (bands?.high ?? 0));
   }
 }

@@ -4,6 +4,7 @@
 // the game never waits on sound.
 import { COIN_VERB, coinMix, LOOPS, MUSIC, SAMPLES, rollGain, sirenGain, type Cue, type MusicId } from './cues';
 import { SETTINGS } from '../ui/settings';
+import { BandMeter, type Bands } from './bands';
 
 export interface SoundFrame {
   mode: string; // the skater's mode
@@ -24,6 +25,9 @@ export class Sound {
   private roll: { gain: GainNode; filter: BiquadFilterNode } | null = null;
   private siren: { gain: GainNode; osc: OscillatorNode; lfo: OscillatorNode } | null = null;
   private music: { id: MusicId; src: AudioBufferSourceNode; track: string; at: number } | null = null;
+  private analyser: AnalyserNode | null = null; // listens to the music for the gnar glow (bands)
+  private bins = new Uint8Array(0);
+  private readonly meter = new BandMeter();
   private beats = new Map<string, number[]>(); // each track's beats, seconds in (public/music/<name>.beats.json)
   private want: MusicId | null = null;
   private track: Record<MusicId, number> = { gameplay: 0, title: 0 }; // where each slot is in its list
@@ -53,6 +57,14 @@ export class Sound {
     this.sfx.connect(ctx.destination);
     this.musicDuck = ctx.createGain();
     this.musicBus.connect(this.musicDuck).connect(ctx.destination);
+    //the analyser hangs off the bus (before the pause dip) into a silent gain, so the graph keeps pulling it
+    this.analyser = ctx.createAnalyser();
+    this.analyser.fftSize = 512;
+    this.analyser.smoothingTimeConstant = 0.4;
+    this.bins = new Uint8Array(this.analyser.frequencyBinCount);
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
+    this.musicBus.connect(this.analyser).connect(mute).connect(ctx.destination);
     //a hidden tab goes quiet; paused in view, only the music plays on (update)
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) void ctx.suspend().catch(() => {});
@@ -104,6 +116,13 @@ export class Sound {
       else hi = mid;
     }
     return Math.floor(t / len) * beats.length + lo;
+  }
+
+  // the playing music's bass, mids and highs (0..1, bands.ts); all at rest with no music
+  bands(dt: number): Bands {
+    if (!this.analyser || !this.music || this.ctx?.state !== 'running' || SETTINGS.music <= 0) return this.meter.rest(dt);
+    this.analyser.getByteFrequencyData(this.bins);
+    return this.meter.update(this.bins, this.ctx.sampleRate / this.analyser.fftSize, dt);
   }
 
   applyVolumes(): void {
