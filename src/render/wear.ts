@@ -84,6 +84,31 @@ export function bearingCaps(mat: THREE.Material): THREE.Mesh {
   return mesh;
 }
 
+// the paint a slide shreds off the deck's underside, as it looks now (worn, it's rubbed through to the wood), in
+// sRGB for the particles: a few samples of the deck's own colour, plus the plies that show where it's chipped
+const PLY_PAINT = [0xe2c08d, 0xe8b830].map((h) => new THREE.Color(h).getRGB(new THREE.Color(), THREE.SRGBColorSpace));
+export function deckPaint(board: THREE.Object3D): number[][] {
+  const out: number[][] = [];
+  const c = new THREE.Color();
+  board.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
+    const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
+    for (const [a, b] of ranges(mesh, 'deck')) {
+      const step = Math.max(1, Math.floor((b - a) / 24));
+      for (let i = a; i < b; i += step) {
+        if (pos.getY(i) > -0.005) continue; // the underside only, not the grip side
+        if (col) c.setRGB(col.getX(i), col.getY(i), col.getZ(i), THREE.LinearSRGBColorSpace);
+        else c.copy((mesh.material as THREE.MeshToonMaterial).color);
+        c.getRGB(c, THREE.SRGBColorSpace);
+        out.push([c.r, c.g, c.b]);
+      }
+    }
+  });
+  return [...out, ...PLY_PAINT.map((p) => [p.r, p.g, p.b])];
+}
+
 export function wearBoard(board: THREE.Object3D, g: Gear): void {
   const deck = look(g.deck);
   const trucks = look(g.trucks);
@@ -184,24 +209,44 @@ export function wearShoes(model: THREE.Object3D, condition: number): void {
   });
 }
 
-// paint the grip tape (src/board/grips.ts): its vertices in a merged board, or its own material. The colour goes into
-// the fresh copy too, so wear redraws over the new grip
+// the bar across the grip by the back truck (art/board.py 'gripbar'): bare maple, or near-black on a grip too light
+// for the wood to stand out against (white, yellow, lime, cyan, orange)
+const BAR_WOOD = 0xe2c08d;
+const BAR_DARK = 0x1c1c20;
+export function gripBarColor(grip: number): number {
+  const lum = (hex: number) => {
+    const c = new THREE.Color(hex); // linear, so these make a WCAG contrast ratio
+    return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  };
+  const [a, b] = [lum(grip), lum(BAR_WOOD)];
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) < 1.8 ? BAR_DARK : BAR_WOOD;
+}
+
+// paint the grip tape (src/board/grips.ts), and its bar to stand out from it: their vertices in a merged board, or
+// their own materials. The colour goes into the fresh copy too, so wear redraws over the new grip
 export function paintGrip(board: THREE.Object3D, color: number): void {
-  const c = new THREE.Color(color);
+  const paints: [string, THREE.Color][] = [
+    ['grip', new THREE.Color(color)],
+    ['gripbar', new THREE.Color(gripBarColor(color))],
+  ];
   board.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
-    if (mesh.userData.mat === 'grip' || (!col && mesh.userData.grip)) {
-      (mesh.material as THREE.MeshToonMaterial).color.copy(c);
-      return;
+    for (const [mat, c] of paints) {
+      if (mesh.userData.mat === mat || (mat === 'grip' && !col && mesh.userData.grip)) {
+        (mesh.material as THREE.MeshToonMaterial).color.copy(c);
+        return;
+      }
     }
     if (!col) return;
     const fresh = original(col);
-    for (const [a, b] of ranges(mesh, 'grip')) {
-      for (let i = a; i < b; i++) {
-        fresh.set([c.r, c.g, c.b], i * 3);
-        col.setXYZ(i, c.r, c.g, c.b);
+    for (const [mat, c] of paints) {
+      for (const [a, b] of ranges(mesh, mat)) {
+        for (let i = a; i < b; i++) {
+          fresh.set([c.r, c.g, c.b], i * 3);
+          col.setXYZ(i, c.r, c.g, c.b);
+        }
       }
     }
     col.needsUpdate = true;

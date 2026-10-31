@@ -76,6 +76,25 @@ export function puddleSpots(level: Level, seed: number, floor: number): Puddle[]
   return out;
 }
 
+// Chinatown's street is wet whatever the weather (zack's photos): standing water along its flats, already there when
+// you arrive. Only for the look: they're not in forSim(), so they don't soak the deck
+export function chinatownPuddles(level: Level, seed: number, floor: number): Puddle[] {
+  const r = rng(seed * 6271 + floor * 3571);
+  const out: Puddle[] = [];
+  for (const [a, b] of level.chinatown ?? []) {
+    for (const s of level.surfaces) {
+      if (s.kind !== 'roof' || s.top || s.sky || s.x1 <= a || s.x0 >= b) continue;
+      const [x0, x1] = [toX(Math.max(a, s.x0)) + 0.6, toX(Math.min(b, s.x1)) - 0.6];
+      for (let x = x0 + r() * 2; x < x1 - 0.8; x += 2.2 + r() * 2.5) {
+        const w = Math.min(0.6 + r() * 1.1, (x1 - x) / 2);
+        out.push({ x: x + w, y: toY(level, s.y), z: (r() - 0.5) * 2.4, w, d: 0.5 + r() * 0.7, delay: -PUDDLE.grow, seed: r() * 100 });
+        x += 2 * w;
+      }
+    }
+  }
+  return out;
+}
+
 // how formed a puddle is, 0..1, t seconds into the floor
 export function puddleGrowth(p: Puddle, t: number): number {
   return Math.min(1, Math.max(0, (t - p.delay) / PUDDLE.grow));
@@ -84,6 +103,7 @@ export function puddleGrowth(p: Puddle, t: number): number {
 const vertex = /* glsl */ `
   attribute float aDelay;
   attribute float aSeed;
+  attribute float aWet; // 1: Chinatown's standing water, there whatever the weather
   uniform float uTime;
   uniform float uGrow;
   uniform float uScale;
@@ -95,7 +115,7 @@ const vertex = /* glsl */ `
   void main() {
     vUv = uv * 2.0 - 1.0;
     vSeed = aSeed;
-    vGrowth = clamp((uTime - aDelay) / uGrow, 0.0, 1.0) * min(uScale, 1.0);
+    vGrowth = aWet > 0.5 ? 1.0 : clamp((uTime - aDelay) / uGrow, 0.0, 1.0) * min(uScale, 1.0);
     vec4 world = modelMatrix * instanceMatrix * vec4(position, 1.0);
     vWorld = world.xyz;
     vec4 mvPosition = viewMatrix * world;
@@ -184,6 +204,7 @@ export class Puddles {
   private readonly mat: THREE.ShaderMaterial;
   private readonly delay: THREE.InstancedBufferAttribute;
   private readonly seed: THREE.InstancedBufferAttribute;
+  private readonly wet: THREE.InstancedBufferAttribute;
   private spots: Puddle[] = [];
   private t = 0;
   private wake = 0;
@@ -193,8 +214,10 @@ export class Puddles {
     const geo = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
     this.delay = new THREE.InstancedBufferAttribute(new Float32Array(MAX), 1);
     this.seed = new THREE.InstancedBufferAttribute(new Float32Array(MAX), 1);
+    this.wet = new THREE.InstancedBufferAttribute(new Float32Array(MAX), 1);
     geo.setAttribute('aDelay', this.delay);
     geo.setAttribute('aSeed', this.seed);
+    geo.setAttribute('aWet', this.wet);
     this.mat = new THREE.ShaderMaterial({
       vertexShader: vertex,
       fragmentShader: fragment,
@@ -225,9 +248,11 @@ export class Puddles {
     this.mesh.frustumCulled = false;
   }
 
-  // a new floor: these puddles, starting dry; none when it isn't raining
-  set(spots: Puddle[], rain: number): void {
+  // a new floor: these puddles, starting dry; none when it isn't raining. `wet` are standing water whatever the
+  // weather (chinatownPuddles), drawn after them
+  set(spots: Puddle[], rain: number, wet: Puddle[] = []): void {
     this.spots = rain > 0 ? spots.slice(0, MAX) : [];
+    const always = wet.slice(0, MAX - this.spots.length);
     this.t = 0;
     this.scale = rain <= 0 ? 0 : rain < 0.8 ? 0.55 : rain > 1.2 ? 1.2 : 1;
     this.mat.uniforms.uScale.value = this.scale;
@@ -237,10 +262,19 @@ export class Puddles {
       this.mesh.setMatrixAt(i, tmp);
       this.delay.setX(i, p.delay);
       this.seed.setX(i, p.seed);
+      this.wet.setX(i, 0);
     });
-    this.mesh.count = this.spots.length;
+    always.forEach((p, k) => {
+      const i = this.spots.length + k;
+      tmp.makeScale(p.w, 1, p.d).setPosition(p.x, p.y + 0.012, p.z);
+      this.mesh.setMatrixAt(i, tmp);
+      this.delay.setX(i, p.delay);
+      this.seed.setX(i, p.seed);
+      this.wet.setX(i, 1);
+    });
+    this.mesh.count = this.spots.length + always.length;
     this.mesh.instanceMatrix.needsUpdate = true;
-    this.delay.needsUpdate = this.seed.needsUpdate = true;
+    this.delay.needsUpdate = this.seed.needsUpdate = this.wet.needsUpdate = true;
   }
 
   setSky(top: number, bottom: number, neon: number): void {

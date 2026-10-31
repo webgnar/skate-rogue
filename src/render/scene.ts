@@ -6,6 +6,7 @@ import { LENS, Lens, lensSource, lensWiden } from './lens';
 import { tilt } from './tilt';
 import { buildKitSteps, toX, toY } from './kit';
 import { NightCity } from './night';
+import { chinatownGlow } from './chinatown-art';
 import { FX } from './fx-settings';
 import { railTint } from './rail-metal';
 import { batchSteps } from './batch';
@@ -176,7 +177,7 @@ export class StreetView {
     readonly canvas: HTMLCanvasElement,
     private level: Level,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: true });
     //checking a shader for errors waits for it to finish compiling: only in development
     this.renderer.debug.checkShaderErrors = !import.meta.env.PROD;
     this.keep = new ShaderKeep(this.renderer);
@@ -657,6 +658,8 @@ export class StreetView {
     const k = 1 - 0.22 * this.wet;
     kit.traverse((o) => {
       if (!(o instanceof THREE.Mesh) || o.userData.ink) return;
+      //Chinatown's signs and lanterns light up with the neon
+      if (o.name === 'hillside-ct') (o.material as THREE.MeshToonMaterial).emissiveIntensity = chinatownGlow(this.mood?.neon ?? 0);
       for (const m of [o.material].flat() as THREE.MeshToonMaterial[]) {
         if (m.name === 'railMetal') railTint(this.mood?.neon ?? 0, (m as THREE.Material as THREE.MeshMatcapMaterial).color);
         if (!(m instanceof THREE.MeshToonMaterial) || m.userData.facade) continue;

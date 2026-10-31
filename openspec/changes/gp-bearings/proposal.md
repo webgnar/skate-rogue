@@ -22,3 +22,13 @@ a Swiss-style bearing box (black shields, red ring) and an open bronze ceramic b
 ## Open (asked zack)
 - What wears bearings beyond puddles, since rain is only about 1 floor in 8 (grit is the current pick).
 - Grass: there is none in the levels yet.
+
+## Follow-up (zack, 2026-10-30)
+- "Puddles should wear the deck, but impact from gravity should wear the deck the most, especially landing in a way
+  that is against momentum that makes you lose speed." The deck wears 0.25 per px/frame of landing impact over
+  FEEL.soft, plus 0.55 per px/frame of speed the landing scrubs off (the land event's `lost`). Ollies are down to
+  0.4 and puddles add 2.
+- "Dirt will wear bearings, running into breakables which create dust, hitting glass shards." Bearings take 1 for
+  each wood, stone or glass prop you smash (src/sim/stuff.ts `gritty`), and 1 per stretch of broken glass rolled
+  over, on top of dirt from rolling (0.3/s) and puddles (12).
+- Rebalanced: the bot's first shop has 2.44 parts worn (deck about 39, wheels 34, shoes 50, bearings 58).

@@ -1,6 +1,6 @@
 // Grip tape colours (zack, 2026-10-30: "grip color could be bought at the shop... selling one color at a time
 // throughout the world"). The grip faces the camera, so a bright one is what makes the board read on a phone. You
-// start on cyan; each shop visit sells one other colour, and a bought colour stays on the board for later runs.
+// start on classic black; each shop visit sells one other colour, and a bought colour stays on the board for later runs.
 // Pure: the save keeps the id, the rig paints it.
 import { makeRng, randInt } from '../gen/rng';
 
@@ -25,7 +25,7 @@ export const GRIPS: GripDef[] = [
 ];
 
 export const GRIP = {
-  start: 'cyan' as GripId,
+  start: 'black' as GripId, // zack (2026-10-30): start on black grip, buy the colours
   price: 15,
 };
 

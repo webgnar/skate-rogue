@@ -36,7 +36,7 @@ import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
 import { BulletTime, landCall } from './bullet-time';
-import { Aura, inkify } from '../render/toon';
+import { glowMaterial, INK, inkify, outlineMaterial, silhouetteInk } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
 import { FlipLines } from '../render/flip-lines';
 import { FX } from '../render/fx-settings';
@@ -49,7 +49,7 @@ import { hideProp, propsFor, restyle } from '../render/props';
 import { BIOMES, biomeMood, type BiomeId } from '../render/biomes';
 import { SkaterLight } from '../render/skater-light';
 import { clockFor, mixMood, moodAt, rainLevel, rainy, WEATHER, type Mood } from '../render/atmosphere';
-import { puddleSpots } from '../render/puddles';
+import { chinatownPuddles, puddleSpots } from '../render/puddles';
 import { FloorSim, type FloorEvent } from '../sim/floor';
 import { ChopperView } from '../render/chopper-view';
 import { SkyView } from '../render/sky-view';
@@ -66,7 +66,8 @@ import { BountyView } from '../render/bounty-view';
 import { BOUNTY, bountyPay } from '../run/bounty';
 import { PHYS, TILE } from '../physics/constants';
 import { LIFT, SkaterRig } from '../render/skater-rig';
-import { trickName } from '../physics/tricks';
+import { ShardAura } from '../render/shard-aura';
+import { SLIDES, trickName } from '../physics/tricks';
 import { parkedPaint, toX, toY } from '../render/kit';
 import { CarHopFx, damageParked, parkedDamage, slideParked } from '../render/car-damage';
 import { OneButton } from './input';
@@ -144,6 +145,9 @@ export interface PlaytestState {
 
 export type ShopPick = { stock: number } | { slot: number } | null;
 
+// the skater's ink outline in CSS px (the city's is INK.width, 2.2): thicker since Lou grew (zack, 2026-10-30)
+const SKATER_INK = 3;
+
 export interface ShopView {
   shop: ShopState;
   picked: ShopPick;
@@ -210,6 +214,7 @@ const FLOW_RANGE = 0.7;
 const GNAR_TRAIL = 40; // sparkles per second
 const SPARKS_RAIL = 150;
 const SPARKS_LEDGE = 70;
+const SLIDE_FLAKES = 0.8; // paint flakes per spark the same grind would throw: fewer, they hang around longer
 
 export class Game {
   private level: Level;
@@ -267,6 +272,7 @@ export class Game {
   }
   private spotState = 'hunt';
   private readonly particles = new Particles();
+  private paint: number[][] = [[0.78, 0.19, 0.17]]; // the deck's colours, for a slide's paint flakes (SkaterRig.deckPaint)
   private readonly focus = new FocusLines();
   private readonly escapeFx = new EscapeFx(this.particles);
   private readonly words = new SoundWords();
@@ -295,10 +301,13 @@ export class Game {
   private perfFrames = 0;
   private frameAt = 0;
   private perfText = '';
-  private readonly aura: Aura;
+  private readonly aura: ShardAura;
+  private readonly skaterInk = glowMaterial(SKATER_INK, INK.color, 0);
+  private readonly boardInk = glowMaterial(SKATER_INK, INK.color, 0);
   private readonly visor: VisorGlint;
   private readonly skaterLight: SkaterLight;
   private gnarGlow = 0; // 0..1, eases with the gnar state
+  private lastBeat = 0; // the soundtrack's beat count last frame (the gnar glow steps on each)
   private clock = 0;
   private readonly puddleRes = new THREE.Vector2();
   private ghostMesh: THREE.Mesh;
@@ -307,7 +316,7 @@ export class Game {
   private shopPick: ShopPick = null;
   private shopVisits = 0;
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
-  private grip: GripId = loadSave().grip; // the grip tape's colour, kept between runs (src/board/grips.ts)
+  private grip: GripId = loadSave().tape ?? GRIP.start; // the grip tape's colour, kept between runs (src/board/grips.ts)
   // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
   // next one is already there, built in the background while you skated this one
   private readonly prefetch = new FloorPrefetch();
@@ -345,8 +354,11 @@ export class Game {
     this.view.actor.add(this.sprite.mesh);
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
+    //the skater's ink a touch thicker than the city's, so it holds up at Lou's bigger size (SKATER_INK), and only
+    //round the outside (silhouetteInk)
+    silhouetteInk(this.sprite.mesh, this.sprite.boardGroup, outlineMaterial(), this.skaterInk, this.boardInk);
     this.sprite.setGrip(gripDef(this.grip).color);
-    this.aura = new Aura(this.sprite.mesh);
+    this.aura = new ShardAura(this.sprite.mesh, this.sprite.boardGroup);
     this.visor = new VisorGlint(this.sprite.mesh);
     this.skaterLight = new SkaterLight(this.sprite.mesh);
     this.view.front.add(this.skaterLight.group);
@@ -599,7 +611,7 @@ export class Game {
     this.prev = from ? { x: this.prev.x + from.dx, y: this.prev.y + from.dy } : { x: this.skater.x, y: this.skater.y };
     if (!from) this.view.setLevel(this.level, this.seed, this.floor);
     const rain = this.applyMood(!!from);
-    this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain);
+    this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain, chinatownPuddles(this.level, this.seed, this.floor));
     //the sim wears the deck rolling through them, so it needs them in its own units
     this.sim.puddles = this.view.puddles.forSim().map((p) => ({ ...p, x: p.x * TILE, y: this.level.streetY - p.y * TILE, w: p.w * TILE }));
     this.dripEdges = this.level.surfaces
@@ -911,7 +923,7 @@ export class Game {
   private setGrip(id: GripId): void {
     this.grip = id;
     this.sprite.setGrip(gripDef(id).color);
-    writeSave({ ...loadSave(), grip: id });
+    writeSave({ ...loadSave(), tape: id });
   }
 
   private leaveShop(): void {
@@ -1074,7 +1086,7 @@ export class Game {
     for (const d of sim.traffic.doors) keep(d, 'open');
     for (const h of sim.traffic.hillCross) for (const c of h.cars) keep(c, 'z');
     for (const c of sim.traffic.cabs) {
-      keep(c, 'turn');
+      keep(c, 'turn', 'z');
       keep(c.box, 'x0', 'x1');
     }
     for (const t of sim.trains) {
@@ -1337,7 +1349,13 @@ export class Game {
     this.view.rhythm.combo(skating ? this.run.combo : 0);
     this.view.rhythm.update(dt, skating ? flow : 0);
     this.gnarGlow += ((gnar ? 1 : 0) - this.gnarGlow) * Math.min(1, dt * 6);
+    //the glow's shards step on the soundtrack's beat (a steady 0.58 s pulse when there's no music to follow)
+    const beat = this.sound?.beatIndex() ?? Math.floor(this.clock / 0.58);
+    if (beat !== this.lastBeat && this.gnarGlow > 0.01) this.aura.beat();
+    this.lastBeat = beat;
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
+    this.skaterInk.uniforms.uWidth.value = Math.max(1, SKATER_INK * this.view.resolution);
+    this.boardInk.uniforms.uWidth.value = this.skaterInk.uniforms.uWidth.value;
     this.skaterLight.update(dt, this.sprite.mesh.position, (x, y, out) => this.view.night.lights.lightAt(x, y, out), this.gnarGlow > 0.01, this.view.resolution);
     if (gnar) {
       const p = this.sprite.mesh.position;
@@ -1372,9 +1390,22 @@ export class Game {
     if (this.state !== 'skate' || (sk.mode !== 'rail' && sk.mode !== 'grind')) return;
     const speed = sk.mode === 'rail' ? sk.railV : Math.abs(sk.hsp);
     const rate = (sk.mode === 'rail' ? SPARKS_RAIL : SPARKS_LEDGE) * Math.min(2, Math.max(0.4, speed / PHYS.baseSpeed));
-    const [x, y] = this.backTruck();
-    //rails are metal; ledges, roof edges and banks are concrete
-    this.particles.grind(x, y, 1, rate, dt, sk.material);
+    //a slide shreds the deck's paint off its middle; rails are metal; ledges, roof edges and banks are concrete
+    if (SLIDES.has(sk.stance)) this.particles.slide(...this.deckMiddle(), 1, rate * SLIDE_FLAKES, dt, this.paint);
+    else this.particles.grind(...this.backTruck(), 1, rate, dt, sk.material);
+  }
+
+  // a grind or slide locked on: sparks off the back truck, or a slide's burst of paint
+  private grindStart(): void {
+    if (!SLIDES.has(this.skater.stance)) return this.particles.grindStart(...this.backTruck(), 1);
+    this.paint = this.sprite.deckPaint(); // as worn now
+    this.particles.slideStart(...this.deckMiddle(), 1, this.paint);
+  }
+
+  // where the middle of the deck's underside meets the rail
+  private deckMiddle(): [number, number] {
+    const p = this.sprite.mesh.position;
+    return [p.x, p.y];
   }
 
   // where the back truck meets the rail, from the rig's tilt
@@ -1601,11 +1632,11 @@ export class Game {
         this.hud.callout(trickName(e.name, e.fakie, e.nollie) + combo, 'trick');
         break;
       case 'grind':
-        this.particles.grindStart(...this.backTruck(), 1);
+        this.grindStart();
         this.hud.callout(this.sprite.grindName + combo, 'trick');
         break;
       case 'rail':
-        this.particles.grindStart(...this.backTruck(), 1);
+        this.grindStart();
         this.hud.callout(this.sprite.grindName + combo, 'trick');
         break;
       case 'hop':

@@ -37,13 +37,16 @@ export interface Framing {
 
 export const PHONE_CAM = {
   short: 600, // css px: a screen whose short side is this or less is a phone
-  // (zack 2026-10-30, "the player character needs to be bigger": 20% tighter than the 10.5 tiles both ways before)
-  landscapeH: 8.75, // tiles of height on a phone held sideways (Lou ~a quarter of the screen; desktop shows 16)
+  // (zack 2026-10-30, "the player character needs to be bigger": 8.75, then "pull out the camera a little": 9.5;
+  // 10.5 both ways before)
+  landscapeH: 9.5, // tiles of height on a phone held sideways (Lou ~a quarter of the screen; desktop shows 16)
   landscapeFov: 52,
-  portraitW: 8.75, // tiles of width on a phone held upright (it showed 21; height follows from the aspect)
+  portraitW: 9.5, // tiles of width on a phone held upright (it showed 21; height follows from the aspect)
   portraitFov: 74, // tall screen, so a tall lens: about 40 degrees across
   lead: [0.22, 0.42], // landscape, portrait: Lou sits left of centre so more street ahead shows
-  low: [0.12, 0.14], // landscape, portrait: Lou sits below centre, the roofs, wires and the L above in view
+  // landscape, portrait: Lou sits below centre, the roofs, wires and the L above in view (zack 2026-10-30: "move the
+  // camera up. so the board is lower on the screen, and you can see up more": 0.12 and 0.14 before)
+  low: [0.36, 0.3],
   punch: 1, // trick and grind zooms at this share of their strength (zack 2026-10-25: "zoom effects More")
 };
 

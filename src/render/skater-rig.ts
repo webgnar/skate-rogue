@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
-import { bearingCaps, paintGrip, wearBoard, wearShoes } from './wear';
+import { bearingCaps, deckPaint, paintGrip, wearBoard, wearShoes } from './wear';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
@@ -27,9 +27,10 @@ const ARM_FIELDS = [
 // the poses are in a ~1.8 tile tall skater; the sprite stood about 2 tiles at 1.15. zack (2026-10-30): "something
 // about the player character needs to be bigger. its too hard to see the board", so Lou is 1.2x that
 export const SCALE = 1.38;
-// and the board 1.4x again on top, a hero board that reads on a phone. Scaled about the deck's top, where the feet
+// and the board in proportion to him (zack 2026-10-30: 1.4x on top was too big; "shrink down board to ratio of
+// player"). Kept as a knob: scaled about the deck's top, where the feet
 // stand, so the wheels reach lower: the game lifts the rig by LIFT (in the rig's units) to keep them on the ground
-export const BOARD_SIZE = 1.4;
+export const BOARD_SIZE = 1;
 export const LIFT = BOARD.deckTop * (BOARD_SIZE - 1);
 const THIGH = 0.4;
 const SHIN = 0.4;
@@ -644,6 +645,11 @@ export class SkaterRig {
     this.snap?.board.multiply(new THREE.Matrix4().makeRotationY(-Math.PI));
   }
 
+  // the group the board's meshes ride in (the gnar glow's board shard, shard-aura.ts)
+  get boardGroup(): THREE.Object3D {
+    return this.boardFace;
+  }
+
   get boardReversed(): boolean {
     return this.boardBack;
   }
@@ -1016,6 +1022,14 @@ export class SkaterRig {
   // the deck as drawn (origin at the middle of its top), for effects that follow the board (flip-lines.ts)
   get deck(): THREE.Object3D {
     return this.boardFace;
+  }
+
+  // the colours a slide shreds off the deck (wear.ts deckPaint); the built-in board is plain red
+  deckPaint(): number[][] {
+    const paint = this.board ? deckPaint(this.board) : [];
+    if (paint.length > 2) return paint;
+    const c = new THREE.Color(COLORS.deck).getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
+    return [[c.r, c.g, c.b]];
   }
 
   // the grip tape's colour (src/board/grips.ts)

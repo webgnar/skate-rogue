@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { crossed, freshGear, GEAR, gearScale, replace, wornness } from '../src/run/gear';
 import { PHYS, TILE } from '../src/physics/constants';
 import { FloorSim } from '../src/sim/floor';
-import { FLAT, levelOf, pressAt } from './helpers';
+import { FLAT, levelOf, pressAt, withExtras } from './helpers';
+import { FEEL } from '../src/physics/feel';
 
 const GLASS = [
   '................', '................', '................', '................', '................',
@@ -109,5 +110,36 @@ describe('gear wear', () => {
     const worn = over(GEAR.roughFrom - 1);
     expect(worn.seen).toContain('slam');
     expect(worn.seen).not.toContain('glass');
+  });
+
+  it('hard landings wear the deck the most, and more when they cost you speed', () => {
+    const street = levelOf(FLAT).streetY;
+    const drop = (tiles: number, hsp: number, carry: number) => {
+      const y = street - tiles * TILE;
+      const sim = new FloorSim(withExtras([{ kind: 'roof', x0: 0, x1: 2 * TILE, y, row: -1 }], [], { x: TILE, y }));
+      sim.skater.hsp = hsp;
+      sim.skater.carry = carry;
+      let land: { impact?: number; lost?: number } | undefined;
+      for (let f = 0; f < 240 && !land; f++) {
+        sim.step({ pressed: false, held: false });
+        land = sim.events.find((e) => e.type === 'land');
+      }
+      return { deck: 100 - sim.gear.deck, land: land! };
+    };
+    const small = drop(1, PHYS.baseSpeed, 0);
+    const big = drop(6, PHYS.baseSpeed, 0);
+    expect(small.land.impact!).toBeLessThan(FEEL.soft);
+    expect(small.deck).toBeCloseTo(0);
+    expect(big.deck).toBeGreaterThan(GEAR.ollie * 3); // one big drop beats three ollies
+    //the same drop carrying rail speed: the landing scrubs it, and that wears the deck more
+    const fast = drop(6, PHYS.bombSpeed, PHYS.bombSpeed);
+    expect(fast.land.lost!).toBeGreaterThan(0);
+    expect(fast.deck).toBeGreaterThan(big.deck);
+  });
+
+  it('smashing dusty or glassy props and rolling over broken glass grits the bearings', () => {
+    const sim = new FloorSim(levelOf(GLASS));
+    for (let f = 0; f < 260; f++) sim.step({ pressed: false, held: false });
+    expect(100 - sim.gear.bearings).toBeCloseTo(GEAR.smashGrit + (260 * GEAR.rollSec) / 60, 1);
   });
 });

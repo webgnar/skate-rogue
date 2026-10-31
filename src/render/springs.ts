@@ -3,7 +3,8 @@
 // (art/skaters.py). Each bone's tail is a verlet particle in world space: it keeps its momentum, falls with gravity
 // and is pulled back toward where the pose would put it, held at the bone's length from the bone's head and pushed
 // out of the head and chest. So when the skater rolls, pops or falls, the hair lags behind and streams the other way.
-// The clips never key these bones.
+// The clips never key these bones. Hair, drawstrings and (later) a tee's hem are all just chains: each kind gets its
+// own feel from SPRING_KINDS by its bone name.
 import * as THREE from 'three';
 
 export const SPRING = {
@@ -14,6 +15,22 @@ export const SPRING = {
   maxSteps: 4, // a slow frame catches up at most this many steps
   jump: 3, // a head that moves more than this (rig units) in a frame was teleported: snap to rest
 };
+
+export type SpringFeel = Pick<typeof SPRING, 'stiffness' | 'drag' | 'gravity'>;
+
+// per kind of chain, by the start of its bones' names (the longest match wins); anything else feels like SPRING.
+// Anime spikes are gelled: they stand up against gravity and snap back, flicking at the tips on a pop or a landing.
+export const SPRING_KINDS: Record<string, Partial<SpringFeel>> = {
+  SpringSpike: { stiffness: 0.22, drag: 0.2, gravity: 1 },
+  SpringLock: { stiffness: 0.1, drag: 0.14, gravity: 4 }, // the locks framing the face
+};
+
+export function feelOf(name: string): SpringFeel {
+  let best = '';
+  for (const k of Object.keys(SPRING_KINDS)) if (name.startsWith(k) && k.length > best.length) best = k;
+  const { stiffness, drag, gravity } = SPRING;
+  return { stiffness, drag, gravity, ...SPRING_KINDS[best] };
+}
 
 interface Link {
   bone: THREE.Bone;
@@ -38,6 +55,7 @@ const q2 = new THREE.Quaternion();
 
 export class Springs {
   private readonly chains: Link[][] = [];
+  private readonly feels: SpringFeel[] = [];
   private readonly colliders: Collider[] = [];
   private readonly head = new THREE.Vector3();
   private acc = 0;
@@ -62,6 +80,7 @@ export class Springs {
         l.tail.copy(next ? next.bone.position : chain.length > 1 ? chain[i].bone.position : new THREE.Vector3(0, 0.1, 0));
       });
       this.chains.push(chain);
+      this.feels.push(feelOf(root.name));
     }
     for (const c of colliders) {
       let bone: THREE.Object3D | undefined;
@@ -103,11 +122,12 @@ export class Springs {
     // of the way there, so a slow frame doesn't fling the hair ahead
     const move = v1.clone().sub(this.head);
     this.head.copy(v1);
-    const g = SPRING.gravity * scale * SPRING.step * SPRING.step;
-    for (const chain of this.chains) {
-      for (let s = 0; s < steps; s++) this.solve(chain, g, scale, lag.copy(move).multiplyScalar(1 - (s + 1) / steps));
+    this.chains.forEach((chain, c) => {
+      const feel = this.feels[c];
+      const g = feel.gravity * scale * SPRING.step * SPRING.step;
+      for (let s = 0; s < steps; s++) this.solve(chain, feel, g, scale, lag.copy(move).multiplyScalar(1 - (s + 1) / steps));
       this.aim(chain);
-    }
+    });
   }
 
   private rest(chain: Link[]): void {
@@ -120,7 +140,7 @@ export class Springs {
   }
 
   // `back`: how far the body still has to go this frame (it is drawn back by that much)
-  private solve(chain: Link[], g: number, scale: number, back: THREE.Vector3): void {
+  private solve(chain: Link[], feel: SpringFeel, g: number, scale: number, back: THREE.Vector3): void {
     // heads move with the pose; each tail swings about the tail before it (or the chain's root)
     for (let i = 0; i < chain.length; i++) {
       const l = chain[i];
@@ -133,9 +153,9 @@ export class Springs {
       const next = v3
         .copy(l.p)
         .sub(l.prev)
-        .multiplyScalar(1 - SPRING.drag)
+        .multiplyScalar(1 - feel.drag)
         .add(l.p)
-        .addScaledVector(posed.sub(l.p), SPRING.stiffness);
+        .addScaledVector(posed.sub(l.p), feel.stiffness);
       next.y -= g;
       // hold the bone's length, then push out of the body
       next.sub(head).setLength(len).add(head);

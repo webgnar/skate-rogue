@@ -1,5 +1,5 @@
 // Card art for the skate shop (openspec/changes/ui3-shop-look): each card shows one of the game's own models
-// (rendered by art/cards, public/sprites/cards/*.png) on a burst in the card's colour, with a comic glyph on top
+// (rendered by art/cards, public/sprites/cards/*.png; the gear cards' truck, wheel and shoe are art/gear.py) on a burst in the card's colour, with a comic glyph on top
 // that says what the mod does (an arrow for a pop, a clock for a delay, ×2...).
 import type { ModId } from '../board/mods';
 import type { GearPart } from '../run/gear';
@@ -8,7 +8,7 @@ const base = import.meta.env.BASE_URL;
 
 export type Pic =
   | 'board' | 'pop' | 'flip' | 'grind' | 'car' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe' | 'bearing'
-  | 'cruiser' | 'robotaxi' | 'bus' | 'boxtruck' | 'drone' | 'chopper' | 'wanted' | 'signal' | 'rocket';
+  | 'butter' | 'wax' | 'cruiser' | 'robotaxi' | 'bus' | 'boxtruck' | 'drone' | 'chopper' | 'wanted' | 'signal' | 'rocket';
 export type Glyph = 'up' | 'down' | 'right' | 'curl' | 'clock' | 'speed' | 'ring' | 'sparks' | 'plus' | 'flipv' | string;
 
 const MOD_ART: Record<ModId, [Pic, Glyph?]> = {
@@ -33,12 +33,6 @@ const MOD_ART: Record<ModId, [Pic, Glyph?]> = {
 };
 
 const GEAR_ART: Record<GearPart, Pic> = { deck: 'deck', trucks: 'truck', wheels: 'wheel', shoes: 'shoe', bearings: 'bearing' };
-
-// a sneaker in the comic style: no model of Lou's shoes on their own, so it's drawn
-const SHOE =
-  '<svg class="pic" viewBox="0 0 64 40" aria-hidden="true"><path d="M4 22c0-6 3-12 6-14l8 1c3 5 9 8 16 9l14 3c7 1 12 4 12 9v3H4z" fill="#ff3fa4" stroke="#120a16" stroke-width="2.5" stroke-linejoin="round"/>' +
-  '<path d="M18 9c2 6 8 9 15 10l-4 7H8" fill="#f4f0f6" stroke="#120a16" stroke-width="2" stroke-linejoin="round"/><path d="M20 13l5-2M23 17l5-2M27 20l5-2" stroke="#120a16" stroke-width="2" stroke-linecap="round"/>' +
-  '<path d="M3 31h59v4a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" fill="#f4f0f6" stroke="#120a16" stroke-width="2.5"/><path d="M36 25c6 0 12 1 16 4" stroke="#120a16" stroke-width="2" fill="none"/></svg>';
 
 // bearings in the comic style, from zack's refs (2026-10-30): a Swiss-style one in front, black shield with a red
 // ring and bright races, and an open bronze ceramic one behind it showing its black balls in a white cage
@@ -83,7 +77,7 @@ export function glyph(g: Glyph | undefined): string {
 }
 
 export function pic(p: Pic): string {
-  return p === 'shoe' ? SHOE : p === 'bearing' ? BEARING : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
+  return p === 'bearing' ? BEARING : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
 }
 
 export function modArt(id: ModId): string {
@@ -104,9 +98,35 @@ export function gearIcon(part: GearPart): string {
   return pic(GEAR_ART[part]);
 }
 
-// a grip colour card's picture: the board from above, its grip tape in the colour, the bolt heads showing
+// a grip colour card's picture (zack's photo, 2026-10-30): a roll of grip tape in the colour, its brown paper
+// backing peeled out behind it with GRIP printed on it, the grit speckled over the roll
 export function gripArt(color: string): string {
-  const bolts = [-27, 27].flatMap((x) => [-4, 4].map((y) => `<circle cx="${50 + x + (y > 0 ? 2 : -2)}" cy="${20 + y}" r="1.6" fill="#ccd"/>`)).join('');
-  return `<span class="art"><svg class="grip" viewBox="0 0 100 40" aria-hidden="true">
-    <rect x="4" y="8" width="92" height="24" rx="12" fill="${color}" stroke="#000" stroke-width="3"/>${bolts}</svg></span>`;
+  const id = `g${color.replace('#', '')}`;
+  //a steady scatter of grit, light and dark
+  const rnd = (n: number) => {
+    const v = Math.sin(n * 127.1) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const grit = Array.from({ length: 90 }, (_, i) => {
+    const x = 50 + rnd(i) * 40;
+    const y = 22 + rnd(i + 500) * 64;
+    return `<circle cx="${x}" cy="${y}" r="0.7" fill="${i % 3 ? '#000' : '#fff'}" opacity="${i % 3 ? 0.22 : 0.3}"/>`;
+  }).join('');
+  const words = [
+    [16, 30],
+    [30, 54],
+    [12, 74],
+  ].map(([x, y]) => `<text x="${x}" y="${y}" transform="rotate(-18 ${x} ${y})" class="grip-word">GRIP</text>`).join('');
+  return `<span class="art"><svg class="grip" viewBox="0 0 100 96" aria-hidden="true">
+    <defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity="0.35"/>
+      <stop offset="0.35" stop-color="#fff" stop-opacity="0.12"/><stop offset="1" stop-color="#000" stop-opacity="0.45"/></linearGradient></defs>
+    <path d="M6 14 Q30 4 58 10 L58 82 Q30 78 6 88 Z" fill="#c9935a" stroke="#000" stroke-width="2.5" stroke-linejoin="round"/>
+    ${words}
+    <path d="M48 14 L48 84 A22 7 0 0 0 92 84 L92 14 Z" fill="${color}" stroke="#000" stroke-width="2.5"/>
+    <path d="M48 14 L48 84 A22 7 0 0 0 92 84 L92 14 Z" fill="url(#${id})"/>
+    ${grit}
+    <ellipse cx="70" cy="14" rx="22" ry="7" fill="${color}" stroke="#000" stroke-width="2.5"/>
+    <ellipse cx="70" cy="14" rx="22" ry="7" fill="#fff" opacity="0.18"/>
+    <ellipse cx="70" cy="14" rx="11" ry="3.6" fill="#eee" stroke="#000" stroke-width="1.5"/>
+  </svg></span>`;
 }

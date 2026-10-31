@@ -19,7 +19,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
 import { surfaceTexture } from './surfaces';
 import { TUNNEL, mouths } from '../traffic/tunnel';
-import { cables, chinatownAtlas, chinatownRng, tenement } from './chinatown-art';
+import { cables, chinatownAtlas, chinatownGlowMap, chinatownRng, tenement } from './chinatown-art';
 
 const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
 
@@ -387,7 +387,10 @@ function materials(): NonNullable<typeof mats> {
     walk: new THREE.MeshLambertMaterial({ map: surfaceTexture('pavers'), color: 0xa9a4b2 }),
     concrete: new THREE.MeshLambertMaterial({ map: surfaceTexture('concrete'), color: 0x8c8794 }),
     house: new THREE.MeshLambertMaterial({ map: houseAtlas() }),
-    ct: new THREE.MeshLambertMaterial({ map: chinatownAtlas() }), // Chinatown's tenements (chinatown-art.ts)
+    //Chinatown's tenements (chinatown-art.ts): their signs, lanterns and lit windows glow at night (chinatownGlow)
+    ct: new THREE.MeshLambertMaterial({ map: chinatownAtlas(), emissiveMap: chinatownGlowMap(), emissive: 0xffffff, emissiveIntensity: 0 }),
+    wetRoad: new THREE.MeshLambertMaterial({ map: road, color: 0x7c84a0 }),
+    wetWalk: new THREE.MeshLambertMaterial({ map: surfaceTexture('pavers'), color: 0x7e7a90 }),
     //the power lines: flat ink, no outline of their own
     wire: new THREE.MeshBasicMaterial({ color: 0x1a1424 }),
   };
@@ -396,7 +399,7 @@ function materials(): NonNullable<typeof mats> {
 
 // ------------------------------------------------------------------------------------------------- geometry
 
-type Key = 'road' | 'walk' | 'concrete' | 'house' | 'wire' | 'ct';
+type Key = 'road' | 'walk' | 'concrete' | 'house' | 'wire' | 'ct' | 'wetRoad' | 'wetWalk';
 type V3 = [number, number, number];
 type UvFn = (p: V3) => [number, number];
 
@@ -763,10 +766,15 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   const cs = UV.side(2, 2);
   const cf = UV.front(2, 2);
   const walkFaces: Parameters<Mesher['box']>[7] = { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] };
+  const walkFacesDry = walkFaces;
   //the street section across one piece of ground: sidewalk, road, sidewalk, retaining walls at its ends. On the
   //steep blocks the back sidewalk is a flight of steps, the way San Francisco's are (photo 3)
+  //Chinatown's street is always wet (zack's photos): darker, bluer road and paving
+  const chinaSpans = chinatownSpans(level);
   const section = (x0: number, x1: number, t0: number, t1: number) => {
-    m.box(x0, x1, B, t0, t1, rz0, rz1, { top: ['road', UV.top(4, rz1 - rz0, rz0)], left: ['concrete', cs], right: ['concrete', cs] });
+    const wet = overlaps(chinaSpans, x0, x1);
+    const walkFaces: Parameters<Mesher['box']>[7] = wet ? { ...walkFacesDry, top: ['wetWalk', UV.top(1, 1)] } : walkFacesDry;
+    m.box(x0, x1, B, t0, t1, rz0, rz1, { top: [wet ? 'wetRoad' : 'road', UV.top(4, rz1 - rz0, rz0)], left: ['concrete', cs], right: ['concrete', cs] });
     const steep = Math.abs(t1 - t0) / (x1 - x0) >= HILLSIDE.stepGrade;
     if (steep) {
       const n = Math.max(1, Math.round((x1 - x0) / 0.5));
@@ -796,6 +804,11 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
       crossings.push([cx - HILLSIDE.crossW / 2, cx + HILLSIDE.crossW / 2, g.t0]);
     }
   });
+  //Chinatown's cab corners: the side street the cab turns off into, just before the kicker (src/traffic/cab.ts)
+  for (const r of level.cabs ?? []) {
+    const cx = tx(r.turnX) + 0.5;
+    crossings.push([cx - HILLSIDE.crossW / 2, cx + HILLSIDE.crossW / 2, (level.streetY - r.y) / TILE]);
+  }
   //where each cross street ends it meets a back street in a T (zack, 2026-10-25: "cross traffic streets, should form
   //T's in the background to suggest a continuation of where they go"): the back street running off both ways behind
   //the rows, its far sidewalk, and a row of houses along it facing down the cross street

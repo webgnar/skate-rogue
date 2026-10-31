@@ -12,6 +12,7 @@ import { CruiserJets, JETS, jetState } from '../src/render/cruiser-jets';
 import { chrome, railHeights, railTint, railUv, RAIL_METAL } from '../src/render/rail-metal';
 import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
+import { SLIDES } from '../src/physics/tricks';
 import { landDust, landKick } from '../src/render/land-fx';
 import { FEEL } from '../src/physics/feel';
 import { applyParams, clampPixel, FX, PIXEL_MAX } from '../src/render/fx-settings';
@@ -678,5 +679,27 @@ describe('flip lines setting', () => {
     expect(applyParams({ ...base }, new URLSearchParams('fliplines=swoosh')).flipLines).toBe('swoosh');
     expect(applyParams({ ...base }, new URLSearchParams('fliplines=pixels')).flipLines).toBe('pixels');
     expect(applyParams({ ...base }, new URLSearchParams('fliplines=nope')).flipLines).toBe('ink');
+  });
+});
+
+describe('slides shred paint', () => {
+  it('a boardslide is a slide, a 50-50 is not', () => {
+    expect(SLIDES.has('grind2')).toBe(true);
+    expect(SLIDES.has('fsBoardslide')).toBe(true);
+    expect(SLIDES.has('grind1')).toBe(false);
+    expect(SLIDES.has('smith')).toBe(false);
+  });
+  it('peels flakes of the deck\'s paint off behind, under the skater', () => {
+    const p = new Particles();
+    const red = [0.78, 0.19, 0.17];
+    p.slideStart(0, 1, 1, [red]);
+    const pool = (p as unknown as { pool: { life: Float32Array; r: Float32Array; vx: Float32Array } }).pool;
+    const live = [...pool.life.keys()].filter((i) => pool.life[i] > 0);
+    expect(live.length).toBeGreaterThan(10);
+    const flakes = live.filter((i) => Math.abs(pool.r[i] - red[0]) < 1e-6);
+    expect(flakes.length).toBeGreaterThan(live.length / 2);
+    expect(flakes.every((i) => pool.vx[i] < 0)).toBe(true);
+    const layer = p.points.geometry.getAttribute('aLayer');
+    expect(live.every((i) => layer.getX(i) === 1)).toBe(true);
   });
 });

@@ -1,5 +1,7 @@
 // One floor of a run, stepped at 60 Hz: traffic, then the skater, pickups, then Heat. Pure, so the game, the
 // validator's bot and tests all run the same thing.
+import { FEEL } from '../physics/feel';
+import { gritty } from './stuff';
 import type { Mods } from '../boons/mods';
 import { BOARD, fires, type EffectId, type Slots, type TriggerId } from '../board/mods';
 import { PHYS, TILE } from '../physics/constants';
@@ -99,11 +101,12 @@ export class FloorSim {
   private readonly flip: () => number; // the board's coin flips, from the floor seed
   private slipT = 0; // frames drafting behind a car
   // Rain puddles (the view's, src/render/puddles.ts, set by the game on a rainy floor): rolling through one washes
-  // out the bearings. x, y: centre and surface (px); w: half width when full (px); delay: seconds before it starts to form,
+  // out the bearings and soaks the deck. x, y: centre and surface (px); w: half width when full (px); delay: seconds before it starts to form,
   // grow: seconds to form; k: how far it forms in a light rain (1 in a full one)
   puddles: { x: number; y: number; w: number; delay: number; grow: number; k: number }[] = [];
   private frames = 0; // steps this floor, for how formed the puddles are
   private wading: object | null = null; // the puddle we're rolling through
+  private grit = 0; // bearing wear from this step's smashes, for wear()
   readonly broken: boolean[]; // props smashed
   private fall = 0; // how fast we were falling before this step
   readonly gear: Gear; // worn down as you skate; the run takes it to the next floor
@@ -386,6 +389,7 @@ export class FloorSim {
       if (!by) return;
       this.broken[i] = true;
       this.events.push({ type: 'smash', index: i, prop: p.name, x: p.x, y: p.y, how: by, ...(p.loot ? { loot: p.loot } : {}) });
+      if (gritty(p.name)) this.grit += GEAR.smashGrit; // dust and shards in your bearings
       if (p.ai) this.heat.add(-SMASH.aiCool);
     });
   }
@@ -406,16 +410,22 @@ export class FloorSim {
     });
   }
 
-  // gear wear: the deck from ollies, the shoes from flip tricks, the trucks from grinding, the wheels from speed and
-  // glass, the bearings from grit and puddles
+  // gear wear: the deck from hard landings (most), ollies and puddles, the shoes from flip tricks, the trucks from
+  // grinding, the wheels from speed and glass, the bearings from puddles, dirt and the dust and shards of smashes
   private wear(events: readonly SkaterEvent[]): void {
     const sk = this.skater;
     const use: Gear = { deck: 0, shoes: 0, trucks: 0, wheels: 0, bearings: 0 };
     for (const e of events) {
       if (e.type === 'ollie') use.deck += GEAR.ollie;
+      else if (e.type === 'land' && !e.manual) use.deck += GEAR.land * Math.max(0, (e.impact ?? 0) - FEEL.soft) + GEAR.landLost * (e.lost ?? 0);
       else if (e.type === 'trick') use.shoes += GEAR.flip;
-      else if (e.type === 'glass') use.wheels += GEAR.glass;
+      else if (e.type === 'glass') {
+        use.wheels += GEAR.glass;
+        use.bearings += GEAR.smashGrit; // shards and grit kicked into them
+      }
     }
+    use.bearings += this.grit;
+    this.grit = 0;
     if (sk.mode === 'roll') use.bearings += GEAR.rollSec / 60;
     //(the top route's power line is a long, smooth grind: it wears your trucks and wheels a lot less)
     const soft = sk.rail?.top ? TOP.wear : 1;
@@ -425,6 +435,7 @@ export class FloorSim {
     const wet = sk.mode === 'roll' ? this.puddleAt(sk.x, sk.y) : null;
     if (wet && wet !== this.wading) {
       use.bearings += GEAR.puddle;
+      use.deck += GEAR.puddleDeck;
       const drag = GEAR.puddleDrag.fresh + (GEAR.puddleDrag.dead - GEAR.puddleDrag.fresh) * (1 - sk.gear.grip);
       sk.hsp *= 1 - drag;
       sk.carry *= 1 - drag;

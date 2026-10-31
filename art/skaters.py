@@ -8,6 +8,7 @@
 # title cast art (QFSHIVE art_source/title_cast), minus the swords and shields: Gnar Run has no combat.
 import math
 import os
+import random
 import sys
 
 import bpy  # first: the bpy module provides bmesh and mathutils
@@ -23,11 +24,11 @@ HEAD_C = Vector((0, 0, HEAD_Z + 0.14))  # middle of the head
 HEAD_R = 0.12
 
 # top: what covers the chest ('skin' for none); crop: the top stops above the navel; sleeves: none, short or long;
-# flare: how far the trouser legs widen at the ankle; hair: 'long', 'hood' (hood up over short hair) or 'bun'
+# flare: how far the trouser legs widen at the ankle; hair: 'spiky', 'long' (spiky up top, long behind) or 'hood' (hood up over spiky bangs)
 SKATERS = {
     'webster': {
         'skin': 0xD9945A, 'top': 'skin', 'sleeves': 'none', 'pants': 0x25252B, 'shoe': 0x18181D, 'sole': 0x2B44C8,
-        'hair': 'long', 'hairColor': 0xE8C25A, 'shades': 0xE0322E, 'build': 1.08,
+        'hair': 'spiky', 'hairColor': 0xE8C25A, 'shades': 0xE0322E, 'build': 1.08,
     },
     'keanu': {
         'skin': 0x6B4128, 'top': 0x8C8C92, 'sleeves': 'long', 'pants': 0x2E2E34, 'shoe': 0x1C1C22, 'sole': 0x2B44C8,
@@ -127,17 +128,92 @@ def head(spec, mats):
             parts.append((lg.box(f'eye{s}', (0.028, 0.02, 0.03), HEAD_C + Vector((s * 0.042, -0.115, 0.02)), mats['eye']), 'Head'))
     hair = mats['hair']
     if spec['hair'] == 'hood':
-        # a grey hood up over the head, open round the face, and short dark hair showing at the brow
+        # a grey hood up over the head, open round the face, and spiky dark bangs poking out over the brow
         def open_face(p):
             return not (p.y < -0.05 and -0.13 < p.z < 0.1 and abs(p.x) < 0.11)
         parts.append((sphere('hood', HEAD_R + 0.035, HEAD_C + Vector((0, 0.012, 0.01)), mats['top'], (0.95, 1.05, 1.1), open_face), 'Head'))
         parts.append((sphere('fringe', HEAD_R + 0.008, HEAD_C, hair, (0.9, 1, 1.12), lambda p: p.z > 0.07), 'Head'))
+        parts.append((spikes('bangs', bangs(spec, 5, 0.1, 0.05, 36), hair), 'Head'))
     else:
-        # a cap over the crown and back of the head, and the long hair falling down the back past the shoulders
+        # comic book anime hair (zack's reference, 2026-10-30): a cap over the scalp bristling with sharp gelled
+        # spikes, and bangs hanging over the brow in points. The big spikes and long clumps swing (chains below).
         def crown(p):
             return p.z > 0.04 or p.y > 0.0
-        parts.append((sphere('hair', HEAD_R + 0.015, HEAD_C, hair, (0.95, 1.02, 1.12), crown), 'Head'))
+        parts.append((sphere('hair', HEAD_R + 0.012, HEAD_C, hair, (0.95, 1.02, 1.12), crown), 'Head'))
+        parts.append((spikes('spikes', crown_spikes(spec), hair), 'Head'))
+        parts.append((spikes('bangs', bangs(spec, 6, 0.13, 0.08), hair), 'Head'))
     return parts
+
+
+def scalp(az, el, out=0.0):
+    """A point on the head's surface: az 0 at the back (+Y), 90 the lead side (+X), 180 the face; el up from level."""
+    a, e = math.radians(az), math.radians(el)
+    d = Vector((math.cos(e) * math.sin(a) * 0.9, math.cos(e) * math.cos(a), math.sin(e) * 1.12))
+    return HEAD_C + d * (HEAD_R + out), d.normalized()
+
+
+def blade(bm, root, d, length, w, t, bend=Vector(), radial=None):
+    """One anime hair spike into `bm`: a flat diamond section, broad across the scalp, tapering to a sharp tip and
+    curling along `bend` toward it. Returns the new verts."""
+    d = d.normalized()
+    radial = (radial or Vector((0, 0, 1))).normalized()
+    a = radial.cross(d)
+    a = a.normalized() if a.length > 1e-4 else Vector((1, 0, 0))
+    b = d.cross(a).normalized()
+    out = []
+    rings = []
+    for k, f in ((0.0, 1.0), (0.4, 0.85), (0.75, 0.5)):
+        c = root + d * length * k + bend * (k * k)
+        rings.append([bm.verts.new(c + a * w * f * x + b * t * f * y) for x, y in ((1, 0), (0, 1), (-1, 0), (0, -1))])
+    tip = bm.verts.new(root + d * length + bend)
+    for r0, r1 in zip(rings, rings[1:]):
+        for i in range(4):
+            j = (i + 1) % 4
+            bm.faces.new((r0[i], r0[j], r1[j], r1[i]))
+    for i in range(4):
+        bm.faces.new((rings[-1][i], rings[-1][(i + 1) % 4], tip))
+    bm.faces.new(rings[0][::-1])
+    for r in rings:
+        out += r
+    return out + [tip]
+
+
+def spikes(name, specs, mat):
+    bm = bmesh.new()
+    for root, d, length, w, t, bend, radial in specs:
+        blade(bm, root, d, length, w, t, bend, radial)
+    return lg.link(name, bm, [mat])
+
+
+def crown_spikes(spec):
+    """Spikes all over the crown, swept up and back, the ones at the sides flaring out: the anime silhouette."""
+    rnd = random.Random(spec['hairColor'])
+    long = spec['hair'] == 'long'
+    out = []
+    for el, n, length, span in ((15, 9, 0.15, 250), (42, 8, 0.17, 230), (68, 5, 0.15, 200)):
+        for i in range(n):
+            az = -span / 2 + span * (i + 0.5) / n + rnd.uniform(-8, 8)  # round the back and sides, not over the face
+            root, radial = scalp(az, el + rnd.uniform(-5, 5), -0.015)
+            # out from the scalp, pushed back and up so the sides flare; long hair lies flatter, sweeping back
+            d = radial * 1.2 + Vector((0, 0.6 if long else 0.3, 0.1 if long else 0.45))
+            l = length * rnd.uniform(0.8, 1.2) * (0.7 if long else 1)
+            bend = Vector((0, 0.035, -0.025 if long else 0.03)) + radial * 0.015
+            out.append((root, d, l, 0.06, 0.018, bend, radial))
+    return out
+
+
+def bangs(spec, n, length, spread, el=55):
+    """Pointed bangs hanging over the brow, the middle ones longest, the outer ones curling out past the temples."""
+    rnd = random.Random(spec['hairColor'] + 1)
+    out = []
+    for i in range(n):
+        u = (i + 0.5) / n * 2 - 1  # -1 trailing side .. 1 lead side
+        root, radial = scalp(180 - u * 60, el + 8 * abs(u), 0.0)
+        d = Vector((u * 0.6, -0.9, -1))
+        bend = Vector((u * spread * 0.6, -0.03, 0.015))
+        l = length * (1.15 - 0.45 * abs(u)) * rnd.uniform(0.85, 1.1)
+        out.append((root, d, l, 0.042, 0.014, bend, radial))
+    return out
 
 
 # Spring chains: hair clumps and loose cloth hang off a chain of extra bones ('Spring...') that the game swings with
@@ -145,12 +221,23 @@ def head(spec, mats):
 # direction, length, root half-width, root half-depth, taper, bones).
 def chains(spec):
     out = []
+    if spec['hair'] in ('long', 'spiky'):
+        # big spikes standing off the crown, gelled stiff (SpringSpike in springs.ts): they bob on a pop and lean
+        # back with speed
+        for i, az in enumerate((-60, -25, 5, 35, 70)):
+            root, radial = scalp(az, 62 if abs(az) < 40 else 45, -0.01)
+            d = radial + Vector((0, 0.45, 0.7))
+            out.append((f'SpringSpike{i}', 'Head', root, d, 0.24 if abs(az) < 40 else 0.2, 0.07, 0.02, 1.0, 2))
     if spec['hair'] == 'long':
-        # the long hair falling down the back past the shoulders, in five clumps fanned across the back of the head
+        # the long hair falling down the back past the shoulders, in five pointed clumps fanned across the back
         for i, x in enumerate((-0.085, -0.045, 0.0, 0.045, 0.085)):
             side = abs(x) / 0.085
             root = HEAD_C + Vector((x, 0.07 + 0.015 * (1 - side), 0.03 - 0.03 * side))
-            out.append((f'SpringHair{i}', 'Head', root, Vector((x * 0.6, 0.12, -1)), 0.36 - 0.06 * side, 0.05, 0.04, 0.6, 3))
+            out.append((f'SpringHair{i}', 'Head', root, Vector((x * 0.9, 0.12, -1)), 0.4 - 0.07 * side, 0.055, 0.02, 1.0, 3))
+        # a lock either side of the face, down past the jaw
+        for i, s in enumerate((1, -1)):
+            root, _ = scalp(180 - s * 70, 20, -0.005)
+            out.append((f'SpringLock{i}', 'Head', root, Vector((s * 0.15, -0.1, -1)), 0.2, 0.035, 0.014, 1.0, 2))
     if spec['hair'] == 'hood':
         # the hoodie's drawstrings, hanging down the chest from either side of the neck
         for i, x in enumerate((-0.045, 0.045)):
@@ -176,25 +263,31 @@ def chain_bones(rig, specs):
 
 
 def chain_mesh(spec, mat):
-    """A tapered tube along a chain, skinned along its bones so it bends with them."""
+    """A chain's mesh, skinned along its bones so it bends with them: a sharp hair blade (taper 1), or a tapered tube."""
     name, _parent, root, d, length, w, dep, taper, n = spec
     d = d.normalized()
-    side = Vector((1, 0, 0)).cross(d).normalized()  # across the clump's depth
-    across = d.cross(side).normalized()
-    rings, seg = 8, 6
     bm = bmesh.new()
-    loops = []
-    for r in range(rings + 1):
-        t = r / rings
-        k = 1 - taper * t
-        c = root + d * length * t
-        loops.append([bm.verts.new(c + across * w * k * math.cos(2 * math.pi * a / seg) + side * dep * k * math.sin(2 * math.pi * a / seg)) for a in range(seg)])
-    for a, b in zip(loops, loops[1:]):
-        for i in range(seg):
-            j = (i + 1) % seg
-            bm.faces.new((a[i], a[j], b[j], b[i]))
-    bm.faces.new(loops[0][::-1])
-    bm.faces.new(loops[-1])
+    if taper >= 1:
+        # hair: a blade broad across the head, its tip curling out away from it
+        out = root - HEAD_C
+        out.z = 0
+        blade(bm, root, d, length, w, dep, out.normalized() * 0.025, root - HEAD_C)
+    else:
+        side = Vector((1, 0, 0)).cross(d).normalized()  # across the clump's depth
+        across = d.cross(side).normalized()
+        rings, seg = 8, 6
+        loops = []
+        for r in range(rings + 1):
+            t = r / rings
+            k = 1 - taper * t
+            c = root + d * length * t
+            loops.append([bm.verts.new(c + across * w * k * math.cos(2 * math.pi * a / seg) + side * dep * k * math.sin(2 * math.pi * a / seg)) for a in range(seg)])
+        for a, b in zip(loops, loops[1:]):
+            for i in range(seg):
+                j = (i + 1) % seg
+                bm.faces.new((a[i], a[j], b[j], b[i]))
+        bm.faces.new(loops[0][::-1])
+        bm.faces.new(loops[-1])
     ob = lg.link(name, bm, [mat])
     groups = [ob.vertex_groups.new(name=f'{name}_{j}') for j in range(n)]
     for v in ob.data.vertices:
@@ -244,7 +337,7 @@ def build(name, spec):
         lg.rigid(part, bone)
         part.select_set(True)
     for c in specs:
-        chain_mesh(c, mats['hair'] if c[0].startswith('SpringHair') else mats['top']).select_set(True)
+        chain_mesh(c, mats['top'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
     ob.select_set(True)
     rig.select_set(False)
     bpy.context.view_layer.objects.active = ob
