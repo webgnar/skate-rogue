@@ -1636,6 +1636,8 @@ export class Game {
         break;
       case 'hop':
         this.hud.callout('CAR HOP!' + combo, 'good');
+        //the slam's comic burst on the roof, a third the size (zack)
+        this.impacts.spawn(toX(this.skater.x), toY(this.level, this.skater.y), 1 / 3);
         break;
       case 'kicker':
         this.view.zoom.trick();
