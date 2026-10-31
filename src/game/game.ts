@@ -36,7 +36,7 @@ import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
 import { BulletTime, landCall } from './bullet-time';
-import { glowMaterial, INK, inkify, outlineMaterial } from '../render/toon';
+import { glowMaterial, INK, inkify, outlineMaterial, silhouetteInk } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
 import { FX } from '../render/fx-settings';
 import { HeatCue } from '../render/heat-cue';
@@ -301,6 +301,7 @@ export class Game {
   private perfText = '';
   private readonly aura: ShardAura;
   private readonly skaterInk = glowMaterial(SKATER_INK, INK.color, 0);
+  private readonly boardInk = glowMaterial(SKATER_INK, INK.color, 0);
   private readonly visor: VisorGlint;
   private readonly skaterLight: SkaterLight;
   private gnarGlow = 0; // 0..1, eases with the gnar state
@@ -351,11 +352,9 @@ export class Game {
     this.view.actor.add(this.sprite.mesh);
     //the rig makes its own toon materials (it flashes them on hits); this adds the outlines
     inkify(this.sprite.mesh, { toon: false });
-    //the skater's ink a touch thicker than the city's, so it holds up at Lou's bigger size (SKATER_INK)
-    this.sprite.mesh.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (m.userData.ink && m.material === outlineMaterial()) m.material = this.skaterInk;
-    });
+    //the skater's ink a touch thicker than the city's, so it holds up at Lou's bigger size (SKATER_INK), and only
+    //round the outside (silhouetteInk)
+    silhouetteInk(this.sprite.mesh, this.sprite.boardGroup, outlineMaterial(), this.skaterInk, this.boardInk);
     this.sprite.setGrip(gripDef(this.grip).color);
     this.aura = new ShardAura(this.sprite.mesh, this.sprite.boardGroup);
     this.visor = new VisorGlint(this.sprite.mesh);
@@ -1352,6 +1351,7 @@ export class Game {
     this.lastBeat = beat;
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
     this.skaterInk.uniforms.uWidth.value = Math.max(1, SKATER_INK * this.view.resolution);
+    this.boardInk.uniforms.uWidth.value = this.skaterInk.uniforms.uWidth.value;
     this.skaterLight.update(dt, this.sprite.mesh.position, (x, y, out) => this.view.night.lights.lightAt(x, y, out), this.gnarGlow > 0.01, this.view.resolution);
     if (gnar) {
       const p = this.sprite.mesh.position;

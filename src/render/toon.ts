@@ -429,3 +429,41 @@ export class Aura {
     (this.mat.uniforms.uColor.value as THREE.Color).copy(color).lerp(this.ink, 1 - amount);
   }
 }
+
+// The skater's ink round his outside only (zack, 2026-10-31: the outline "shouldnt target interior geometry of the
+// model... the board should actually have its own outline"). Per-mesh hulls also draw where one part sits over
+// another (the hair over the face, an arm over the chest), so the body marks its pixels in the stencil (1) and the
+// board its own (2); the body's hulls then draw only where neither is, and the board's anywhere but on the board,
+// so the board is outlined against the legs as well as the street. The hulls draw after the meshes (renderOrder 1).
+// `ink` is the hulls' current material (inkify's shared one); body and board hulls get bodyInk and boardInk.
+export function silhouetteInk(root: THREE.Object3D, board: THREE.Object3D, ink: THREE.Material, bodyInk: THREE.Material, boardInk: THREE.Material): void {
+  const onBoard = new Set<THREE.Object3D>();
+  board.traverse((o) => onBoard.add(o));
+  for (const [mat, ref, func] of [
+    [bodyInk, 0, THREE.EqualStencilFunc],
+    [boardInk, 2, THREE.NotEqualStencilFunc],
+  ] as const) {
+    mat.stencilWrite = true; // turns the stencil test on; the ops keep the marks as they are
+    mat.stencilRef = ref;
+    mat.stencilFunc = func;
+    mat.stencilZPass = THREE.KeepStencilOp;
+  }
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const isBoard = onBoard.has(m);
+    if (m.userData.ink) {
+      if (m.material !== ink) return; // the gnar shards and the night rim keep their own
+      m.material = isBoard ? boardInk : bodyInk;
+      m.renderOrder = 1;
+      return;
+    }
+    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
+      if (mat.transparent) continue; // the visor glint
+      mat.stencilWrite = true;
+      mat.stencilRef = isBoard ? 2 : 1;
+      mat.stencilFunc = THREE.AlwaysStencilFunc;
+      mat.stencilZPass = THREE.ReplaceStencilOp;
+    }
+  });
+}

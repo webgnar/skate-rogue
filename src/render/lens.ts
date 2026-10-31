@@ -99,7 +99,7 @@ export class Lens {
     const filter = chunky ? THREE.NearestFilter : THREE.LinearFilter;
     if (!this.target || this.target.width !== this.size.x || this.target.height !== this.size.y || this.target.texture.magFilter !== filter) {
       this.target?.dispose();
-      this.target = new THREE.WebGLRenderTarget(this.size.x, this.size.y, { minFilter: filter, magFilter: filter, depthBuffer: true });
+      this.target = new THREE.WebGLRenderTarget(this.size.x, this.size.y, { minFilter: filter, magFilter: filter, depthBuffer: true, stencilBuffer: true });
       this.target.texture.colorSpace = THREE.SRGBColorSpace;
     }
     renderer.setRenderTarget(this.target);
