@@ -222,7 +222,8 @@ staircase for testing.
 ground"). Up there there's no ground to fall back to, so the line is laid to rules a good player can trust, checked
 by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9 stretches in 10 end to end):
 - **The way in is the crest.** The sky starts where the hill crests (the big ollie and flip at the top), not on the
-  climb out of the cross street before it.
+  climb out of the cross street before it. Its first piece stands at most 2.5 tiles over the hill's lip (where the
+  ground starts to fall away), so a big ollie and a flip off the lip lands on it; the line climbs from there.
 - **Every piece within a flip of the last.** Measured in the sim: at base speed an ollie carries about 4 tiles to the
   same height, an ollie and a flip about 6.5, two tiles up about 5.5, and a tile further for every two you drop. The
   line asks for at most 4.5 tiles at the same height (`src/gen/sky-line.ts`, REACH), nothing more than a flip (1.5
@@ -234,7 +235,10 @@ by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9
 - **Room to land.** Water towers 4 tiles, girders 4 to 5, no stub decks: you land, take the knock, and pop again.
   Scaffolds are a flight of steps down, a tile apart, so an ollie anywhere lands on one.
 - **No holes.** A piece that's crowded (by the power line) nudges up or down instead of vanishing, and any gap left
-  past reach gets a small deck (a rooftop, or a puff of cloud up in the clouds).
+  past reach gets a small deck (a rooftop, or a puff of cloud up in the clouds), all the way across however long the
+  hole is (where there's no room for another, the last deck runs on toward the next piece).
+- **The clouds are the long part.** On a cloudy stretch the staircase up starts about a fifth of the way down the hill,
+  so most of the stretch is up in the cloud layer.
 - **Variety.** Each stretch runs its floor's recipe from its own place, so no two stretches play the same order.
 - **Nothing from the sky crosses in front of you**: scaffold tubes stand behind the lane.
 

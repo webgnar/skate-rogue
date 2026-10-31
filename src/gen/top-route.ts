@@ -108,7 +108,8 @@ export function busy(level: Level, x0: number, x1: number, y: number): boolean {
   for (const s of level.surfaces) if (s.x1 > x0 && s.x0 < x1 && s.kind !== 'overpass' && near(Math.min(s.y, s.y1 ?? s.y))) return true;
   for (const r of level.rails) if (r.x1 > x0 && r.x0 < x1 && r.ys.some(near)) return true;
   //and the L: its trains' roofs are a way along up there already (src/traffic/el.ts)
-  if ((level.el ?? []).some((e) => e.x1 > x0 - 2 * TILE && e.x0 < x1 + 2 * TILE)) return true;
+  //(up to a few tiles over its trains' roofs: the sky route's pieces way up over it are clear of it)
+  if ((level.el ?? []).some((e) => e.x1 > x0 - 2 * TILE && e.x0 < x1 + 2 * TILE && y > e.y - 6 * TILE)) return true;
   return false;
 }
 

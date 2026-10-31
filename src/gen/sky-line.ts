@@ -12,6 +12,7 @@ import { TILE } from '../physics/constants';
 import { surfaceY, type Level } from '../physics/level';
 import { PICKUPS } from './descent';
 import { clearAt } from './top-route';
+import { TOP } from './top-route';
 
 export const REACH = {
   gap: 4.5, // tiles of open sky the line may ask you to cross at the same height
@@ -58,6 +59,14 @@ export function piecesOf(level: Level, a: number, b: number): Piece[] {
   return out.sort((p, q) => p.x0 - q.x0);
 }
 
+// nothing else up near y over [x0, x1] right there (a rail only where it runs over [x0, x1]: unlike busy(), a long
+// power line's sag further along doesn't count)
+function openAt(level: Level, x0: number, x1: number, y: number): boolean {
+  const near = (sy: number) => Math.abs(sy - y) < TOP.clear;
+  if (level.surfaces.some((s) => s.x1 > x0 && s.x0 < x1 && s.kind !== 'overpass' && near(Math.min(s.y, s.y1 ?? s.y)))) return false;
+  return !level.rails.some((r) => r.xs.some((rx, k) => rx > x0 - TILE && rx < x1 + TILE && near(r.ys[k])));
+}
+
 // bridge every gap on each stretch's sky line that's past reach: deck after deck from where you leave the last piece,
 // each a comfortable jump on and stepping toward the next piece's height, until the next piece is in reach
 export function bridgeSky(level: Level): void {
@@ -71,23 +80,36 @@ export function bridgeSky(level: Level): void {
       let from = line.slice(0, i).filter((p) => p.x1 <= line[i].x0 + 1).sort((p, q) => q.x1 - p.x1)[0];
       if (!from) continue;
       const to = line[i];
-      for (let n = 0; n < 8 && !inReach(from, to); n++) {
+      let laid = false;
+      for (let n = 0; n < 16 && !inReach(from, to); n++) {
         //the next deck: a gap of a few tiles on, a step toward the height you're heading for
         //(a short deck where there's only room for one: a tile of air either side of it)
         const room = to.x0 - from.x1;
-        const w = Math.min(REACH.deck * TILE, room - 2 * TILE);
+        let w = Math.min(REACH.deck * TILE, room - 2 * TILE);
         if (w < 2.5 * TILE) break; // one sits right over the other: nothing to bridge
-        const open = Math.min(3 * TILE, (room - w) / 2);
-        const x0 = from.x1 + open;
         const want = from.y1 + Math.max(-1.25 * TILE, Math.min(2 * TILE, to.y0 - from.y1));
         let y: number | null = null;
-        let x = x0;
-        for (; x < to.x0 - w && y === null; x += TILE / 2) {
-          y = clearAt(level, x, x + w, want);
-          if (y !== null && (y < from.y1 - REACH.rise * TILE || (x - from.x1) / TILE > maxGap((y - from.y1) / TILE))) y = null;
+        let x = 0;
+        //(crowded where it'd go: a narrower deck, slid along the gap)
+        for (; w >= 2.5 * TILE && y === null; w -= TILE / 2) {
+          x = from.x1 + Math.min(3 * TILE, (room - w) / 2);
+          for (; x <= to.x0 - w && y === null; x += TILE / 2) {
+            y = clearAt(level, x, x + w, want);
+            if (y !== null && (y < from.y1 - REACH.rise * TILE || (x - from.x1) / TILE > maxGap((y - from.y1) / TILE))) y = null;
+          }
         }
-        if (y === null) break;
+        if (y === null) {
+          //(no room for another: the deck just laid runs on toward the next piece instead, if it's clear)
+          const last = level.surfaces.at(-1)!;
+          if (laid && last.y === from.y1) {
+            const x1 = to.x0 - maxGap((to.y0 - last.y) / TILE) * TILE;
+            if (x1 > last.x1 && openAt(level, last.x1 + 1, x1, last.y)) last.x1 = x1;
+          }
+          break;
+        }
         x -= TILE / 2;
+        w += TILE / 2;
+        laid = true;
         const sky = to.cloud && from.cloud ? 'cloud' : 'roofs';
         level.surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky });
         for (let c = x + TILE; c < x + w - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y - PICKUPS.ride });

@@ -17,7 +17,8 @@ export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap
 export const CLOUDS = {
   from: 5, // first floor with a cloud layer
   room: 95, // tiles of hill down from its crest a stretch needs for a cloud layer
-  stairAt: 0.3, // how far down each stretch of hill from its crest (0-1) the sky beats end and the staircase starts
+  stairAt: 0.18, // how far down each stretch of hill from its crest (0-1) the sky beats end and the staircase starts
+  // (early: zack's clips, 2026-10-31, the clouds were over in about 7 s; this way about a third longer)
   climb: 9, // tiles the staircase climbs over the last sky beat, up to the layer
   stair: [4, 5], // tiles: each step's deck (room to land from a flip, take the knock and pop again)
   stairGap: 2, // tiles between steps
@@ -62,6 +63,27 @@ export function cloudy(level: Level, stretch: number): boolean {
   if (!span || level.layout.floor < CLOUDS.from || stretch % 2) return false;
   const [a, b] = span;
   return b - crestOf(level, a, b) >= CLOUDS.room * TILE;
+}
+
+// the lip at the top of a stretch of hill: where the ground starts to fall away past its crest (px), and the crest's
+// height. The way into the sky is a big ollie and a flip off it
+export function lipOf(level: Level, a: number, b: number): [number, number] {
+  const c = crestOf(level, a, b);
+  const top = groundAt(level, c) ?? level.streetY;
+  let x = c;
+  while (x < b && (groundAt(level, x + TILE / 2) ?? top) <= top + TILE / 4) x += TILE / 2;
+  return [x, top];
+}
+
+// the way into the sky on a stretch of hill: where you leave the hill for it (px), at what height, and whether off the
+// end of a falling grind (a power line or a rail run down the hill off the lip: the way in is off its end) or off the
+// lip itself (a big ollie and a flip)
+export function skyEntry(level: Level, a: number, b: number): { x: number; y: number; grind: boolean } {
+  const [lip, top] = lipOf(level, a, b);
+  const ahead = lip + 3 * TILE;
+  const rail = level.rails.find((r) => !r.sky && !r.top && !r.sewer && r.x0 < ahead + 4 * TILE && r.x1 > ahead - 2 * TILE && r.x1 < ahead + 30 * TILE);
+  if (rail) return { x: rail.x1, y: rail.ys[rail.ys.length - 1], grind: true };
+  return { x: lip, y: top, grind: false };
 }
 
 // where the sky beats give way to the staircase up into the clouds, on the stretch [a, b]
