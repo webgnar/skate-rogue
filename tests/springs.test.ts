@@ -116,4 +116,28 @@ describe('springs (hair that trails the motion)', () => {
     expect(sheet('SpringHair')).toBeGreaterThan(0.2); // loose strands go their own ways
     expect(sheet('SpringHood')).toBeLessThan(sheet('SpringHair') - 0.05); // fabric keeps them together
   });
+
+  it('fabric that closes round into a loop ties its last strip back to its first; an open sheet does not', () => {
+    const ties = (around: number) => {
+      const root = new THREE.Group();
+      const spine = new THREE.Bone();
+      spine.name = 'Spine';
+      root.add(spine);
+      for (let c = 0; c < 6; c++) {
+        const a = (c / 6) * around;
+        let parent: THREE.Bone = spine;
+        for (let i = 0; i < 2; i++) {
+          const b = new THREE.Bone();
+          b.name = `SpringShirt${c}_${i}`;
+          b.position.set(i ? 0 : Math.sin(a) * 0.15, i ? -0.1 : 0, i ? 0 : Math.cos(a) * 0.15);
+          parent.add(b);
+          parent = b;
+        }
+      }
+      root.updateMatrixWorld(true);
+      return (new Springs(root, []) as unknown as { ties: unknown[] }).ties.length;
+    };
+    expect(ties(Math.PI * 2)).toBe(6 * 2); // round the waist
+    expect(ties(Math.PI)).toBe(5 * 2); // half way round: open at the ends
+  });
 });

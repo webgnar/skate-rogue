@@ -6,7 +6,8 @@
 // The clips never key these bones. Hair, drawstrings and fabric are all just chains: each kind gets its own feel from
 // SPRING_KINDS by its bone name. Fabric (zack, 2026-10-31: Keanu's hood "should be like the hair") is a row of chains
 // side by side, 'SpringHood0', 'SpringHood1'...: each tail is also tied to the same tail on the chains either side, so
-// the row moves as one sheet that balloons and flaps instead of a fringe of separate strands. A tee hem is next.
+// the row moves as one sheet that balloons and flaps instead of a fringe of separate strands. A sheet that closes into
+// a loop (the hood, a sweatshirt's body) ties its last chain back to its first.
 import * as THREE from 'three';
 
 export const SPRING = {
@@ -29,6 +30,8 @@ export const SPRING_KINDS: Record<string, Partial<SpringFeel>> = {
   SpringLock: { stiffness: 0.1, drag: 0.14, gravity: 4 }, // the locks framing the face
   // a hood up over the head: soft, so it puffs back off the head with speed and flops on a landing
   SpringHood: { stiffness: 0.035, drag: 0.08, gravity: 5, cloth: 0.6 },
+  // a sweatshirt's body hanging off the chest: a little firmer, so it swings out and settles rather than drapes
+  SpringShirt: { stiffness: 0.06, drag: 0.1, gravity: 5, cloth: 0.7 },
 };
 
 export function feelOf(name: string): SpringFeel {
@@ -103,7 +106,15 @@ export class Springs {
       const k = this.feels[c].cloth;
       const m = sheet(chain[0].bone.name);
       if (!k || !m) return;
-      const next = this.chains.find((o) => sheet(o[0].bone.name)?.[0] === `${m[1]}${Number(m[2]) + 1}_`);
+      const named = (n: number) => this.chains.find((o) => sheet(o[0].bone.name)?.[0] === `${m[1]}${n}_`);
+      let next = named(Number(m[2]) + 1);
+      // the last chain of a sheet closes a loop when it hangs as close to the first as the first does to the second
+      const first = named(0);
+      const second = named(1);
+      if (!next && first && second && first !== chain) {
+        const gap = (a: Link[], b: Link[]) => a[0].bone.getWorldPosition(v1).distanceTo(b[0].bone.getWorldPosition(v2));
+        if (gap(chain, first) < gap(first, second) * 1.5) next = first;
+      }
       if (!next) return;
       for (let i = 0; i < Math.min(chain.length, next.length); i++) this.ties.push({ a: chain[i], b: next[i], len: 0, k });
     });
@@ -237,7 +248,10 @@ export function bodyColliders(bindPos: (name: string) => THREE.Vector3 | undefin
   const out: { bone: string; at: THREE.Vector3; r: number }[] = [];
   const head = bindPos('Head');
   const chest = bindPos('Spine1');
+  const waist = bindPos('Spine');
   if (head) out.push({ bone: 'Head', at: head.clone().add(new THREE.Vector3(0, 0.14 * scale, 0)), r: 0.15 });
   if (chest) out.push({ bone: 'Spine1', at: chest.clone().add(new THREE.Vector3(0, 0.08 * scale, 0)), r: 0.17 });
+  // a sweatshirt's body hangs round the waist, and doesn't sink into it
+  if (waist) out.push({ bone: 'Spine', at: waist.clone().add(new THREE.Vector3(0, 0.02 * scale, 0)), r: 0.12 });
   return out;
 }
