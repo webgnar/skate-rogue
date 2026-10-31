@@ -739,12 +739,41 @@ export function buildHill(level: Level, group: THREE.Group): void {
   run(buildHillSteps(level, group));
 }
 
+// the deep (src/gen/sewer.ts) in cutaway under the hill: the hill's ground that goes all the way down (to
+// HILLSIDE.bottom) across the tunnel's depth stops at the deep's roof over it, so the deep shows through
+// (sewer-kit.ts draws it)
+function deepCutaway(level: Level, m: Mesher): void {
+  const Y = (py: number) => (level.streetY - py) / TILE;
+  const cuts = (level.sewers ?? []).flatMap((s): [number, number, number][] => {
+    if (s.top === undefined) return [];
+    const at = s.topAt ?? s.x0;
+    return [...(s.top0 !== undefined && at > s.x0 ? [[tx(s.x0), tx(at), Y(s.top0)] as [number, number, number]] : []), [tx(at), tx(s.x1), Y(s.top)]];
+  });
+  if (!cuts.length) return;
+  const raw = m.box.bind(m);
+  m.box = (x0, x1, bottom, t0, t1, z0, z1, faces) => {
+    if (bottom > HILLSIDE.bottom + 0.01 || z1 <= HILLSIDE.backWalk || z0 >= HILLSIDE.nearWalk || !cuts.some(([a, b]) => x1 > a && x0 < b)) return raw(x0, x1, bottom, t0, t1, z0, z1, faces);
+    const t = (x: number) => (x1 > x0 ? t0 + ((t1 - t0) * (x - x0)) / (x1 - x0) : t0);
+    let a = x0;
+    for (const [c0, c1, top] of cuts) {
+      if (c1 <= a || c0 >= x1) continue;
+      const [b0, b1] = [Math.max(a, c0), Math.min(x1, c1)];
+      if (b0 > a) raw(a, b0, bottom, t(a), t(b0), z0, z1, faces);
+      if (Math.max(t(b0), t(b1)) > top) raw(b0, b1, top, Math.max(t(b0), top), Math.max(t(b1), top), z0, z1, faces);
+      a = b1;
+    }
+    if (a < x1) raw(a, x1, bottom, t(a), t(x1), z0, z1, faces);
+  };
+}
+
 // buildHill a piece at a time, yielding when the frame's slice is spent (slice.ts)
 export function* buildHillSteps(level: Level, group: THREE.Group): Generator<void, void> {
   const m = new Mesher();
   const ground = descentGround(level);
   const hill = onHill(level);
   const B = HILLSIDE.bottom;
+  //the sewer route's deep runs under the hill (src/gen/sewer.ts): ground over it only goes down to its roof
+  deepCutaway(level, m);
   const [rz0, rz1] = HILLSIDE.road;
   const back = HILLSIDE.backWalk;
   const near = HILLSIDE.nearWalk;
@@ -1040,7 +1069,16 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
   //where there's no ground in front: canals on the street, the crest jumps' cross streets on the hill
   const through = throughStreets(level);
   //and the sewer route's cutaway: the near sidewalk is a thin roof over it and no houses stand in front of it
-  const sewers = (level.sewers ?? []).map((w): [number, number] => [tx(w.x0) - 0.5, tx(w.x1) + 0.5]);
+  //(split where the deep's roof comes down: over it the sidewalk goes down to that)
+  const roofs: [number, number, number][] = (level.sewers ?? []).flatMap((w): [number, number, number][] => {
+    const thin = -SEWER_ROOF / TILE;
+    if (w.top === undefined) return [[tx(w.x0) - 0.5, tx(w.x1) + 0.5, thin]];
+    const at = tx(w.topAt ?? w.x0);
+    const deepAt = (py: number) => (level.streetY - py) / TILE;
+    return [...(at > tx(w.x0) ? [[tx(w.x0) - 0.5, at, w.top0 !== undefined ? deepAt(w.top0) : thin] as [number, number, number]] : []), [at, tx(w.x1) + 0.5, deepAt(w.top)]];
+  });
+  const sewers = roofs.map(([a, b]): [number, number] => [a, b]);
+  const deepRoof = (x0: number, x1: number) => roofs.find(([a, b]) => x0 >= a - 0.01 && x1 <= b + 0.01)?.[2];
   const open = (x0: number, x1: number) => [...holes, ...through, ...sewers].some(([a, b]) => x1 > a - 0.1 && x0 < b + 0.1);
   //the street's near sidewalk and the low wall (the hill's sidewalk is part of buildHill; its wall is here)
   let x = level.hills ? Math.floor(finale) : Math.max(0, Math.floor(finale));
@@ -1056,7 +1094,7 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
     for (const [w0, w1] of sewers.filter(([w0, w1]) => w1 > x && w0 < e + 1)) {
       if (w0 > a) m.box(a, w0, B, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
       const [b0, b1] = [Math.max(a, w0), Math.min(e + 1, w1)];
-      m.box(b0, b1, -SEWER_ROOF / TILE, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+      m.box(b0, b1, Math.min(c - 0.1, deepRoof(b0, b1) ?? -SEWER_ROOF / TILE), c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
       a = b1;
     }
     if (a < e + 1) m.box(a, e + 1, B, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });

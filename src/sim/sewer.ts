@@ -158,7 +158,7 @@ export class SewerSim {
         }
         if (surge.on) {
           surge.front += SEWER_SIM.surgeSpeed;
-          if (surge.front > s.x1 - SEWER.ramp * TILE) surge.done = true;
+          if (surge.front > s.x1 - (s.outlet[1] > s.outlet[0] ? SEWER.ramp * TILE : 0)) surge.done = true;
           if (!surge.caught && mine && surge.front >= sk.x - half && sk.y > s.y - SEWER_SIM.surgeH && sk.mode !== 'bail') {
             surge.caught = true;
             sk.shot();

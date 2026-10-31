@@ -162,10 +162,11 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
   if (lay.sewer) {
     for (const [i, sw] of (L.sewers ?? []).entries()) {
       g.push(`<rect x="${f(X(sw.x0))}" y="${f(Y(L.streetY) + 40 * scale + 6)}" width="${f((sw.x1 - sw.x0) * scale)}" height="${f(Math.max(4, Y(sw.y) - Y(L.streetY) - 40 * scale - 6))}" fill="${C.sewer}"/>`);
-      for (const [a, b] of [sw.drain, sw.outlet]) g.push(`<rect x="${f(X(a))}" y="${f(Y(L.streetY) - 2)}" width="${f((b - a) * scale)}" height="${f(40 * scale + 10)}" fill="#0c1612" stroke="#f2c230" stroke-width="1.2"/>`);
+      for (const [a, b] of [sw.drain, sw.outlet].filter(([a, b]) => b > a)) g.push(`<rect x="${f(X(a))}" y="${f(Y(L.streetY) - 2)}" width="${f((b - a) * scale)}" height="${f(40 * scale + 10)}" fill="#0c1612" stroke="#f2c230" stroke-width="1.2"/>`);
       for (const [a, b] of sw.wet) g.push(`<rect x="${f(X(a))}" y="${f(Y(sw.y) - 3)}" width="${f((b - a) * scale)}" height="3" fill="${C.runoff}"/>`);
-      text(X(sw.drain[0]), Y(L.streetY) - 6, sw.entry === 'ramp' ? 'plank ramp ↓' : 'dig ↓', '#f2c230');
-      text(X(sw.outlet[0]), Y(L.streetY) - 6, sw.gate ? 'SEWER ROAD → spot' : 'outlet ↑', '#f2c230');
+      if (sw.drain[1] > sw.drain[0]) text(X(sw.drain[0]), Y(L.streetY) - 6, sw.entry === 'ramp' ? 'plank ramp ↓' : 'dig ↓', '#f2c230');
+      if (sw.outlet[1] > sw.outlet[0]) text(X(sw.outlet[0]), Y(L.streetY) - 6, sw.gate ? 'SEWER ROAD → spot' : 'outlet ↑', '#f2c230');
+      if (sw.entry === 'drop') text(X(sw.x0), Y(sw.y) + 12, 'the deep ↓', '#7cff4a');
       //kick-outs: a quarterpipe up through a grate in the street
       for (const k of sw.kicks ?? []) {
         g.push(`<rect x="${f(X(k.grate[0]))}" y="${f(Y(L.streetY) - 1)}" width="${f((k.grate[1] - k.grate[0]) * scale)}" height="3" fill="none" stroke="${C.kicker}" stroke-dasharray="2 2"/>`);

@@ -112,6 +112,8 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     const under = (col: number) => {
       const px = (col + 0.5) * TILE;
       const s = sewerAt(level, px);
+      //(over the deep the street's its full depth, and a canal's a canal: the deep's roof is under them)
+      if (s?.top !== undefined && (px >= (s.topAt ?? s.x0) || s.top0 !== undefined)) return 0;
       return !s ? 0 : s.kicks?.some((k) => px >= k.grate[0] && px < k.grate[1]) ? 2 : 1;
     };
     const kind = under(c);
@@ -555,7 +557,9 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     bottom.position.set(sx, hy + 0.65, -1.25);
     kit.add(top, bottom);
     //the sewer road (src/gen/sewer.ts): its sign stands over the way into the tunnel that runs to the gate
-    const gateway = level.sewers?.find((w) => w.gate);
+    //(the route's way in that runs on to the gate: the last before it)
+    const gated = level.sewers?.find((w) => w.gate);
+    const gateway = gated && level.sewers!.filter((w) => w.drain[1] > w.drain[0] && w.x0 <= gated.x0).at(-1);
     if (fork.sewer && gateway) {
       const under = roadSign(fork.sewer, false, true);
       under.userData.forkSign = 'sewer';

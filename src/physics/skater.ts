@@ -6,7 +6,7 @@ import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { Tuck } from './tuck';
 import { LEDGE_GRINDS, MANUALS, NOSE_STANCES, RAIL_GRINDS, rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
-import { PIT, SEWER_FLOW, ceilingAt, currentAt, isStreetAt, pitAt, pits, sewerAt, sewerFloor, sewerFlow, sewerRoof, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { PIT, SEWER_FLOW, ceilingAt, currentAt, inDeep, isStreetAt, pitAt, pits, sewerAt, sewerFloor, sewerFlow, sewerRoof, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
@@ -634,8 +634,11 @@ export class Skater {
     this.checkHazards();
 
     //in the canal, or down a pit on the hill
+    //(over the deep, a canal or a pit on the hill has its own bottom: its roof is under them)
     const sewer = sewerAt(this.level, this.x);
-    const bottom = pitAt(this.level, this.x)?.floor ?? (sewer ? sewerFloor(sewer, this.x) : this.level.streetY) + PHYS.bailDepth;
+    const deep = !!sewer && inDeep(sewer, this.x, this.y);
+    const open = sewer && (deep || sewer.top === undefined || this.x < (sewer.topAt ?? sewer.x0));
+    const bottom = deep ? sewerFloor(sewer, this.x) + PHYS.bailDepth : pitAt(this.level, this.x)?.floor ?? (open ? sewerFloor(sewer, this.x) : this.level.streetY) + PHYS.bailDepth;
     if (this.mode === 'air' && this.y > bottom && this.tucks > 0) {
       //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
       this.tucks--;
@@ -817,6 +820,9 @@ export class Skater {
   // the wall and fall glitching through the hill). Just short of the lip, you get up onto it.
   private wall(px: number): void {
     const fy = this.boardY;
+    //(down in the deep, the hill's pits are overhead)
+    const deep = sewerAt(this.level, this.x);
+    if (deep && inDeep(deep, this.x, this.y)) return;
     for (const p of pits(this.level)) {
       const at = p.x1 - truckReach(p.far);
       if (px > at || this.x <= at || fy <= p.lip) continue;

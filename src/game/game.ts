@@ -262,7 +262,7 @@ export class Game {
     this.view.follow(this.skater.x, this.skater.y);
   }
 
-  // ?sewer (or ?sewer=rats, surge, bowl, subway, gator, kick, gate): each new floor starts on the street just before
+  // ?sewer (or ?sewer=rats, surge, bowl, subway, gator, kick, gate, stairs, deep): each new floor starts on the street just before
   // the way into one of its sewers (src/gen/sewer.ts), the one with that piece if there is one, to try it straight away
   startInSewer(want: string): void {
     this.sewerStart = want || 'any';
@@ -274,9 +274,12 @@ export class Game {
     const all = this.level.sewers ?? [];
     const want = this.sewerStart;
     const s =
-      all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate) || (want === 'stairs' && w.stairs?.length)) ?? all[0];
-    //(down on its floor, just past the way in: a few tiles up the street from a dig can be a hill's foot or a canal)
-    if (s) Object.assign(this.sim.skater, { x: s.drain[1] + TILE, y: s.y, mode: 'roll', surface: null, hsp: 4, carry: 0, vsp: 0 });
+      all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate) || (want === 'stairs' && w.stairs?.length) || (want === 'deep' && w.entry === 'drop')) ?? all[0];
+    //(down on its floor, just past the way in: a few tiles up the street from a dig can be a hill's foot or a canal;
+    //along the route, past the climb up out of the deep, or at the top of the drop into it)
+    const x = s?.entry === 'climb' ? s.climb![1] + TILE : s?.entry === 'drop' ? s.x0 - 2 * TILE : (s?.drain[1] ?? 0) + TILE;
+    const y = s?.entry === 'drop' ? all.find((w) => w.x1 === s.x0)?.y ?? s.y : s?.y;
+    if (s) Object.assign(this.sim.skater, { x, y, mode: 'roll', surface: null, hsp: 4, carry: 0, vsp: 0 });
   }
 
   // ?shop: the run starts on act 1's escape, skating up to its gate with the shop picked: GNAR SUPPLY stands

@@ -272,7 +272,7 @@ export class Pilot {
     if (sim.down) return sewerPress(sim, pressed && sk.mode === 'rail');
     if (this.style === 'sewer') {
       //roll on into a drain ahead, and no flips on the way down (the street's underside is overhead)
-      const drain = level.sewers?.find((w) => w.drain[0] - sk.x > -TILE && w.drain[0] - sk.x < 4 * TILE);
+      const drain = level.sewers?.find((w) => w.drain[1] > w.drain[0] && w.drain[0] - sk.x > -TILE && w.drain[0] - sk.x < 4 * TILE);
       if (drain && sk.y <= level.streetY + 1 && sk.mode === 'roll' && (!sk.surface || Math.abs(sk.surface.y - level.streetY) < 1)) pressed = false;
       if (sk.mode === 'air' && sewerAt(level, sk.x) && sk.y > level.streetY - 4) pressed = false;
       //and no big ollie off the top of a hill (that's the way up into the sky): roll on down where the hill goes on
