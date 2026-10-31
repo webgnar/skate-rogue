@@ -27,7 +27,7 @@ export const GEAR = {
   glass: 8, // wheels, per stretch of broken glass rolled over: it chunks the urethane
   flip: 1.25, // shoes, per flip trick
   grindSec: 1.4, // trucks, per second on a rail or ledge
-  fastSec: 1.0, // wheels, per second going faster than fastOver x cruising speed
+  fastSec: 0.96, // wheels, per second going faster than fastOver x cruising speed
   fastOver: 1.25,
   wornFrom: 50, // below this a part starts to cost you
   busted: 15, // the HUD flashes it from here

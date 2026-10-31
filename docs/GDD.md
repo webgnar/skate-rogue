@@ -301,6 +301,11 @@ Input buffering (100 ms) and coyote time (80 ms) are on for everyone; touch late
 ### Ollie and tricks
 
 - **Jumps**: start with 2. Ground or rail ollie spends 1; an air flip trick spends 1 and gives a smaller hop.
+- **Flip pop by timing** (zack, Oct 31, 2026): the sooner you tap the flip after the ollie, the higher it pops you.
+  A quick double tap goes about 4.6 tiles up (148 px; the old best was about 2.8); a flip at the top of the ollie
+  pops like before. The pop rides on top of the rise the ollie still has, so tapping early never wastes the ollie.
+  It trades against perfect landings, which want the flip late and low. A quick double tap can't reach the sky
+  route's power line yet (PHYS.trickEarly -6; -7 would let one off a high rail reach it).
   Jumps refill on landing, on any grind, on a car-hop, and on riding off a curved rail.
 - **Jump charge**: jumps are a number, not an integer (Lou Gnar's 1.75). A partial jump gives a partial hop.
   Several boons add or drain fractions.
@@ -912,6 +917,30 @@ src/
   render/      Three.js scene, camera rig, kit builder (piece → meshes), skater rig, particles
   ui/          HUD, cards (HTML/CSS over the canvas)
 ```
+
+## Roadmap
+
+The official roadmap (zack, Oct 31, 2026). Each item is checked against "What the game is" before it's built.
+
+**Now**
+1. The sewer route, so all three routes (sky, surface, sewer) exist.
+2. A one-tap "Again" on the game-over screen.
+3. Flip pop tuning (a quicker flip pops higher) and a dynamic zoom option.
+
+**Next**
+4. Missions and Skater Rank.
+5. Spin tokens and the end-of-run slot machine.
+
+**Then**
+6. The Chinatown downhill: skitch cabs and cross traffic.
+7. Tee physics, and Blender texture painting for the models.
+8. Grass strips that punish worn wheels.
+9. Wall rides, only if they earn their place.
+
+**Ship**
+10. A performance pass for small iPhones.
+11. Release on ad-supported web game portals (zack still picks which).
+12. App store builds with Capacitor, if wanted.
 
 ## Milestones
 

@@ -55,6 +55,7 @@ export class Skater {
   impactT = 0; // frames left of the landing's impact: no ollie, and a press then is lost (Lou Gnar's LANDING state)
   impactTaps = 0; // presses during this impact (Strong Legs: the second one ollies anyway)
   flipLow: number | null = null; // where the last flip was thrown, if it was on the way down (px), for a PERFECT
+  airT = 0; // frames in this air, for how hard a flip pops
   topY = 0; // the highest point of this air (px; y points down), for how big the drop was
   coyote = 0;
   tricks = 0; // counts flip tricks, so the animation choice is deterministic
@@ -183,6 +184,7 @@ export class Skater {
     this.holdT = input.held && this.holdT > 0 ? this.holdT + 1 : 0;
 
     if (this.mode !== 'air') this.topY = this.y; // the drop is measured from the ground you left
+    this.airT = this.mode === 'air' ? this.airT + 1 : 0;
     //the button: ollie from the ground (or just after leaving it), flip trick in the air
     if (this.mode !== 'roll') this.impactT = 0;
     if (this.impactT > 0) {
@@ -231,6 +233,7 @@ export class Skater {
     this.impactT = from.impactT;
     this.impactTaps = from.impactTaps;
     this.topY = from.topY + dy;
+    this.airT = from.airT;
     this.flipLow = from.flipLow === null ? null : from.flipLow + dy;
     this.coyote = from.coyote;
     this.tricks = from.tricks;
@@ -411,7 +414,7 @@ export class Skater {
     if (this.jumps > 0) this.jumps--;
     else this.spare -= 1;
     this.flipLow = this.vsp > 0 ? this.y : null;
-    this.vsp = PHYS.trick * this.gear.trick;
+    this.vsp = this.flipPop();
     this.buffer = 0;
     this.flipped = true;
     if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
@@ -425,6 +428,17 @@ export class Skater {
     if (spin === 180) this.fakie = !this.fakie;
     //Sky Line: a ghost rail under your feet to come down on
     if (this.mods.skyLine) this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.skyLineTiles * TILE, y: this.y + PHYS.skyLineDrop, row: -1, ttl: PHYS.ghostFrames };
+  }
+
+  // the vsp a flip tapped now pops you to: harder the sooner after leaving the ground. It rides on top of the
+  // rise the ollie has left, so a quick double tap never throws the ollie's height away
+  flipPop(): number {
+    const t = Math.min(1, Math.max(0, (this.airT - PHYS.trickEarlyFrames) / (PHYS.trickLateFrames - PHYS.trickEarlyFrames)));
+    const pop = (PHYS.trickEarly + (PHYS.trick - PHYS.trickEarly) * t) * this.gear.trick;
+    if (this.vsp >= 0) return pop;
+    const g = this.snap ? this.grav * PHYS.popSnap ** 2 : this.grav;
+    const rise = (this.vsp * this.vsp) / (2 * g); // px the ollie would still climb
+    return -Math.sqrt(pop * pop + 2 * this.grav * rise);
   }
 
   private bankSpare(): void {
