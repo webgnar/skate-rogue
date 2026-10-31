@@ -21,7 +21,7 @@ import { buzz } from '../ui/settings';
 import { cashScale, dayKey, DECK_SLOTS, FULL_LIBRARY, firstPick, STOCK, withLoadout, type Library, type Loadout } from '../run/meta';
 import { PickupView } from '../render/pickups';
 
-import type { Level } from '../physics/level';
+import { inHill, pitAt, type Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
@@ -31,6 +31,7 @@ import { ElView } from '../render/el-view';
 import { ChinatownView } from '../render/chinatown-view';
 import { CableView } from '../render/cable-view';
 import { Impacts } from '../render/impact';
+import { WaterSplashes } from '../render/water-splash';
 import { Particles, TRICK_TRAIL } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
@@ -68,7 +69,7 @@ import { PHYS, TILE } from '../physics/constants';
 import { LIFT, SkaterRig } from '../render/skater-rig';
 import { ShardAura } from '../render/shard-aura';
 import { SLIDES, trickName } from '../physics/tricks';
-import { parkedPaint, toX, toY } from '../render/kit';
+import { parkedPaint, toX, toY, WATER_TOP } from '../render/kit';
 import { CarHopFx, damageParked, parkedDamage, slideParked } from '../render/car-damage';
 import { OneButton } from './input';
 import { FixedStep } from './loop';
@@ -196,6 +197,8 @@ const CAUGHT_BEAT_MS = 800;
 const AHEAD_TILES = 44;
 const MOOD_BLEND_SECS = 4;
 
+// going under in a canal: how deep (world units, enough to cover him) and how long, and when the continue card comes up
+const SINK = { depth: 4.5, secs: 1.5, wait: 1.7 };
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
 const CONT_LOCK_MS = 700;
 const SMASH_CHAIN = 4; // smashes in quick succession for a Wrecking Ball
@@ -250,6 +253,8 @@ export class Game {
   private dripEdges: { x: number; y: number }[] = []; // roof corners water drips from
   private dripT = 0; // how fast the skater was falling before this step
   private readonly impacts: Impacts;
+  private readonly splashes: WaterSplashes;
+  private sink: { at: number; x: number; top: number; bubble: number } | null = null; // went into the canal: going under
   private readonly chopper = new ChopperView();
   private readonly topChopper = new ChopperView(); // over the top route (src/sim/sky.ts)
   private readonly skyView = new SkyView();
@@ -369,7 +374,8 @@ export class Game {
     this.view.over.add(this.speedLines.mesh);
     this.view.withActor.add(this.flipLines.mesh); // in depth with the skater: the board covers the lines (zack)
     this.impacts = new Impacts(() => this.view.resolution);
-    this.view.over.add(this.impacts.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
+    this.splashes = new WaterSplashes(() => this.view.resolution);
+    this.view.over.add(this.impacts.group, this.splashes.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group);
@@ -573,12 +579,15 @@ export class Game {
   private startFloor(from?: { skater: Skater; dx: number; dy: number }): void {
     this.state = 'skate';
     this.finished = false;
+    this.sink = null;
+    this.view.ghostOff = false;
     this.pending = null;
     this.colDebug?.reset();
     if (!from) {
       this.warp.reset();
       this.bullet.reset();
       this.particles.clear();
+      this.splashes.clear();
       this.smashFx.clear();
       this.input.clear();
     }
@@ -809,7 +818,7 @@ export class Game {
     const y = -(level.streetY - level.startY) / TILE;
     this.view.promote(specKey(spec), level, this.seed, next.floor, x, y);
     this.trafficView.handOff(old);
-    for (const fx of [this.particles, this.impacts, this.words, this.smashFx]) fx.shift(-x, -y);
+    for (const fx of [this.particles, this.impacts, this.splashes, this.words, this.smashFx]) fx.shift(-x, -y);
     for (const ch of [this.chopper, this.topChopper]) ch.shift(-x, -y);
     const skater = this.skater;
     this.floor = next.floor;
@@ -1186,12 +1195,14 @@ export class Game {
     }
     this.blendMood(dt);
 
-    if (this.state === 'skate' && this.sim.state !== 'skate' && !this.finished) this.logFloor(this.sim.state === 'exit' ? 'exit' : `${this.sim.state} at col ${Math.floor(this.skater.x / TILE)}`);
+    if (this.state === 'skate' && this.sim.state !== 'skate' && !this.finished && !this.sink) this.logFloor(this.sim.state === 'exit' ? 'exit' : `${this.sim.state} at col ${Math.floor(this.skater.x / TILE)}`);
     if (this.state === 'skate' && this.sim.state === 'exit' && !this.finished) {
       this.finished = true;
       this.finishFloor(now);
     } else if (this.state === 'skate' && this.sim.state === 'bail') {
-      this.fell(now, false);
+      //into the canal: the splash, and he goes under before the continue card comes up
+      if (!this.sink && this.inWater()) this.splashDown(now);
+      if (!this.sink || now - this.sink.at >= SINK.wait * 1000) this.fell(now, false);
     } else if (this.state === 'skate' && this.sim.state === 'caught') {
       this.state = 'caught';
       this.menuAt = now;
@@ -1249,7 +1260,7 @@ export class Game {
     this.sprite.mesh.position.x = toX(x);
     //landed on a lifted board: drawn lower while the legs reach down to it (src/physics/tuck.ts)
     //plus the lift that keeps the hero-sized board's wheels on the ground (skater-rig.ts BOARD_SIZE)
-    this.sprite.mesh.position.y = toY(this.level, y + this.skater.feel.drop) + LIFT * this.sprite.mesh.scale.y;
+    this.sprite.mesh.position.y = toY(this.level, y + this.skater.feel.drop) + LIFT * this.sprite.mesh.scale.y - this.sinking(now, realDt);
     const sk = this.skater;
     //the board's angle from the sim: where its trucks touch the ground, the rail's slope, easing level in the air
     this.sprite.grab = sk.skitching ? this.chinatownView.grab(this.level, sk.skitching) : this.cableView.grab(sk.surface);
@@ -1258,6 +1269,7 @@ export class Game {
     //stood still on the board under a menu, hands up when busted
     this.sprite.hold(this.state === 'caught' ? 'busted' : this.state === 'skate' ? null : 'idle');
     this.impacts.update(dt);
+    this.splashes.update(realDt);
     this.chopper.update(this.level, this.sim.chopper, dt);
     const top = this.sim.sky.chopper;
     this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
@@ -1429,6 +1441,41 @@ export class Game {
     const y = toY(this.level, this.skater.y);
     this.words.spawn(x, y, 'GNAR!');
     this.impacts.spawn(x, y, 0.7);
+  }
+
+  // bailed into a canal, not down a pit on the hill
+  private inWater(): boolean {
+    const x = this.skater.x;
+    return !pitAt(this.level, x) && !inHill(this.level, x);
+  }
+
+  // broke the water: the comic splash (water-splash.ts), drops all round, a word, a shake
+  private splashDown(now: number): void {
+    const x = toX(this.skater.x);
+    const top = toY(this.level, this.level.streetY) + WATER_TOP;
+    this.sink = { at: now, x, top, bubble: 0.35 };
+    this.view.ghostOff = true; // under the water he's hidden, not drawn through it as the ghost
+    this.splashes.spawn(x, top, 1.3);
+    this.particles.splash(x, top, 2.2);
+    this.particles.splash(x, top, 1.4);
+    this.words.spawn(x, top + 0.8, 'SPLOOSH!');
+    this.view.shake(0.3);
+    if (!FX.reduceMotion) this.view.punch(0.6);
+  }
+
+  // how far under the water the skater is drawn, world units; bubbles come up as he goes
+  private sinking(now: number, dt: number): number {
+    const s = this.sink;
+    if (!s) return 0;
+    const t = Math.min(1, (now - s.at) / 1000 / SINK.secs);
+    s.bubble -= dt;
+    if (s.bubble <= 0 && t < 1) {
+      s.bubble = 0.22 + Math.random() * 0.2;
+      this.splashes.ripple(s.x + (Math.random() - 0.5) * 0.4, s.top, 1 + Math.random() * 0.8);
+      this.particles.splash(s.x + (Math.random() - 0.5) * 0.4, s.top, 0.12);
+    }
+    //drops in fast, then sinks slower and slower
+    return SINK.depth * (1 - Math.pow(1 - t, 2.2));
   }
 
   private slam(): void {

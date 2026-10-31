@@ -28,6 +28,7 @@ export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
 
 const STREET_DEPTH = 6; // the street runs from z = -3.5 (back, sidewalk and wall) to z = 2.5 (front)
 const STREET_BACK = -3.5;
+export const WATER_TOP = -0.6; // the canals' water, this far under the street (the splash and the sink: game.ts)
 const WALK = STREET_Z.curb - STREET_BACK; // the back sidewalk's depth, wall to curb
 const LANDMARK_W = 8; // art/landmarks.py's are up to 8 wide
 const PLAZA = ['Flamingo', 'Picasso'];
@@ -155,7 +156,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
       const front = [new Array(n).fill(pit.top), new Array(n).fill(pit.fill), new Array(n).fill(pit.fill)];
       const tex = tileTexture(front, skin.pit === 'city' ? cityTiles() : undefined);
       const water = slab(n, 2.4, STREET_DEPTH, lambert(tex), surface('water', 0x3a5fb0), sideMat);
-      water.position.set(x, -1.8, STREET_BACK + STREET_DEPTH / 2);
+      water.position.set(x, WATER_TOP - 1.2, STREET_BACK + STREET_DEPTH / 2);
       kit.add(water);
     }
     c = end + 1;
