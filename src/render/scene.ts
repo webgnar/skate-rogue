@@ -177,7 +177,7 @@ export class StreetView {
     readonly canvas: HTMLCanvasElement,
     private level: Level,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: true });
     //checking a shader for errors waits for it to finish compiling: only in development
     this.renderer.debug.checkShaderErrors = !import.meta.env.PROD;
     this.keep = new ShaderKeep(this.renderer);
