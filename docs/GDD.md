@@ -763,6 +763,13 @@ and on the top route. When the run ends, before the summary, each token pulls a 
 Three of a kind pays big. Runs that end badly still pay something, so losing stings less, and smashing props and
 taking the risky lines are worth more. The machine skips with a tap and plays every pull at once when you have many.
 
+Built Oct 31, 2026 (src/gen/spin-tokens.ts, src/run/slots.ts, src/ui/slots-panel.ts): a token is a red casino chip
+with a gold star. A floor has a 15% chance of one prop hiding a token, the side line's prize is a token a quarter of
+the time, and one of the top route's Stoken can be a token. A plain pull pays 2 to 5 Stoken; three ◆ pay 25 Stoken,
+three $ a $40 head start, three ⚡ a free boon at the next run's start, three ♥ a saved continue (2 held at most), and
+three ★ a grip colour. A tap stops the reels, the next goes on to the summary. Tokens found on a floor you continue
+from are lost with the rest of that floor.
+
 ## Scoring and stoke
 
 - **Score** = tricks × combo × speed multiplier + floor clear (`250 × floor`, QFS) + Stoken grabbed.

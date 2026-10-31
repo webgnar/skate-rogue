@@ -59,6 +59,7 @@ export class RunScore {
   score = 0;
   cash = 0;
   stoken = 0;
+  spins = 0; // spin tokens found: each pulls the slot machine once at the run's end (src/run/slots.ts)
   combo = 0; // tricks in the current combo
   comboPoints = 0;
   stoke = 0; // 0..1
@@ -150,6 +151,7 @@ export class RunScore {
         break;
       case 'pickup':
         if (e.kind === 'cash') this.addCash(SCORE.cashCoin);
+        else if (e.kind === 'spin') this.spins++;
         else {
           this.stoken += this.stokenScale;
           this.score += SCORE.stoken;

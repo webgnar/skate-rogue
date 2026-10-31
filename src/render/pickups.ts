@@ -48,10 +48,59 @@ function coinMesh(count: number): THREE.InstancedMesh {
   return new THREE.InstancedMesh(geo, [edge, face, face], count);
 }
 
+// A spin token (src/gen/spin-tokens.ts): a red casino chip with white rim stripes and a gold star, drawn once on a
+// canvas (none under Node, where it's a plain red chip)
+let chipFace: THREE.Texture | null = null;
+function chipTexture(): THREE.Texture | null {
+  if (chipFace || typeof document === 'undefined') return chipFace;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  if (!g) return null;
+  g.fillStyle = '#e8203a';
+  g.beginPath();
+  g.arc(32, 32, 32, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = '#fff';
+  g.lineWidth = 7;
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    g.beginPath();
+    g.arc(32, 32, 27, a - 0.18, a + 0.18);
+    g.stroke();
+  }
+  g.fillStyle = '#ffd84a';
+  g.strokeStyle = '#000';
+  g.lineWidth = 2.5;
+  g.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const a = -Math.PI / 2 + (k * Math.PI) / 5;
+    const rad = k % 2 ? 7 : 16;
+    g.lineTo(32 + Math.cos(a) * rad, 32 + Math.sin(a) * rad);
+  }
+  g.closePath();
+  g.fill();
+  g.stroke();
+  chipFace = new THREE.CanvasTexture(c);
+  chipFace.colorSpace = THREE.SRGBColorSpace;
+  return chipFace;
+}
+
+const CHIP_R = 0.26;
+let chipGeo: THREE.BufferGeometry | null = null;
+function chipMesh(count: number): THREE.InstancedMesh {
+  chipGeo ??= new THREE.CylinderGeometry(CHIP_R, CHIP_R, 0.08, 28).rotateX(Math.PI / 2);
+  const map = chipTexture();
+  const face = new THREE.MeshLambertMaterial(map ? { map, emissive: 0x401010 } : { color: 0xe8203a, emissive: 0x401010 });
+  const edge = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x303030 });
+  return new THREE.InstancedMesh(chipGeo, [edge, face, face], count);
+}
+
 export class PickupView {
   readonly group = new THREE.Group();
   private coins: THREE.InstancedMesh | null = null;
   private gems: THREE.InstancedMesh | null = null;
+  private chips: THREE.InstancedMesh | null = null; // spin tokens
   private slots: { mesh: THREE.InstancedMesh; i: number; x: number; y: number; popT: number; gone: boolean }[] = [];
   private t = 0;
   private readonly m = new THREE.Matrix4();
@@ -61,14 +110,15 @@ export class PickupView {
   private readonly s = new THREE.Vector3();
 
   setLevel(level: Level): void {
-    for (const mesh of [this.coins, this.gems]) {
+    for (const mesh of [this.coins, this.gems, this.chips]) {
       if (!mesh) continue;
       this.group.remove(mesh);
       mesh.dispose();
     }
     this.slots = [];
     const cash = level.pickups.filter((p) => p.kind === 'cash').length;
-    const stoken = level.pickups.length - cash;
+    const spins = level.pickups.filter((p) => p.kind === 'spin').length;
+    const stoken = level.pickups.length - cash - spins;
     //art/pickups.py: a brilliant-cut gem, colours baked into the vertices
     const gem = flatGeometry('Stoken');
     this.coins = coinMesh(Math.max(1, cash));
@@ -77,18 +127,22 @@ export class PickupView {
       new THREE.MeshLambertMaterial(gem ? { vertexColors: true, emissive: 0x2a1460 } : { color: 0xb98cff, emissive: 0x4a2a9a }),
       Math.max(1, stoken),
     );
+    this.chips = chipMesh(Math.max(1, spins));
     this.coins.count = cash;
     this.gems.count = stoken;
+    this.chips.count = spins;
     let c = 0;
     let g = 0;
+    let k = 0;
     for (const p of level.pickups) {
-      const mesh = p.kind === 'cash' ? this.coins : this.gems;
-      const i = p.kind === 'cash' ? c++ : g++;
+      const mesh = p.kind === 'cash' ? this.coins : p.kind === 'spin' ? this.chips : this.gems;
+      const i = p.kind === 'cash' ? c++ : p.kind === 'spin' ? k++ : g++;
       this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), popT: 0, gone: false });
     }
     inkify(this.coins);
     inkify(this.gems);
-    this.group.add(this.coins, this.gems);
+    inkify(this.chips);
+    this.group.add(this.coins, this.gems, this.chips);
     this.update(0);
   }
 
@@ -134,5 +188,6 @@ export class PickupView {
     }
     if (this.coins) this.coins.instanceMatrix.needsUpdate = true;
     if (this.gems) this.gems.instanceMatrix.needsUpdate = true;
+    if (this.chips) this.chips.instanceMatrix.needsUpdate = true;
   }
 }

@@ -89,7 +89,7 @@ export function cueFor(e: FloorEvent): Cue | null {
     case 'kicker':
       return cue('ollie', 1, 0.8);
     case 'pickup':
-      return e.kind === 'stoken' ? cue('coin', 1, 1.5) : cue('coin', 0.8);
+      return e.kind === 'cash' ? cue('coin', 0.8) : cue('coin', 1, e.kind === 'spin' ? 1.8 : 1.5);
     case 'smash':
       return cue('ufo_explode', e.how === 'roll' ? 0.4 : 0.6, 1.3 + ((e.index * 7) % 5) * 0.08);
     case 'drone':

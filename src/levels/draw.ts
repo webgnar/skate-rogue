@@ -182,7 +182,8 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
     if (p.kind === 'stoken') {
       const cx = X(p.x), cy = Y(p.y), r = 5;
       g.push(`<polygon points="${f(cx)},${f(cy - r)} ${f(cx + r)},${f(cy)} ${f(cx)},${f(cy + r)} ${f(cx - r)},${f(cy)}" fill="${C.stoken}" stroke="#000"/>`);
-    } else g.push(`<circle cx="${f(X(p.x))}" cy="${f(Y(p.y))}" r="${f(Math.max(1.4, 5 * scale))}" fill="${C.cash}"/>`);
+    } else if (p.kind === 'spin') g.push(`<circle cx="${f(X(p.x))}" cy="${f(Y(p.y))}" r="5" fill="#ff3b4e" stroke="#000"/>`);
+    else g.push(`<circle cx="${f(X(p.x))}" cy="${f(Y(p.y))}" r="${f(Math.max(1.4, 5 * scale))}" fill="${C.cash}"/>`);
   }
   // the top route: pigeons in the way, and its name over the first stretch of it
   for (const k of L.flocks ?? []) text(X(k.x), Y(k.y) - 2, 'ᵛᵛᵛ pigeons', C.up, 'text-anchor="middle"');

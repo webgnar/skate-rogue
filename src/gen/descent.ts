@@ -16,6 +16,7 @@ import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } fr
 import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
 import { addSkyBeats } from './sky-beats';
+import { addSpinTokens, type SpinSpots } from './spin-tokens';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
 import { floorEdit } from './level-edits';
 import { elPlan } from '../traffic/el';
@@ -295,11 +296,14 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   };
   //Chicago's L over the street, before the side line so the side line stays clear of it
   if (opts.hills) level.el = elPlan(level, level.layout.seed);
+  const sideFrom = level.pickups.length;
   addSideLine(level, level.layout.seed);
+  const topFrom = level.pickups.length;
   if (opts.hills && !opts.short) {
     addTopRoute(level, level.layout.seed);
     addSkyBeats(level, level.layout.seed);
   }
+  const spinSpots: SpinSpots = { side: [sideFrom, topFrom], top: [topFrom, level.pickups.length] };
   applyTwist(level, opts.twist, level.layout.seed);
   level.crossings = crossPlan(level, level.layout.seed);
   level.busStops = stopPlan(level, level.layout.seed);
@@ -308,5 +312,6 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   if (bounty && !opts.short) level.bounty = bounty;
   level.grass = placeGrass(level);
   level.props = placeProps(level);
+  addSpinTokens(level, spinSpots);
   return level;
 }

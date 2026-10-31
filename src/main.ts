@@ -45,6 +45,7 @@ import { SETTINGS, buzz, loadSettings } from './ui/settings';
 import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
 import { bindMissions } from './ui/missions-panel';
+import { SlotsPanel } from './ui/slots-panel';
 
 const base = import.meta.env.BASE_URL;
 
@@ -204,6 +205,7 @@ function makeHud(): Hud {
   const pausedEl = document.getElementById('paused')!;
   const hintEl = document.getElementById('hint')!;
   const view = new HudView();
+  const slots = new SlotsPanel(document.getElementById('spin')!, () => FX.reduceMotion);
   const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
   let level = 0;
   let held: Held[] = [];
@@ -352,6 +354,8 @@ function makeHud(): Hud {
       contEl.querySelector('.left')!.textContent = `${v.left} CONTINUE${v.left === 1 ? '' : 'S'} LEFT`;
     },
     missions: (v) => drawMissions(v),
+    slots: (v) => slots.show(v),
+    slotsSkip: () => slots.skip(),
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
     over: (result) => {
       overEl.hidden = !result;
