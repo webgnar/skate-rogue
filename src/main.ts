@@ -470,7 +470,7 @@ async function start() {
   if (params.has('clouds')) game.startOnClouds();
   const bot = params.get('bot');
   if (bot !== null) {
-    game.setAutopilot(bot === 'mash' || bot === 'high' || bot === 'sewer' ? bot : 'ref');
+    game.setAutopilot(bot === 'mash' || bot === 'high' || bot === 'sewer' || bot === 'sky' ? bot : 'ref');
     game.timeScale = Math.min(8, Math.max(1, Number(params.get('turbo')) || 1));
   }
   //?debug (and ?bot) expose the game for headless checks: the playtest runner reads game.playtest and window.rig

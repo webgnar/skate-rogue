@@ -22,6 +22,7 @@ export interface Surface {
   manual?: boolean; // a manual pad (buildLevel): you ride it in a manual
   side?: boolean; // part of a floor's side line (src/gen/sidelines.ts)
   crumble?: boolean; // Greece's ruins: it falls a moment after you land on it
+  crumbleFrames?: number; // and how long that moment is, if not PHYS.crumbleFrames (a thin cloud, src/gen/clouds.ts)
   conveyor?: number; // High-Tech conveyor rails: px/frame the rail adds to your grind (negative runs back)
   el?: boolean; // the L's running rails (src/traffic/el.ts): drawn with the track, not as a bar on posts
   hill?: boolean; // a street running downhill (act 1's San Francisco hills): a bank that falls away, drawn as road

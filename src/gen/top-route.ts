@@ -112,6 +112,17 @@ export function busy(level: Level, x0: number, x1: number, y: number): boolean {
   return false;
 }
 
+// the nearest height to y, up or down by half tiles up to two tiles, where [x0, x1] is clear of everything up
+// there (null: crowded all the way); up first, at each step
+// (no higher than `highest`, if given)
+export function clearAt(level: Level, x0: number, x1: number, y: number, highest = -Infinity): number | null {
+  for (let k = 0; k <= 8; k++) {
+    const dy = (k % 2 ? -1 : 1) * Math.ceil(k / 2) * (TILE / 2);
+    if (y + dy >= highest && !busy(level, x0, x1, y + dy)) return y + dy;
+  }
+  return null;
+}
+
 // rooftop ledges at the top route's height over the street from x0 to x1, with gaps to ollie between
 function roofs(level: Level, x0: number, x1: number, rng: Rng, gaps = TOP.gap): Surface[] {
   const y = level.streetY - TOP.height;
