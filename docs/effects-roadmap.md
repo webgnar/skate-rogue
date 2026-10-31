@@ -22,3 +22,25 @@ Shaders and visual effects for Gnar Run. Each item is an OpenSpec change in `ope
 
 Budget rules for all of it: one draw call per effect type, no full-screen passes beyond the brief slam lines,
 fake lights (additive meshes) instead of real ones, and nothing that strobes the whole screen.
+
+## Render layering (read before adding an effect)
+
+The frame is drawn in passes (`StreetView.render`, src/render/scene.ts), in this order:
+
+1. **Level** (`view.scene`): the street, kit, traffic, particles in `particles.behind`.
+2. **Ghost**: the skater's hidden parts as the dithered ghost, where the level is in front of him (ghost.ts).
+3. **Skater** (`view.actor`, plus `view.withActor`): the skater, in depth with the level, camera pulled a little
+   toward him so he isn't buried in nearby walls.
+4. **Over** (`view.over`): the **depth buffer is cleared first**, so everything here draws on top of everything,
+   skater included. Speed lines, impacts, words, focus lines, the particle pool, rain.
+
+Pick the layer by what has to cover what:
+
+- Must draw **over the skater** (screen-space juice, words, sparks in front): `view.over`.
+- Must be **covered by the skater or his board** (flip lines): `view.withActor`. Depth offsets on a mesh in
+  `view.over` do nothing, because the depth there is already cleared. That is why the first "behind the board"
+  fix (#256) did nothing: the lines stayed on top.
+- Must be **covered by the level** (sparks behind the skater, street FX): `view.scene` or `particles.behind`.
+
+`withActor` is left out of the ghost pass, so effects there don't turn into the pink/yellow dither.
+Check a layering change in a zoomed still before calling it done: the board's edge should cut the line.
