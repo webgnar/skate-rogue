@@ -1,0 +1,2 @@
+- [x] Measure the top bar and place the boon chips under it
+- [x] Check portrait and landscape phones and desktop
