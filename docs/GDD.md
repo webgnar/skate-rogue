@@ -241,7 +241,11 @@ A full Slay the Spire map is an option for later.
 Goal for later (zack, Oct 31, 2026; not designed, nothing built). The run should eventually be a non-linear
 progression: the boon path you take and the type of skater you curate decide the path forward through the run.
 
-Open: what the paths are, and how a build opens or picks them.
+zack (Oct 31, 2026): "entire whole levels of sky street sewer, as acts in the run", and "whole sky/street/sewers would
+be designed differently FOR those boons". So a whole act could be a sky, street or sewer level, each built for the
+boons that lead there. This may change the current design, where the three routes are stacked through every floor.
+
+Open: which boons lead to which kind of act, and how each kind of act is designed for them.
 
 ### 2. How a run ends: escape the city
 
@@ -1009,8 +1013,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 
 ## Open questions
 
-- **Build-driven paths** (future direction under Run structure): what the paths are, and how a build opens or
-  picks them.
+- **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
+  to each, and how each is designed for them.
 - **The sewer route**: rats, its own road at the gate, and a way down on the hills (first version under Three routes).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
