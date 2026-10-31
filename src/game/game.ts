@@ -1353,7 +1353,9 @@ export class Game {
     const beat = this.sound?.beatIndex() ?? Math.floor(this.clock / 0.58);
     if (beat !== this.lastBeat && this.gnarGlow > 0.01) this.aura.beat();
     this.lastBeat = beat;
-    this.aura.set(this.gnarGlow, this.clock, this.view.resolution);
+    //and dances to it: bass, mids and highs (bands.ts), held still with reduce motion
+    const bands = this.sound?.bands(dt) ?? null;
+    this.aura.set(this.gnarGlow, this.clock, this.view.resolution, FX.reduceMotion ? null : bands);
     this.skaterInk.uniforms.uWidth.value = Math.max(1, SKATER_INK * this.view.resolution);
     this.boardInk.uniforms.uWidth.value = this.skaterInk.uniforms.uWidth.value;
     this.skaterLight.update(dt, this.sprite.mesh.position, (x, y, out) => this.view.night.lights.lightAt(x, y, out), this.gnarGlow > 0.01, this.view.resolution);
