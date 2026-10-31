@@ -448,12 +448,16 @@ export function silhouetteInk(root: THREE.Object3D, board: THREE.Object3D, ink: 
     mat.stencilFunc = func;
     mat.stencilZPass = THREE.KeepStencilOp;
   }
+  const drop: THREE.Object3D[] = [];
   root.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
     const isBoard = onBoard.has(m);
     if (m.userData.ink) {
       if (m.material !== ink) return; // the gnar shards and the night rim keep their own
+      //the deck's ply edge is an open band round the deck: its far side's hull stood above the deck as a stray line
+      //(zack, 2026-10-31). The deck's own hull already outlines it
+      if (m.parent?.userData.mat === 'plies') return void drop.push(m);
       m.material = isBoard ? boardInk : bodyInk;
       m.renderOrder = 1;
       return;
@@ -466,4 +470,5 @@ export function silhouetteInk(root: THREE.Object3D, board: THREE.Object3D, ink: 
       mat.stencilZPass = THREE.ReplaceStencilOp;
     }
   });
+  for (const m of drop) m.removeFromParent();
 }
