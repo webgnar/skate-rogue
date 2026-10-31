@@ -147,6 +147,9 @@ export type ShopPick = { stock: number } | { slot: number } | null;
 
 // the skater's ink outline in CSS px (the city's is INK.width, 2.2): thicker since Lou grew (zack, 2026-10-30)
 const SKATER_INK = 3;
+// the paper-white line round the skater's ink, as a fraction of the ink's width (zack: "half the thickness")
+const SKATER_HALO = 0.5;
+const PAPER = 0xfffaeb; // the flip lines' paper white (flip-lines.ts HALO_RGB)
 
 export interface ShopView {
   shop: ShopState;
@@ -304,6 +307,7 @@ export class Game {
   private readonly aura: ShardAura;
   private readonly skaterInk = glowMaterial(SKATER_INK, INK.color, 0);
   private readonly boardInk = glowMaterial(SKATER_INK, INK.color, 0);
+  private readonly halo = [glowMaterial(SKATER_INK, PAPER, 0), glowMaterial(SKATER_INK, PAPER, 0)] as [THREE.ShaderMaterial, THREE.ShaderMaterial];
   private readonly visor: VisorGlint;
   private readonly skaterLight: SkaterLight;
   private gnarGlow = 0; // 0..1, eases with the gnar state
@@ -356,7 +360,7 @@ export class Game {
     inkify(this.sprite.mesh, { toon: false });
     //the skater's ink a touch thicker than the city's, so it holds up at Lou's bigger size (SKATER_INK), and only
     //round the outside (silhouetteInk)
-    silhouetteInk(this.sprite.mesh, this.sprite.boardGroup, outlineMaterial(), this.skaterInk, this.boardInk);
+    silhouetteInk(this.sprite.mesh, this.sprite.boardGroup, outlineMaterial(), this.skaterInk, this.boardInk, this.halo);
     this.sprite.setGrip(gripDef(this.grip).color);
     this.aura = new ShardAura(this.sprite.mesh, this.sprite.boardGroup);
     this.visor = new VisorGlint(this.sprite.mesh);
@@ -1358,6 +1362,7 @@ export class Game {
     this.aura.set(this.gnarGlow, this.clock, this.view.resolution, FX.reduceMotion ? null : bands);
     this.skaterInk.uniforms.uWidth.value = Math.max(1, SKATER_INK * this.view.resolution);
     this.boardInk.uniforms.uWidth.value = this.skaterInk.uniforms.uWidth.value;
+    for (const h of this.halo) h.uniforms.uWidth.value = Math.max(1.5, SKATER_INK * (1 + SKATER_HALO) * this.view.resolution);
     this.skaterLight.update(dt, this.sprite.mesh.position, (x, y, out) => this.view.night.lights.lightAt(x, y, out), this.gnarGlow > 0.01, this.view.resolution);
     if (gnar) {
       const p = this.sprite.mesh.position;
