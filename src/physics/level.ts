@@ -189,6 +189,7 @@ export interface Level {
   rails: CurvedRail[];
   cars: Car[];
   glass: Glass[];
+  grass?: Glass[]; // strips of grass across the street (src/gen/grass.ts): worn wheels bog down on them
   startX: number;
   startY: number;
   finaleX: number; // where the street begins (after a descent); 0 for a street-only floor

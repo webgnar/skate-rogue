@@ -1,6 +1,7 @@
 // Builds a floor's 3D kit from the physics level: street slabs, canals, buildings under rooftops, ledges, rails,
 // parked cars and the city behind. 1 world unit = 1 tile (32 px); y = 0 is the street surface; gameplay is z = 0.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { run, sliceDone } from './slice';
 import { railBar, railMetal, railUv } from './rail-metal';
 import { BOON_COLORS } from '../boons/defs';
@@ -421,6 +422,9 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
       kit.add(shard);
     }
   }
+
+  //--- grass strips across the street (src/gen/grass.ts): a mat of turf with tufts sticking up, one mesh a floor ----
+  if (level.grass?.length) kit.add(buildGrass(level, rng));
 
   //--- the L over Chicago's street, round its bends into the city (el-view.ts) -----------------
   buildElTrack(level, kit);
@@ -924,4 +928,32 @@ function roadSign(road: Road, high: boolean): THREE.Mesh {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   return new THREE.Mesh(new THREE.PlaneGeometry(4, 1.5), new THREE.MeshBasicMaterial({ map: tex }));
+}
+
+// The floor's grass strips as one mesh, coloured per vertex: a low mat of turf across the lane, ragged at the ends,
+// and tufts poking up out of it, light green against the dark street so they read on a phone
+function buildGrass(level: Level, rng: () => number): THREE.Mesh {
+  const geos: THREE.BufferGeometry[] = [];
+  const tint = (g: THREE.BufferGeometry, hex: number) => {
+    const c = new THREE.Color(hex);
+    g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: g.attributes.position.count }, () => [c.r, c.g, c.b]).flat(), 3));
+    return g;
+  };
+  const TUFTS = [0x7ed957, 0x5fbf3f, 0x9be86a];
+  for (const g of level.grass ?? []) {
+    const x0 = toX(g.x0);
+    const w = toX(g.x1) - x0;
+    geos.push(tint(new THREE.BoxGeometry(w, 0.04, 1.9).translate(x0 + w / 2, 0.02, 0).toNonIndexed(), 0x3f8a2e));
+    for (let i = 0; i < w * 9; i++) {
+      const h = 0.1 + rng() * 0.14;
+      const tuft = new THREE.ConeGeometry(0.035 + rng() * 0.03, h, 4).toNonIndexed();
+      tuft.rotateZ((rng() - 0.5) * 0.6);
+      tuft.translate(x0 + rng() * w, 0.04 + h / 2, (rng() - 0.5) * 1.8);
+      geos.push(tint(tuft, TUFTS[Math.floor(rng() * TUFTS.length)]));
+    }
+  }
+  const geo = mergeGeometries(geos.map((g) => { g.deleteAttribute('uv'); return g; }))!;
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.name = 'Grass';
+  return mesh;
 }

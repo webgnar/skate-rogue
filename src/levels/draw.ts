@@ -177,6 +177,7 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
     g.push(`<rect x="${f(X(c.x0))}" y="${f(Y(c.roof))}" width="${f((c.x1 - c.x0) * scale)}" height="${f((c.bottom - c.roof) * scale)}" rx="2" fill="${col}"/>`);
   }
   for (const gl of L.glass) g.push(`<rect x="${f(X(gl.x0))}" y="${f(Y(L.streetY - 4))}" width="${f((gl.x1 - gl.x0) * scale)}" height="4" fill="${C.slam}"/>`);
+  for (const gr of L.grass ?? []) g.push(`<rect x="${f(X(gr.x0))}" y="${f(Y(L.streetY - 3))}" width="${f((gr.x1 - gr.x0) * scale)}" height="3" fill="#5fbf3f"/>`);
   for (const p of L.pickups) {
     if (p.kind === 'stoken') {
       const cx = X(p.x), cy = Y(p.y), r = 5;

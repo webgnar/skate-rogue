@@ -493,7 +493,17 @@ export class Skater {
   private baseSpeed(): number {
     //after a slam you're back to full speed over slamFrames
     const k = this.slamT > 0 ? 1 - (1 - PHYS.slamSpeed) * (this.slamT / PHYS.slamFrames) : 1;
-    return PHYS.baseSpeed * k * this.boost * this.mods.speedScale * this.gear.speed;
+    return PHYS.baseSpeed * k * this.boost * this.mods.speedScale * this.gear.speed * this.grassScale();
+  }
+
+  // rolling on a grass strip: good wheels take it in their stride, worn ones bog down, worse the more worn
+  get onGrass(): boolean {
+    return this.mode === 'roll' && !this.surface && !!this.level.grass?.some((g) => this.x >= g.x0 && this.x <= g.x1);
+  }
+
+  private grassScale(): number {
+    if (!this.onGrass) return 1;
+    return 1 - GEAR.grassSlow * Math.min(1, Math.max(0, 1 - (this.gear.grip * 100) / GEAR.roughFrom));
   }
 
   private stepMove(held: boolean): void {
@@ -512,8 +522,12 @@ export class Skater {
       const excess = Math.max(0, this.carry - PHYS.baseSpeed);
       const bleed = Math.max(PHYS.carryBleedMin, excess * PHYS.carryDecay) * this.mods.carryBleedScale;
       this.carry = Math.max(0, this.carry - bleed);
+      //grass with worn wheels eats flow speed too
+      if (this.grassScale() < 1) this.carry *= this.grassScale() ** (1 / 20);
       const cap = Math.max(this.baseSpeed(), this.carry);
-      this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : cap;
+      //(bogging down on grass eases you back over a few frames, not in one)
+      const bog = this.grassScale() < 1 && this.hsp > cap;
+      this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : bog ? Math.max(cap, this.hsp * 0.93) : cap;
       if (this.skitching) this.skitch();
     } else if (this.mode === 'grind') {
       this.onRailT++;

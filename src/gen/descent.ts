@@ -1,6 +1,7 @@
 // Downhill floors (GDD: Floor shape). A floor starts high on the rooftops and works down to the street through
 // terraces, stair sets, big handrails, drop-offs, rooftop gaps and a few banks, then finishes on a short street
 // stretch built from QFS pieces (canals, curved rails, parked cars, traffic) with the exit gate.
+import { placeGrass } from './grass';
 import { placeProps } from './props';
 import { addSideLine } from './sidelines';
 import { applyTwist, districtPieces, type Twist } from './twists';
@@ -305,6 +306,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   level.doors = doorPlan(level, level.layout.seed, level.busStops);
   const bounty = bountyPlan(level, level.layout.seed);
   if (bounty && !opts.short) level.bounty = bounty;
+  level.grass = placeGrass(level);
   level.props = placeProps(level);
   return level;
 }
