@@ -22,6 +22,9 @@ const HALO = 0.07; // how much wider the outline is than its stroke (both sides 
 // camera: depth leaks into screen right and up, and a roll about the board's length reads as an ellipse.
 const LEAN_RIGHT = 0.55;
 const LEAN_UP = 0.4;
+// The arcs sit behind the board (zack): every point is slid back along its line of sight, so it stays where it is
+// on screen but the board, feet and legs draw over it. In deck units, about a board length past the deck.
+const BEHIND = 1.1;
 
 // an edge the arcs come off, in the deck's own space (x along the board, y up, z across): `base` stays put as the
 // board turns about it and `radial` is pushed outward so the arc clears the deck
@@ -85,6 +88,7 @@ export class FlipLines {
   private readonly fwd = new THREE.Vector3();
   private readonly right = new THREE.Vector3();
   private readonly up = new THREE.Vector3();
+  private readonly eye = new THREE.Vector3();
   private readonly path: THREE.Vector3[] = Array.from({ length: PTS }, () => new THREE.Vector3());
   private readonly path2: THREE.Vector3[] = Array.from({ length: PTS }, () => new THREE.Vector3());
   private readonly qs: THREE.Quaternion[] = Array.from({ length: PTS }, () => new THREE.Quaternion());
@@ -167,6 +171,7 @@ export class FlipLines {
     camera.getWorldDirection(this.fwd);
     this.right.setFromMatrixColumn(camera.matrixWorld, 0);
     this.up.setFromMatrixColumn(camera.matrixWorld, 1);
+    this.eye.setFromMatrixPosition(camera.matrixWorld);
     const scale = this.s.x;
     const look = LOOKS[this.style];
 
@@ -222,6 +227,10 @@ export class FlipLines {
     p.copy(edge.radial).multiplyScalar(out).add(edge.base).multiplyScalar(scale).applyQuaternion(q);
     const depth = p.dot(this.fwd);
     p.addScaledVector(this.right, -depth * LEAN_RIGHT).addScaledVector(this.up, -depth * LEAN_UP).add(this.at);
+    p.sub(this.eye);
+    const d = p.dot(this.fwd);
+    if (d > 0.01) p.multiplyScalar((d + BEHIND * scale) / d);
+    p.add(this.eye);
   }
 
   // a tapered brush line along `path`: a point at the tail, full width near the head
