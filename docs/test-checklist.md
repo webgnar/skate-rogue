@@ -721,6 +721,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 - [ ] Perfect landing: ollie, and tap for the flip just before you'd land. You get PERFECT! with a pop of light and a little speed. Tap at the top of the ollie and it's a normal landing. Flip onto a rail just before touching it and the callout says PERFECT plus the grind name.
 
+- [ ] Flip pop by timing: double tap fast (ollie then flip right away) and you go much higher than flipping at the top of the ollie; the later the flip, the smaller the extra pop.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

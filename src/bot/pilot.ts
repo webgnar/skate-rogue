@@ -113,7 +113,7 @@ function landsTop(level: Level, near: Near, sk: Skater, x: number, y: number, vs
 // falling with no street ahead: flip now, or hold it while a later flip still lands where this one wouldn't (at
 // full stoke's speed a flip straight away can sail over a short roof)
 function flipNow(level: Level, near: Near, sk: Skater): boolean {
-  const flip = PHYS.trick * sk.gear.trick;
+  const flip = sk.flipPop();
   if (landsOn(level, near, sk, sk.x, sk.y, flip, true, true)) return true;
   let { x, vsp } = sk;
   let y = sk.y;
@@ -168,7 +168,7 @@ export class Pilot {
     if (sk.mode === 'rail' && sk.rail && sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) pressed = true;
     if (this.style === 'high' && onSurface && sk.surface?.top && sk.x > sk.surface.x1 - 24) pressed = true;
     //flip near the top of an arc if that's what reaches the top route
-    if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, near, sk, sk.x, sk.y, sk.vsp) && landsTop(level, near, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true)) pressed = true;
+    if (this.style === 'high' && sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -1.5 && !landsTop(level, near, sk, sk.x, sk.y, sk.vsp) && landsTop(level, near, sk, sk.x, sk.y, sk.flipPop(), true)) pressed = true;
     //a guard's bullet coming up behind at waist height: ollie so it goes under (feet clear of it ~6-34 frames in)
     if (sk.grounded && sim.shooter?.bullets.some((b) => {
       const eta = (sk.x - PHYS.width / 2 - b.x) / Math.max(0.1, b.vx - Math.abs(sk.hsp));
@@ -181,7 +181,7 @@ export class Pilot {
     if (sk.mode === 'air' && sk.jumps > 0 && !isStreetAt(level, sk.x + 40) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, false)) {
       if (sk.vsp > 0.5 && flipNow(level, near, sk)) pressed = true;
       //near the top of the arc: flip already if that lands on something and coming down as we are wouldn't
-      else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, near, sk, sk.x, sk.y, PHYS.trick * sk.gear.trick, true, true) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
+      else if (sk.vsp > -2 && sk.vsp <= 0.5 && landsOn(level, near, sk, sk.x, sk.y, sk.flipPop(), true, true) && !landsOn(level, near, sk, sk.x, sk.y, sk.vsp, true)) pressed = true;
     }
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.boardY)) pressed = true;

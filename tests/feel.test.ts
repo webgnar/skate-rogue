@@ -791,3 +791,36 @@ describe('perfect landings', () => {
     expect(['sketchy', 'slam']).toContain(late.quality);
   });
 });
+
+// zack (2026-10-31): the flip pops higher the sooner you tap it after the ollie, less the longer you wait
+describe('flip pop by timing', () => {
+  function peakAfterFlipAt(at: number): number {
+    const sk = new Skater(levelOf(FLAT));
+    const ground = sk.y;
+    let top = ground;
+    for (let f = 0; f < 200; f++) {
+      sk.step({ pressed: f === 0 || f === at, held: f < 20 });
+      top = Math.min(top, sk.y);
+      if (f > at && sk.mode !== 'air') break;
+    }
+    return ground - top;
+  }
+
+  it('a quick double tap goes highest, and it shrinks the longer you wait', () => {
+    const quick = peakAfterFlipAt(3);
+    const mid = peakAfterFlipAt(12);
+    const late = peakAfterFlipAt(24);
+    expect(quick).toBeGreaterThan(mid);
+    expect(mid).toBeGreaterThan(late);
+  });
+
+  it('the pop eases from trickEarly down to the old flip, never weaker', () => {
+    const sk = new Skater(levelOf(FLAT));
+    sk.airT = 0;
+    expect(sk.flipPop()).toBeCloseTo(PHYS.trickEarly * sk.gear.trick);
+    sk.airT = PHYS.trickLateFrames;
+    expect(sk.flipPop()).toBeCloseTo(PHYS.trick * sk.gear.trick);
+    sk.airT = 200;
+    expect(sk.flipPop()).toBeCloseTo(PHYS.trick * sk.gear.trick);
+  });
+});

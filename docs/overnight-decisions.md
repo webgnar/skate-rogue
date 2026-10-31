@@ -568,6 +568,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - 2026-10-31 (zack): three routes, sky, surface and sewer, stacked through every floor. Sky and surface exist; the sewer is drafted in the GDD (Three routes) and waits on zack before it's built.
 
+- 2026-10-31 (zack): the flip pops higher the sooner you tap it after the ollie (PHYS.trickEarly -6 easing to the old -5 by frame 24), riding on the ollie's remaining rise. Kept at -6 so it can't reach the sky route's wire; wheel wear per fast second trimmed 1.0 to 0.96 for the balance test. The official roadmap is in the GDD.
+
 ## Models thread: animation
 
 - 2026-10-28: Backside 180 feet (zack: "a weird glitch with his feet on backside 180's"). Two causes, both fixed:
