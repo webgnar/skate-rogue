@@ -2,7 +2,7 @@
 // A small card above the gear wear, bottom right, away from the trick callouts at the top: the mission, a bar and
 // "3/10" when it moves on; gold with MISSION COMPLETE! when it's done. One card at a time: a new tick for a mission
 // just swaps the count in; a finished one holds its beat and anything after it waits in line.
-import type { MissionTick } from '../run/missions';
+import { countText, type MissionTick } from '../run/missions';
 
 export const TOAST = {
   tickMs: 1700, // how long a tick holds
@@ -13,15 +13,10 @@ export const TOAST = {
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 
-// the count as the pause card shows it: a big goal (banked points) as a share
-export function countText(count: number, goal: number): string {
-  return goal >= 1000 ? `${Math.round((100 * Math.min(count, goal)) / goal)}%` : `${Math.min(count, goal)}/${goal}`;
-}
-
 export function toastHtml(t: MissionTick, done: boolean): string {
   const share = Math.round((100 * Math.min(t.count, t.goal)) / t.goal);
   const tag = done ? 'MISSION COMPLETE!' : 'MISSION';
-  return `<span class="tag">${tag}</span><span class="txt">${esc(t.text)}</span><span class="row"><span class="bar"><i style="width:${share}%"></i></span><span class="n">${done ? '✔' : countText(t.count, t.goal)}</span></span>`;
+  return `<span class="tag">${tag}</span><span class="txt">${esc(t.text)}</span><span class="row"><span class="bar"><i style="width:${share}%"></i></span><span class="n">${done ? '✔' : countText(t.count, t.goal, t.unit)}</span></span>`;
 }
 
 export interface MissionToast {
@@ -52,7 +47,7 @@ export function makeMissionToast(el: HTMLElement): MissionToast {
       //the same mission again: the count moves, the bar slides, the number bumps
       el.querySelector<HTMLElement>('.bar i')!.style.width = `${Math.round((100 * Math.min(t.count, t.goal)) / t.goal)}%`;
       const n = el.querySelector<HTMLElement>('.n')!;
-      n.textContent = countText(t.count, t.goal);
+      n.textContent = countText(t.count, t.goal, t.unit);
       n.classList.remove('bump');
       void n.offsetWidth;
       n.classList.add('bump');

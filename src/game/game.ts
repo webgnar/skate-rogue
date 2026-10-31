@@ -17,7 +17,7 @@ import { firstCloud } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
 import { NO_HEAD_START, prizeText, pullAll, type Pull } from '../run/slots';
-import { boonsOfType, Missions, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
+import { boonsOfType, Missions, PX_PER_M, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
@@ -403,6 +403,8 @@ export class Game {
   // the three missions and Skater Rank (src/run/missions.ts), kept between runs
   private readonly missions = new Missions(loadSave().missions);
   private floorSlams = 0; // slams this floor, for "clear a floor without slamming"
+  private travelPx = 0; // px skated and ground towards the next whole metre, for the distance missions
+  private grindPx = 0;
   private floorBusted = false; // a part busted this floor
   private overResult: RunResult | null = null; // the summary, shown once the slot machine's done
   private slotsEnd = 0; // when the slot machine's last reel stops
@@ -1358,6 +1360,7 @@ export class Game {
         } else this.sim.step(this.input.sample());
         col?.afterStep(this.skater);
         this.run.step(this.skater.mode);
+        this.metres();
         for (const e of this.sim.events) this.handle(e);
         //rolled off the end of the floor: the next one carries on from here
         if (this.finished && this.pending && this.skater.x >= this.level.width) this.cross();
@@ -1906,6 +1909,26 @@ export class Game {
   // the save's missions after this run: ours, unless the bot or the tutorial was skating
   private missionsKept(save: ReturnType<typeof loadSave>) {
     return this.missionsOn ? this.missions.state : save.missions;
+  }
+
+  // the distance missions: metres skated forward, and metres along rails and ledges, a whole metre at a time
+  private metres(): void {
+    if (!this.missionsOn || this.state !== 'skate') return;
+    const sk = this.skater;
+    const dx = sk.x - this.prev.x;
+    if (dx < 0 || dx > 4 * TILE) return; // backwards, or a floor change moving the origin
+    this.travelPx += dx;
+    if (sk.mode === 'grind' || sk.mode === 'rail') this.grindPx += Math.hypot(dx, sk.y - this.prev.y);
+    if (this.travelPx >= PX_PER_M) {
+      const m = Math.floor(this.travelPx / PX_PER_M);
+      this.travelPx -= m * PX_PER_M;
+      this.mission('travel', m);
+    }
+    if (this.grindPx >= PX_PER_M) {
+      const m = Math.floor(this.grindPx / PX_PER_M);
+      this.grindPx -= m * PX_PER_M;
+      this.mission('grindDist', m);
+    }
   }
 
   // count a stat towards the missions: a finished one calls out and swaps for the next, and a rank pays at once

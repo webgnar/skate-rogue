@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_MISSIONS, MISSIONS, Missions, RANK, cleanMissions, missionDef, rankGrip, statsOf } from '../src/run/missions';
+import { EMPTY_MISSIONS, MISSIONS, Missions, RANK, cleanMissions, countText, missionDef, rankGrip, statsOf } from '../src/run/missions';
 import { isGrip } from '../src/board/grips';
 
 const fresh = () => new Missions(EMPTY_MISSIONS, 7);
@@ -98,5 +98,20 @@ describe('missions', () => {
     expect(statsOf({ type: 'smash', index: 0, prop: 'crate', x: 0, y: 0, how: 'roll' })).toEqual(['smash']);
     expect(statsOf({ type: 'smash', index: 0, prop: 'crate', x: 0, y: 0, how: 'car' })).toEqual([]);
     expect(statsOf({ type: 'doorSlam', x: 0, y: 0 })).toEqual(['doorSlam']);
+  });
+
+  it('distance missions add up metres, pop up only at each tenth, and read in m or km', () => {
+    const m = new Missions({ active: ['grind50m', 'travel1k', 'grind15combo'], progress: [0, 0, 0], done: 3, seen: [] }, 1);
+    m.add1('grindDist', 4);
+    expect(m.ticked.map((t) => t.text)).toEqual(['Grind 15 m in one combo']); // 4/50 is under a tenth; 4/15 isn't
+    m.add1('grindDist', 2);
+    expect(m.ticked.map((t) => [t.text, t.count, t.unit])).toEqual([['Grind 50 m', 6, 'm'], ['Grind 15 m in one combo', 6, 'm']]);
+    m.add1('travel', 99);
+    expect(m.ticked).toEqual([]);
+    m.add1('travel', 1);
+    expect(m.ticked.map((t) => t.count)).toEqual([100]);
+    expect(countText(6, 50, 'm')).toBe('6/50 m');
+    expect(countText(450, 1000, 'm')).toBe('0.4/1 km');
+    expect(countText(2500, 20000)).toBe('13%');
   });
 });
