@@ -1,8 +1,9 @@
-// The settings on the pause card (GDD: UI, Pause): sound and music volume, vibration, the effects quality, the
-// chunky pixel look and the three accessibility switches. Each change applies at once and is saved.
+// The settings on the pause card (GDD: UI, Pause): sound and music volume, vibration, the camera's close-ups and
+// zoom (pinching the street sets it too), the effects quality, the chunky pixel look and the three accessibility switches. Each change applies at once and is saved.
 import { FX, PIXEL_MAX, saveFx, type FxSettings } from '../render/fx-settings';
 import { SETTINGS, saveSettings, buzz } from './settings';
 import { tilt } from '../render/tilt';
+import { USER_ZOOM, clampUserZoom } from '../render/camera';
 import { canFullscreen, isApp, isFull, isIPhone, setFullscreen, watchFullscreen } from './fullscreen';
 
 type Toggle = 'haptics' | 'reduceMotion' | 'reduceFlashing' | 'heatCue';
@@ -28,6 +29,8 @@ export class SettingsPanel {
       <button class="row" data-fullscreen hidden><span>FULL SCREEN</span><b></b></button>
       <div class="fshelp" hidden>On iPhone: tap Share <b>&#x2191;</b> then <b>Add to Home Screen</b>, and play from the Gnar Run icon. It opens with no browser bars.</div>
       <button class="row" data-tilt hidden><span>GYRO TILT</span><b></b></button>
+      <button class="row" data-closeup><span>DYNAMIC ZOOM</span><b></b></button>
+      <label class="row"><span>CAMERA</span><input type="range" min="${USER_ZOOM.min * 100}" max="${USER_ZOOM.max * 100}" step="5" data-zoom><b></b></label>
       <button class="row" data-quality><span>EFFECTS</span><b></b></button>
       <label class="row"><span>PIXELS</span><input type="range" min="1" max="${PIXEL_MAX}" step="1" data-pixel><b></b></label>
       <button class="row" data-toggle="reduceMotion"><span>REDUCE MOTION</span><b></b></button>
@@ -37,6 +40,12 @@ export class SettingsPanel {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('input', (e) => {
       const t = e.target as HTMLInputElement;
+      if (t.dataset.zoom !== undefined) {
+        SETTINGS.zoom = clampUserZoom(Number(t.value) / 100);
+        saveSettings();
+        this.render();
+        return;
+      }
       if (t.dataset.pixel !== undefined) {
         FX.pixel = Number(t.value);
         saveFx();
@@ -54,7 +63,10 @@ export class SettingsPanel {
       const b = (e.target as Element).closest<HTMLElement>('button');
       if (!b) return;
       const key = b.dataset.toggle as Toggle | undefined;
-      if (b.dataset.tilt !== undefined) {
+      if (b.dataset.closeup !== undefined) {
+        SETTINGS.closeUp = !SETTINGS.closeUp;
+        saveSettings();
+      } else if (b.dataset.tilt !== undefined) {
         void tilt.toggle().then(() => this.render());
       } else if (b.dataset.fullscreen !== undefined) {
         if (canFullscreen()) setFullscreen(!isFull());
@@ -96,6 +108,14 @@ export class SettingsPanel {
       b.classList.toggle('on', on);
       b.querySelector('b')!.textContent = on ? 'ON' : 'OFF';
     }
+    //the close-ups: off with reduce motion whatever the switch says
+    const cu = this.el.querySelector<HTMLElement>('[data-closeup]')!;
+    const close = SETTINGS.closeUp && !FX.reduceMotion;
+    cu.classList.toggle('on', close);
+    cu.querySelector('b')!.textContent = FX.reduceMotion ? 'CALM' : close ? 'ON' : 'OFF';
+    const zm = this.el.querySelector<HTMLInputElement>('[data-zoom]')!;
+    zm.value = String(Math.round(SETTINGS.zoom * 100));
+    zm.parentElement!.querySelector('b')!.textContent = `${Math.round(SETTINGS.zoom * 100)}%`;
     this.el.querySelector('[data-quality] b')!.textContent = FX.quality.toUpperCase();
     const px = this.el.querySelector<HTMLInputElement>('[data-pixel]')!;
     px.value = String(FX.pixel);

@@ -1,7 +1,8 @@
 // The 2.5D view: renderer, Lou Gnar's camera (see camera.ts), lights, sky and skyline.
 import * as THREE from 'three';
 import type { Level } from '../physics/level';
-import { CAM, CamDrift, DYN_CAM, LouZoom, Rhythm, SMOOTH, Spring, framing, type Framing } from './camera';
+import { CAM, CLOSE_CAM, CamDrift, CloseUp, DYN_CAM, LouZoom, Rhythm, SMOOTH, Spring, framing, softFloor, type Framing } from './camera';
+import { SETTINGS } from '../ui/settings';
 import { LENS, Lens, lensSource, lensWiden } from './lens';
 import { tilt } from './tilt';
 import { buildKitSteps, toX, toY } from './kit';
@@ -150,10 +151,11 @@ export class StreetView {
   readonly zoom = new LouZoom();
   readonly drift = new CamDrift();
   readonly rhythm = new Rhythm();
+  readonly close = new CloseUp(); // the rush in on grinds and combo flips (game.ts steps it)
   private readonly lens = new Lens();
   private lensK = 0; // the fisheye's strength this frame (lens.ts)
   private lensLevel = 2; // 2: the lens drawn sharp (bigger texture), 1: at screen size, 0: off. Slow frames step it down first
-  private readonly smooth = { zoom: new Spring(1), fov: new Spring(0), lens: new Spring(CAM.lens), yaw: new Spring(0), roll: new Spring(0), tilt: new Spring(0) };
+  private readonly smooth = { zoom: new Spring(1), fov: new Spring(0), lens: new Spring(CAM.lens), yaw: new Spring(0), roll: new Spring(0), tilt: new Spring(0), user: new Spring(SETTINGS.zoom) };
   private camX = 0;
   private camY = 2;
   private lagY = 0; // world units the camera trails the feet in y, easing to 0 (a soft follow on jumps and drops)
@@ -501,7 +503,12 @@ export class StreetView {
     this.lensK = THREE.MathUtils.clamp(ease(this.smooth.lens, FX.tier === 'low' || this.lensLevel === 0 ? 0 : Math.min(1, CAM.lens + (rhythm ? this.rhythm.lens : 0)), SMOOTH.lens), 0, 1);
     const fov = f.fov + (zoom - 1) * (zoom > 1 ? DYN_CAM.zoomFov : DYN_CAM.zoomOutFov) + ease(this.smooth.fov, this.drift.fovAdd + this.punchAmt * 16, SMOOTH.fov) + this.lensK * LENS.fov;
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(fov) / 2);
-    const viewH = f.viewH / zoom;
+    //the close-up and the player's pinch zoom: a straight dolly in, the lens left as it is, so the camera gets right
+    //up on Lou (past minDist it tightens the lens instead). Never so tight that Lou doesn't fit
+    const close = this.close.amount;
+    const closer = (1 + (CLOSE_CAM.zoom - 1) * close) * ease(this.smooth.user, SETTINGS.zoom, SMOOTH.zoom);
+    const short = Math.min(1, this.camera.aspect); // the short side's share of the height
+    const viewH = softFloor(f.viewH / zoom / closer, CLOSE_CAM.minShort / short, 0.6);
     this.dist = Math.max(DYN_CAM.minDist, viewH / (2 * tanHalf));
     //and the lens drawn wider still by its swell, so Lou keeps their size
     const tanY = lensWiden(this.lensK, viewH / (2 * this.dist), this.camera.aspect);
@@ -514,9 +521,11 @@ export class StreetView {
     //a little above the skater looking down at them, so the street reads in depth. The whole view pans ahead and up
     //so Lou sits left of and below centre (framing): more street ahead, the wires and roofs above
     //(through the lens: pan so Lou lands on that spot of the bent picture)
-    const [lx, ly] = lensSource(this.lensK, tanY * this.camera.aspect, tanY, f.lead, f.low);
+    //(a close-up drops most of the lead and aims at Lou's hips, so Lou sits in the middle)
+    const centre = 1 - CLOSE_CAM.centre * close;
+    const [lx, ly] = lensSource(this.lensK, tanY * this.camera.aspect, tanY, f.lead * centre, f.low * centre);
     const panX = lx * this.dist;
-    const panY = ly * this.dist - this.lagY;
+    const panY = ly * this.dist - this.lagY + CLOSE_CAM.aim * close;
     const cx = this.camX + panX + sx;
     const cy = this.camY + panY + sy;
     //at speed the camera swings round behind Lou to look down the street ahead (the drift's yaw)

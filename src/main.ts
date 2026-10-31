@@ -19,7 +19,7 @@ import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { makeCallouts } from './ui/callouts';
-import { initCam } from './render/camera';
+import { clampUserZoom, initCam } from './render/camera';
 import { initBullet } from './game/bullet-time';
 import { isBiome } from './render/biomes';
 import { props, propsFor } from './render/props';
@@ -41,7 +41,7 @@ import { DEV, loadDev, saveDev, slower, stepFrame } from './ui/dev';
 import { DevPanel } from './ui/dev-panel';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
-import { SETTINGS, buzz, loadSettings } from './ui/settings';
+import { SETTINGS, buzz, loadSettings, saveSettings } from './ui/settings';
 import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
 
@@ -519,12 +519,20 @@ async function start() {
   const unlock = () => sound.unlock();
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
-  new SettingsPanel(document.querySelector<HTMLElement>('#paused .settings')!, {
+  const settings = new SettingsPanel(document.querySelector<HTMLElement>('#paused .settings')!, {
     volumes: () => sound.applyVolumes(),
     tier: (tier) => view.setTier(tier),
     look,
     pixel: () => view.setPixel(),
   });
+  //pinching the street zooms the camera (camera.ts USER_ZOOM), remembered with the settings
+  input.onPinch = (scale, done) => {
+    SETTINGS.zoom = clampUserZoom(SETTINGS.zoom * scale);
+    if (done) {
+      saveSettings();
+      settings.render();
+    }
+  };
   //the one button blocks touchstart on the whole game (src/game/input.ts), which on a phone also kills the taps' clicks
   //and the scrolling on the pause card: let the card have its touches back
   document.getElementById('paused')!.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });

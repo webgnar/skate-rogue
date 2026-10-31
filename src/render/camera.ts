@@ -169,12 +169,13 @@ export function viewHeight(aspect: number): number {
 //   and lets it all go when the combo banks or slams
 // - speed bends the lens (the fisheye of a filmer running alongside)
 // CAM sets the lens's resting strength and whether the rhythm runs; ?lens=0..1 and ?rhythm=0 set them from the URL.
-export const CAM = { lens: 0.75, rhythm: true }; // fisheye strength (zack, 2026-10-26: full, toned down, then 0.75)
+export const CAM = { lens: 0.75, rhythm: true, closeUp: true }; // fisheye strength (zack, 2026-10-26: full, toned down, then 0.75)
 
 export function initCam(params: URLSearchParams): void {
   const lens = Number(params.get('lens'));
   if (params.has('lens') && Number.isFinite(lens)) CAM.lens = Math.min(1, Math.max(0, lens));
   if (params.get('rhythm') === '0') CAM.rhythm = false;
+  if (params.get('closeup') === '0') CAM.closeUp = false;
 }
 
 export const RHYTHM = {
@@ -255,3 +256,76 @@ export const SMOOTH = {
   tilt: 14, // gyro tilt: quick enough to follow the hand, soft enough to blend the jump when the screen flips
   frame: 3, // turning the phone: the framing glides over about a second and a half
 };
+
+// The close-up (zack, 2026-10-31: "when the player lands in a grind, or does a flip trick in more than 3 trick combo,
+// move the camera up into the skater's business"). On top of everything else the camera rushes right in on Lou:
+// landing in a grind holds it for the whole grind, and a flip trick from the 3rd trick of a combo on holds it a
+// beat. It aims at Lou's middle (not the feet) and drops most of the lead, so Lou fills the middle of the screen,
+// then eases back out to the normal framing. It can make you queasy, so the pause card switches it off
+// (DYNAMIC ZOOM) and reduce motion skips it. ?closeup=0 turns it off from the URL.
+export const CLOSE_CAM = {
+  zoom: 2.1, // how much tighter than the framing at full close-up
+  comboFrom: 3, // a flip trick this far into a combo (or further) gets one
+  flipSecs: 0.9, // and holds it this long (seconds) before easing out
+  grindAfter: 0.25, // a grind holds it this long after the grind ends
+  aim: 0.85, // tiles above the feet it aims at (Lou's middle: the board clear of the bottom HUD, the whole body in view)
+  centre: 0.8, // share of the framing's lead and low it drops, so Lou sits near the middle
+  minShort: 4.2, // tiles across the screen's short side it never goes tighter than (Lou ~2.5 tall, all of them in)
+  rushIn: 6, // spring rates (rad/s): rush in quick, glide back out slow
+  easeOut: 2.4,
+};
+
+export class CloseUp {
+  private holdT = 0;
+  private grinding = false;
+  private readonly spring = new Spring(0);
+
+  // a flip trick, with the combo it's part of
+  trick(combo: number): void {
+    if (combo >= CLOSE_CAM.comboFrom) this.holdT = Math.max(this.holdT, CLOSE_CAM.flipSecs);
+  }
+
+  // landed in a grind or on a rail
+  grind(): void {
+    this.grinding = true;
+  }
+
+  // dt: real seconds (the camera's clock); on: whether close-ups are allowed (the setting, reduce motion)
+  update(dt: number, mode: Mode, on: boolean): number {
+    const grinding = mode === 'grind' || mode === 'rail';
+    if (this.grinding && !grinding) {
+      this.grinding = false;
+      this.holdT = Math.max(this.holdT, CLOSE_CAM.grindAfter);
+    } else if (this.grinding) this.holdT = Math.max(this.holdT, CLOSE_CAM.grindAfter);
+    this.holdT = Math.max(0, this.holdT - dt);
+    const target = on && (this.holdT > 0 || this.grinding) ? 1 : 0;
+    this.spring.step(target, target > this.spring.x ? CLOSE_CAM.rushIn : CLOSE_CAM.easeOut, dt);
+    return this.amount;
+  }
+
+  // 0 (none) to 1 (all the way in)
+  get amount(): number {
+    return Math.min(1, Math.max(0, this.spring.x));
+  }
+
+  reset(): void {
+    this.holdT = 0;
+    this.grinding = false;
+    this.spring.snap(0);
+  }
+}
+
+// the player's own zoom, set by pinching the street (or the pause card's CAMERA slider): multiplies the framing
+export const USER_ZOOM = { min: 0.7, max: 1.6 };
+
+export function clampUserZoom(z: number): number {
+  return Number.isFinite(z) ? Math.min(USER_ZOOM.max, Math.max(USER_ZOOM.min, z)) : 1;
+}
+
+// x, but never under floor: a soft floor that bends in over knee so a spring hitting it doesn't jolt
+export function softFloor(x: number, floor: number, knee: number): number {
+  if (x >= floor + knee) return x;
+  if (x <= floor - knee) return floor;
+  const t = x - floor + knee;
+  return floor + (t * t) / (4 * knee);
+}
