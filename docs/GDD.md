@@ -236,6 +236,20 @@ Not in yet: rats, coming up at the gate onto its own road (the underground spot)
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
 
+### Future direction: the build decides the path
+
+**Unconfirmed early idea** (zack, Oct 31, 2026: "i DONT KNOW for sure yet which is why the idea is half baked"; not
+decided, not designed, nothing built). A goal for later. The run should eventually be a non-linear
+progression: the boon path you take and the type of skater you curate decide the path forward through the run.
+
+zack (Oct 31, 2026): "entire whole levels of sky street sewer, as acts in the run", and "whole sky/street/sewers would
+be designed differently FOR those boons". So a whole act could be a sky, street or sewer level, each built for the
+boons that lead there. This may change the current design, where the three routes are stacked through every floor.
+
+zack: "players like to choose thier path".
+
+Open: which boons lead to which kind of act, and how each kind of act is designed for them.
+
 ### 2. How a run ends: escape the city
 
 Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes when you win:
@@ -713,8 +727,9 @@ Oct 30), each worn by the thing it takes the beating from:
   (the bot grinds little); its bearings sit around 83, since balance runs have no rain. A part you lean on loses about 20 to 40 a floor. Your build decides what wears: a grind
   build eats trucks, a flip build eats shoes. `npm run balance` prints the first-shop count.
 - **The run keeps it:** wear carries from floor to floor and resets with a new run. Fresh gear every run.
-- **The shop** always has a gear row under the mod stock: New Deck $25, New Shoes $15, New Trucks $20, New Wheels
-  $15, New Bearings $15. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
+- **The shop** always has a gear row under the mod stock: New Deck $80, New Shoes $90, New Trucks $70, New Wheels
+  $50, New Bearings $80 (zack, 2026-10-31; were $25/15/20/15/15). The bot reaches the first shop with about $260
+  (pickups plus act 1's $45) and about $215 of worn parts to replace, so fixing everything leaves little for mods. A new part is back to 100. You can't buy a part that's still fresh. This puts a real choice on shop cash:
   a new mod, or keep your setup rolling.
 - **HUD:** five bars in the GEAR WEAR panel, bottom right (DECK, TRUCKS, WHEELS, BEARINGS, SHOES), green while fresh,
   yellow once a part starts costing you and red, blinking, from 15. A callout fires when a part wears past half
@@ -1001,6 +1016,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 
 ## Open questions
 
+- **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
+  to each, and how each is designed for them.
 - **The sewer route**: rats, its own road at the gate, and a way down on the hills (first version under Three routes).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.

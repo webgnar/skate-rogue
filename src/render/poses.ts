@@ -165,6 +165,7 @@ function nosePop(k: Key, spinBoard = false): Key {
   if (k.boardPivot !== undefined) out.boardPivot = -k.boardPivot;
   if (k.boardPitch !== undefined) out.boardPitch = -k.boardPitch;
   if (k.boardX !== undefined) out.boardX = -k.boardX;
+  if (k.hipX !== undefined) out.hipX = -k.hipX; // the weight over the popping foot, now the front one
   if (k.lean !== undefined) out.lean = -k.lean;
   // a shove-it scooped from the nose: the nose goes round the way the tail would have, so the board spins the other
   // way under the body (not for the 180s, where the board turns with the body)
