@@ -19,6 +19,7 @@ import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { makeCallouts } from './ui/callouts';
+import { makeMissionToast } from './ui/mission-toast';
 import { initCam } from './render/camera';
 import { initBullet } from './game/bullet-time';
 import { isBiome } from './render/biomes';
@@ -193,6 +194,7 @@ let skipMission: (i: number) => void = () => {};
 
 function makeHud(): Hud {
   const callouts = makeCallouts(document.getElementById('callout')!, () => FX.reduceMotion);
+  const missionToast = makeMissionToast(document.getElementById('mission')!);
   const debugEl = document.getElementById('debug')!;
   const boonsEl = document.getElementById('boons')!;
   const pickEl = document.getElementById('pick')!;
@@ -355,6 +357,8 @@ function makeHud(): Hud {
       contEl.querySelector('.left')!.textContent = `${v.left} CONTINUE${v.left === 1 ? '' : 'S'} LEFT`;
     },
     missions: (v) => drawMissions(v),
+    missionTick: (t) => missionToast.tick(t),
+    missionDone: (t) => missionToast.done(t),
     slots: (v) => slots.show(v),
     slotsSkip: () => slots.skip(),
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
