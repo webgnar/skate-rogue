@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { Level } from '../physics/level';
 import { CAM, CamDrift, DYN_CAM, LouZoom, Rhythm, SMOOTH, Spring, framing, type Framing } from './camera';
 import { LENS, Lens, lensSource, lensWiden } from './lens';
+import { updateShown } from './shown';
 import { tilt } from './tilt';
 import { buildKitSteps, toX, toY } from './kit';
 import { NightCity } from './night';
@@ -178,6 +179,7 @@ export class StreetView {
   private punchAmt = 0;
   private punchRoll = 1;
   private readonly buf = new THREE.Vector2();
+  private readonly hulls: THREE.Object3D[] = [];
   private readonly keep: ShaderKeep;
   compiled = 0; // shader programs made since the debug line last read it (StreetView.warm should leave none to make)
 
@@ -726,6 +728,11 @@ export class StreetView {
 
   render(): void {
     this.renderer.info.reset(); // count both passes
+    //world matrices once a frame: the skater's scene is drawn three times (ghost, skater, effects) and three would
+    //walk all of it each time
+    updateShown(this.scene, false);
+    this.front.updateMatrixWorld();
+    this.scene.matrixWorldAutoUpdate = this.front.matrixWorldAutoUpdate = false;
     //the ink pre-corrects for the fisheye's bend (toon.ts inkLens), with the same strength and angles the lens uses
     const tanY = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
     setInkLens(this.lensK > 0.001 ? Math.min(1, this.lensK) : 0, tanY * this.camera.aspect, tanY);
@@ -741,10 +748,19 @@ export class StreetView {
       this.ghost.uniforms.uColor.value.setHex(GHOST.colors[FX.ghost]);
       this.ghost.uniforms.uCell.value = Math.max(1, Math.round(GHOST.cell * this.pixelRatio));
       if (!this.ghostOff) {
+        //the outlines drawn with the ghost's material are the body over again (the push is in their own
+        //material's shader): a third of the skater's draws, for nothing
+        const hulls = this.hulls;
+        this.actor.traverseVisible((o) => {
+          if (o.userData.ink) hulls.push(o);
+        });
+        for (const h of hulls) h.visible = false;
         this.front.overrideMaterial = this.ghost;
         this.withActor.visible = false;
         r.render(this.front, cam);
         this.front.overrideMaterial = null;
+        for (const h of hulls) h.visible = true;
+        hulls.length = 0;
       }
       this.withActor.visible = true;
       r.render(this.front, cam);
@@ -755,6 +771,7 @@ export class StreetView {
       r.render(this.front, this.camera);
       this.actor.visible = this.withActor.visible = true;
     });
+    this.scene.matrixWorldAutoUpdate = this.front.matrixWorldAutoUpdate = true;
     this.compiled += this.keep.pin();
   }
 }

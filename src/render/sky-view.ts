@@ -22,7 +22,11 @@ const PLANE_EVERY = [9, 18]; // seconds between airliners, down on the street (h
 
 export class SkyView {
   readonly group = new THREE.Group();
-  private readonly flocks: THREE.Group[] = [];
+  private readonly flocks: THREE.Group[] = []; // a plain flock's pigeons are poses (empties), drawn by `parts`
+  // every plain pigeon's parts as four instanced meshes: one bird was eight draws with its outlines, and a few
+  // flocks in view made the sky route the most draws in the game (~130 of ~400 on a small iPhone). The golden
+  // pigeon is one bird, drawn as meshes
+  private parts: THREE.InstancedMesh[] = [];
   private readonly feather = new THREE.MeshLambertMaterial({ color: 0x7d8799, side: THREE.DoubleSide });
   private readonly pale = new THREE.MeshLambertMaterial({ color: 0xc9d0dc });
   private readonly gold = new THREE.MeshLambertMaterial({ color: 0xffc81e, emissive: 0x6a4a00 });
@@ -30,6 +34,7 @@ export class SkyView {
   private readonly body = new THREE.SphereGeometry(0.14, 8, 6);
   private readonly head = new THREE.SphereGeometry(0.09, 8, 6);
   private readonly wing: THREE.BufferGeometry;
+  private readonly rightWing: THREE.BufferGeometry;
   private readonly plane: THREE.Group;
   private readonly trail: THREE.Mesh;
   private planeT = 6;
@@ -42,6 +47,10 @@ export class SkyView {
     //one wing: a flat triangle from the body out, flapped about the body's axis
     this.wing = new THREE.BufferGeometry();
     this.wing.setAttribute('position', new THREE.Float32BufferAttribute([0.12, 0, 0, -0.2, 0, 0.05, -0.05, 0.02, 0.5], 3));
+    //the right wing for the instanced flocks: the left one mirrored across the body (z), wound the other way round
+    //as a mirrored mesh draws (instances don't flip their winding the way a mirrored mesh does)
+    this.rightWing = new THREE.BufferGeometry();
+    this.rightWing.setAttribute('position', new THREE.Float32BufferAttribute([0.12, 0, 0, -0.05, 0.02, -0.5, -0.2, 0, -0.05], 3));
     //an airliner: fuselage, wings, tail, a pale grey on the sky
     this.plane = new THREE.Group();
     const jet = model('Airliner');
@@ -68,11 +77,12 @@ export class SkyView {
     this.plane.add(this.trail);
     this.plane.visible = false;
     this.group.add(this.plane, this.pieces.group);
+    this.makeParts(4 * BIRDS); // made now, so the loading screen compiles their shaders
   }
 
   // build the flocks for a floor
   reset(sky: Sky): void {
-    for (const f of this.flocks) this.group.remove(f);
+    for (const f of this.flocks) if (f.parent) this.group.remove(f);
     this.flocks.length = 0;
     this.pieces.reset(sky);
     sky.flocks.forEach((f, i) => {
@@ -83,14 +93,15 @@ export class SkyView {
       for (let b = 0; b < (gold ? 1 : BIRDS); b++) {
         //a pigeon: slate body, pale head, wings folded on its back until it takes off
         const bird = new THREE.Group();
-        const l = new THREE.Mesh(this.wing, gold ? this.gold : this.feather);
-        const r = new THREE.Mesh(this.wing, gold ? this.gold : this.feather);
-        r.scale.z = -1;
+        const part = (geo: THREE.BufferGeometry, mat: THREE.Material) => (gold ? new THREE.Mesh(geo, mat) : new THREE.Object3D());
+        const l = part(this.wing, this.gold);
+        const r = part(this.wing, this.gold);
+        if (gold) r.scale.z = -1; // the instanced flocks' right wing is mirrored in its geometry (rightWing)
         l.position.y = r.position.y = 0.1;
-        const body = new THREE.Mesh(this.body, gold ? this.gold : this.feather);
+        const body = part(this.body, this.gold);
         body.scale.set(1.6, 1, 1);
         body.position.y = 0.12;
-        const head = new THREE.Mesh(this.head, this.pale);
+        const head = part(this.head, this.pale);
         head.position.set(0.2, 0.26, 0);
         bird.add(l, r, body, head);
         //sat in a loose row, each its own phase
@@ -99,15 +110,50 @@ export class SkyView {
         bird.userData.phase = k * 0.6;
         g.add(bird);
       }
-      inkify(g);
       this.flocks.push(g);
+      if (!gold) return;
+      inkify(g);
       this.group.add(g);
     });
+    const n = sky.flocks.filter((f) => !f.site.gold).length * BIRDS;
+    if (n > this.parts[0].instanceMatrix.count) this.makeParts(n);
+    for (const m of this.parts) this.setCount(m, 0);
+  }
+
+  // the instanced parts, room for n pigeons (made again only when a floor has more)
+  private makeParts(n: number): void {
+    for (const m of this.parts) {
+      this.group.remove(m);
+      m.dispose();
+    }
+    this.parts = (
+      [
+        [this.wing, this.feather],
+        [this.rightWing, this.feather],
+        [this.body, this.feather],
+        [this.head, this.pale],
+      ] as const
+    ).map(([geo, mat]) => {
+      const m = new THREE.InstancedMesh(geo, mat, n);
+      m.frustumCulled = false;
+      inkify(m);
+      this.setCount(m, 0);
+      this.group.add(m);
+      return m;
+    });
+  }
+
+  // draw the first n instances, and their outlines (inkify's hull shares the instances)
+  private setCount(m: THREE.InstancedMesh, n: number): void {
+    m.count = n;
+    m.instanceMatrix.needsUpdate = true;
+    for (const h of m.children) if (h instanceof THREE.InstancedMesh) h.count = n;
   }
 
   update(level: Level, sky: Sky, skaterX: number, skaterY: number, up: boolean, dt: number, gone?: ReadonlySet<Surface>): void {
     this.t += dt;
     this.pieces.update(level, skaterX, gone);
+    let n = 0;
     sky.flocks.forEach((f, i) => {
       const g = this.flocks[i];
       if (!g) return;
@@ -123,7 +169,14 @@ export class SkyView {
         //sat facing you, then away up when they scatter
         bird.rotation.y = f.state === 'scatter' ? 0 : Math.PI;
       }
+      if (f.site.gold) return;
+      g.updateMatrixWorld(true);
+      for (const bird of g.children) {
+        bird.children.forEach((part, j) => this.parts[j].setMatrixAt(n, part.matrixWorld));
+        n++;
+      }
     });
+    for (const m of this.parts) this.setCount(m, n);
     //an airliner now and then, left to right far behind
     if (!this.flying) {
       this.planeT -= dt * (up ? 2 : 1);

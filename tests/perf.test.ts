@@ -7,6 +7,7 @@ import { bakeMerge, batchSteps } from '../src/render/batch';
 import { mergeInk } from '../src/render/kit-merge';
 import { inkNormals } from '../src/render/toon';
 import { run, sliceEnd, sliceStart } from '../src/render/slice';
+import { updateShown } from '../src/render/shown';
 
 function scatter(indexed: boolean): { root: THREE.Group; meshes: THREE.Mesh[] } {
   const root = new THREE.Group();
@@ -80,5 +81,34 @@ describe('kit merges', () => {
     const pa = (a.root.children[0] as THREE.Mesh).geometry.getAttribute('position').array;
     const pb = (b.root.children[0] as THREE.Mesh).geometry.getAttribute('position').array;
     close(pa, pb);
+  });
+});
+
+describe('world matrices for shown nodes only', () => {
+  it('skips hidden branches and catches them up the frame they show', () => {
+    const scene = new THREE.Scene();
+    const a = new THREE.Group();
+    const hidden = new THREE.Group();
+    const child = new THREE.Mesh();
+    child.position.set(0, 1, 0);
+    child.updateMatrix();
+    child.matrixAutoUpdate = false; // even a child that never updates its own matrix
+    hidden.add(child);
+    hidden.visible = false;
+    a.add(hidden);
+    scene.add(a);
+    a.position.set(5, 0, 0);
+    updateShown(scene, false);
+    expect(new THREE.Vector3().setFromMatrixPosition(a.matrixWorld).x).toBe(5);
+    expect(new THREE.Vector3().setFromMatrixPosition(child.matrixWorld).y).toBe(0); // not walked
+    //moved while hidden, then shown: worked out in full, the same as three's own walk
+    a.position.set(-2, 3, 0);
+    updateShown(scene, false);
+    hidden.visible = true;
+    updateShown(scene, false);
+    const ours = child.matrixWorld.clone();
+    scene.updateMatrixWorld(true);
+    expect(ours.equals(child.matrixWorld)).toBe(true);
+    expect(new THREE.Vector3().setFromMatrixPosition(ours).toArray()).toEqual([-2, 4, 0]);
   });
 });
