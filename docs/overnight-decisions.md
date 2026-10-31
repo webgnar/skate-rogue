@@ -566,6 +566,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - **Perfect landings (2026-10-31, zack):** a flip tapped within 40 px above the landing on the way down, or caught within 5 frames of touchdown, is PERFECT: at least cruising + 0.75 px/frame of flow speed, +100, a PERFECT! callout (this replaced the old CLUTCH! callout) and a burst. A first version stacked the boost on any speed, which pushed the bot's wheel wear past half on a floor, so it now tops up to a fifth over cruising instead.
 
+- 2026-10-31 (zack): three routes, sky, surface and sewer, stacked through every floor. Sky and surface exist; the sewer is drafted in the GDD (Three routes) and waits on zack before it's built.
+
 ## Models thread: animation
 
 - 2026-10-28: Backside 180 feet (zack: "a weird glitch with his feet on backside 180's"). Two causes, both fixed:
