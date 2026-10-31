@@ -812,16 +812,65 @@ export class SkaterRig {
 
   // the animation editor's arm IK: where a hand ends up for a pose (rig space), without posing the rig
   handFor(p: Pose, arm: 0 | 1): THREE.Vector3 {
-    const m = (pos: THREE.Vector3, e: THREE.Euler) => new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromEuler(e), ONE);
-    const raise = arm === 0 ? p.armLRaise : -p.armRRaise;
-    const fwd = arm === 0 ? p.armLFwd : p.armRFwd;
+    return HAND.clone().applyMatrix4(this.armChain(p, arm).elbow);
+  }
+
+  // the shoulder and elbow joints for a pose (rig space), without posing the rig
+  jointsFor(p: Pose, arm: 0 | 1): { shoulder: THREE.Vector3; elbow: THREE.Vector3 } {
+    const c = this.armChain(p, arm);
+    return { shoulder: new THREE.Vector3().setFromMatrixPosition(c.shoulder), elbow: new THREE.Vector3().setFromMatrixPosition(c.elbow) };
+  }
+
+  private armChain(p: Pose, arm: 0 | 1): { shoulder: THREE.Matrix4; elbow: THREE.Matrix4 } {
+    const m = (pos: THREE.Vector3, q: THREE.Quaternion) => new THREE.Matrix4().compose(pos, q, ONE);
+    const e = (x: number, y: number, z: number, order: THREE.EulerOrder = 'XYZ') => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, order));
     const elbow = arm === 0 ? p.armLElbow : p.armRElbow;
-    return HAND.clone().applyMatrix4(
-      m(new THREE.Vector3(p.hipX, p.hipY, p.hipZ), new THREE.Euler(0, p.yaw, p.tumble, 'ZYX'))
-        .multiply(m(this.spine.position, new THREE.Euler(p.bend, 0, -p.lean)))
-        .multiply(m(this.shoulders[arm].position, new THREE.Euler(-fwd, 0, raise, 'XYZ')))
-        .multiply(m(this.elbows[arm].position, new THREE.Euler(-elbow, 0, 0))),
-    );
+    const shoulder = m(new THREE.Vector3(p.hipX, p.hipY, p.hipZ), e(0, p.yaw, p.tumble, 'ZYX'))
+      .multiply(m(this.spine.position, e(p.bend, 0, -p.lean)))
+      .multiply(m(this.shoulders[arm].position, shoulderTurn(p, arm)));
+    return { shoulder, elbow: shoulder.clone().multiply(m(this.elbows[arm].position, e(-elbow, 0, 0))) };
+  }
+
+  // The animation editor's elbow pole target: the arm's angles, twist included, that swing the elbow round the
+  // shoulder-hand line toward `pole` (rig space) with the hand kept where it is. Damped least squares on the elbow's
+  // and the hand's positions together.
+  swivel(pose: Pose, arm: 0 | 1, pole: THREE.Vector3, iterations = 40): Partial<Pose> {
+    const fields = [...ARM_FIELDS[arm], arm === 0 ? 'armLTwist' : 'armRTwist'] as const;
+    const hand = this.handFor(pose, arm);
+    const { shoulder, elbow } = this.jointsFor(pose, arm);
+    const axis = hand.clone().sub(shoulder).normalize();
+    const centre = shoulder.clone().addScaledVector(axis, elbow.clone().sub(shoulder).dot(axis));
+    const r = elbow.distanceTo(centre);
+    const d = pole.clone().sub(centre);
+    d.addScaledVector(axis, -d.dot(axis));
+    if (r < 1e-3 || d.lengthSq() < 1e-8) return {}; // a straight arm has no bend to swing
+    const goal = centre.clone().addScaledVector(d.normalize(), r);
+    const q = { ...pose };
+    const err = () => {
+      const j = this.jointsFor(q, arm);
+      return [...goal.clone().sub(j.elbow).toArray(), ...hand.clone().sub(this.handFor(q, arm)).toArray()];
+    };
+    for (let it = 0; it < iterations; it++) {
+      const e = err();
+      if (e.reduce((s, v) => s + v * v, 0) < 1e-8) break;
+      // J: 6 errors by 4 angles, by finite differences
+      const J = fields.map((f) => {
+        const v = q[f];
+        q[f] = v + 1e-4;
+        const e2 = err();
+        q[f] = v;
+        return e.map((x, k) => (x - e2[k]) * 1e4);
+      });
+      const dot = (a: number[], b: number[]) => a.reduce((s, v, k) => s + v * b[k], 0);
+      // solve (JᵀJ + λI) dθ = Jᵀe
+      const A = new THREE.Matrix4().set(
+        ...([0, 1, 2, 3].flatMap((i) => [0, 1, 2, 3].map((j) => dot(J[i], J[j]) + (i === j ? 0.01 : 0))) as [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]),
+      );
+      const step = new THREE.Vector4(dot(J[0], e), dot(J[1], e), dot(J[2], e), dot(J[3], e)).applyMatrix4(A.invert());
+      fields.forEach((f, k) => (q[f] += Math.max(-0.3, Math.min(0.3, step.getComponent(k)))));
+      q[fields[2]] = Math.max(0, Math.min(2.6, q[fields[2]])); // elbows only bend one way
+    }
+    return Object.fromEntries(fields.map((f) => [f, q[f]]));
   }
 
   // hold a pose clip whatever the skater is doing ('idle' under a menu, 'busted' when caught); null lets go
@@ -1057,13 +1106,9 @@ export class SkaterRig {
     this.pelvis.rotation.set(0, p.yaw, p.tumble, 'ZYX');
     this.spine.rotation.set(p.bend, 0, -p.lean);
     this.head.rotation.set(p.nod, p.head, -p.headTilt, 'YXZ');
-    const arms: [number, number, number][] = [
-      [p.armLRaise, p.armLFwd, p.armLElbow],
-      [p.armRRaise, p.armRFwd, p.armRElbow],
-    ];
-    arms.forEach(([raise, fwd, elbow], i) => {
-      this.shoulders[i].rotation.set(-fwd, 0, i === 0 ? raise : -raise);
-      this.elbows[i].rotation.x = -elbow;
+    ([0, 1] as const).forEach((i) => {
+      this.shoulders[i].quaternion.copy(shoulderTurn(p, i));
+      this.elbows[i].rotation.x = -(i === 0 ? p.armLElbow : p.armRElbow);
     });
 
     // legs: hips from the posed pelvis, ankles over the feet, knees toward the toes and a little outward
@@ -1106,6 +1151,16 @@ export class SkaterRig {
     this.followJoints();
   }
 }
+
+// The shoulder's turn: raised out sideways, swung toward the camera, then the upper arm twisted about its own length
+// (the elbow pole target), mirrored for the right arm like the raise
+function shoulderTurn(p: Pose, arm: 0 | 1): THREE.Quaternion {
+  const raise = arm === 0 ? p.armLRaise : -p.armRRaise;
+  const fwd = arm === 0 ? p.armLFwd : p.armRFwd;
+  const twist = arm === 0 ? p.armLTwist : -p.armRTwist;
+  return new THREE.Quaternion().setFromEuler(new THREE.Euler(-fwd, 0, raise, 'XYZ')).multiply(new THREE.Quaternion().setFromAxisAngle(UP_Y, twist));
+}
+const UP_Y = new THREE.Vector3(0, 1, 0);
 
 // Knees bend the way the chest faces, which in the riding stance is toward the camera (+z in the rig), a touch
 // outward from the stance's middle, whatever the feet do, so a squash, a slope or a landing never folds a knee

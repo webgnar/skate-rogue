@@ -202,6 +202,7 @@ describe('rig poses', () => {
     const m = mirrorPose(p);
     expect([m.kneeBX, m.kneeBY, m.kneeBZ]).toEqual([-0.3, -0.2, 0.1]);
     expect(m.kneeFX).toBeCloseTo(0.4);
+    expect(mirrorPose({ ...BASE, armLTwist: 0.7 }).armRTwist).toBe(0.7);
   });
 
   it('blends between clips take the short way round for spun boards', () => {

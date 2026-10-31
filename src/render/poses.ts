@@ -33,9 +33,11 @@ export interface Pose {
   armLRaise: number; // lead (left, +x) arm: 0 hanging, 1.57 straight out sideways
   armLFwd: number; // swing toward the camera
   armLElbow: number;
+  armLTwist: number; // upper arm turned about its own length: swings the elbow round the shoulder-hand line
   armRRaise: number; // trailing (right, -x) arm
   armRFwd: number;
   armRElbow: number;
+  armRTwist: number;
   footFX: number; // front (left) foot along the board
   footFY: number; // used when the foot is off the board
   footFZ: number;
@@ -83,9 +85,11 @@ export const BASE: Pose = {
   armLRaise: 0.45,
   armLFwd: 0.15,
   armLElbow: 0.45,
+  armLTwist: 0,
   armRRaise: 0.45,
   armRFwd: 0.1,
   armRElbow: 0.45,
+  armRTwist: 0,
   footFX: BOARD.bolts,
   footFY: BOARD.deckTop,
   footFZ: 0,
@@ -725,9 +729,11 @@ export function mirrorPose(p: Pose): Pose {
     armLRaise: p.armRRaise,
     armLFwd: p.armRFwd,
     armLElbow: p.armRElbow,
+    armLTwist: p.armRTwist,
     armRRaise: p.armLRaise,
     armRFwd: p.armLFwd,
     armRElbow: p.armLElbow,
+    armRTwist: p.armLTwist,
     footFX: -p.footBX,
     footFY: p.footBY,
     footFZ: p.footBZ,
