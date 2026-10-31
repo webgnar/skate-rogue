@@ -12,7 +12,7 @@
 // physics: you get in by rolling into the hole instead of ollieing it, and out by rolling up a ramp.
 // Drawn by src/render/sewer-kit.ts; the moving pieces are src/sim/sewer.ts.
 import { TILE } from '../physics/constants';
-import { inHill, polyRail, type Level, type Sewer, type SewerKick, type Surface } from '../physics/level';
+import { inHill, polyRail, type Level, type Sewer, type SewerKick, type SewerStairs, type Surface } from '../physics/level';
 import type { Road } from './roads';
 import { PICKUPS } from './descent';
 import { makeRng, type Rng } from './rng';
@@ -60,6 +60,15 @@ export const SEWER = {
   gator: 0.45, // the chance of the alligator on a floor, in one of its tunnels
   gatorFrom: 2,
   gatorLen: 2.5, // tiles nose to tail
+  // the stair set: stairUp tiles of steps up stairH onto a landing stairTop long, stairDown tiles of steps back down
+  // with a handrail railH over them (zack's ledges ref): a line in every tunnel that has room
+  stairs: 0.8,
+  stairUp: 3,
+  stairTop: 3,
+  stairDown: 3,
+  stairH: 1.25 * TILE,
+  railH: 0.9 * TILE,
+  stairMin: 6, // tiles of the squeezed-down set
   stash: 0.5, // the chance of a DIY stash on a floor, in one of its tunnels
   stashGear: 0.4, // and of it being a fresh gear part (else a spin token)
 };
@@ -138,7 +147,7 @@ function runOutAt(level: Level, s: Sewer, x: number): boolean {
 
 // what goes along a tunnel, left to right from where you come down to the foot of the outlet ramp: pipes (overhead,
 // they don't block the floor), kick-outs and the set piece, each with clear floor after it
-type Slot = { kind: 'pipe' | 'kick' | 'piece'; w: number };
+type Slot = { kind: 'pipe' | 'kick' | 'piece' | 'stairs'; w: number };
 
 // dig the sewer route under a built floor's street chases
 export function addSewer(level: Level, seed: number): void {
@@ -168,6 +177,7 @@ export function addSewer(level: Level, seed: number): void {
     for (let p = 0; p < Math.min(pipes, SEWER.pipes); p++) slots.push({ kind: 'pipe', w: range(more, SEWER.pipe) });
     if (more() < SEWER.kicks[0]) slots.push({ kind: 'kick', w: SEWER.kick + SEWER.kickClear });
     if (more() < SEWER.kicks[1]) slots.push({ kind: 'kick', w: SEWER.kick + SEWER.kickClear });
+    if (more() < SEWER.stairs) slots.push({ kind: 'stairs', w: SEWER.stairUp + SEWER.stairTop + SEWER.stairDown + 3 });
     const roll = more();
     const piece = floor >= SEWER.pieceFrom && more() < SEWER.piece ? (roll < 0.3 ? 'rats' : roll < 0.48 ? 'surge' : roll < 0.74 ? 'bowl' : 'subway') : null;
     if (piece === 'rats') slots.push({ kind: 'piece', w: 8 });
@@ -183,10 +193,16 @@ export function addSewer(level: Level, seed: number): void {
     //(the set piece goes first or second, so it gets its room)
     const at = slots.findIndex((sl) => sl.kind === 'piece');
     if (at > 1) slots.unshift(...slots.splice(at, 1));
+    //(and the stair set right after it, ahead of the pipes: it's the tunnel's line)
+    const st = slots.findIndex((sl) => sl.kind === 'stairs');
+    const lead = slots[0]?.kind === 'piece' ? 1 : 0;
+    if (st > lead) slots.splice(lead, 0, ...slots.splice(st, 1));
     let x = s.drain[1] + SEWER.land * TILE;
     const stop = ramp - 2 * TILE;
     const floors: [number, number, number][] = []; // pieces of floor that dip or break: [x0, x1, kind 0 bowl / 1 gap]
     for (const slot of slots) {
+      //(a stair set squeezes down to two-tile flights and landing where the tunnel's short)
+      if (slot.kind === 'stairs' && x + slot.w * TILE > stop) slot.w = SEWER.stairMin + 2;
       const w = slot.w * TILE;
       if (x + w > stop) continue;
       if (slot.kind === 'pipe') {
@@ -214,6 +230,19 @@ export function addSewer(level: Level, seed: number): void {
         (s.kicks ??= []).push(kick);
         level.surfaces.push({ kind: 'bank', x0: k0, x1: k1, y: s.y, y1: s.y - SEWER.kickUp * TILE, row: -1, launch: SEWER.kickPop, sewer: true });
         x = k0 + w;
+      } else if (slot.kind === 'stairs') {
+        const a = x + TILE;
+        const k = slot.w - 2 < SEWER.stairUp + SEWER.stairTop + SEWER.stairDown ? 2 / 3 : 1;
+        const [u, t, d] = [SEWER.stairUp * k, SEWER.stairTop * k, SEWER.stairDown * k].map((n) => Math.round(n) * TILE);
+        const st: SewerStairs = { x0: a, up: a + u, top: a + u + t, x1: a + u + t + d, h: SEWER.stairH * (k < 1 ? 0.8 : 1) };
+        (s.stairs ??= []).push(st);
+        floors.push([st.x0, st.x1, 2]);
+        //the handrail down the far steps, from over the landing's edge to past their foot; coins along it
+        const rail = polyRail([[st.top - TILE / 2, s.y - st.h - SEWER.railH], [st.x1 + TILE / 2, s.y - SEWER.railH]]);
+        rail.sewer = true;
+        level.rails.push(rail);
+        for (let c = st.top + TILE / 2; c < st.x1; c += TILE) level.pickups.push({ kind: 'cash', x: c, y: s.y - st.h * (1 - (c - st.top) / (st.x1 - st.top)) - SEWER.railH - PICKUPS.ride });
+        x += w;
       } else if (piece === 'rats') {
         const n = range(more, SEWER.rats);
         s.piece = { kind: 'rats', x: x + w, n };
@@ -243,6 +272,12 @@ export function addSewer(level: Level, seed: number): void {
     const roof = (a: number, c: number, y = s.y) => c > a && level.surfaces.push({ kind: 'roof', x0: a, x1: c, y, row: -1, sewer: true });
     for (const [a, c, kind] of floors.sort((p, q) => p[0] - q[0])) {
       roof(f0, a);
+      if (kind === 2) {
+        const st = s.stairs!.find((t) => t.x0 === a)!;
+        level.surfaces.push({ kind: 'bank', x0: a, x1: st.up, y: s.y, y1: s.y - st.h, row: -1, sewer: true });
+        roof(st.up, st.top, s.y - st.h);
+        level.surfaces.push({ kind: 'bank', x0: st.top, x1: c, y: s.y - st.h, y1: s.y, row: -1, sewer: true });
+      }
       if (kind === 0) {
         const d = SEWER.bowl * TILE;
         level.surfaces.push({ kind: 'bank', x0: a, x1: a + d, y: s.y, y1: s.y + SEWER.bowlDepth, row: -1, sewer: true });
@@ -311,6 +346,7 @@ function clearFloor(s: Sewer, w: number, rng: Rng): number | null {
   if (p?.kind === 'bowl' || p?.kind === 'subway') busy.push([p.x0 - 2 * TILE, p.x1 + 4 * TILE]);
   if (p?.kind === 'rats') busy.push([p.x - 10 * TILE, p.x + TILE]);
   if (s.gator) busy.push([s.gator[0] - 4 * TILE, s.gator[1] + 4 * TILE]);
+  for (const t of s.stairs ?? []) busy.push([t.x0 - 2 * TILE, t.x1 + 3 * TILE]);
   const tries = Math.floor((hi - lo) / TILE) + 1;
   const from = Math.floor(rng() * tries);
   for (let k = 0; k < tries; k++) {

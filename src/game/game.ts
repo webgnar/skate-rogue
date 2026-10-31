@@ -274,7 +274,7 @@ export class Game {
     const all = this.level.sewers ?? [];
     const want = this.sewerStart;
     const s =
-      all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate)) ?? all[0];
+      all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate) || (want === 'stairs' && w.stairs?.length)) ?? all[0];
     if (s) Object.assign(this.sim.skater, { x: s.drain[0] - 3 * TILE, y: this.level.streetY, mode: 'roll', surface: null, hsp: 3.5, carry: 0, vsp: 0 });
   }
 

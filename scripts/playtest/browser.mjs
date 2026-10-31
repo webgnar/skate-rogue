@@ -33,6 +33,7 @@ const SCENARIOS = [
   { id: 'act-5', q: 'seed=5503&floor=13&danger=3', secs: 50, turbo: 3, what: 'act 5 from its first floor' },
   ...[1, 2, 3, 4, 5].map((act) => ({ id: `escape-${act}`, q: `seed=${act * 911}&escape=${act}`, secs: 45, turbo: 2, what: `act ${act}'s escape` })),
   { id: 'mash', q: 'seed=777&floor=2', bot: 'mash', secs: 50, turbo: 2, what: 'a button-masher on floor 2' },
+  { id: 'sewer', q: 'seed=103&floor=2', bot: 'sewer', secs: 60, turbo: 2, what: 'the sewer bot cruising the sewer route (stairs, kick-outs, rats)' },
   { id: 'boons', q: 'seed=4242&floor=5&boons=bigPop,bigPop,grease,floatyFlip,railMagnet,slingshot,tripleThreat', secs: 50, turbo: 3, what: 'a strong POP and GRIND build' },
   ...['webster', 'keanu', 'roxy', 'goldie'].map((s, i) => ({ id: `skater-${s}`, q: `seed=${60 + i}&floor=${2 + i}`, skater: s, secs: 30, turbo: 2, what: `${s} on the rig` })),
 ];
@@ -43,7 +44,7 @@ const FOOT = { up: [-0.03, 0.09], along: 0.46, across: 0.2 }; // the deck top, i
 const STRETCH = 1.03;
 
 function urlFor(base, s) {
-  const bot = s.bot === 'mash' ? 'bot=mash' : 'bot';
+  const bot = s.bot ? `bot=${s.bot}` : 'bot';
   return `${base}?${s.q}&unlockall&skater=${s.skater ?? 'lou-gnar'}&${bot}&turbo=${VIDEO ? 1 : s.turbo}`;
 }
 
