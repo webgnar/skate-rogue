@@ -33,19 +33,45 @@ function coinTexture(): THREE.Texture {
   return tex;
 }
 
-// a gold edge and the Stoken face on both caps, facing the camera (the game spins coins about Y, its vertical)
+// The coin's reeded edge: gold ridges across its thickness, each a highlight down to a groove, with a darker lip
+// where it meets each face. One ridge, tiled round the edge; a DataTexture, so it builds under Node too.
+const REEDS = 40;
+let coinEdge: THREE.Texture | null = null;
+function edgeTexture(): THREE.Texture {
+  if (coinEdge) return coinEdge;
+  const ridge = [0xffe25a, 0xe6aa14, 0xbe820a, 0x784800];
+  const rows = [0.62, 0.9, 1, 1, 0.9, 0.62]; // the lips, then the ridge's face
+  const data = new Uint8Array(ridge.length * rows.length * 4);
+  rows.forEach((k, y) =>
+    ridge.forEach((c, x) => {
+      const i = (y * ridge.length + x) * 4;
+      data.set([((c >> 16) & 255) * k, ((c >> 8) & 255) * k, (c & 255) * k, 255], i);
+    }),
+  );
+  const tex = (coinEdge = new THREE.DataTexture(data, ridge.length, rows.length));
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.repeat.set(REEDS, 1);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// a reeded gold edge and the Stoken face on both caps, facing the camera (the game spins coins about Y, its vertical)
 let coinGeo: THREE.BufferGeometry | null = null;
 function coinMesh(count: number): THREE.InstancedMesh {
   if (!coinGeo) {
-    coinGeo = new THREE.CylinderGeometry(COIN_R, COIN_R, COIN_T, 24).rotateX(Math.PI / 2);
+    coinGeo = new THREE.CylinderGeometry(COIN_R, COIN_R, COIN_T, 40).rotateX(Math.PI / 2);
     //the caps' UVs come out a quarter turn off once the coin is stood up: turn them so the face reads upright, front
-    //and back (the edge is a flat colour, so its UVs don't matter)
+    //and back (the edge keeps its own: round the coin, then across it)
     const uv = coinGeo.getAttribute('uv');
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), 1 - uv.getX(i));
+    const normal = coinGeo.getAttribute('normal');
+    for (let i = 0; i < uv.count; i++) if (Math.abs(normal.getZ(i)) > 0.5) uv.setXY(i, uv.getY(i), 1 - uv.getX(i));
   }
   const geo = coinGeo;
   const face = new THREE.MeshLambertMaterial({ map: coinTexture(), emissive: 0x181000 });
-  const edge = new THREE.MeshLambertMaterial({ color: 0xc08a18, emissive: 0x3a2800 });
+  const edge = new THREE.MeshLambertMaterial({ map: edgeTexture(), emissive: 0x181000 });
   return new THREE.InstancedMesh(geo, [edge, face, face], count);
 }
 
