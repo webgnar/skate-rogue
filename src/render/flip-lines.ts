@@ -16,6 +16,8 @@ const WINDOW = 0.2; // seconds of the board's turn an arc covers at full length
 const PTS = 24; // points along each arc
 const MAX_SAMPLES = 40;
 const INK = [0.02, 0.02, 0.03];
+const HALO_RGB = [1, 0.98, 0.92]; // the outline round the ink: paper white
+const HALO = 0.07; // how much wider the outline is than its stroke (both sides together, deck units)
 // Seen from the side a kickflip's rails just bob up and down, so the arcs are drawn a little turned toward the
 // camera: depth leaks into screen right and up, and a roll about the board's length reads as an ellipse.
 const LEAN_RIGHT = 0.55;
@@ -42,21 +44,24 @@ interface Stroke {
   inner?: [number, number]; // a filled smear from here out to `out` (swoosh), instead of a line
   len: number;
   width: number;
-  ink: boolean; // black, or the trick's colour
+  color: 'ink' | 'trick' | 'halo'; // black, the trick's colour, or the pale outline round an ink stroke
 }
 
 const LOOKS: Record<'ink' | 'swoosh', Stroke[]> = {
+  // each black stroke sits on a wider pale one, so it outlines itself on dark walls and night streets (zack)
   ink: [
-    { out: [2.2, 1.18], len: 1, width: 0.11, ink: true },
-    { out: [2.9, 1.4], len: 0.75, width: 0.07, ink: true },
+    { out: [2.2, 1.18], len: 1.06, width: 0.11 + HALO, color: 'halo' },
+    { out: [2.9, 1.4], len: 0.8, width: 0.07 + HALO, color: 'halo' },
+    { out: [2.2, 1.18], len: 1, width: 0.11, color: 'ink' },
+    { out: [2.9, 1.4], len: 0.75, width: 0.07, color: 'ink' },
   ],
   swoosh: [
-    { out: [2.4, 1.24], inner: [0.9, 0.62], len: 1.15, width: 0, ink: false },
-    { out: [2.4, 1.24], len: 1.15, width: 0.06, ink: true },
+    { out: [2.4, 1.24], inner: [0.9, 0.62], len: 1.15, width: 0, color: 'trick' },
+    { out: [2.4, 1.24], len: 1.15, width: 0.06, color: 'ink' },
   ],
 };
 
-const STRIPS = EDGES.length * 2;
+const STRIPS = EDGES.length * Math.max(...Object.values(LOOKS).map((l) => l.length));
 
 export class FlipLines {
   readonly mesh: THREE.Mesh;
@@ -221,7 +226,7 @@ export class FlipLines {
 
   // a tapered brush line along `path`: a point at the tail, full width near the head
   private line(strip: number, k: number, st: Stroke, scale: number): void {
-    const rgb = st.ink ? INK : this.rgb;
+    const rgb = st.color === 'ink' ? INK : st.color === 'halo' ? HALO_RGB : this.rgb;
     const side = this.v;
     for (let i = 0; i < PTS; i++) {
       const u = i / (PTS - 1);
@@ -241,7 +246,7 @@ export class FlipLines {
   // a filled crescent between path2 (inside) and path (outside), in the trick's colour washed toward white
   private fill(strip: number, k: number, st: Stroke): void {
     const c = this.rgb.map((x) => 0.45 * x + 0.55);
-    const rgb = st.ink ? INK : c;
+    const rgb = st.color === 'ink' ? INK : c;
     for (let i = 0; i < PTS; i++) {
       const u = i / (PTS - 1);
       const a = k * 0.92 * Math.min(1, u * 1.6);
