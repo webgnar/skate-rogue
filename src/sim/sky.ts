@@ -22,6 +22,8 @@ export const SKY = {
   chopperLag: 0.05, // how hard the helicopter closes on you
   chopperOff: 2.2, // x base speed it peels away at once you're down
   goldOver: 3 * TILE, // px: clearing the golden pigeon from no higher than this over it pays out
+  beamFrames: 300, // a swinging I-beam's swing there and back: slow (5 s)
+  beamLift: 6, // px it rises at each end of its swing, as a weight on a long cable does
   blimpBob: 4, // px the blimp's back rides up and down
   blimpBobFrames: 240,
   rigV: 1, // px/frame the rig starts dropping at once you land on it
@@ -60,7 +62,7 @@ export class SkyPieceSim {
 
   constructor(readonly site: SkyMover) {
     this.y = site.y;
-    const rail = site.kind === 'swing';
+    const rail = site.kind === 'swing' || site.kind === 'beam';
     this.ledge = { kind: rail ? 'rail' : 'roof', x0: site.x0, x1: site.x1, y: site.y, row: -1, sky: site.kind, ...(rail ? { material: 'metal' as const } : {}) };
     this.box = { x0: site.x0, x1: site.x1, roof: site.y, bottom: site.y + 2 * TILE, ledge: this.ledge };
   }
@@ -87,6 +89,15 @@ export class SkyPieceSim {
         this.y = Math.min(s.floor ?? s.y, this.y + this.v);
       }
     } else if (s.kind === 'swing') this.angle = swingAt(frame + (s.phase ?? 0));
+    else if (s.kind === 'beam') {
+      //a weight on a long cable: along the lane and back, rising a little at each end
+      const u = Math.sin(((frame + (s.phase ?? 0)) / SKY.beamFrames) * Math.PI * 2);
+      dx = SKY_SWAY * TILE * u;
+      this.y = s.y - SKY.beamLift * u * u;
+      //(grinding it, it carries you with it)
+      if (sk.surface === this.ledge && sk.grounded) sk.x += dx - this.x;
+      this.x = dx;
+    }
     this.box.roof = this.ledge.y = this.y;
     this.box.bottom = this.y + 2 * TILE;
     //a jib slewed out of the lane isn't under you: nothing to land on, and you drop off it
@@ -99,6 +110,8 @@ export class SkyPieceSim {
 }
 
 const CLOUD_DRIFT = 1.5 * TILE; // CLOUDS.driftBy (src/gen/clouds.ts), px
+// tiles a swinging I-beam swings either way along the lane (src/gen/sky-beats.ts keeps that clear)
+export const SKY_SWAY = 1.25;
 
 // a crane jib's slew at frame t: held in the lane, eased out, held out, eased back
 export function swingAt(t: number): number {

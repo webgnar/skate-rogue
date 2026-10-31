@@ -90,7 +90,7 @@ export class CurvedRail {
   wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
   top = false; // the top route's power line (src/gen/top-route.ts)
   sewer = false; // a pipe in the sewer (src/gen/sewer.ts)
-  sky?: string; // a sky beat's grind (src/gen/sky-beats.ts): a crane's boom, an I-beam
+  sky?: string; // a sky beat's grind (src/gen/sky-beats.ts): a crane's boom
 
   constructor(
     readonly x0: number,
@@ -228,12 +228,12 @@ export interface Level {
 // built: a blimp's back bobs on the air, a window washer's rig drops under you once you land on it (down to
 // `floor`), a tower crane's jib swings out of the lane and back
 export interface SkyMover {
-  kind: 'blimp' | 'rig' | 'swing' | 'cloud' | 'balloon'; // cloud, balloon: up in the cloud layer (src/gen/clouds.ts)
+  kind: 'blimp' | 'rig' | 'swing' | 'cloud' | 'balloon' | 'beam'; // cloud, balloon: up in the cloud layer (src/gen/clouds.ts)
   x0: number;
   x1: number;
   y: number;
   floor?: number; // rig: the lowest its deck sinks to
-  phase?: number; // swing: frames into its swing at the start of the floor
+  phase?: number; // swing, beam: frames into its swing at the start of the floor
   mast?: number; // swing: the mast's x, what the jib slews round
 }
 

@@ -81,9 +81,8 @@ export function buildSkyBeats(level: Level): THREE.Group {
   const g = new THREE.Group();
   const sky = level.surfaces.filter((s) => s.sky);
   const cranes = level.rails.filter((r) => r.sky === 'crane');
-  const beams = level.rails.filter((r) => r.sky === 'beam');
   const lines = level.rails.filter((r) => r.sky === 'lines');
-  if (!sky.length && !cranes.length && !lines.length && !beams.length) return g;
+  if (!sky.length && !cranes.length && !lines.length) return g;
   const Y = (py: number) => (level.streetY - py) / TILE;
   const foot = (px: number) => {
     const gy = groundAt(level, px);
@@ -202,36 +201,6 @@ export function buildSkyBeats(level: Level): THREE.Group {
     leg(mx, my - 0.4, -0.6, 0.3, yellow);
     box(1.2, 1, 1, mx, my + 0.3, -0.9, yellow); // the cab
     box(2, 0.5, 0.8, mx - 1.4, my - 0.1, -0.6, steel); // the counterweight
-  }
-  //the I-beams (zack, 2026-10-31: "we need some Grindable I-beams"): red steel, its top flange the grind, hoisted on a
-  //crane's cable like the staircase's girders, a hook block over its middle and two slings
-  for (const r of beams) {
-    const [ax, ay, bx, by] = [X(r.xs[0]), Y(r.ys[0]), X(r.xs[r.xs.length - 1]), Y(r.ys[r.ys.length - 1])];
-    const len = Math.hypot(bx - ax, by - ay);
-    const ang = Math.atan2(by - ay, bx - ax);
-    const [cx, cy] = [(ax + bx) / 2, (ay + by) / 2];
-    //(drawn along the beam's own axis, in a group turned to its slope)
-    const b = new THREE.Group();
-    b.position.set(cx, cy, 0);
-    b.rotation.z = ang;
-    const part = (w: number, h: number, d: number, y: number, z: number) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), girder);
-      m.position.set(0, y, z);
-      b.add(m);
-    };
-    part(len, 0.07, 0.7, -0.035, -0.1); // the top flange: what you grind
-    part(len, 0.4, 0.08, -0.27, -0.1); // the web
-    part(len, 0.07, 0.7, -0.5, -0.1); // the bottom flange
-    for (let k = 0.6; k < len - 0.3; k += 1.2) part(0.04, 0.36, 0.3, -0.27, 0.1); // stiffeners, for the rivet-y look
-    g.add(b);
-    const hook = Math.max(ay, by) + 2.4;
-    box(0.35, 0.5, 0.35, cx, hook, -0.45, yellow);
-    for (const [lx, ly] of [[ax + (bx - ax) * 0.15, ay + (by - ay) * 0.15], [ax + (bx - ax) * 0.85, ay + (by - ay) * 0.85]]) {
-      const l = Math.hypot(cx - lx, hook - ly);
-      const sling = box(0.04, l, 0.04, (cx + lx) / 2, (hook + ly) / 2, -0.45, steel);
-      sling.rotation.z = Math.atan2(lx - cx, hook - ly);
-    }
-    box(0.05, 30, 0.05, cx, hook + 15, -0.45, steel); // the cable, up out of the top of the frame
   }
   //Chinatown's clotheslines: a thin line on a bracket at each end, washing pegged along it
   //(zack's refs: NYC Chinatown's washing is mostly white sheets and shirts, a bright one here and there)

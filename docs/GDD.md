@@ -241,8 +241,10 @@ by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9
   so most of the stretch is up in the cloud layer.
 - **Variety.** Each stretch runs its floor's recipe from its own place, so no two stretches play the same order.
 - **Nothing from the sky crosses in front of you**: scaffold tubes stand behind the lane.
-- **I-beams** (zack, Oct 31: "we need some Grindable I-beams"): red steel beams hoisted on a crane's cable, 5 to 7
-  tiles, their top flange a grind falling a tile in seven so it feeds your speed. One to three a floor from floor 5.
+- **I-beams** (zack, Oct 31: "we need some Grindable I-beams", "can we make the i beams slowly swinging?"): red steel
+  beams, 5 to 7 tiles, hung on a crane's cable, swinging slowly along the lane (a tile and a quarter either way, 5 s
+  there and back, rising a little at each end). Their top flange is a grind, and it carries you with it. Moving
+  grindables: these and the tower crane's slewing jib.
 - **Skyscrapers** (zack: "super tall sky scrapers that do go up to the height of the sky route"): every rooftop deck
   up there is the top of a glass tower that runs all the way down to the city, behind the lane.
 - **Clouds are honest**: a cloud's puffs never draw past where you can land on it (its deck plus a truck's overhang).

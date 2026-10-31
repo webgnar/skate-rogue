@@ -11,6 +11,7 @@
 import { TILE } from '../physics/constants';
 import { surfaceY, type Level } from '../physics/level';
 import { PICKUPS } from './descent';
+import { SKY_SWAY } from '../sim/sky';
 import { clearAt } from './top-route';
 import { TOP } from './top-route';
 
@@ -52,8 +53,8 @@ export function piecesOf(level: Level, a: number, b: number): Piece[] {
   }
   for (const m of level.skyMovers ?? []) {
     if (m.x1 < a || m.x0 > b) continue;
-    //a drifting cloud: at the far end of its wander when you come to it, at the near end when you leave it
-    const d = m.kind === 'cloud' ? REACH.drift : 0;
+    //a drifting cloud or a swinging I-beam: at the far end of its wander when you come to it, at the near end when you leave it
+    const d = m.kind === 'cloud' ? REACH.drift : m.kind === 'beam' ? SKY_SWAY * TILE : 0;
     out.push({ x0: m.x0 + d, x1: m.x1 - d, y0: m.y, y1: m.y, cloud: m.kind === 'cloud' || m.kind === 'balloon' });
   }
   return out.sort((p, q) => p.x0 - q.x0);
