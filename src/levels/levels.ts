@@ -56,6 +56,11 @@ const SKY_HELP: Record<SkyBeat, string> = {
   crane: "a crane's boom, a long grind falling with the hill",
   scaffold: 'three scaffold decks stepping down',
   gap: 'open sky, with a Stoken in it now and then',
+  blimp: "set piece: an ad blimp's long back, bobbing (one set piece a floor)",
+  rig: 'set piece: a window washer rig that drops under you; pop off onto the roof ahead',
+  swing: "set piece: a tower crane's jib that swings out of the lane and back",
+  bust: 'set piece: two decks with a paper billboard across the gap to burst through',
+  lines: "Chinatown's clotheslines: short sagging wires to chain (Chinatown's stretch opens on them)",
 };
 
 const ROADS: { id: string; name: string; road: Road }[] = [

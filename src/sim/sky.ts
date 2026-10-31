@@ -4,8 +4,12 @@
 // (they take off under you). The police helicopter flies in over you while you're up (its Heat is in src/sim/floor.ts) and
 // peels off once you're back on the street. The airplanes are only scenery (src/render/sky-view.ts). Pure, stepped
 // at 60 Hz with the floor.
+//
+// The sky's set pieces and finds (zack, 2026-10-31, src/gen/sky-beats.ts) are stepped here too: the moving decks
+// (a blimp's bobbing back, a window washer's rig that drops under you, a crane jib that swings out of the lane),
+// the paper billboards you burst through, and the golden pigeon: clear it from above and it pays a spin token.
 import { PHYS, TILE } from '../physics/constants';
-import type { Level } from '../physics/level';
+import type { Car, Level, SkyBust, SkyMover, Surface } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import type { Cover } from './chopper';
 
@@ -17,13 +21,91 @@ export const SKY = {
   strikeHeat: 5,
   chopperLag: 0.05, // how hard the helicopter closes on you
   chopperOff: 2.2, // x base speed it peels away at once you're down
+  goldOver: 3 * TILE, // px: clearing the golden pigeon from no higher than this over it pays out
+  blimpBob: 4, // px the blimp's back rides up and down
+  blimpBobFrames: 240,
+  rigV: 1, // px/frame the rig starts dropping at once you land on it
+  rigAccel: 0.15, // and faster each frame (its rope's slipping)
+  rigMax: 6,
+  // a crane jib's swing, frames: in the lane, slewing out, out, slewing back
+  swingHold: 130,
+  swingMove: 60,
+  swingAway: 50,
+  swingOut: 1.3, // radians it slews out to
+  swingIn: 0.3, // radians: past this it's out of the lane, and you drop off it
+  bustCash: 5, // cash in a billboard you burst through
 };
+
+// NO GROUND (zack, 2026-10-31): chain sky pieces (wires, rooftops, billboards, booms, a blimp's back) without
+// touching the ground below and the coins you pick up up there multiply; touch down and the line banks
+export const SKY_LINE = { step: 0.5, max: 4 };
+
+// the coin multiplier `n` pieces into a line
+export function skyMult(n: number): number {
+  return n < 2 ? 1 : Math.min(SKY_LINE.max, 1 + SKY_LINE.step * (n - 1));
+}
+
+// a moving sky deck: a box in the skate lane whose top (ledge) you land on, as an L train's roof
+export class SkyPieceSim {
+  readonly box: Car;
+  readonly ledge: Surface;
+  y: number;
+  angle = 0; // a crane jib's slew, radians (0 = along the lane)
+  v = 0; // a rig's drop, px/frame
+  dropping = false;
+
+  constructor(readonly site: SkyMover) {
+    this.y = site.y;
+    const rail = site.kind === 'swing';
+    this.ledge = { kind: rail ? 'rail' : 'roof', x0: site.x0, x1: site.x1, y: site.y, row: -1, sky: site.kind, ...(rail ? { material: 'metal' as const } : {}) };
+    this.box = { x0: site.x0, x1: site.x1, roof: site.y, bottom: site.y + 2 * TILE, ledge: this.ledge };
+  }
+
+  get inLane(): boolean {
+    return Math.abs(this.angle) < SKY.swingIn;
+  }
+
+  step(frame: number, sk: Skater): void {
+    const s = this.site;
+    if (s.kind === 'blimp') this.y = s.y + SKY.blimpBob * Math.sin((frame / SKY.blimpBobFrames) * Math.PI * 2);
+    else if (s.kind === 'rig') {
+      if (!this.dropping && sk.surface === this.ledge) {
+        this.dropping = true;
+        this.v = SKY.rigV;
+      }
+      if (this.dropping && this.y < (s.floor ?? s.y)) {
+        this.v = Math.min(SKY.rigMax, this.v + SKY.rigAccel);
+        this.y = Math.min(s.floor ?? s.y, this.y + this.v);
+      }
+    } else this.angle = swingAt(frame + (s.phase ?? 0));
+    this.box.roof = this.ledge.y = this.y;
+    this.box.bottom = this.y + 2 * TILE;
+    //a jib slewed out of the lane isn't under you: nothing to land on, and you drop off it
+    const here = this.inLane;
+    this.box.x0 = this.ledge.x0 = here ? s.x0 : -1e6;
+    this.box.x1 = this.ledge.x1 = here ? s.x1 : -1e6;
+    //riding it: your feet go up and down with it
+    if (sk.surface === this.ledge && sk.grounded) sk.y = this.y;
+  }
+}
+
+// a crane jib's slew at frame t: held in the lane, eased out, held out, eased back
+export function swingAt(t: number): number {
+  const { swingHold: h, swingMove: m, swingAway: w, swingOut: out } = SKY;
+  const f = ((t % (h + 2 * m + w)) + (h + 2 * m + w)) % (h + 2 * m + w);
+  const ease = (u: number) => u * u * (3 - 2 * u);
+  if (f < h) return 0;
+  if (f < h + m) return out * ease((f - h) / m);
+  if (f < h + m + w) return out;
+  return out * (1 - ease((f - h - m - w) / m));
+}
 
 // a flock's place in the level: over a rooftop at y, or (rail) along a power line
 export interface FlockSite {
   x: number;
   y: number;
   rail?: number; // index into level.rails: it flies along the wire's height
+  gold?: boolean; // the golden pigeon (src/gen/sky-beats.ts): one bird; clear it from above for a spin token
 }
 
 export class Flock {
@@ -54,15 +136,48 @@ export class TopChopper {
 export class Sky {
   readonly flocks: Flock[];
   readonly chopper: TopChopper;
+  readonly pieces: SkyPieceSim[];
+  readonly busts: SkyBust[];
+  readonly busted: boolean[];
+  gold = false; // this step, the golden pigeon was cleared: it pays out
+  private frame = 0;
 
   constructor(readonly level: Level) {
     this.flocks = (level.flocks ?? []).map((s) => new Flock(s));
     this.chopper = new TopChopper(level.startX);
+    this.pieces = (level.skyMovers ?? []).map((m) => new SkyPieceSim(m));
+    this.busts = level.busts ?? [];
+    this.busted = this.busts.map(() => false);
+  }
+
+  // the moving decks' boxes for the skater's movers
+  get boxes(): Car[] {
+    return this.pieces.map((p) => p.box);
+  }
+
+  // before the skater steps: move the decks
+  stepPieces(sk: Skater): void {
+    this.frame++;
+    for (const p of this.pieces) p.step(this.frame, sk);
+  }
+
+  // after the skater steps (from px, py): the billboards you went through this step, by index
+  burst(sk: Skater, px: number): number[] {
+    const out: number[] = [];
+    this.busts.forEach((b, i) => {
+      if (this.busted[i] || px >= b.x || sk.x < b.x || sk.mode === 'bail') return;
+      if (sk.y > b.y0 && sk.y - PHYS.height < b.y1) {
+        this.busted[i] = true;
+        out.push(i);
+      }
+    });
+    return out;
   }
 
   // one step: true when the skater just skated into a flock
   step(sk: Skater, up: boolean): boolean {
     let hit = false;
+    this.gold = false;
     for (const f of this.flocks) {
       f.t++;
       if (f.state === 'scatter') {
@@ -81,7 +196,11 @@ export class Sky {
         if (sk.mode === 'rail') sk.railV *= SKY.strikeSpeed;
       }
       //they take off as you come over them (or hit them)
-      if (into || dx < SKY.wake) f.state = 'scatter';
+      if (into || dx < SKY.wake) {
+        //cleared the golden pigeon from just over it: it drops a spin token
+        if (f.site.gold && f.state === 'perch' && !into && sk.y <= f.y + 4 && f.y - sk.y < SKY.goldOver && sk.mode !== 'bail') this.gold = true;
+        f.state = 'scatter';
+      }
     }
     //the helicopter: in over you while you're up, away ahead once you're down
     const ch = this.chopper;

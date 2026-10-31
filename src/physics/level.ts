@@ -219,6 +219,28 @@ export interface Level {
   hillCross?: { x: number; y: number }[]; // their intersections with cross traffic: the cross street's middle, the ground (src/traffic/hill-cross.ts)
   cabs?: CabRun[]; // their cab flats (src/traffic/cab.ts)
   sewers?: Sewer[]; // the sewer route under the street chases (src/gen/sewer.ts)
+  skyMovers?: SkyMover[]; // the sky's moving set pieces (src/gen/sky-beats.ts, stepped by src/sim/sky.ts)
+  busts?: SkyBust[]; // paper billboards across the lane up in the sky: skate through one and it bursts
+}
+
+// a sky set piece that moves (zack, 2026-10-31: "along with the set pieces"), px. x0..x1 and y are its deck as
+// built: a blimp's back bobs on the air, a window washer's rig drops under you once you land on it (down to
+// `floor`), a tower crane's jib swings out of the lane and back
+export interface SkyMover {
+  kind: 'blimp' | 'rig' | 'swing';
+  x0: number;
+  x1: number;
+  y: number;
+  floor?: number; // rig: the lowest its deck sinks to
+  phase?: number; // swing: frames into its swing at the start of the floor
+  mast?: number; // swing: the mast's x, what the jib slews round
+}
+
+// a paper billboard standing across the lane between two sky decks: top (y0) to bottom (y1), px
+export interface SkyBust {
+  x: number;
+  y0: number;
+  y1: number;
 }
 
 // a stretch of the sewer route, px: an open drain in the street drops you in, a tunnel runs under the street, and a

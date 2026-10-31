@@ -150,10 +150,11 @@ export class RunScore {
         if (!this.gnar) this.stoke = Math.max(0, this.stoke - SCORE.slamStoke);
         break;
       case 'pickup':
-        if (e.kind === 'cash') this.addCash(SCORE.cashCoin);
+        //(NO GROUND's multiplier up in the sky: coins by it, Stoken by its whole part)
+        if (e.kind === 'cash') this.addCash(SCORE.cashCoin * (e.mult ?? 1));
         else if (e.kind === 'spin') this.spins++;
         else {
-          this.stoken += this.stokenScale;
+          this.stoken += this.stokenScale * Math.floor(e.mult ?? 1);
           this.score += SCORE.stoken;
         }
         break;

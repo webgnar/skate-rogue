@@ -12,6 +12,7 @@ import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { RunScore, SCORE } from '../run/score';
+import { SKY } from '../sim/sky';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
 import { NO_HEAD_START, prizeText, pullAll, type Pull } from '../run/slots';
@@ -1216,6 +1217,7 @@ export class Game {
     if (sim.chopper) keep(sim.chopper, 'x');
     keep(sim.sky.chopper, 'x');
     for (const f of sim.sky.flocks) keep(f, 'x', 'y');
+    for (const p of sim.sky.pieces) keep(p, 'y', 'angle');
     for (const d of sim.swarm?.drones ?? []) keep(d, 'x', 'roof');
   }
 
@@ -1662,9 +1664,24 @@ export class Game {
       this.hud.callout('GOLDEN SMASH! STOKEN', 'good');
     } else if (e.loot === 'spin') {
       this.run.spins++;
-      this.hud.callout('SPIN TOKEN!', 'trick');
+      this.hud.callout(this.level.props[e.index]?.stash ? 'SKY STASH! SPIN TOKEN' : 'SPIN TOKEN!', 'trick');
     }
     this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), z: this.level.props[e.index]?.z, how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
+  }
+
+  // burst through a paper billboard up in the sky: it tears away in a comic burst, with cash in it
+  private bustFx(e: Extract<FloorEvent, { type: 'bust' }>): void {
+    this.run.addCash(SKY.bustCash * e.mult);
+    this.run.addStyle(SCORE.smash * 4);
+    this.hud.money(this.run.cash, this.run.stoken);
+    this.hud.callout('BILLBOARD BUST!', 'trick');
+    const x = toX(e.x);
+    const y = toY(this.level, e.y) + 0.8;
+    this.skyView.bust(e.index);
+    this.impacts.spawn(x, y, 0.8);
+    this.words.spawn(x, y + 0.4, 'RRIP!');
+    this.particles.dust(x, y, 0.8, true);
+    this.view.shake(0.1);
   }
 
   // a car hop dented a car (src/traffic/damage.ts): it shows its new stage, and springs and dust burst out of it
@@ -1828,6 +1845,29 @@ export class Game {
       this.particles.shards(x, y);
       this.words.spawn(x, y + 0.3, 'CRNCH!');
       this.hud.gearTick('wheels');
+      return;
+    }
+    if (e.type === 'skyChain') {
+      //NO GROUND: another sky piece on the line, the coins up here worth more
+      this.hud.callout(`NO GROUND! COINS x${e.mult}`, 'trick');
+      return;
+    }
+    if (e.type === 'skyBank') {
+      this.hud.callout(`SKY LINE x${e.n}!`, 'good');
+      return;
+    }
+    if (e.type === 'bust') return this.bustFx(e);
+    if (e.type === 'goldBird') {
+      //the golden pigeon: a spin token, in a burst of gold
+      this.run.spins++;
+      this.hud.callout('GOLDEN PIGEON! SPIN TOKEN', 'trick');
+      this.particles.coin(toX(e.x), toY(this.level, e.y) + 0.8, 0);
+      return;
+    }
+    if (e.type === 'repair') {
+      //a sky stash's fresh part: your most worn one, good as new
+      this.hud.callout(`SKY STASH! FRESH ${GEAR.names[e.part].toUpperCase()}`, 'good');
+      this.hud.gear(this.sim.gear);
       return;
     }
     if (e.type === 'sewer') {
