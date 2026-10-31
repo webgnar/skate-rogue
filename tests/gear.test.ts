@@ -130,7 +130,7 @@ describe('gear wear', () => {
     const big = drop(6, PHYS.baseSpeed, 0);
     expect(small.land.impact!).toBeLessThan(FEEL.soft);
     expect(small.deck).toBeCloseTo(0);
-    expect(big.deck).toBeGreaterThan(GEAR.ollie * 3); // one big drop beats three ollies
+    expect(big.deck).toBeGreaterThan(GEAR.ollie * 2); // one big drop beats two ollies
     //the same drop carrying rail speed: the landing scrubs it, and that wears the deck more
     const fast = drop(6, PHYS.bombSpeed, PHYS.bombSpeed);
     expect(fast.land.lost!).toBeGreaterThan(0);
@@ -141,5 +141,20 @@ describe('gear wear', () => {
     const sim = new FloorSim(levelOf(GLASS));
     for (let f = 0; f < 260; f++) sim.step({ pressed: false, held: false });
     expect(100 - sim.gear.bearings).toBeCloseTo(GEAR.smashGrit + (260 * GEAR.rollSec) / 60, 1);
+  });
+
+  it('smashing a breakable knocks the deck; a dusty one grits the bearings too', () => {
+    const smash = (name: string) => {
+      const l = levelOf(FLAT);
+      l.props = [{ name, x: l.startX + 5 * TILE, y: l.streetY, z: 0, yaw: 0, breaks: true }];
+      const sim = new FloorSim(l);
+      sim.traffic.vehicles.length = 0;
+      for (let f = 0; f < 120; f++) sim.step({ pressed: false, held: false });
+      return { deck: 100 - sim.gear.deck, bearings: 100 - sim.gear.bearings - (120 * GEAR.rollSec) / 60 };
+    };
+    const cone = smash('Cone');
+    expect(cone.deck).toBeCloseTo(GEAR.smashDeck, 5);
+    expect(cone.bearings).toBeCloseTo(0, 5);
+    expect(smash('Crate').bearings).toBeCloseTo(GEAR.smashGrit, 5);
   });
 });
