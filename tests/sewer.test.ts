@@ -25,7 +25,8 @@ function dropIn(level: Level, presses: number[] = [], frames = 900) {
   return { sim, w, events, top };
 }
 
-describe('the sewer route', () => {
+// (whole floors get built and skated here: seconds each, more with the rest of the suite running alongside)
+describe('the sewer route', { timeout: 30000 }, () => {
   it('floors with hills get one under a street chase, with its holes in the street', () => {
     //(about 1 layout in 13 has no stretch of unbroken street long enough for one: 7 of 90 floors, before and after the
     //sky route's level design pass, 2026-10-31)
@@ -154,7 +155,7 @@ function ride(level: Level, s: Sewer, x: number, onFloor: boolean, presses: (sim
 }
 const never = () => false;
 
-describe('the sewer route, built out', () => {
+describe('the sewer route, built out', { timeout: 30000 }, () => {
   it('the ways in are construction spots: a dig on the street, or a plank ramp down off the foot of a hill', () => {
     const { level, s } = find((w) => w.entry === 'ramp');
     const ramp = level.surfaces.find((f) => f.sewer && f.x0 === s.drain[0] && f.y1 !== undefined)!;
@@ -251,7 +252,7 @@ describe('the sewer route, built out', () => {
     }, 120);
     expect(clear.events).toContain('gator');
     expect(clear.events).not.toContain('bite');
-  }, 30000);
+  });
 
   it('the subway: hop off a passing train, or ollie the gap; drop in with no train and you bail', () => {
     const { level, s } = find((w) => w.piece?.kind === 'subway');
