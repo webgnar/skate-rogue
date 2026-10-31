@@ -69,6 +69,32 @@ function glowDisc(): THREE.CanvasTexture {
   return glowTex;
 }
 
+let beamTex: THREE.CanvasTexture | null = null;
+// a shaft of light falling in from the street: bright at the top, soft at the sides, fading out toward the floor
+function beam(): THREE.CanvasTexture {
+  if (beamTex) return beamTex;
+  const [W, H] = [64, 128];
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d')!;
+  const down = g.createLinearGradient(0, 0, 0, H);
+  down.addColorStop(0, 'rgba(255,255,255,1)');
+  down.addColorStop(1, 'rgba(255,255,255,0.05)');
+  g.fillStyle = down;
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'destination-in';
+  const side = g.createLinearGradient(0, 0, W, 0);
+  side.addColorStop(0, 'rgba(0,0,0,0)');
+  side.addColorStop(0.3, 'rgba(0,0,0,1)');
+  side.addColorStop(0.7, 'rgba(0,0,0,1)');
+  side.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = side;
+  g.fillRect(0, 0, W, H);
+  beamTex = new THREE.CanvasTexture(c);
+  return beamTex;
+}
+
 let latticeTex: THREE.CanvasTexture | null = null;
 // a pool of light through a manhole grate, seen from below: a glowing disc cut into diamonds (zack's ref)
 function lattice(): THREE.CanvasTexture {
@@ -136,13 +162,13 @@ export function buildSewers(level: Level): THREE.Group {
   const ground = surface('concrete', 0x2a2420);
   const pipeMat = new THREE.MeshLambertMaterial({ color: 0x6f7a5a });
   const bracket = new THREE.MeshLambertMaterial({ color: 0x3a3430 });
-  const water = new THREE.MeshLambertMaterial({ color: 0x4a8a7a, emissive: 0x10302a, transparent: true, opacity: 0.85 });
+  const water = new THREE.MeshLambertMaterial({ color: 0x3f6e52, emissive: 0x0c2a16, transparent: true, opacity: 0.88 });
   const chevron = new THREE.MeshBasicMaterial({ color: 0xbff5e6, transparent: true, opacity: 0.55, depthWrite: false });
   const lamp = new THREE.MeshBasicMaterial({ color: 0xffd27a });
   const cage = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
   const hazard = new THREE.MeshBasicMaterial({ color: 0xf2c230 });
   const stripe = new THREE.MeshBasicMaterial({ color: 0x1a1414 });
-  const shaft = new THREE.MeshBasicMaterial({ color: 0xfff0c8, transparent: true, opacity: 0.12, depthWrite: false });
+  const shaft = new THREE.MeshBasicMaterial({ map: beam(), color: 0xfff0c8, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
   const cone = new THREE.MeshLambertMaterial({ color: 0xff6a1a });
   const white = new THREE.MeshLambertMaterial({ color: 0xf2f0ea });
   const plate = surface('plate', 0x7a7e86);
@@ -168,11 +194,26 @@ export function buildSewers(level: Level): THREE.Group {
   const pillar = surface('concrete', 0x9a948a);
   const redLight = new THREE.MeshBasicMaterial({ color: 0xff3030 });
   const ceilLight = new THREE.MeshBasicMaterial({ color: 0xfff4d0 });
+  const stone = surface('concrete', 0x5a6a70);
+  const mainMat = new THREE.MeshLambertMaterial({ color: 0x2a4a8a });
   const box = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, m: THREE.Material) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m);
     b.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
     g.add(b);
     return b;
+  };
+  // a soft shaft of light from the street (y top) down to the floor (y bottom), as two crossed planes, wider at its foot
+  const light = (a: number, b: number, bottom: number, top: number, w = 1.2) => {
+    for (const rot of [0, Math.PI / 2]) {
+      const geo = new THREE.PlaneGeometry(1, top - bottom);
+      const pos = geo.attributes.position;
+      for (let k = 0; k < pos.count; k++) pos.setX(k, pos.getX(k) * (pos.getY(k) > 0 ? b - a : (b - a) * 1.5));
+      const m = new THREE.Mesh(geo, shaft);
+      m.position.set((a + b) / 2, (top + bottom) / 2, 0);
+      m.rotation.y = rot;
+      if (rot) m.scale.x = w / (b - a);
+      g.add(m);
+    }
   };
   // a solid wedge under a slope from (a, ya) to (b, yb), down to `base`, across z0..z1
   const wedge = (a: number, ya: number, b: number, yb: number, base: number, z0: number, z1: number, m: THREE.Material) => {
@@ -208,8 +249,9 @@ export function buildSewers(level: Level): THREE.Group {
     box(x1, x1 + 0.5, fy - 0.3, roof, STREET_BACK, FRONT, brick);
     box(x0, x1, deep, roof, STREET_BACK, BACK, brick);
     //the floor, as the physics has it: flat runs as slabs, slopes (the bowl's sides, kick-outs, ramps) as wedges
+    const inStairs = (f: { x0: number; x1: number }) => (s.stairs ?? []).some((t) => f.x0 >= t.x0 && f.x1 <= t.x1);
     for (const f of level.surfaces) {
-      if (!f.sewer || f.x0 < s.x0 - 1 || f.x1 > s.x1 + 1) continue;
+      if (!f.sewer || f.x0 < s.x0 - 1 || f.x1 > s.x1 + 1 || inStairs(f)) continue;
       const [a, b] = [X(f.x0), X(f.x1)];
       const [ya, yb] = [Y(f.y), Y(f.y1 ?? f.y)];
       if (f.launch) {
@@ -315,13 +357,32 @@ export function buildSewers(level: Level): THREE.Group {
     //light falling in through the holes, and hazard paint round them on the street
     for (const [h0, h1] of [s.drain, s.outlet]) {
       const [a, b] = [X(h0), X(h1)];
-      box(a + 0.1, b - 0.1, fy, roof, -0.6, 0.6, shaft);
+      light(a + 0.1, b - 0.1, fy, roof);
       for (const [p0, p1] of [[a - 0.35, a], [b, b + 0.35]]) {
         box(p0, p1, 0, 0.02, STREET_BACK + 1.2, FRONT, hazard);
         for (let z = STREET_BACK + 1.4; z < FRONT - 0.2; z += 0.6) box(p0, p1, 0.02, 0.03, z, z + 0.25, stripe);
       }
     }
     construction(s);
+    if (s.entry !== 'ramp') dig(s, fy);
+    for (const t of s.stairs ?? []) stairs(t, fy);
+    //a green slime fall now and then, from a broken pipe in the roof down the back wall into a glowing pool
+    if (rng() < 0.6) {
+      const x = x0 + 6 + rng() * Math.max(1, ramp - x0 - 12);
+      const busy = (s.stairs ?? []).some((t) => x > X(t.x0) - 1 && x < X(t.x1) + 1) || lower(x);
+      if (!busy) {
+        const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.5, 10), pipeMat);
+        pipe.position.set(x, roof - 0.2, BACK + 0.4);
+        box(x - 0.13, x + 0.13, fy, roof - 0.4, BACK + 0.3, BACK + 0.5, ooze);
+        const pool = new THREE.Mesh(new THREE.CircleGeometry(0.9, 14), ooze);
+        pool.rotation.x = -Math.PI / 2;
+        pool.scale.y = 0.6;
+        pool.position.set(x, fy + 0.05, BACK + 0.9);
+        const glow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, roof - fy + 1), oozeGlow);
+        glow.position.set(x, (fy + roof) / 2, BACK + 0.06);
+        g.add(pipe, pool, glow);
+      }
+    }
     //kick-outs' grates: a frame in the street with bars across, light falling through
     for (const k of s.kicks ?? []) {
       const [a, b] = [X(k.grate[0]), X(k.grate[1])];
@@ -329,7 +390,7 @@ export function buildSewers(level: Level): THREE.Group {
       box(b - 0.12, b, roof, 0.01, STREET_BACK + 1, FRONT, dark);
       for (let x = a + 0.3; x < b - 0.2; x += 0.32) box(x - 0.04, x + 0.04, -0.06, 0.01, STREET_BACK + 1, FRONT, dark);
       for (const z of [STREET_BACK + 1, -0.5, 1.5, FRONT - 0.1]) box(a, b, -0.08, 0.01, z - 0.05, z + 0.05, dark);
-      box(a + 0.2, b - 0.2, fy, roof, -0.8, 0.8, shaft);
+      light(a + 0.2, b - 0.2, fy, roof, 1.6);
       //(and the grate's light lies on the quarterpipe's floor in diamonds, like a manhole seen from below)
       const pool = new THREE.Mesh(new THREE.PlaneGeometry(b - a + 0.6, 3.2), grateGlow);
       pool.rotation.x = -Math.PI / 2;
@@ -399,6 +460,77 @@ export function buildSewers(level: Level): THREE.Group {
       g.add(sign);
     }
   });
+
+  // a stair set (zack's ledges ref): brick-topped steps up, a concrete landing, steps down with a steel handrail over
+  // them, and a low hubba wall along the back with little lights set in it
+  function stairs(t: { x0: number; up: number; top: number; x1: number; h: number }, fy: number): void {
+    const [a, u, tp, b] = [X(t.x0), X(t.up), X(t.top), X(t.x1)];
+    const h = t.h / TILE;
+    const z0 = BACK + 0.6;
+    const flight = (from: number, to: number, y0: number, y1: number) => {
+      const n = Math.max(3, Math.round(Math.abs(to - from) * 2));
+      for (let k = 0; k < n; k++) {
+        const xa = from + ((to - from) * k) / n;
+        const xb = from + ((to - from) * (k + 1)) / n;
+        const y = y0 + ((y1 - y0) * (y1 > y0 ? k + 1 : k)) / n;
+        box(Math.min(xa, xb), Math.max(xa, xb), fy - 0.3, y, z0, FRONT - 0.4, stone);
+        box(Math.min(xa, xb), Math.max(xa, xb), y - 0.06, y + 0.02, z0, FRONT - 0.4, archBrick);
+      }
+    };
+    flight(a, u, fy, fy + h);
+    box(u, tp, fy - 0.3, fy + h, z0, FRONT - 0.4, stone);
+    box(u, tp, fy + h - 0.06, fy + h + 0.02, z0, FRONT - 0.4, archBrick);
+    flight(b, tp, fy, fy + h);
+    //the hubba wall along the back: up the steps, flat over the landing, down the far steps, its lights in a row
+    const wall = 0.55;
+    wedge(a, fy + wall, u, fy + h + wall, fy - 0.3, BACK, z0, stone);
+    box(u, tp, fy - 0.3, fy + h + wall, BACK, z0, stone);
+    wedge(tp, fy + h + wall, b, fy + wall, fy - 0.3, BACK, z0, stone);
+    for (let x = a + 0.4; x < b - 0.2; x += 0.6) {
+      const y = x < u ? fy + ((x - a) / (u - a)) * h : x < tp ? fy + h : fy + h - ((x - tp) / (b - tp)) * h;
+      const dot = new THREE.Mesh(new THREE.CircleGeometry(0.06, 8), lamp);
+      dot.position.set(x, y + wall * 0.45, z0 + 0.01);
+      g.add(dot);
+    }
+    //the handrail: a steel tube down the far steps on posts
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 8), steel);
+    const [ra, rb] = [tp - 0.5, b + 0.5];
+    const [ya, yb] = [fy + h + SEWER.railH / TILE, fy + SEWER.railH / TILE];
+    rail.scale.y = Math.hypot(rb - ra, yb - ya);
+    rail.position.set((ra + rb) / 2, (ya + yb) / 2, 0);
+    rail.rotation.z = Math.atan2(yb - ya, rb - ra) - Math.PI / 2;
+    g.add(rail);
+    for (const k of [0.15, 0.5, 0.85]) {
+      const x = ra + (rb - ra) * k;
+      const top = ya + (yb - ya) * k;
+      const foot = x < tp ? fy + h : x > b ? fy : fy + h - ((x - tp) / (b - tp)) * h;
+      box(x - 0.035, x + 0.035, foot, top, -0.035, 0.035, steel);
+    }
+  }
+
+  // the dig at a construction spot's way in, seen in the cutaway: timber shoring boards down its walls, cross braces,
+  // a ladder down the back and a fat blue water main running through it (zack's construction refs)
+  function dig(s: Sewer, fy: number): void {
+    const [a, b] = [X(s.drain[0]), X(s.drain[1])];
+    for (const x of [a, b]) for (let z = BACK; z < BACK + 1.2; z += 0.4) box(x - 0.06, x + 0.06, fy, 0, z, z + 0.32, plank);
+    for (let y = fy + 0.8; y < -0.3; y += 1.1) {
+      const brace = box(a, b, y, y + 0.12, BACK + 0.2, BACK + 0.32, plank);
+      brace.rotation.z = (y * 7) % 2 > 1 ? 0.18 : -0.18;
+    }
+    //the ladder, leaning on the back of the hole
+    const lx = b - 0.5;
+    for (const dx of [-0.22, 0.22]) box(lx + dx - 0.04, lx + dx + 0.04, fy, 0.6, BACK + 0.15, BACK + 0.25, yellow);
+    for (let y = fy + 0.3; y < 0.5; y += 0.35) box(lx - 0.22, lx + 0.22, y, y + 0.05, BACK + 0.17, BACK + 0.23, yellow);
+    //the water main, through the back of the dig
+    const main = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, b - a + 1.2, 12).rotateZ(Math.PI / 2), mainMat);
+    main.position.set((a + b) / 2, fy + 1.1, BACK + 0.5);
+    g.add(main);
+    for (const x of [a - 0.1, b + 0.1]) {
+      const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.1, 12).rotateZ(Math.PI / 2), dark);
+      flange.position.set(x, fy + 1.1, BACK + 0.5);
+      g.add(flange);
+    }
+  }
 
   // a construction spot on the street at a sewer's way in: cones, a striped barricade behind the hole, the trench plate
   // dragged aside, a dirt pile and a little excavator at the back of the street

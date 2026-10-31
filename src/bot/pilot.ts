@@ -164,6 +164,8 @@ function sewerPress(sim: FloorSim, railEnd: boolean): boolean {
   const v = Math.max(1, sk.hsp);
   const ahead = (x: number, lo: number, hi: number) => x - sk.x > lo && x - sk.x < hi;
   if (s.kicks?.some((k) => ahead(k.x0, 0, Math.max(10, 3 * v)))) return true;
+  //(up on a stair set's landing: off its edge onto the handrail)
+  if (s.stairs?.some((t) => sk.y < s.y - t.h / 2 && ahead(t.top, 0, Math.max(12, 2 * v)))) return true;
   const half = PHYS.width / 2;
   if (s.gator && ahead(s.gator[0] - half, 0, 3 * v)) return true;
   const p = s.piece;

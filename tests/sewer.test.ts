@@ -328,3 +328,52 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
     expect(roads).toBeGreaterThan(0);
   });
 });
+
+// zack (2026-10-31): "do a second pass with art and design": a stair set in the tunnels, from the ledges ref
+describe('the sewer stair set', { timeout: 30000 }, () => {
+  it('you roll up its steps, over the landing and back down without a slam, or ollie onto its handrail and grind it down', () => {
+    const { level, s } = find((w) => !!w.stairs?.length && !w.gator && w.piece?.kind !== 'rats' && w.piece?.kind !== 'surge');
+    const st = s.stairs![0];
+    //(rolling: up onto the landing, then down to the floor past it)
+    let topY = Infinity;
+    const roll = ride(level, s, st.x0 - 3 * TILE, true, (sim) => {
+      if (sim.skater.x > st.up && sim.skater.x < st.top) topY = Math.min(topY, sim.skater.y);
+      return false;
+    }, 260);
+    expect(roll.events).not.toContain('slam');
+    expect(topY).toBeLessThanOrEqual(s.y - st.h + 1);
+    expect(roll.sim.skater.x).toBeGreaterThan(st.x1);
+    //(an ollie off the landing's edge: onto the handrail)
+    let grind = false;
+    let at = -1;
+    ride(level, s, st.x0 - 3 * TILE, true, (sim, f) => {
+      if (sim.skater.mode === 'rail') grind = true;
+      if (at < 0 && sim.skater.x > st.top - 2.2 * TILE) at = f;
+      return f === at;
+    }, 260);
+    expect(grind).toBe(true);
+  });
+
+  it('most tunnels with room get one, and nothing else sits on it', () => {
+    let roomy = 0;
+    let withStairs = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const level = floorOf(seed * 7919, 3);
+      for (const w of level.sewers ?? []) {
+        //(a short dip, 16-20 tiles, only has room to drop in and come back up)
+        if (w.x1 - w.x0 >= 24 * TILE) {
+          roomy++;
+          if (w.stairs?.length) withStairs++;
+        }
+        for (const st of w.stairs ?? []) {
+          const on = (a: number, b: number) => a < st.x1 && b > st.x0;
+          expect((w.kicks ?? []).some((k) => on(k.x0, k.x1))).toBe(false);
+          if (w.gator) expect(on(w.gator[0], w.gator[1])).toBe(false);
+          const p = w.piece;
+          if (p?.kind === 'bowl' || p?.kind === 'subway') expect(on(p.x0, p.x1)).toBe(false);
+        }
+      }
+    }
+    expect(withStairs).toBeGreaterThanOrEqual(roomy / 2);
+  });
+});

@@ -261,6 +261,17 @@ export interface Sewer {
   piece?: SewerPiece;
   gator?: [number, number]; // the sewer alligator, nose to tail: ollie it for a spin token, roll into it and it bites
   gate?: boolean; // it runs to the gate and comes up into the underground spot: the sewer road
+  stairs?: SewerStairs[];
+}
+
+// a stair set (zack's ledges ref, 2026-10-31): steps up onto a landing, steps down off it with a lit handrail over
+// them to grind. x0..x1: the whole set; up / top: where the steps up end and the landing ends (px); h: its height (px)
+export interface SewerStairs {
+  x0: number;
+  up: number;
+  top: number;
+  x1: number;
+  h: number;
 }
 
 // a kick-out (zack, 2026-10-31): a quarterpipe against the tunnel wall that throws you straight up through a grate
