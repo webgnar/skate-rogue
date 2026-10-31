@@ -30,6 +30,18 @@ the enforcers shut you down. The QFS skaters (Webster, Keanu, Roxy, Goldie) are 
 The world tells this story while you skate, without cutscenes: robotaxis everywhere, AI propaganda billboards
 about social credit, cameras that turn to follow you, and sirens that grow louder when you slow down.
 
+## What the game is
+
+Settled Oct 31, 2026 (zack, after looking at Jetpack Joyride, Alto's Odyssey and OlliOlli World). Gnar Run is a
+**one-touch phone skate runner where style is speed**:
+
+- Clean timing and combos keep you fast and alive. Sloppy skating slows you down, and slow gets you caught.
+- The city is a playground of lines to read: rails, ledges, wires, cars, rooftops.
+- Runs are short, with a quick restart.
+- A light meta (missions, the end-of-run payout, the shop) brings you back.
+
+New ideas are measured against this, and anything that bloats it stays out.
+
 ## Design pillars
 
 1. **The board is the weapon.** No combat. Every verb is a skate verb: ollie, flip, grind, car-hop.
@@ -274,6 +286,12 @@ Input buffering (100 ms) and coyote time (80 ms) are on for everyone; touch late
   flat), sketchy (5.5+ tiles to flat, or a flip landed late in its catch) or a slam (stairs, or a flip barely
   started). Heavy and sketchy landings cost flow speed only. Landing into a bank that falls away soaks up any drop.
   Details: openspec/changes/pf1-physics-feel.
+
+- **Perfect landings** (Oct 31, 2026, from OlliOlli World; not built yet): catch a flip *just* before you touch down
+  (only a few frames between the catch and the landing) and the landing is PERFECT, with a burst of speed and its own
+  callout. Catch it early and it's a clean landing as now; too late is the sketchy landing or slam we have. It needs
+  no new input: it rewards flipping late, so style is speed. Landing on a grind or rail right after a catch is a
+  PERFECT grind that starts at grind speed.
 
 ### Grinding
 
@@ -889,6 +907,14 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 
 ## Open questions
 
+- **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
+  ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
+- **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
+  ollie. For now it stays tap only, until the controls are hashed out.
+- Alto's Odyssey ideas not taken: zen mode and the wingsuit (neither fits a one-button escape). The rest is already
+  in: speed from combos (the gnar state), day, night and weather, goals in threes (missions).
+- OlliOlli World ideas not taken: manuals anywhere and pushing (they need more than one button). Already in:
+  branching routes, challenges (missions) and seeded levels.
 - Jetpack Joyride ideas not taken (Oct 31, 2026): vehicle pickups as an extra life (maybe a rare boon later), a
   pre-run gadget loadout (too much permanent power), and instant restart (partly there already).
 
