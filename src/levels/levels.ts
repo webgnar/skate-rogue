@@ -87,6 +87,7 @@ interface LayerDial {
   max: number;
   step: number;
   unit?: number;
+  free?: boolean; // a pair that isn't a range (two chances): don't keep it in order
 }
 const CLOUD_DIALS: LayerDial[] = [
   { key: 'room', name: 'hill it needs', help: 'tiles of hill down from the crest a stretch needs to climb into the clouds', min: 30, max: 200, step: 5 },
@@ -106,7 +107,7 @@ const CLOUD_DIALS: LayerDial[] = [
 const SEWER_DIALS: LayerDial[] = [
   { key: 'len', name: 'tunnel length', help: 'tiles from the drain to the outlet (the street chase has to fit it: on a short chase it shrinks down to 16)', min: 12, max: 60, step: 1 },
   { key: 'depth', name: 'depth', help: 'tiles under the street (5: an ollie fits under the roof, a double tap bonks)', min: 3, max: 9, step: 0.5, unit: TILE },
-  { key: 'drain', name: 'drain width', help: 'tiles of open drain: an ollie clears it, rolling on drops you in', min: 2, max: 6, step: 1 },
+  { key: 'drain', name: 'drain width', help: 'tiles of hole at the construction dig: an ollie clears it, rolling on takes you in', min: 2, max: 6, step: 1 },
   { key: 'ramp', name: 'outlet ramp', help: 'tiles of ramp up from the floor to the street', min: 4, max: 14, step: 1 },
   { key: 'pipes', name: 'pipes', help: 'the most pipes to grind in a tunnel', min: 0, max: 5, step: 1 },
   { key: 'pipe', name: 'pipe length', help: 'tiles of each pipe', min: 3, max: 20, step: 1 },
@@ -114,6 +115,17 @@ const SEWER_DIALS: LayerDial[] = [
   { key: 'wets', name: 'runoff pools', help: 'the most stretches of runoff on the floor (soaks the deck)', min: 0, max: 5, step: 1 },
   { key: 'wet', name: 'runoff length', help: 'tiles of each stretch of runoff', min: 1, max: 6, step: 1 },
   { key: 'stoken', name: 'Stoken on pipes', help: 'chance of a Stoken on each pipe', min: 0, max: 1, step: 0.05 },
+  { key: 'footRamp', name: 'plank ramp way in', help: 'chance a chase\'s way in is a plank ramp at the foot of the hill (else a construction dig)', min: 0, max: 1, step: 0.05 },
+  { key: 'kicks', name: 'kick-outs', help: 'chance of a first quarterpipe kick-out in a tunnel, and of a second', min: 0, max: 1, step: 0.05, free: true },
+  { key: 'kickPop', name: 'kick-out pop', help: 'how hard a kick-out throws you up (more negative = higher; -9.5 is about 1.5 tiles over the street)', min: -14, max: -6, step: 0.5 },
+  { key: 'pieceFrom', name: 'set pieces from floor', help: 'the first floor with sewer set pieces (rats, flood surge, full pipe, subway)', min: 1, max: 15, step: 1 },
+  { key: 'piece', name: 'set piece chance', help: 'chance a tunnel gets a set piece', min: 0, max: 1, step: 0.05 },
+  { key: 'rats', name: 'rat pack', help: 'rats in a pack', min: 1, max: 12, step: 1 },
+  { key: 'subwayPeriod', name: 'subway trains', help: 'frames between trains under the subway gap (60 = 1 s)', min: 60, max: 360, step: 10 },
+  { key: 'gator', name: 'alligator', help: 'chance of the alligator on a floor', min: 0, max: 1, step: 0.05 },
+  { key: 'gatorFrom', name: 'alligator from floor', help: 'the first floor the alligator can turn up on', min: 1, max: 15, step: 1 },
+  { key: 'stash', name: 'DIY stash', help: 'chance of a stash crate on a floor, in one of its tunnels', min: 0, max: 1, step: 0.05 },
+  { key: 'stashGear', name: 'stash is gear', help: 'chance the stash is a fresh gear part (else a spin token)', min: 0, max: 1, step: 0.05 },
   { key: 'runUp', name: 'clear run-up', help: 'tiles of clear street before the drain', min: 2, max: 16, step: 1 },
   { key: 'runOut', name: 'clear run-out', help: 'tiles of clear street after the outlet', min: 2, max: 16, step: 1 },
 ];
@@ -266,7 +278,7 @@ export function startLevels(): void {
       </section>
       <section class="lv-panel lv-layer" id="lv-sewer">
         <div class="lv-head"><h2>Sewer · floor <span class="lv-fl"></span></h2><span class="lv-tag" id="lv-wtag"></span><button type="button" class="lv-goto" data-goto="sewer">show me</button><button id="lv-wrevert" type="button">use code sewer</button></div>
-        <p class="lv-help">Under each street chase where the street is clear: roll into an open drain, skate the tunnel's pipes, ride the outlet ramp back up. Out of the chopper's sight, so the Heat cools.</p>
+        <p class="lv-help">Under each street chase: drop in at a construction dig or a plank ramp, ride the runoff downstream, skate the pipes, dodge rats, the flood surge and the alligator, and come up the outlet, a kick-out, or the sewer road at the gate. Out of the chopper's sight, so the Heat cools.</p>
         <div class="lv-onoff" data-layer="sewer"></div>
         <div class="lv-dials" id="lv-wdials"></div>
       </section>
@@ -558,7 +570,7 @@ export function startLevels(): void {
         const next: Pair = [cur[0], cur[1]];
         const i = Number(t.dataset.i);
         next[i] = px;
-        if (next[0] > next[1]) next[i === 0 ? 1 : 0] = px;
+        if (!d.free && next[0] > next[1]) next[i === 0 ? 1 : 0] = px;
         e[key] = next;
       } else {
         e[key] = px;
@@ -594,7 +606,7 @@ export function startLevels(): void {
     const view = $('lv-view');
     const a = view.querySelector<SVGTextElement>(`[data-anchor="${k}"]`);
     const ax = a ? Number(a.getAttribute('x')) : (Math.min(...xs) + TILE) * zoom;
-    view.scrollTo({ left: Math.max(0, ax - view.clientWidth * 0.2), behavior: 'smooth' });
+    view.scrollLeft = Math.max(0, ax - view.clientWidth * 0.2);
     const ay = a ? a.getBoundingClientRect().top : view.getBoundingClientRect().top;
     root.scrollBy({ top: ay - window.innerHeight * 0.45, behavior: 'smooth' });
   });

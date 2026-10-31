@@ -323,6 +323,9 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   level.props = placeProps(level);
   if (opts.hills && !opts.short) addSkyStash(level, level.layout.seed);
   addSpinTokens(level, spinSpots);
-  if (opts.hills && !opts.short) addSewerStash(level, level.layout.seed);
+  if (opts.hills && !opts.short) {
+    const sw = floorEdit(editFloor(level.layout.floor)).sewer;
+    if (sw?.on !== false) withDials(SEWER, sw, () => addSewerStash(level, level.layout.seed));
+  }
   return level;
 }
