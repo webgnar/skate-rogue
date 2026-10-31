@@ -1745,3 +1745,5 @@ html, body {
 @keyframes mstamp { 0% { scale: 1; } 35% { scale: 1.14; } 100% { scale: 1; } }
 #app.calm #mission { translate: 0 0; transition: opacity 0.2s; }
 #app.calm #mission.done.in, #app.calm #mission .n.bump { animation: none; }
+#paused .settings.dev .reset b { color: #ff8a8a; }
+#paused .settings.dev .reset.on { background: #b02a3a; }
