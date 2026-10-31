@@ -35,15 +35,43 @@ function chevron(): THREE.BufferGeometry {
   return new THREE.ShapeGeometry(s);
 }
 
+// hidden stand-ins drawing with each twist's kind of material (instanced or not), kept in the group so the loading
+// screen compiles them: a floor with a twist used to compile two or three shaders on its first frame
+function warmTwists(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'warm';
+  g.visible = false;
+  const tiny = new THREE.PlaneGeometry(0.001, 0.001);
+  const inst = (m: THREE.Material) => new THREE.InstancedMesh(tiny, m, 1);
+  g.add(
+    inst(new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })),
+    inst(new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide })),
+    inst(new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })),
+    inst(new THREE.MeshLambertMaterial()),
+    new THREE.Mesh(tiny, new THREE.MeshBasicMaterial()),
+  );
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(0.001, 0.001, 0.001), surface('concrete'));
+  projectSurfaces(slab);
+  inkify(slab);
+  g.add(slab);
+  return g;
+}
+
 export class TwistView {
   readonly group = new THREE.Group();
+  private readonly warm = warmTwists();
   private movers: Mover[] = [];
   private t = 0;
   private ruins: { s: Surface; mesh: THREE.Object3D; y: number; drop: number }[] = [];
   private readonly dummy = new THREE.Object3D();
 
+  constructor() {
+    this.group.add(this.warm);
+  }
+
   set(level: Level): void {
     this.group.clear();
+    this.group.add(this.warm);
     this.movers = [];
     this.ruins = [];
     for (const s of level.surfaces) if (s.crumble && !s.sky) this.addRuin(level, s); // (a thin cloud breaks up its own way: sky-pieces-view.ts)

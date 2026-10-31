@@ -12,7 +12,8 @@
     "balance": "BALANCE=1 vitest run tests/balance.test.ts",
     "playtest": "node scripts/playtest/run.mjs",
     "playtest:quick": "node scripts/playtest/run.mjs --quick",
-    "playtest:sim": "node scripts/playtest/run.mjs --sim-only"
+    "playtest:sim": "node scripts/playtest/run.mjs --sim-only",
+    "perf": "node scripts/playtest/perf.mjs"
   },
   "dependencies": {
     "@fontsource/bangers": "^5.3.0",

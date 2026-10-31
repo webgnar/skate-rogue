@@ -104,6 +104,10 @@ export class Lens {
     }
     renderer.setRenderTarget(this.target);
     draw();
+    //the depth and stencil are spent once the view is drawn: tell the GPU not to write them back out (a phone's
+    //tiled GPU otherwise stores ~7 MB of them a frame on a small iPhone)
+    const gl = renderer.getContext() as WebGL2RenderingContext;
+    gl.invalidateFramebuffer?.(gl.FRAMEBUFFER, [gl.DEPTH_STENCIL_ATTACHMENT]);
     renderer.setRenderTarget(null);
     const tanY = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     this.mat.uniforms.tMap.value = this.target.texture;
