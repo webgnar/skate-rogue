@@ -16,7 +16,7 @@ import { EL_PIECE, FORK_PIECE, HILL_PIECE, PIECES, RUNWAY_PIECE, type Piece } fr
 import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
 import { addSewer } from './sewer';
-import { addSkyBeats } from './sky-beats';
+import { addSkyBeats, addSkyStash } from './sky-beats';
 import { addSpinTokens, type SpinSpots } from './spin-tokens';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
 import { floorEdit } from './level-edits';
@@ -314,6 +314,7 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
   if (bounty && !opts.short) level.bounty = bounty;
   level.grass = placeGrass(level);
   level.props = placeProps(level);
+  if (opts.hills && !opts.short) addSkyStash(level, level.layout.seed);
   addSpinTokens(level, spinSpots);
   return level;
 }

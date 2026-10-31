@@ -9,6 +9,8 @@ import { makeRng, type Rng } from './rng';
 import { CROSS } from '../traffic/cross';
 import { DOOR } from '../traffic/street';
 
+export type Loot = 'cash' | 'stoken' | 'spin' | 'gear';
+
 export interface Prop {
   name: string; // the Blender part in props.glb (art/props.py)
   x: number; // px, the middle of its base
@@ -16,8 +18,9 @@ export interface Prop {
   z: number; // tiles: 0 is the skate lane, negative is further back
   yaw: number;
   breaks: boolean; // a smashable in the lane; scenery doesn't
-  loot?: 'cash' | 'stoken' | 'spin'; // hidden inside: a few coins, a floor's one golden prop's Stoken, or a spin token (src/gen/spin-tokens.ts)
+  loot?: Loot; // hidden inside: a few coins, a floor's one golden prop's Stoken, a spin token (src/gen/spin-tokens.ts), or a fresh gear part (a sky stash, src/gen/sky-beats.ts)
   ai?: boolean; // the AI's stuff: smashing it cools Heat a little
+  stash?: boolean; // a sky stash's tagged crate on a water tower's lid (src/gen/sky-beats.ts)
 }
 
 // the hit box: half-width and height in px

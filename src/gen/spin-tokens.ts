@@ -30,7 +30,7 @@ export function addSpinTokens(level: Level, spots: SpinSpots): void {
   swap(spots.side, SPIN.side);
   swap(spots.top, SPIN.top);
   if (rng() < SPIN.smash) {
-    const plain = level.props.filter((p) => p.breaks && p.loot !== 'stoken');
+    const plain = level.props.filter((p) => p.breaks && p.loot !== 'stoken' && p.loot !== 'gear');
     if (plain.length) plain[Math.floor(rng() * plain.length)].loot = 'spin';
   }
 }

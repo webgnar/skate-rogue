@@ -9,6 +9,7 @@ import type { Sky } from '../sim/sky';
 import { toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
+import { SkyPiecesView } from './sky-pieces-view';
 
 const BIRDS = 5; // pigeons a flock
 // The airliner (art/airliner.py, from the QFS Chicago level's sprite) flies far behind the street, between the
@@ -24,6 +25,8 @@ export class SkyView {
   private readonly flocks: THREE.Group[] = [];
   private readonly feather = new THREE.MeshLambertMaterial({ color: 0x7d8799, side: THREE.DoubleSide });
   private readonly pale = new THREE.MeshLambertMaterial({ color: 0xc9d0dc });
+  private readonly gold = new THREE.MeshLambertMaterial({ color: 0xffc81e, emissive: 0x6a4a00 });
+  private readonly pieces = new SkyPiecesView();
   private readonly body = new THREE.SphereGeometry(0.14, 8, 6);
   private readonly head = new THREE.SphereGeometry(0.09, 8, 6);
   private readonly wing: THREE.BufferGeometry;
@@ -64,24 +67,27 @@ export class SkyView {
     );
     this.plane.add(this.trail);
     this.plane.visible = false;
-    this.group.add(this.plane);
+    this.group.add(this.plane, this.pieces.group);
   }
 
   // build the flocks for a floor
   reset(sky: Sky): void {
     for (const f of this.flocks) this.group.remove(f);
     this.flocks.length = 0;
-    sky.flocks.forEach((_, i) => {
+    this.pieces.reset(sky);
+    sky.flocks.forEach((f, i) => {
       const g = new THREE.Group();
-      g.scale.setScalar(1.3);
-      for (let b = 0; b < BIRDS; b++) {
+      //the golden pigeon: one bird, bigger, all gold
+      const gold = f.site.gold;
+      g.scale.setScalar(gold ? 1.9 : 1.3);
+      for (let b = 0; b < (gold ? 1 : BIRDS); b++) {
         //a pigeon: slate body, pale head, wings folded on its back until it takes off
         const bird = new THREE.Group();
-        const l = new THREE.Mesh(this.wing, this.feather);
-        const r = new THREE.Mesh(this.wing, this.feather);
+        const l = new THREE.Mesh(this.wing, gold ? this.gold : this.feather);
+        const r = new THREE.Mesh(this.wing, gold ? this.gold : this.feather);
         r.scale.z = -1;
         l.position.y = r.position.y = 0.1;
-        const body = new THREE.Mesh(this.body, this.feather);
+        const body = new THREE.Mesh(this.body, gold ? this.gold : this.feather);
         body.scale.set(1.6, 1, 1);
         body.position.y = 0.12;
         const head = new THREE.Mesh(this.head, this.pale);
@@ -89,7 +95,7 @@ export class SkyView {
         bird.add(l, r, body, head);
         //sat in a loose row, each its own phase
         const k = (i * 13 + b * 7) % 11;
-        bird.position.set((b - 2) * 0.42 + (k % 3) * 0.1, 0, 0.3 + (k % 3) * 0.2);
+        bird.position.set(gold ? 0 : (b - 2) * 0.42 + (k % 3) * 0.1, 0, 0.3 + (k % 3) * 0.2);
         bird.userData.phase = k * 0.6;
         g.add(bird);
       }
@@ -101,6 +107,7 @@ export class SkyView {
 
   update(level: Level, sky: Sky, skaterX: number, skaterY: number, up: boolean, dt: number): void {
     this.t += dt;
+    this.pieces.update(level, skaterX);
     sky.flocks.forEach((f, i) => {
       const g = this.flocks[i];
       if (!g) return;
@@ -137,5 +144,10 @@ export class SkyView {
     //ease between the heights as you go up and come down, so it doesn't jump
     this.alt += ((up ? PLANE_UP.top : PLANE_UP.street) - this.alt) * Math.min(1, dt * 1.5);
     if (this.flying) this.plane.position.set(this.planeX, toY(level, skaterY) + this.alt, PLANE_Z);
+  }
+
+  // a sky billboard burst through
+  bust(i: number): void {
+    this.pieces.bust(i);
   }
 }

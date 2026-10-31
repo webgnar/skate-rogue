@@ -13,32 +13,37 @@ import { Shooter, type ShotEvent } from './shots';
 import { Swarm } from './drones';
 import { sewerAt, type Car, type Level, type PickupKind } from '../physics/level';
 import { SEWER } from '../gen/sewer';
-import { PROP_SIZE } from '../gen/props';
+import { PROP_SIZE, type Loot } from '../gen/props';
 import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
 import { spawnPlan, Traffic, type Vehicle } from '../traffic/traffic';
 import { CAR_HEALTH, DAMAGE, parkedKind, stageOf, type CarRef, type DamageKind, type Stage } from '../traffic/damage';
 import { ElTrain } from '../traffic/el';
-import { Sky, SKY } from './sky';
+import { Sky, SKY, skyMult } from './sky';
 import { crossed, freshGear, GEAR, GEAR_PARTS, gearScale, type Gear, type GearPart } from '../run/gear';
 
 export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
 
 export type FloorEvent =
   | SkaterEvent
-  | { type: 'pickup'; kind: PickupKind; index: number }
+  | { type: 'pickup'; kind: PickupKind; index: number; mult?: number } // mult: NO GROUND's coin multiplier (src/sim/sky.ts)
   | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'decoy' } // the Decoy boon pulled the cruiser back
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
+  | { type: 'skyChain'; n: number; mult: number } // NO GROUND: another sky piece on the line, n pieces in
+  | { type: 'skyBank'; n: number } // and down on the ground again, the line banked
+  | { type: 'bust'; index: number; x: number; y: number; mult: number } // burst through a sky billboard (level.busts)
+  | { type: 'goldBird'; x: number; y: number } // cleared the golden pigeon: a spin token
+  | { type: 'repair'; part: GearPart } // a sky stash's fresh gear part, fitted
   | { type: 'sewer'; down: boolean } // dropped into the sewer route, or came back up out of it (src/gen/sewer.ts)
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
   | { type: 'puddle'; x: number; y: number } // rolled into a puddle: it washes out the bearings
   | ShotEvent // the guards shooting at you on a chase (src/sim/shots.ts)
-  | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: 'cash' | 'stoken' | 'spin' }
+  | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: Loot }
   // a car hop dented a car (src/traffic/damage.ts): x is its middle and y its roof, px; stage 3 is wrecked
   | { type: 'dent'; car: CarRef; kind: DamageKind; hits: number; health: number; stage: Stage; x: number; y: number };
 
@@ -91,6 +96,8 @@ export class FloorSim {
   private wasGrinding = false;
   private later: { effect: EffectId; slot: number; t: number }[] = []; // board effects waiting to fire
   combo = 0; // the run's live combo count, set by the game each step (Combo Only reads it)
+  skyLine = 0; // NO GROUND: sky pieces chained since you last touched the ground below (src/sim/sky.ts)
+  private skyPiece: object | null = null; // the last of them
   // the puddle at (x, y), once it's formed enough to splash through (the view's own test: Puddles.at)
   puddleAt(x: number, y: number): object | null {
     const t = this.frames / 60;
@@ -171,15 +178,18 @@ export class FloorSim {
     this.traffic.step(this.skater.x);
     for (const t of this.trains) t.step(this.skater.x);
     this.swarm?.step(this.skater);
+    this.sky.stepPieces(this.skater);
     this.fall = this.skater.mode === 'air' ? this.skater.vsp : 0;
     const crossing = this.traffic.crossing;
     const doors = this.traffic.doorBoxes;
     const trains = this.trains.length ? this.trains.flatMap((t) => t.inLane) : [];
+    const decks = this.sky.pieces.length ? this.sky.boxes : [];
     this.skater.movers =
-      this.swarm || crossing.length || doors.length || trains.length
-        ? [...this.traffic.inLane, ...crossing, ...doors, ...trains, ...(this.swarm?.boxes ?? [])]
+      this.swarm || crossing.length || doors.length || trains.length || decks.length
+        ? [...this.traffic.inLane, ...crossing, ...doors, ...trains, ...decks, ...(this.swarm?.boxes ?? [])]
         : this.traffic.inLane;
     if (this.chaser) this.shooter?.step(this.chaser, this.skater);
+    const px = this.skater.x;
     this.skater.step(input);
     for (const c of this.traffic.cabs) c.pulled = this.skater.skitching === c.box;
     const skaterEvents = this.skater.events.slice();
@@ -216,6 +226,12 @@ export class FloorSim {
       this.heat.add(SKY.strikeHeat);
       this.events.push({ type: 'birds' });
     }
+    if (this.sky.gold) this.events.push({ type: 'goldBird', x: sk.x, y: sk.y });
+    for (const i of this.sky.burst(sk, px)) {
+      const b = this.sky.busts[i];
+      this.events.push({ type: 'bust', index: i, x: b.x, y: sk.y, mult: skyMult(this.skyLine) });
+    }
+    this.noGround();
     this.chaser?.step(this.skater, skaterEvents);
     if (this.heat.decoyFired) this.events.push({ type: 'decoy' });
     if (this.state === 'exit') return;
@@ -226,6 +242,24 @@ export class FloorSim {
       const fork = this.level.fork;
       this.road = fork && this.skater.y <= fork.y + 1 ? 'high' : 'low';
     } else if (this.heat.caught || this.chaser?.caught) this.state = 'caught';
+  }
+
+  // NO GROUND: each new sky piece you land on or catch adds to the line; the air between keeps it going; the
+  // ground below banks it (a bail just loses it)
+  private noGround(): void {
+    const sk = this.skater;
+    if (sk.mode === 'air') return;
+    const piece = sk.mode === 'rail' ? (sk.rail && (sk.rail.top || sk.rail.sky) ? sk.rail : null) : sk.surface && (sk.surface.top || sk.surface.sky) ? sk.surface : null;
+    if (piece && sk.mode !== 'bail' && sk.mode !== 'exit') {
+      if (piece === this.skyPiece) return;
+      this.skyPiece = piece;
+      this.skyLine++;
+      if (this.skyLine >= 2) this.events.push({ type: 'skyChain', n: this.skyLine, mult: skyMult(this.skyLine) });
+      return;
+    }
+    if (this.skyLine >= 2 && sk.mode !== 'bail') this.events.push({ type: 'skyBank', n: this.skyLine });
+    this.skyLine = 0;
+    this.skyPiece = null;
   }
 
   // which road the skater is on right now, once they reach the fork's overpass (null before it, or no fork)
@@ -415,6 +449,13 @@ export class FloorSim {
       //the board takes the hit (zack, 2026-10-31): harder landing on it, slamming or bombing into it
       this.knocks += GEAR.smashDeck * (by === 'roll' || by === 'grind' ? 1 : GEAR.smashHard);
       if (p.ai) this.heat.add(-SMASH.aiCool);
+      //a sky stash's fresh gear part: it replaces your most worn one
+      if (p.loot === 'gear') {
+        const part = GEAR_PARTS.reduce((a, b) => (this.gear[b] < this.gear[a] ? b : a));
+        this.gear[part] = 100;
+        this.skater.gear = gearScale(this.gear);
+        this.events.push({ type: 'repair', part });
+      }
     });
   }
 
@@ -492,7 +533,8 @@ export class FloorSim {
       const dy = p.y - (sk.y - BODY);
       if ((p.x - sk.x) ** 2 + dy * dy > r2) return;
       this.taken[i] = true;
-      this.events.push({ type: 'pickup', kind: p.kind, index: i });
+      const mult = skyMult(this.skyLine);
+      this.events.push({ type: 'pickup', kind: p.kind, index: i, ...(mult > 1 ? { mult } : {}) });
     });
   }
 }

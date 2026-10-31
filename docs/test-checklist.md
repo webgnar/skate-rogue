@@ -684,6 +684,11 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 - [ ] Every floor's street ends with a side street just before the next floor starts. With the cruiser on your tail as you roll into the next floor, it turns up that side street behind you instead of vanishing.
 - [ ] The helicopter follows you smoothly (no stepping), and it doesn't bob up and down with every ollie.
 - [ ] The helicopter over the top route and the high-Heat drone drop in from the sky and stay above the hill, never down inside it. When you come down off the top route the helicopter climbs away.
+- [ ] Sky route (floor 5+, e.g. `?seed=1&floor=5` rig + clotheslines, `floor=6` crane, `floor=7` blimp, `floor=8` billboard bust): chaining sky pieces calls NO GROUND! COINS x1.5 and up, and touching the ground below calls SKY LINE xN.
+- [ ] The window washer's rig drops as soon as you land on it; popping off early makes the roof ahead, waiting drops you short.
+- [ ] The crane's jib swings out of the lane and back; landing as it swings away drops you off it.
+- [ ] Jumping the billboard's gap bursts it (RRIP!) with cash; the sheet is gone after.
+- [ ] A stash crate on a water tower lid pays a spin token or a fresh part (your most worn one fills up). A golden pigeon pays a spin token when you ollie over it.
 - [ ] Traffic, cross street cars, the L trains, the cable car, the chaser, drones and birds all glide as smoothly as the skater (no stepping, best seen on a 120 Hz screen). With `?debug=collision` the player's box and the car boxes stay glued to their sprites.
 
 ## Continues

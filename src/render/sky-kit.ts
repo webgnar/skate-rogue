@@ -20,7 +20,7 @@ const ADS: [string, string, string][] = [
 ];
 let ads: THREE.Texture | null = null;
 // the billboards' faces: the ads side by side on one canvas, each board shows one (zack wrote the last two)
-function adTexture(): THREE.Texture {
+export function adTexture(): THREE.Texture {
   if (ads) return ads;
   const c = document.createElement('canvas');
   c.width = 64 * ADS.length;
@@ -45,11 +45,18 @@ function adTexture(): THREE.Texture {
   return ads;
 }
 
+// show ad k of the canvas on a mesh's face
+export function adUv(mesh: THREE.Mesh, k: number): void {
+  const uv = mesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+  for (let v = 0; v < uv.count; v++) uv.setX(v, (k % ADS.length + uv.getX(v)) / ADS.length);
+}
+
 export function buildSkyBeats(level: Level): THREE.Group {
   const g = new THREE.Group();
   const sky = level.surfaces.filter((s) => s.sky);
-  const cranes = level.rails.filter((r) => r.sky);
-  if (!sky.length && !cranes.length) return g;
+  const cranes = level.rails.filter((r) => r.sky === 'crane');
+  const lines = level.rails.filter((r) => r.sky === 'lines');
+  if (!sky.length && !cranes.length && !lines.length) return g;
   const Y = (py: number) => (level.streetY - py) / TILE;
   const foot = (px: number) => {
     const gy = groundAt(level, px);
@@ -87,9 +94,7 @@ export function buildSkyBeats(level: Level): THREE.Group {
     } else if (s.sky === 'billboard') {
       //the board under its catwalk rail, ad side out, on two posts
       const face = box(w, 2.2, 0.15, cx, y - 1.25, -0.6, board);
-      const uv = face.geometry.getAttribute('uv') as THREE.BufferAttribute;
-      const k = i % ADS.length;
-      for (let v = 0; v < uv.count; v++) uv.setX(v, (k + uv.getX(v)) / ADS.length);
+      adUv(face, i);
       box(w, 0.08, 0.08, cx, y - 0.04, 0, steel); // the rail you grind
       for (let lx = x0 + 0.4; lx < x1; lx += Math.max(1, w - 0.8)) box(0.06, 0.1, 0.6, lx, y - 0.1, -0.3, steel);
       for (const lx of [x0 + w * 0.25, x0 + w * 0.75]) leg(lx, y - 2.35, -0.6, 0.16);
@@ -122,5 +127,28 @@ export function buildSkyBeats(level: Level): THREE.Group {
     box(1.2, 1, 1, mx, my + 0.3, -0.9, yellow); // the cab
     box(2, 0.5, 0.8, mx - 1.4, my - 0.1, -0.6, steel); // the counterweight
   }
+  //Chinatown's clotheslines: a thin line on a bracket at each end, washing pegged along it
+  const cloth = [0xe83a5a, 0xf2eef8, 0x2a6ad8, 0xffb020, 0x5fe8ff].map((c) => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
+  const line = new THREE.MeshBasicMaterial({ color: 0x1a1424 });
+  lines.forEach((r, n) => {
+    for (let k = 1; k < r.xs.length; k++) {
+      const [ax, ay, bx, by] = [X(r.xs[k - 1]), Y(r.ys[k - 1]), X(r.xs[k]), Y(r.ys[k])];
+      const seg = box(Math.hypot(bx - ax, by - ay), 0.05, 0.05, (ax + bx) / 2, (ay + by) / 2 - 0.03, 0, line);
+      seg.rotation.z = Math.atan2(by - ay, bx - ax);
+    }
+    for (const k of [0, r.xs.length - 1]) {
+      const x = X(r.xs[k]);
+      const y = Y(r.ys[k]);
+      box(0.12, 0.6, 0.5, x, y + 0.1, -0.25, steel);
+      leg(x, y - 0.2, -0.5, 0.08);
+    }
+    //washing: shirts and sheets, behind the line so the board's on the line, not in them
+    let i = n * 3;
+    for (let x = X(r.xs[0]) + 0.6; x < X(r.xs[r.xs.length - 1]) - 0.4; x += 0.9) {
+      const top = Y(r.yAt(x * TILE) ?? r.ys[0]);
+      const h = 0.5 + (i % 3) * 0.2;
+      box(0.6, h, 0.03, x, top - h / 2 - 0.05, -0.12, cloth[i++ % cloth.length]);
+    }
+  });
   return g;
 }

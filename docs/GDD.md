@@ -185,6 +185,27 @@ helicopter is on you: clean skating and grinding don't cool your Heat, and it cl
 Pigeons sit on the rooftops and the wire, so ollie them or take a bird strike, which costs speed and a little Heat.
 Airliners cross the sky behind. Code: `src/gen/top-route.ts`, `src/sim/sky.ts`.
 
+**Building out the sky route** (zack, Oct 31, 2026: the sky was the thinnest route, with nothing unique to do or
+find up there). Higher than the power line on each stretch of hill, from floor 4, the sky beats (`src/gen/sky-beats.ts`)
+lay a run of rooftop decks, billboard catwalks, water towers, crane booms and scaffolds to land on. On top of that,
+built the same day (greybox, waiting on zack's reference images in the shared folder's `sky/refs/` for the art pass):
+
+- **NO GROUND.** Chain sky pieces (the wire, rooftops, decks, booms, a blimp's back) without touching the ground below
+  and the coins up there multiply: x1.5 at two pieces, up to x4 (Stoken by the whole part). Air between pieces keeps
+  the line; touching the ground below banks it ("SKY LINE x5!"); a bail loses it. It's the reason to stay up there.
+- **Set pieces, one a floor at most, from floor 5:** an **ad blimp** moored over the hill, its long back a calm
+  cruise; a **window washer's rig** that drops under you once you land, so you pop off it quick onto the roof
+  ahead; a **tower crane** whose jib slews out of the lane and back (land early, or it swings away under you); and a
+  **paper billboard** across the gap between two decks that you burst through for cash.
+- **Finds:** a **stash crate** on a floor's first water tower (a spin token, or a fresh gear part that replaces your
+  most worn one); now and then a **golden pigeon** on a deck (clear it from just above for a spin token; skate into
+  it and it's a bird strike); and on Chinatown's stretch, **clotheslines** strung between the tenements, short
+  sagging wires with the washing on them, to chain.
+
+All of it is physics and tap-only: nothing lifts you up there (zack owns the way up). Code: `src/gen/sky-beats.ts`
+(placement and the SKY dials), `src/sim/sky.ts` (the moving decks, busts, golden pigeon, NO GROUND's multiplier),
+`src/render/sky-pieces-view.ts` and `src/render/sky-kit.ts` (drawing); the level editor lists the new beats.
+
 ### Three routes: sky, surface, sewer
 
 Decided Oct 31, 2026 (zack): the game has **three routes**, stacked vertically through every floor. Sky is built
@@ -198,7 +219,7 @@ for all three:
 
 | Route | Where | How you get on | Danger | Reward | Built |
 | --- | --- | --- | --- | --- | --- |
-| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, Stoken and spin tokens | Yes |
+| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and spin tokens | Yes |
 | **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
 | **Sewer** | A storm tunnel under each street chase | Roll into the open drain instead of ollieing it | A 5-tile drop in (a hard landing), a low roof (a quick double tap bonks your head), runoff that soaks the deck | No traffic, no helicopter, no bullets: the Heat cools fast; pipe grinds and coins | First version |
 
