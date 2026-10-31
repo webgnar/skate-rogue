@@ -61,6 +61,7 @@ import { ChopperView } from '../render/chopper-view';
 import { SkyView } from '../render/sky-view';
 import { SewerView } from '../render/sewer-view';
 import { EscapeFx } from '../render/escape-fx';
+import { shopSpot } from '../render/shop-front';
 import { DroneView } from '../render/drone-view';
 import { CHASER_CALLS, chaserLook, ChaserView } from '../render/chaser-view';
 import { PedView } from '../render/peds';
@@ -274,6 +275,25 @@ export class Game {
     const s =
       all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate)) ?? all[0];
     if (s) Object.assign(this.sim.skater, { x: s.drain[0] - 3 * TILE, y: this.level.streetY, mode: 'roll', surface: null, hsp: 3.5, carry: 0, vsp: 0 });
+  }
+
+  // ?shop: the run starts on act 1's escape, skating up to its gate with the shop picked: GNAR SUPPLY stands
+  // behind the gate and the shop opens there (main.ts sets ?escape=1 for it)
+  startAtShop(): void {
+    this.nextRoad = { kind: 'shop', boonType: 'POP', danger: 1 };
+    Object.assign(this.sim.skater, { x: this.level.exitX - 24 * TILE, y: this.level.streetY, mode: 'roll', surface: null, hsp: 3.5, carry: 0, vsp: 0 });
+    this.view.standShop(this.shopAtGate());
+    this.view.follow(this.skater.x, this.skater.y);
+  }
+
+  // where the shop's front stands on this floor (tiles), if its gate leads to the shop: an escape's gate does when
+  // the road picked before it was the shop's; a floor with the shop at its fork does unless it ends an act (its
+  // gate leads to the escape, and the shop comes after that)
+  private shopAtGate(): number | null {
+    const at = shopSpot(this.level);
+    if (at === null || this.tutorial) return null;
+    if (this.road.kind === 'escape') return this.nextRoad.kind === 'shop' ? at : null;
+    return endsAct(this.floor) ? null : at;
   }
 
   private toClouds(): void {
@@ -697,6 +717,7 @@ export class Game {
     this.shotsCalled = false;
     this.prev = from ? { x: this.prev.x + from.dx, y: this.prev.y + from.dy } : { x: this.skater.x, y: this.skater.y };
     if (!from) this.view.setLevel(this.level, this.seed, this.floor);
+    this.view.standShop(this.shopAtGate());
     const rain = this.applyMood(!!from);
     this.view.puddles.set(puddleSpots(this.level, this.seed, this.floor), rain, chinatownPuddles(this.level, this.seed, this.floor));
     //the sim wears the deck rolling through them, so it needs them in its own units
