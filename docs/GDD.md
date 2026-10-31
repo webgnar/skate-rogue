@@ -680,6 +680,34 @@ come. See docs/overnight-decisions.md.
 Small permanent stat buffs are kept rare and capped (for example Heat starts 10% lower, a free reroll per run), so
 skill and builds stay the point, not grinding the tree. Unlocking is mostly *more variety*, not *more power*.
 
+### Missions (from Jetpack Joyride)
+
+Added Oct 31, 2026 (zack picked it from the Jetpack Joyride ideas). Three missions are always showing, on the pause
+card and the run summary, like "grind 3 rails in one combo", "dodge 5 guard bullets", "land a nollie heelflip off a
+nosegrind", "smash 10 props in one floor" or "car-hop 4 cars without touching the street". Finishing one pops a
+callout mid-run and swaps in the next mission right away. Missions carry over between runs until they're done.
+
+- **Skater Rank:** every 3 missions done raise your rank. Each rank pays Stoken, and some unlock a cosmetic (a board
+  graphic, a colourway, a trail). Ranks give no stat power, in line with "more variety, not more power".
+- **The pool** is written so each mission teaches something the game already has: tricks and stances (fakie,
+  nollie, 180 flips), grinds and manuals, traffic (car-hops, close calls, door slams), the chase (bullets, Heat),
+  the high routes, boons ("finish a floor with 3 GRIND boons") and gear ("clear a floor without busting a part").
+  Early ranks get the easy ones.
+- **A skip:** any mission can be skipped for a little Stoken, so nobody gets stuck on one they hate.
+
+### Spin tokens and the end-of-run payout (from Jetpack Joyride)
+
+Added Oct 31, 2026 (zack). **Spin tokens** turn up rarely: in a smashed prop now and then, at the end of a side line,
+and on the top route. When the run ends, before the summary, each token pulls a three-reel slot machine once. It pays:
+
+- Stoken (most pulls, small amounts),
+- a head start for the next run (cash, a fresh deck, or a free boon pick),
+- a free continue held for the next run,
+- now and then a cosmetic.
+
+Three of a kind pays big. Runs that end badly still pay something, so losing stings less, and smashing props and
+taking the risky lines are worth more. The machine skips with a tap and plays every pull at once when you have many.
+
 ## Scoring and stoke
 
 - **Score** = tricks × combo × speed multiplier + floor clear (`250 × floor`, QFS) + Stoken grabbed.
@@ -860,6 +888,9 @@ gate. No traffic and no Heat. Through the gate, the run starts fresh on floor 1.
 The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays live in excaliburSkate until M2 is better than it.
 
 ## Open questions
+
+- Jetpack Joyride ideas not taken (Oct 31, 2026): vehicle pickups as an extra life (maybe a rare boon later), a
+  pre-run gadget loadout (too much permanent power), and instant restart (partly there already).
 
 1. ~~How much steering?~~ Decided: pure auto-run, one button (see Controls).
 2. ~~Which 3D?~~ Decided: 2.5D side view (see Presentation).
