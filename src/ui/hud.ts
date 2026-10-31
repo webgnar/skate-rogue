@@ -115,6 +115,8 @@ export class HudView {
   private readonly ngBox = new Cell($('ngbox'));
   private readonly ngMult = new Cell($('ngmult'));
   private readonly ngBonus = new Cell($('ngbonus'));
+  private readonly ngLabel = new Cell($('nglabel'));
+  private ngLabelText = 'NO GROUND';
   private readonly ngPips: Meter;
   private ngLast = 0;
   private boardKey = '';
@@ -170,7 +172,11 @@ export class HudView {
 
   // NO GROUND: n sky pieces chained (shown from 2), the coin multiplier, the extra cash it's paid; banked holds
   // the last line up a moment in gold after you touch down
-  setNoGround(n: number, mult: number, bonus: number, banked: boolean): void {
+  setNoGround(n: number, mult: number, bonus: number, banked: boolean, label = 'NO GROUND'): void {
+    if (label !== this.ngLabelText) {
+      this.ngLabelText = label;
+      this.ngLabel.text(label);
+    }
     this.ngBox.data('live', n >= 2 ? '1' : '0');
     this.ngBox.data('banked', banked ? '1' : '0');
     this.ngBox.data('cap', n >= NG_PIPS ? '1' : '0');
@@ -179,7 +185,7 @@ export class HudView {
       return;
     }
     this.ngMult.text(`x${mult}`);
-    this.ngBonus.text(banked ? `BANKED +$${bonus}` : bonus > 0 ? `+$${bonus} BONUS` : 'LAND ON THE NEXT ONE');
+    this.ngBonus.text(banked ? `BANKED +$${bonus}` : bonus > 0 ? `+$${bonus} BONUS` : label === 'NO GROUND' ? 'LAND ON THE NEXT ONE' : 'KEEP IT ROLLING');
     this.ngPips.set(Math.min(NG_PIPS, n));
     //each step up, the multiplier pops
     if (n > this.ngLast && !banked) {

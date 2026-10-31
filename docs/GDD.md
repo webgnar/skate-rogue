@@ -268,17 +268,40 @@ for all three:
 | --- | --- | --- | --- | --- | --- |
 | **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and spin tokens | Yes |
 | **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
-| **Sewer** | A storm tunnel under each street chase | Roll into the open drain instead of ollieing it | A 5-tile drop in (a hard landing), a low roof (a quick double tap bonks your head), runoff that soaks the deck | No traffic, no helicopter, no bullets: the Heat cools fast; pipe grinds and coins | First version |
+| **Sewer** | A storm tunnel under each street chase | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's spin tokens; the sewer road to the underground spot | Yes |
 
-**The sewer route** (built Oct 31, 2026, first version; code: `src/gen/sewer.ts`, drawn by
-`src/render/sewer-kit.ts`). Under each street chase, where the street is clear, a 3-tile open drain with hazard paint
-round it and its manhole cover tipped against the wall. Ollie it and you stay on the street; roll on and you drop
-5 tiles into a brick storm tunnel, drawn as a cutaway under a thin street. Down there: up to two rusty pipes to grind
-(an ollie gets on), stretches of runoff that soak the deck (not the bearings), caged work lamps and light falling in
-through the holes. The street is the roof, so a plain ollie fits and a quick double tap bonks your head. Heat cools
-4 a second on top of the usual, nobody shoots and the helicopter can't see you. A storm outlet ramp brings you back
-up through a 3-tile hole onto clear street ("DOWN THE DRAIN!" and "BACK UP!" call it out). `?bot=sewer` plays it.
-Not in yet: rats, coming up at the gate onto its own road (the underground spot), and a way down on the hills.
+**The sewer route** (first version Oct 31, 2026; built out the same day from zack's "build all of it"; code:
+`src/gen/sewer.ts`, moving pieces `src/sim/sewer.ts`, drawn by `src/render/sewer-kit.ts` and `src/render/sewer-view.ts`).
+Under each street chase where the street is clear runs a brick storm tunnel, drawn as a cutaway under a thin street.
+
+- **Ways in are construction spots** (zack: "the ways down from surface to sewer are construction spots"): a 3-tile dig
+  in the street with hazard paint, cones, a striped barricade, the trench plate dragged aside, a dirt pile and a little
+  excavator. Ollie it and you stay on the street; roll on and you drop 5 tiles in. Half the time the way in is at the
+  **foot of a hill** instead: a plank ramp you roll straight down off the hill, picking up speed (the GDD's "way down on
+  the hills").
+- **DOWNSTREAM** (the sewer's trade: the sky pays more, the sewer is faster): the runoff on the floor runs your way and
+  its current pushes you past street speed (up to 6.8 px/frame; it still soaks the deck). Each new piece you ride down
+  there (a pipe grind, a stretch of runoff, a rat pack or the alligator cleared, the bowl carved, the subway crossed)
+  adds to the line and multiplies the coins, as NO GROUND does up top; the same meter reads DOWNSTREAM. Coming back up
+  banks it (FLOW LINE xN); a trip, a slam or the surge loses it.
+- **Kick-outs** (zack: "a quarterpipe up against a wall that shoots the player straight up through a one way platform to
+  the street again. players will accidentally get shot back up, maybe try to go deeper next time"): a concrete
+  quarterpipe under a grate in the street. Roll into it and it throws you up through the grate onto the street (KICKED
+  OUT!); ollie over it to stay down. Up to two a tunnel.
+- **One set piece a tunnel** (from floor 2): a **rat pack** that runs at you (ollie it, RAT HOP; roll into it and you
+  wobble and lose speed), the **flood surge** (the storm gate behind you bursts and a wall of water chases you down the
+  tunnel a little faster than cruising: the current or a grind outruns it, else WASHED OUT, a slam and a soaked deck),
+  a **full pipe** bowl the floor dips through and carves you out of, or a **subway crossing** (zack: "subway train cars
+  that act as cross traffic"): a gap onto the tracks where trains cross under the tunnel; hop off a train's roof or
+  ollie the gap, drop in with no train and you bail.
+- **Finds:** the **sewer alligator** (now and then; its jaws open as you come up; ollie it for a spin token, roll into it
+  and it bites) and a **DIY stash** crate on the floor (a spin token or a fresh gear part, like the sky's).
+- **The sewer road:** on a floor with a fork, the last street chase's tunnel runs to the gate and comes up at it: take
+  it and you're on the third road, to the underground spot (a SEWER ROAD sign stands over its way in).
+- Pipes to grind (an ollie gets on), caged work lamps, graffiti, light falling through the holes and grates. The
+  street is the roof: a plain ollie fits, a quick double tap bonks your head. Heat cools 4 a second on top of the usual,
+  nobody shoots and the helicopter can't see you. `?bot=sewer` plays it; `?sewer` (or `?sewer=rats`, `surge`, `bowl`,
+  `subway`, `gator`, `kick`, `gate`) starts you at the way into one.
 
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
@@ -1065,7 +1088,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 
 - **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
   to each, and how each is designed for them.
-- **The sewer route**: rats, its own road at the gate, and a way down on the hills (first version under Three routes).
+- **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the

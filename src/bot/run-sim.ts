@@ -48,7 +48,7 @@ export interface FloorPlay {
   pilot: PilotStyle;
 }
 
-export function playFloor(p: FloorPlay): FloorReport & { fork: 'high' | 'low' | null; nextHigh?: Road; nextLow?: Road } {
+export function playFloor(p: FloorPlay): FloorReport & { fork: 'high' | 'low' | 'sewer' | null; nextHigh?: Road; nextLow?: Road } {
   const level = floorLevel({ seed: p.seed, floor: p.floor, road: p.road, library: FULL_LIBRARY, gnar: p.gnar });
   const rep = skate(level, p);
   if (p.pilot === 'ref' && rep.result !== 'exit') {
@@ -61,7 +61,7 @@ export function playFloor(p: FloorPlay): FloorReport & { fork: 'high' | 'low' | 
   return rep;
 }
 
-function skate(level: Level, p: FloorPlay): FloorReport & { fork: 'high' | 'low' | null; nextHigh?: Road; nextLow?: Road } {
+function skate(level: Level, p: FloorPlay): FloorReport & { fork: 'high' | 'low' | 'sewer' | null; nextHigh?: Road; nextLow?: Road } {
   const mods = withGnar(withLoadout(skaterMods(p.boons), STOCK), p.gnar);
   const sim = new FloorSim(level, mods, p.road.kind === 'escape' ? ESCAPE.startHeat : 0, newBoard(DECK_SLOTS[STOCK.deck]), freshGear());
   //the game's score, stepped alongside: the gnar state speeds the skater up and makes slams free of Heat

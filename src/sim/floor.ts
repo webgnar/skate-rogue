@@ -11,8 +11,9 @@ import { TOP } from '../gen/top-route';
 import { Chaser } from './chaser';
 import { Shooter, type ShotEvent } from './shots';
 import { Swarm } from './drones';
-import { sewerAt, type Car, type Level, type PickupKind } from '../physics/level';
+import { sewerAt, type Car, type Level, type PickupKind, type Sewer } from '../physics/level';
 import { SEWER } from '../gen/sewer';
+import { SewerSim, SEWER_SIM, type SewerEvent } from './sewer';
 import { PROP_SIZE, type Loot } from '../gen/props';
 import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
@@ -37,7 +38,10 @@ export type FloorEvent =
   | { type: 'bust'; index: number; x: number; y: number; mult: number } // burst through a sky billboard (level.busts)
   | { type: 'goldBird'; x: number; y: number } // cleared the golden pigeon: a spin token
   | { type: 'repair'; part: GearPart } // a sky stash's fresh gear part, fitted
-  | { type: 'sewer'; down: boolean } // dropped into the sewer route, or came back up out of it (src/gen/sewer.ts)
+  | { type: 'sewer'; down: boolean; kicked?: boolean } // dropped into the sewer route, or came back up out of it (src/gen/sewer.ts); kicked: thrown up by a kick-out
+  | { type: 'flowChain'; n: number; mult: number } // DOWNSTREAM: another sewer piece on the line, n pieces in
+  | { type: 'flowBank'; n: number; mult: number } // and back up on the street, the line banked
+  | SewerEvent // the sewer's moving pieces (src/sim/sewer.ts)
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
@@ -83,10 +87,15 @@ export class FloorSim {
   events: FloorEvent[] = [];
   state: FloorState = 'skate';
   readonly taken: boolean[]; // pickups collected
-  road: 'high' | 'low' | null = null; // which road the skater left the floor on
+  road: 'high' | 'low' | 'sewer' | null = null; // which road the skater left the floor on (sewer: up into the underground spot)
   readonly chopper: Chopper | null; // the helicopter escape's spotlight
   up = false; // on the top route (src/gen/top-route.ts)
   down = false; // in the sewer route (src/gen/sewer.ts)
+  readonly sewer: SewerSim; // its rats, surge, trains and alligator
+  flowLine = 0; // DOWNSTREAM: sewer pieces chained since you dropped in (src/gen/sewer.ts)
+  private flowPiece: object | null = null; // the last of them
+  private upFrom: { s: Sewer; frame: number } | null = null; // the tunnel you last came up out of, and when
+  private kickedOut = false; // thrown up by a kick-out, on the way up through its grate
   readonly sky: Sky; // its pigeons and helicopter
   readonly swarm: Swarm | null; // the drone swarm escape
   readonly chaser: Chaser | null; // act 3's chaser
@@ -156,6 +165,7 @@ export class FloorSim {
     this.broken = level.props.map(() => false);
     const esc = level.escape;
     this.sky = new Sky(level);
+    this.sewer = new SewerSim(level);
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX) : null;
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
     this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX) : null;
@@ -179,14 +189,16 @@ export class FloorSim {
     for (const t of this.trains) t.step(this.skater.x);
     this.swarm?.step(this.skater);
     this.sky.stepPieces(this.skater);
+    this.sewer.stepTrains();
     this.fall = this.skater.mode === 'air' ? this.skater.vsp : 0;
     const crossing = this.traffic.crossing;
     const doors = this.traffic.doorBoxes;
     const trains = this.trains.length ? this.trains.flatMap((t) => t.inLane) : [];
     const decks = this.sky.pieces.length ? this.sky.boxes : [];
+    const subway = this.sewer.boxes;
     this.skater.movers =
-      this.swarm || crossing.length || doors.length || trains.length || decks.length
-        ? [...this.traffic.inLane, ...crossing, ...doors, ...trains, ...decks, ...(this.swarm?.boxes ?? [])]
+      this.swarm || crossing.length || doors.length || trains.length || decks.length || subway.length
+        ? [...this.traffic.inLane, ...crossing, ...doors, ...trains, ...decks, ...subway, ...(this.swarm?.boxes ?? [])]
         : this.traffic.inLane;
     if (this.chaser) this.shooter?.step(this.chaser, this.skater);
     const px = this.skater.x;
@@ -210,7 +222,18 @@ export class FloorSim {
     this.heat.step(this.skater, skaterEvents);
     //down in the sewer nobody sees you: no helicopter, no traffic, and the Heat cools off
     const down = this.inSewer();
-    if (down !== this.down) this.events.push({ type: 'sewer', down });
+    if (this.down && skaterEvents.some((e) => e.type === 'kicker')) this.kickedOut = true;
+    if (down && this.skater.grounded) this.kickedOut = false;
+    this.downstream(skaterEvents, down);
+    if (down !== this.down) {
+      const kicked = !down && this.kickedOut;
+      this.kickedOut = false;
+      this.events.push({ type: 'sewer', down, ...(kicked ? { kicked } : {}) });
+      if (!down) {
+        const s = sewerAt(this.level, this.skater.x);
+        if (s) this.upFrom = { s, frame: this.frames };
+      }
+    }
     this.down = down;
     if (down) this.heat.add(-SEWER.coolPerSec / 60);
     //in the helicopter's light, the Heat climbs
@@ -241,6 +264,8 @@ export class FloorSim {
       //on (or above) the overpass at the gate = the high road
       const fork = this.level.fork;
       this.road = fork && this.skater.y <= fork.y + 1 ? 'high' : 'low';
+      //up out of the tunnel that runs to the gate: the sewer road
+      if (fork?.sewer && (this.down ? sewerAt(this.level, this.skater.x)?.gate : this.upFrom?.s.gate && this.frames - this.upFrom.frame < 120)) this.road = 'sewer';
     } else if (this.heat.caught || this.chaser?.caught) this.state = 'caught';
   }
 
@@ -263,10 +288,52 @@ export class FloorSim {
   }
 
   // which road the skater is on right now, once they reach the fork's overpass (null before it, or no fork)
-  get roadAhead(): 'high' | 'low' | null {
+  get roadAhead(): 'high' | 'low' | 'sewer' | null {
     const fork = this.level.fork;
     if (!fork || this.skater.x < fork.x0) return null;
+    if (fork.sewer && this.down && sewerAt(this.level, this.skater.x)?.gate) return 'sewer';
     return this.skater.y <= fork.y + 1 ? 'high' : 'low';
+  }
+
+  // DOWNSTREAM (zack, 2026-10-31: style is speed): down in the sewer, each new piece you ride (a pipe grind, a
+  // stretch of runoff, a rat pack or the alligator cleared, the bowl carved, the subway crossed) adds to the line, and
+  // the coins down there are worth more; coming back up banks it. A slam, a trip or the surge loses it
+  private downstream(events: readonly SkaterEvent[], down: boolean): void {
+    const sk = this.skater;
+    this.sewer.step(sk, down);
+    this.events.push(...this.sewer.events);
+    const lose = events.some((e) => e.type === 'slam' || e.type === 'bail') || this.sewer.events.some((e) => e.type === 'ratBump' || e.type === 'washed' || e.type === 'bite');
+    for (const e of this.sewer.events) if (e.type === 'washed') this.knocks += GEAR.puddleDeck * SEWER_SIM.surgeSoak;
+    if (lose) {
+      this.flowLine = 0;
+      this.flowPiece = null;
+      return;
+    }
+    if (!down) {
+      if (this.flowLine >= 2 && sk.mode !== 'bail') this.events.push({ type: 'flowBank', n: this.flowLine, mult: skyMult(this.flowLine) });
+      this.flowLine = 0;
+      this.flowPiece = null;
+      return;
+    }
+    let piece: object | null = null;
+    if (sk.mode === 'rail' && sk.rail?.sewer) piece = sk.rail;
+    else if (sk.mode === 'roll') piece = this.runoffAt(sk.x, sk.y);
+    //(and leaving the bowl's far lip into the air)
+    const s = sewerAt(this.level, sk.x);
+    if (!piece && s?.piece?.kind === 'bowl' && sk.mode === 'air' && this.carving(s)) piece = s.piece;
+    for (const e of this.sewer.events) if (e.type === 'rats' || e.type === 'gator' || e.type === 'subway') piece = e;
+    if (!piece || piece === this.flowPiece) return;
+    this.flowPiece = piece;
+    this.flowLine++;
+    if (this.flowLine >= 2) this.events.push({ type: 'flowChain', n: this.flowLine, mult: skyMult(this.flowLine) });
+  }
+
+  // just carved out over the bowl's far lip
+  private carving(s: Sewer): boolean {
+    const p = s.piece;
+    if (p?.kind !== 'bowl') return false;
+    const sk = this.skater;
+    return sk.x >= p.x1 && sk.x < p.x1 + 2 * TILE && sk.y < s.y;
   }
 
   // the board: each trigger event fires its effects; effects on the skater and traffic land here, the rest
@@ -533,7 +600,7 @@ export class FloorSim {
       const dy = p.y - (sk.y - BODY);
       if ((p.x - sk.x) ** 2 + dy * dy > r2) return;
       this.taken[i] = true;
-      const mult = skyMult(this.skyLine);
+      const mult = Math.max(skyMult(this.skyLine), this.down ? skyMult(this.flowLine) : 1);
       this.events.push({ type: 'pickup', kind: p.kind, index: i, ...(mult > 1 ? { mult } : {}) });
     });
   }

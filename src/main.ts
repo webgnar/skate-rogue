@@ -242,7 +242,7 @@ function makeHud(): Hud {
     },
     money: (cash, stoken) => view.money(cash, stoken),
     score: (score, combo, stoke, gnar, pending) => view.setScore(score, combo, stoke, gnar, pending),
-    noGround: (n, mult, bonus, banked) => view.setNoGround(n, mult, bonus, banked),
+    noGround: (n, mult, bonus, banked, label) => view.setNoGround(n, mult, bonus, banked, label),
     callout: (text, kind = 'trick') => callouts.show(text, kind),
     debug: (text) => (debugEl.textContent = text),
     heat: (value) => {
@@ -468,6 +468,8 @@ async function start() {
   built();
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
   if (params.has('clouds')) game.startOnClouds();
+  //?sewer (or ?sewer=rats, surge, bowl, subway, gator, kick, gate) starts at the way into a sewer (src/gen/sewer.ts)
+  if (params.has('sewer')) game.startInSewer(params.get('sewer') ?? '');
   const bot = params.get('bot');
   if (bot !== null) {
     game.setAutopilot(bot === 'mash' || bot === 'high' || bot === 'sewer' || bot === 'sky' ? bot : 'ref');
