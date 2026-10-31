@@ -26,9 +26,17 @@ export function isFloorEdit(e: unknown): e is FloorEdit {
     const ok = Array.isArray(f.sky) && f.sky.every((slot) => Array.isArray(slot) && slot.length > 0 && slot.every((b) => SKY_BEAT_LIST.includes(b as SkyBeat)));
     if (!ok) return false;
   }
+  for (const k of ['clouds', 'sewer']) if (f[k] !== undefined && !isLayerEdit(f[k])) return false;
   for (const k of ['top', 'grade', 'finalSet', 'street', 'climbTop', 'chasePieces', 'topStart', 'flocks', 'skyHeight', 'skyStart']) if (f[k] !== undefined && !isNum(f[k])) return false;
   for (const k of ['run', 'crest', 'gap', 'midSet', 'roofGap']) if (f[k] !== undefined && !isPair(f[k])) return false;
   return true;
+}
+
+// a route layer's edits (clouds, sewer): on/off, a beat mix, and numbers or pairs for its dials
+function isLayerEdit(e: unknown): boolean {
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return false;
+  return Object.entries(e as Record<string, unknown>).every(([k, v]) =>
+    k === 'on' ? typeof v === 'boolean' : k === 'mix' ? Array.isArray(v) && v.every((b) => typeof b === 'string') : isNum(v) || isPair(v));
 }
 
 export function isLevelEdits(e: unknown): e is LevelEdits {

@@ -19,6 +19,16 @@ as text instead of writing the file (see Saving).
   (the purple dashed slope) tows you up the next hill. Power lines over a block are thin dashed wires; the L's kicker
   ramp is orange. The top route is sky blue: its power line down each hill, the rooftops over the streets after it, and
   the pigeons sitting on them; the overpass gate at the end stands at the rooftops' height.
+- **The sky route** in mint (SKY ROUTE): rooftops, billboards, towers, cranes, scaffolds and I-beams, each named.
+  Its moving set pieces are orange and say how they move: the blimp bobs, the window washer's rig drops (dashed, down
+  to where it stops), the tower crane's jib swings round its mast, the I-beam swings on its cable; paper billboards
+  stand across the gap as a dashed bar.
+- **The cloud layer** in white (CLOUD LAYER), way up over a long stretch of hill: the staircase up (`step`, `wisp`),
+  clouds, thin clouds (faded, they puff away), drifting clouds, rainbows (pink arcs) and balloons.
+- **The sewer** in green under the street chases: the open drain and the outlet as yellow-edged holes in the street,
+  the tunnel, its floor and outlet ramp, its pipes and pools of runoff, named `SEWER · 24 tiles · 5 down`.
+- **show sky / clouds / sewer** at the top hide or show each layer. Each layer's panel has a **show me** button that
+  scrolls the view to it.
 - **The bot's line**: the floor validator's reference bot (no boons) skating it. White is rolling, yellow is in the
   air, green is grinding, a red ✕ is a slam. Under the view: how long it took, and whether it reaches the gate at
   cruising speed and at gnar speed. A floor has to pass both to ship. If the first roll fails, the game rerolls it,
@@ -48,6 +58,19 @@ starts, the gaps between rooftops, and the chance of pigeons. Each shows the cod
 edited dial gets a yellow edge and a reset link. The hill's height is shared out between the beats, so a taller
 start makes every block and stairway bigger.
 
+**Sky beats.** Like the recipe, slot by slot, for the sky over each hill (blimp, rig, swing and bust are set pieces,
+one a floor).
+
+**Cloud layer.** As the code builds it (from floor 5, on stretches of hill long enough), on for this floor whatever
+the floor, or off. Light or unlight the beats it picks from (puff, thin, drift, rainbow, balloon, gap), and dial how
+much hill it needs, where the staircase starts, how high it climbs, the step rise and gap, cloud sizes, gaps and the
+chance of Stoken and a spin token.
+
+**Sewer.** As the code builds it, on, or off for this floor; and dial the tunnel's length (a short chase still shrinks
+it), depth, drain width, outlet ramp, pipes (how many, how long, how high), runoff, Stoken on pipes, and the clear
+street before the drain and after the outlet. The result line counts the floor's sky pieces, clouds and tunnels and
+how long the bot spends down in the sewer.
+
 **use code recipe / use code dials** put a floor back to how the code builds it.
 
 ## Saving
@@ -63,5 +86,8 @@ start makes every block and stairway bigger.
 
 `src/gen/level-edits.json` holds only what was changed, per floor (`"3": { "recipe": [...], "top": 30 }`).
 `src/gen/hills.ts` reads a floor's edits over its code recipe (`RECIPES`) and dials (`HILLS`) through `floorRecipe`
-and `hillDials`; `descent.ts` reads the street piece count. A floor with no entry is built exactly as before.
+and `hillDials`; `descent.ts` reads the street piece count. A floor's `clouds` and `sewer` edits
+(`{ "on": false }`, `{ "len": [30, 40], "pipes": 3 }`, `{ "mix": ["puff", "rainbow"] }`) overlay the `CLOUDS` and
+`SEWER` dials by key while that floor is built (`withDials` in level-edits.ts), so a dial added to either object later
+just needs a line in the editor's `CLOUD_DIALS` / `SEWER_DIALS`. A floor with no entry is built exactly as before.
 Endless floors past 15 follow the floor whose recipe they reuse.

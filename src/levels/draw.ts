@@ -32,7 +32,26 @@ const C = {
   wire: '#d8d2e6',
   sky: '#7af0c8', // the sky beats over the power line
   up: '#5fa8ff', // the top route (sky blue: the side line has pink)
+  cloud: '#eef4ff', // the cloud layer
+  rainbow: '#ff9ad5',
+  mover: '#ffb86b', // a sky set piece that moves
+  sewer: '#1f3b30', // the sewer tunnel
+  sewerEdge: '#7fd17a',
+  pipe: '#a6c46a',
+  runoff: '#4ac0a8',
 };
+
+// the route layers the editor can show or hide
+export interface Layers {
+  sky: boolean;
+  clouds: boolean;
+  sewer: boolean;
+}
+export const ALL_LAYERS: Layers = { sky: true, clouds: true, sewer: true };
+
+// which layer a sky piece is in: the cloud layer (src/gen/clouds.ts) or the sky beats under it (src/gen/sky-beats.ts)
+const CLOUD_KINDS = ['step', 'wisp', 'cloud', 'thin', 'rainbow', 'balloon'];
+export const inClouds = (kind: string | undefined) => !!kind && CLOUD_KINDS.includes(kind);
 
 const MONO = 'font-family="JetBrains Mono, ui-monospace, Menlo, monospace"';
 
@@ -85,9 +104,12 @@ export function sectionNotes(level: Level): { x: number; y: number; text: string
   return notes;
 }
 
-export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; spawns?: Spawn[] } = {}): string {
-  const minY = Math.min(L.startY, L.streetY, ...L.surfaces.map((s) => Math.min(s.y, s.y1 ?? s.y)), ...L.pickups.map((p) => p.y)) - 70;
-  const maxY = L.streetY + 100;
+export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; spawns?: Spawn[]; layers?: Layers } = {}): string {
+  const lay = opts.layers ?? ALL_LAYERS;
+  const minY = Math.min(L.startY, L.streetY, ...L.surfaces.map((s) => Math.min(s.y, s.y1 ?? s.y)), ...L.pickups.map((p) => p.y), ...(L.skyMovers ?? []).map((m) => m.y - 40)) - 70;
+  const maxY = Math.max(L.streetY + 100, ...(lay.sewer ? (L.sewers ?? []).map((s) => s.y + 70) : []));
+  const holeAt = (x: number) => (L.sewers ?? []).some((s) => (x >= s.drain[0] && x < s.drain[1]) || (x >= s.outlet[0] && x < s.outlet[1]));
+  const showSky = (kind: string) => (inClouds(kind) ? lay.clouds : lay.sky);
   const W = L.width + 2 * TILE;
   const f = (n: number) => n.toFixed(1);
   const X = (x: number) => (x + TILE) * scale;
@@ -122,7 +144,7 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
     g.push(`<line x1="${f(X(a))}" y1="${f(Y(L.streetY))}" x2="${f(X(b))}" y2="${f(Y(L.streetY))}" stroke="${C.top}" stroke-width="2"/>`);
   }
   for (let c = Math.floor(st / TILE); c < L.street.length; c++) {
-    if (!L.street[c] && !inHill(L, c * TILE)) g.push(`<rect x="${f(X(c * TILE))}" y="${f(Y(L.streetY - 2))}" width="${f(TILE * scale + 0.6)}" height="${f(40 * scale + 8)}" fill="${C.water}"/>`);
+    if (!L.street[c] && !inHill(L, c * TILE) && !holeAt(c * TILE)) g.push(`<rect x="${f(X(c * TILE))}" y="${f(Y(L.streetY - 2))}" width="${f(TILE * scale + 0.6)}" height="${f(40 * scale + 8)}" fill="${C.water}"/>`);
   }
   L.layout.pieces.forEach((p, i) => {
     const x = st + i * 16 * TILE;
@@ -136,16 +158,34 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
   streetSpans(L).forEach(([a, b], i, all) => {
     if (i < all.length - 1) text(X(a + 8), Y(L.streetY + 46) + 26, `CHASE · ${Math.round((b - a) / TILE)} tiles`, C.cash);
   });
+  // the sewer route under the street chases: the tunnel, its runoff, the drain and the outlet (pipes are rails below)
+  if (lay.sewer) {
+    for (const [i, sw] of (L.sewers ?? []).entries()) {
+      g.push(`<rect x="${f(X(sw.x0))}" y="${f(Y(L.streetY) + 40 * scale + 6)}" width="${f((sw.x1 - sw.x0) * scale)}" height="${f(Math.max(4, Y(sw.y) - Y(L.streetY) - 40 * scale - 6))}" fill="${C.sewer}"/>`);
+      for (const [a, b] of [sw.drain, sw.outlet]) g.push(`<rect x="${f(X(a))}" y="${f(Y(L.streetY) - 2)}" width="${f((b - a) * scale)}" height="${f(40 * scale + 10)}" fill="#0c1612" stroke="#f2c230" stroke-width="1.2"/>`);
+      for (const [a, b] of sw.wet) g.push(`<rect x="${f(X(a))}" y="${f(Y(sw.y) - 3)}" width="${f((b - a) * scale)}" height="3" fill="${C.runoff}"/>`);
+      text(X(sw.drain[0]), Y(L.streetY) - 6, 'drain ↓', '#f2c230');
+      text(X(sw.outlet[0]), Y(L.streetY) - 6, 'outlet ↑', '#f2c230');
+      text(X(sw.x0) + 4, Y(sw.y) + 14, `SEWER · ${Math.round((sw.x1 - sw.x0) / TILE)} tiles · ${Math.round((sw.y - L.streetY) / TILE)} down`, C.sewerEdge, i ? '' : 'data-anchor="sewer"');
+    }
+  }
   // the L overhead
   for (const e of L.el ?? []) g.push(`<rect x="${f(X(e.x0))}" y="${f(Y(e.y))}" width="${f((e.x1 - e.x0) * scale)}" height="${f(Math.max(3, (e.under - e.y) * scale))}" fill="${C.el}"/>`);
   // ledges, flat rails, platforms, the overpass
   for (const s of L.surfaces) {
     const fin = !inHill(L, s.x0);
     if (s.el) continue;
-    if (s.sky) {
-      //a sky beat: a deck (or a billboard's rail) over the power line, labelled with what it is
-      g.push(`<rect x="${f(X(s.x0))}" y="${f(Y(s.y))}" width="${f((s.x1 - s.x0) * scale)}" height="${f(Math.max(2, (s.kind === 'rail' ? 4 : 10) * scale))}" fill="${C.sky}"/>`);
-      text(X(s.x0), Y(s.y) - 4, s.sky, C.sky);
+    if (s.sewer) {
+      //the sewer's floor and its outlet ramp up to the street
+      if (!lay.sewer) continue;
+      g.push(`<line x1="${f(X(s.x0))}" y1="${f(Y(s.y))}" x2="${f(X(s.x1))}" y2="${f(Y(s.y1 ?? s.y))}" stroke="${C.sewerEdge}" stroke-width="2"/>`);
+    } else if (s.sky) {
+      //a sky beat (a deck, or a billboard's rail, over the power line) or a cloud, labelled with what it is
+      if (!showSky(s.sky)) continue;
+      const cloud = inClouds(s.sky);
+      const col = cloud ? C.cloud : C.sky;
+      g.push(`<rect x="${f(X(s.x0))}" y="${f(Y(s.y))}" width="${f((s.x1 - s.x0) * scale)}" height="${f(Math.max(2, (s.kind === 'rail' ? 4 : cloud ? 14 : 10) * scale))}" rx="${cloud ? f(Math.max(1, 6 * scale)) : 0}" fill="${col}"${s.sky === 'thin' ? ' opacity="0.55" stroke-dasharray="3 2" stroke="#fff"' : ''}/>`);
+      text(X(s.x0), Y(s.y) - 4, s.sky, col);
     } else if (s.kind === 'bank' && s.kicker) {
       //the L's kicker: a steel ramp up off the street
       const y1 = s.y1 ?? s.y;
@@ -164,7 +204,15 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
     for (let i = 0; i < r.xs.length; i += 2) pts += `${f(X(r.xs[i]))},${f(Y(r.ys[i]))} `;
     pts += `${f(X(r.xs[r.xs.length - 1]))},${f(Y(r.ys[r.ys.length - 1]))}`;
     //a power line strung over the hill is a thin wire; the rest are tubes
-    g.push(r.sky
+    if ((r.sky && !showSky(r.sky)) || (r.sewer && !lay.sewer)) continue;
+    if (r.sky === 'rainbow') {
+      g.push(`<polyline points="${pts}" fill="none" stroke="${C.rainbow}" stroke-width="3"/>`);
+      text(X(r.x0), Y(r.y0) - 6, 'rainbow', C.rainbow);
+      continue;
+    }
+    g.push(r.sewer
+      ? `<polyline points="${pts}" fill="none" stroke="${C.pipe}" stroke-width="3"/>`
+      : r.sky
       ? `<polyline points="${pts}" fill="none" stroke="${C.sky}" stroke-width="2.4"/>`
       : r.top
       ? `<polyline points="${pts}" fill="none" stroke="${C.up}" stroke-width="1.8" stroke-dasharray="6 3"/>`
@@ -172,6 +220,46 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
       ? `<polyline points="${pts}" fill="none" stroke="${C.wire}" stroke-width="1.2" stroke-dasharray="4 2"/>`
       : `<polyline points="${pts}" fill="none" stroke="${C.rail}" stroke-width="2.2"/>`);
   }
+  // the sky's moving set pieces, each with how it moves, and paper billboards to burst through
+  for (const m of L.skyMovers ?? []) {
+    const cloud = m.kind === 'cloud' || m.kind === 'balloon';
+    if (cloud ? !lay.clouds : !lay.sky) continue;
+    const [x0, x1, y] = [X(m.x0), X(m.x1), Y(m.y)];
+    const col = cloud ? C.cloud : C.mover;
+    const deck = (h: number, extra = '') => g.push(`<rect x="${f(x0)}" y="${f(y)}" width="${f(x1 - x0)}" height="${f(Math.max(2, h * scale))}" fill="${col}"${extra}/>`);
+    if (m.kind === 'blimp') {
+      g.push(`<ellipse cx="${f((x0 + x1) / 2)}" cy="${f(y + 30 * scale)}" rx="${f((x1 - x0) / 2)}" ry="${f(Math.max(3, 30 * scale))}" fill="none" stroke="${col}" stroke-width="1.5"/>`);
+      deck(6);
+      text(x0, y - 4, 'blimp ↕ bobs', col);
+    } else if (m.kind === 'rig') {
+      deck(8);
+      if (m.floor !== undefined) g.push(`<line x1="${f((x0 + x1) / 2)}" y1="${f(y)}" x2="${f((x0 + x1) / 2)}" y2="${f(Y(m.floor))}" stroke="${col}" stroke-dasharray="3 3"/><rect x="${f(x0)}" y="${f(Y(m.floor))}" width="${f(x1 - x0)}" height="2" fill="${col}" opacity="0.4"/>`);
+      text(x0, y - 4, 'rig ↓ drops', col);
+    } else if (m.kind === 'swing') {
+      deck(5);
+      if (m.mast !== undefined) g.push(`<line x1="${f(X(m.mast))}" y1="${f(y - 20 * scale)}" x2="${f(X(m.mast))}" y2="${f(Y(L.streetY))}" stroke="${col}" stroke-width="1.5" opacity="0.6"/>`);
+      text(x0, y - 4, 'crane jib ⟲ swings', col);
+    } else if (m.kind === 'beam') {
+      g.push(`<line x1="${f(x0)}" y1="${f(y)}" x2="${f(x1)}" y2="${f(y)}" stroke="#ff5a3d" stroke-width="3"/><line x1="${f((x0 + x1) / 2)}" y1="${f(y)}" x2="${f((x0 + x1) / 2)}" y2="${f(y - 60 * scale)}" stroke="${C.dim}" stroke-dasharray="2 2"/>`);
+      text(x0, y - 4, 'I-beam ↔ swings', '#ff5a3d');
+    } else if (m.kind === 'cloud') {
+      deck(14, ` rx="${f(Math.max(1, 6 * scale))}"`);
+      text(x0, y - 4, '↔ drifting cloud', col);
+    } else {
+      deck(8);
+      g.push(`<circle cx="${f((x0 + x1) / 2)}" cy="${f(y - 50 * scale)}" r="${f(Math.max(3, 34 * scale))}" fill="none" stroke="${C.rainbow}" stroke-width="1.5"/>`);
+      text(x0, y - 4 - 84 * scale, 'balloon ↕', C.rainbow);
+    }
+  }
+  if (lay.sky) for (const b of L.busts ?? []) {
+    g.push(`<rect x="${f(X(b.x) - 2)}" y="${f(Y(b.y0))}" width="4" height="${f((b.y1 - b.y0) * scale)}" fill="#f2eef8" opacity="0.7" stroke-dasharray="2 2" stroke="${C.mover}"/>`);
+    text(X(b.x), Y(b.y0) - 4, 'paper bust', C.mover, 'text-anchor="middle"');
+  }
+  // layer names over the first piece of each
+  const firstSky = L.surfaces.filter((s) => s.sky && !inClouds(s.sky)).sort((a, b) => a.x0 - b.x0)[0];
+  if (firstSky && lay.sky) text(X(firstSky.x0), Y(firstSky.y) - 18, 'SKY ROUTE ↘', C.sky, 'font-weight="700" data-anchor="sky"');
+  const firstCloud = L.surfaces.filter((s) => s.sky && inClouds(s.sky)).sort((a, b) => a.x0 - b.x0)[0];
+  if (firstCloud && lay.clouds) text(X(firstCloud.x0), Y(firstCloud.y) - 18, 'CLOUD LAYER ↗', C.cloud, 'font-weight="700" data-anchor="clouds"');
   for (const c of L.cars) {
     const col = c.model === 'bus' ? C.cash : c.model === 'cruiser' ? '#5b8cff' : '#9a93ad';
     g.push(`<rect x="${f(X(c.x0))}" y="${f(Y(c.roof))}" width="${f((c.x1 - c.x0) * scale)}" height="${f((c.bottom - c.roof) * scale)}" rx="2" fill="${col}"/>`);
@@ -179,6 +267,8 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
   for (const gl of L.glass) g.push(`<rect x="${f(X(gl.x0))}" y="${f(Y(L.streetY - 4))}" width="${f((gl.x1 - gl.x0) * scale)}" height="4" fill="${C.slam}"/>`);
   for (const gr of L.grass ?? []) g.push(`<rect x="${f(X(gr.x0))}" y="${f(Y(L.streetY - 3))}" width="${f((gr.x1 - gr.x0) * scale)}" height="3" fill="#5fbf3f"/>`);
   for (const p of L.pickups) {
+    //coins in a hidden layer hide with it
+    if (!lay.sewer && (L.sewers ?? []).some((sw) => p.x >= sw.x0 && p.x < sw.x1 && p.y > L.streetY + TILE)) continue;
     if (p.kind === 'stoken') {
       const cx = X(p.x), cy = Y(p.y), r = 5;
       g.push(`<polygon points="${f(cx)},${f(cy - r)} ${f(cx + r)},${f(cy)} ${f(cx)},${f(cy + r)} ${f(cx - r)},${f(cy)}" fill="${C.stoken}" stroke="#000"/>`);
@@ -235,7 +325,7 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
 // a small silhouette for the floors 1-15 strip: the hill, its rails and the street, at a shared scale
 export function silhouetteSVG(L: Level, scale: number, maxW: number, top: number): string {
   const g: string[] = [];
-  const h = Math.round((top + 80) * scale) + 6;
+  const h = Math.round((top + 200) * scale) + 6;
   const X = (x: number) => (x * scale).toFixed(1);
   const Y = (y: number) => ((y - (L.streetY - top)) * scale).toFixed(1);
   for (const s of L.surfaces) {
@@ -245,6 +335,8 @@ export function silhouetteSVG(L: Level, scale: number, maxW: number, top: number
     }
   }
   for (const r of L.rails) if (inHill(L, r.x0)) g.push(`<line x1="${X(r.x0)}" y1="${Y(r.y0)}" x2="${X(r.x1)}" y2="${Y(r.y1)}" stroke="${r.top ? C.up : r.wire ? C.wire : C.rail}" stroke-width="${r.wire ? 1 : 1.5}"/>`);
+  for (const s of L.surfaces) if (s.sky) g.push(`<rect x="${X(s.x0)}" y="${Math.max(0, Number(Y(s.y)))}" width="${X(s.x1 - s.x0)}" height="1.5" fill="${inClouds(s.sky) ? C.cloud : C.sky}"/>`);
+  for (const sw of L.sewers ?? []) g.push(`<rect x="${X(sw.x0)}" y="${Y(L.streetY + 20)}" width="${X(sw.x1 - sw.x0)}" height="${((sw.y - L.streetY - 20) * scale).toFixed(1)}" fill="${C.sewerEdge}" opacity="0.7"/>`);
   for (const s of L.surfaces) if (s.top) g.push(`<rect x="${X(s.x0)}" y="${Y(s.y)}" width="${X(s.x1 - s.x0)}" height="1.5" fill="${C.up}"/>`);
   for (const [a, b] of streetSpans(L)) g.push(`<rect x="${X(a)}" y="${Y(L.streetY)}" width="${X(b - a)}" height="4" fill="#4a4262"/>`);
   if (L.fork) g.push(`<rect x="${X(L.fork.x0)}" y="${Y(L.fork.y)}" width="${X(L.fork.x1 - L.fork.x0)}" height="2" fill="${C.cash}"/>`);

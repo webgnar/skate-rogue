@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { buildFloor, type FloorOptions } from '../src/gen/descent';
 import { floorRecipe, hillDials, recipe, RECIPES, stretches } from '../src/gen/hills';
 import { SAVED_EDITS, useLevelEdits, type LevelEdits } from '../src/gen/level-edits';
+import { CLOUDS } from '../src/gen/clouds';
+import { SEWER } from '../src/gen/sewer';
 import { PIECES } from '../src/gen/pieces';
 import { validatedFloor } from '../src/gen/validate';
 import { TILE } from '../src/physics/constants';
@@ -104,5 +106,24 @@ describe('level edits', () => {
     const L = buildFloor(2026, 1, PIECES, opts);
     expect(floorSVG(L, 0.3)).toContain('<svg');
     expect(sectionNotes(L).some((n) => n.text.includes('stairs'))).toBe(true);
+  });
+
+  it('turns the cloud layer and the sewer on and off per floor, and puts their dials back', () => {
+    const before = JSON.stringify([CLOUDS, SEWER]);
+    useLevelEdits(none);
+    const code = buildFloor(2026, 7, PIECES, opts);
+    expect(code.sewers?.length).toBeGreaterThan(0);
+    useLevelEdits({ floors: { '7': { sewer: { on: false }, clouds: { on: false } } } });
+    const off = buildFloor(2026, 7, PIECES, opts);
+    expect(off.sewers).toBeUndefined();
+    expect(off.surfaces.some((s) => s.sky === 'cloud' || s.sky === 'step')).toBe(false);
+    useLevelEdits({ floors: { '3': { clouds: { on: true, room: 40, mix: ['puff'] }, sewer: { pipes: 0, stoken: 0.5 } } } });
+    const on = buildFloor(2026, 3, PIECES, opts);
+    expect(on.surfaces.some((s) => s.sky === 'cloud')).toBe(true);
+    expect(on.rails.some((r) => r.sky === 'rainbow') || on.rails.some((r) => r.sewer)).toBe(false);
+    expect(JSON.stringify([CLOUDS, SEWER])).toBe(before);
+    expect(isLevelEdits({ floors: { '3': { sewer: { len: [30, 40], on: true } } } })).toBe(true);
+    expect(isLevelEdits({ floors: { '3': { sewer: { len: 'long' } } } })).toBe(false);
+    expect(floorSVG(on, 0.3)).toContain('SEWER');
   });
 });
