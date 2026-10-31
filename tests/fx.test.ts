@@ -13,6 +13,7 @@ import { chrome, railHeights, railTint, railUv, RAIL_METAL } from '../src/render
 import type { BoonId } from '../src/boons/defs';
 import { Particles } from '../src/render/particles';
 import { SLIDES } from '../src/physics/tricks';
+import { GrindImpacts, GRIND_IMPACT } from '../src/render/grind-impact';
 import { landDust, landKick } from '../src/render/land-fx';
 import { FEEL } from '../src/physics/feel';
 import { applyParams, clampPixel, FX, PIXEL_MAX } from '../src/render/fx-settings';
@@ -701,5 +702,19 @@ describe('slides shred paint', () => {
     expect(flakes.every((i) => pool.vx[i] < 0)).toBe(true);
     const layer = p.points.geometry.getAttribute('aLayer');
     expect(live.every((i) => layer.getX(i) === 1)).toBe(true);
+  });
+});
+
+describe('grind entry flash', () => {
+  it('plays its ten frames once, then hides', () => {
+    const fx = new GrindImpacts();
+    expect(fx.frame(0)).toBe(0);
+    expect(fx.frame((GRIND_IMPACT.frames - 0.5) / GRIND_IMPACT.fps)).toBe(GRIND_IMPACT.frames - 1);
+    expect(fx.frame(GRIND_IMPACT.frames / GRIND_IMPACT.fps + 0.01)).toBe(-1);
+    fx.spawn(1, 2);
+    const live = () => fx.group.children.filter((c) => (c as THREE.Sprite).isSprite && c.visible).length;
+    expect(live()).toBe(1);
+    fx.update(0.5);
+    expect(live()).toBe(0);
   });
 });
