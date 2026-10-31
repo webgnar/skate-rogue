@@ -238,12 +238,15 @@ A full Slay the Spire map is an option for later.
 
 ### Future direction: the build decides the path
 
-Goal for later (zack, Oct 31, 2026; not designed, nothing built). The run should eventually be a non-linear
+**Unconfirmed early idea** (zack, Oct 31, 2026: "i DONT KNOW for sure yet which is why the idea is half baked"; not
+decided, not designed, nothing built). A goal for later. The run should eventually be a non-linear
 progression: the boon path you take and the type of skater you curate decide the path forward through the run.
 
 zack (Oct 31, 2026): "entire whole levels of sky street sewer, as acts in the run", and "whole sky/street/sewers would
 be designed differently FOR those boons". So a whole act could be a sky, street or sewer level, each built for the
 boons that lead there. This may change the current design, where the three routes are stacked through every floor.
+
+zack: "players like to choose thier path".
 
 Open: which boons lead to which kind of act, and how each kind of act is designed for them.
 
