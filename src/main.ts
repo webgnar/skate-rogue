@@ -450,7 +450,7 @@ async function start() {
   await loading.paint();
   const input = new OneButton(document.getElementById('app')!);
   //test URLs (src/bot/repro.ts): ?escape=2 starts on act 2's escape, ?boons=bigPop,grease holds those, ?danger=3 is rush-hour traffic
-  const escape = Math.min(ACTS, Math.max(0, Math.floor(Number(params.get('escape')) || 0)));
+  const escape = Math.min(ACTS, Math.max(0, Math.floor(Number(params.get('escape')) || (params.has('shop') ? 1 : 0)))); // ?shop: act 1's escape, to the shop
   const startAt = escape ? escape * FLOORS_PER_ACT : Math.max(1, Math.floor(Number(params.get('floor')) || 1));
   const danger = Math.min(3, Math.max(1, Math.floor(Number(params.get('danger')) || 1)));
   //a new phone starts on the tutorial floor (?tutorial shows it again; a test URL skips it)
@@ -477,6 +477,7 @@ async function start() {
   if (params.has('clouds')) game.startOnClouds();
   //?sewer (or ?sewer=rats, surge, bowl, subway, gator, kick, gate) starts at the way into a sewer (src/gen/sewer.ts)
   if (params.has('sewer')) game.startInSewer(params.get('sewer') ?? '');
+  if (params.has('shop')) game.startAtShop();
   const bot = params.get('bot');
   if (bot !== null) {
     game.setAutopilot(bot === 'mash' || bot === 'high' || bot === 'sewer' || bot === 'sky' ? bot : 'ref');

@@ -24,6 +24,7 @@ import { buildForegroundSteps, buildHillSteps } from './hillside';
 import { buildElTrack, elCuts, setColumn } from './el-view';
 import { quarters, type Quarter } from './quarters';
 import { projectSurfaces, surface } from './surfaces';
+import { SHOP_FRONT, shopSpot } from './shop-front';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
@@ -195,13 +196,16 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   const hillCuts = (level.hillSpans ?? []).slice(1).map(([a, b]) => [toX(a), toX(b)]);
   const cuts = [...gaps, ...elCuts(level), ...hillCuts];
   const inGap = (x0: number, x1: number) => cuts.some(([g0, g1]) => x1 > g0 - 0.2 && x0 < g1 + 0.2);
+  //where the shop's front may stand (shop-front.ts): that piece of wall is its own mesh, hidden when it does
+  const shopAt = shopSpot(level);
+  const shopWall = shopAt === null ? null : [Math.floor(shopAt - SHOP_FRONT.wall), Math.ceil(shopAt + SHOP_FRONT.wall)];
   let w0 = first;
   for (const [g0, g1] of [...cuts, [cols, cols]].sort((a, b) => a[0] - b[0])) {
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
     //split where a quarter's own wall takes over (its block tiles)
     if (sliceDone()) yield;
-    const cutsAt = [a0, ...fused.flatMap((q) => [q.x0, q.x1]).filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
+    const cutsAt = [a0, ...[...fused.flatMap((q) => [q.x0, q.x1]), ...(shopWall ?? [])].filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
     for (let k = 0; k + 1 < cutsAt.length; k++) {
       const [b0, b1] = [cutsAt[k], cutsAt[k + 1]];
       if (b1 <= b0) continue;
@@ -209,6 +213,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
       const rows = q ? [0, 1].map((r) => Array.from({ length: b1 - b0 }, (_, i) => q.skin.block.fill[((b0 + i) * (r ? 5 : 7) + r * 3) % q.skin.block.fill.length])) : wallRows.map((row) => row.slice(b0, b1));
       const wall = slab(b1 - b0, 2, 0.5, lambert(q ? tileTexture(rows, q.sheet) : tileTexture(rows)), surface('pavers', q ? q.skin.side : city ? 0x6b5a55 : skin.side), sideMat);
       wall.position.set((b0 + b1) / 2, 1, STREET_BACK - 0.25);
+      if (shopWall && b0 >= shopWall[0] && b1 <= shopWall[1]) wall.userData = { keep: true, shopWall: true };
       kit.add(wall);
     }
     w0 = g1;

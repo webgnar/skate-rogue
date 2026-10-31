@@ -24,6 +24,7 @@ import { Bay } from './bay';
 import { biasCamera, GHOST, ghostMaterial } from './ghost';
 import { RAIN, Rain, skyMesh, skylineMaterial, type Mood } from './atmosphere';
 import { Puddles } from './puddles';
+import { ShopFront } from './shop-front';
 
 // keep everything: a clipping plane this far out cuts nothing
 const NO_CUT = 1e6;
@@ -75,6 +76,8 @@ function clipKit(kit: THREE.Object3D, planes: THREE.Plane[]): void {
 
 // free a kit's geometry, materials and their textures
 function disposeKit(kit: THREE.Object3D): void {
+  //the shop's front is kept from floor to floor (shop-front.ts): off the kit before it goes
+  kit.getObjectByName('shopFront')?.removeFromParent();
   kit.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
     //outlines share their geometry with what they outline (bar the merged one), and the outline material
@@ -138,6 +141,7 @@ export class StreetView {
   night = new NightCity(); // these three are the floor being skated's: the next floor's take over at the join
   gates = new GateFx();
   sirens = new SirenFx();
+  private readonly shopFront = new ShopFront(); // GNAR SUPPLY, behind the gate that leads to the shop
   readonly ambience = new Ambience();
   private wet = 0;
   private backdrop: { mesh: THREE.Mesh; parallax: number; w: number; y: number; off: number }[] = [];
@@ -301,6 +305,12 @@ export class StreetView {
     for (const s of [this.sirens, ...[...this.aheads.values()].map((a) => a.sirens)]) s.setNight(m.neon);
     this.lightningIn = 6 + Math.random() * 6;
     this.flash = 99;
+  }
+
+  // the shop's front behind this floor's gate when it leads to the shop (x tiles, shop-front.ts shopSpot); null
+  // leaves it where it is (behind the floor before, if it was there, until that floor goes)
+  standShop(x: number | null): void {
+    if (x !== null) this.shopFront.place(this.kit, x);
   }
 
   // this floor's street kit (its parked cars show car-hop damage, car-damage.ts); null while it builds
