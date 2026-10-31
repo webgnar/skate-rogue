@@ -77,11 +77,17 @@ export function shardOf(points: THREE.Vector3[], level = LEVELS[0]): THREE.Buffe
 export class ShardAura {
   private readonly glow = glowMaterial(INK.width, 0xffd23f, 0.002);
   private readonly edge = glowMaterial(INK.width, INK.color, 0.004);
+  // every hull's black edge goes down first and every glow over it, ignoring each other's depth, so the edges only
+  // show round the outside of the union: one shard's edge used to win against a farther shard's glow (the board's far
+  // edge drew a stray black line across the glow between the legs, zack 2026-10-31). They still write depth, so the
+  // city drawn after (renderOrder 0) stays in front of or behind them as it should, and the skater covers them.
+  private readonly order = new Map<THREE.Material, number>([[this.edge, -2], [this.glow, -1]]);
   private readonly hulls: THREE.Mesh[][] = LEVELS.map(() => []);
   private step = 0; // where in STEPS the beat has it
 
   // root: the skater rig's mesh; board: the group the board's meshes ride in
   constructor(root: THREE.Object3D, board: THREE.Object3D) {
+    for (const mat of this.order.keys()) mat.depthFunc = THREE.AlwaysDepth;
     root.updateMatrixWorld(true);
     //the body's skinned parts (one merged mesh plus the few kept apart), all on one skeleton
     const parts: THREE.SkinnedMesh[] = [];
@@ -155,7 +161,7 @@ export class ShardAura {
       hull.userData.ink = true; // not a body part: the ink, rims and wear leave it alone
       hull.frustumCulled = false;
       hull.visible = false;
-      hull.renderOrder = -1;
+      hull.renderOrder = this.order.get(mat)!;
       parent.add(hull);
       this.hulls[level].push(hull);
     }
