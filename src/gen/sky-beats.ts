@@ -9,7 +9,7 @@
 // - crane: a crane's boom, a long grind falling with the hill
 // - scaffold: three scaffold decks stepping down
 // - gap: open sky, with a Stoken in it now and then
-// - beam: a steel I-beam hoisted on a crane's cable, a short grind falling a little (zack, 2026-10-31)
+// - beam: a steel I-beam hung on a crane's cable, slowly swinging along the lane, its top a grind (zack, 2026-10-31)
 // Set pieces (zack, 2026-10-31, "build out the sky route"), at most one a floor:
 // - blimp: an ad blimp moored over the hill, its long back bobbing on the air, a calm cruise
 // - rig: a window washer's rig on a tower's face that drops under you once you land: pop off it quick onto the roof
@@ -29,6 +29,7 @@ import { editFloor } from './hills';
 import { floorEdit } from './level-edits';
 import { makeRng, randInt, type Rng } from './rng';
 import { busy, clearAt, groundAt, TOP } from './top-route';
+import { SKY_SWAY } from '../sim/sky';
 import { cloudy, crestOf, lipOf, stairStart } from './clouds';
 
 export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | 'beam' | SkyPiece | 'lines';
@@ -293,34 +294,33 @@ export function addSkyBeats(level: Level, seed: number): void {
         }
         x += w;
       } else if (beat === 'beam') {
-        //a steel I-beam hoisted on a crane's cable, its top flange the grind: falling a little along it, as a boom
-        //does (a flat grind bleeds your speed), nudged clear of the power line if it's crowded
+        //a steel I-beam hung on a crane's cable, slowly swinging along the lane (zack, 2026-10-31: "can we make the i
+        //beams slowly swinging? can we have moveable grindables?"): its top flange the grind, src/sim/sky.ts swings it
         const w = t(range(rng, SKY.beam));
         const y0 = top(base, x, x + w);
-        const pts: [number, number][] = [];
-        for (let px = x; px <= x + w + 1; px += TILE / 2) pts.push([px, y0 + (px - x) / SKY.craneFall]);
-        //(crowded, by the power line or the hill: up or down a little, never over the ceiling nor within 2 tiles of
-        //the ground)
-        //(a rail counts only where it runs right there: a power line's height further along doesn't, as busy()'s would)
+        const sway = SKY_SWAY * TILE;
+        const pts: number[] = [];
+        for (let px = x - sway; px <= x + w + sway + 1; px += TILE / 2) pts.push(px);
+        //(crowded, by the power line or the hill, anywhere it swings: up or down a little, never over the ceiling nor
+        //within 2 tiles of the ground. A rail counts only where it runs right there: a power line's height further
+        //along doesn't, as busy()'s would)
         const bare = { ...level, rails: [] };
         const wire = (px: number, py: number) =>
           [...level.rails, ...rails].some((r) => r.xs.some((rx, k) => Math.abs(rx - px) < TILE && Math.abs(r.ys[k] - py) < TOP.clear));
-        const fits = (dy: number) =>
-          pts[0][1] + dy >= ceiling - 0.5 &&
-          pts.every(([px, py]) => !busy(bare, px, px + TILE / 2, py + dy) && !wire(px, py + dy) && py + dy <= (groundAt(level, px) ?? level.streetY) - 2 * TILE);
-        let dy: number | null = null;
-        for (let k = 0; k <= 12 && dy === null; k++) {
+        const fits = (y: number) =>
+          y >= ceiling - 0.5 && pts.every((px) => !busy(bare, px, px + TILE / 2, y) && !wire(px, y) && y <= (groundAt(level, px) ?? level.streetY) - 2 * TILE);
+        let y: number | null = null;
+        for (let k = 0; k <= 12 && y === null; k++) {
           const d = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (TILE / 2);
-          if (fits(d)) dy = d;
+          if (fits(y0 + d)) y = y0 + d;
         }
         //(and never out on its own past a hole the line left: it'd be a piece you can't reach)
         const ends = [...surfaces.map((q) => q.x1), ...rails.map((q) => q.x1), ...movers.map((q) => q.x1)].filter((e) => e > a && e <= x + 1);
         const alone = ends.length > 0 && x - Math.max(...ends) > 8 * TILE;
-        if (pts.length >= 4 && dy !== null && !alone) {
-          const r = polyRail(pts.map(([px, py]) => [px, py + dy!] as [number, number]));
-          r.sky = 'beam';
-          rails.push(r);
-          coins(x, x + w, (cx) => r.yAt(cx) ?? y0);
+        if (y !== null && !alone) {
+          movers.push({ kind: 'beam', x0: x, x1: x + w, y, phase: Math.floor(rng() * 600) });
+          const yy = y;
+          coins(x, x + w, () => yy);
         }
         x += w;
       } else if (beat === 'lines') {

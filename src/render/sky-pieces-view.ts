@@ -188,6 +188,7 @@ export class SkyPiecesView {
   private readonly navy = new THREE.MeshLambertMaterial({ color: 0x1b2a6a });
   private readonly gold = new THREE.MeshLambertMaterial({ color: 0xffd21a });
   private readonly orange = new THREE.MeshLambertMaterial({ color: 0xe8541e });
+  private readonly girder = new THREE.MeshLambertMaterial({ color: 0xc8402a }); // red oxide primer, as the staircase's
   private readonly glass = new THREE.MeshLambertMaterial({ color: 0x2a3550, emissive: 0x0a1428 });
   private readonly white = new THREE.MeshLambertMaterial({ color: 0xf2eef0 });
   private readonly rope = new THREE.MeshBasicMaterial({ color: 0x1a1424 });
@@ -223,6 +224,18 @@ export class SkyPiecesView {
       const p = new Parts();
       if (s.kind === 'cloud') {
         cloud(p, this.puff, this.puffUnder, w, Math.round(s.x0));
+        p.into(moving);
+      } else if (s.kind === 'beam') {
+        //a red steel I-beam on a crane's cable (zack, 2026-10-31: "Grindable I-beams", "slowly swinging"): its top
+        //flange is the grind; a hook block over its middle, two slings, the cable up out of the top of the frame. It all
+        //swings together (update)
+        p.box(this.girder, w, 0.07, 0.7, w / 2, -0.035, -0.1); // the top flange
+        p.box(this.girder, w, 0.4, 0.08, w / 2, -0.27, -0.1); // the web
+        p.box(this.girder, w, 0.07, 0.7, w / 2, -0.5, -0.1); // the bottom flange
+        for (let k = 0.6; k < w - 0.3; k += 1.2) p.box(this.girder, 0.04, 0.36, 0.3, k, -0.27, 0.1); // stiffeners
+        p.box(this.orange, 0.35, 0.5, 0.35, w / 2, 2.4, -0.45); // the hook block
+        for (const lx of [w * 0.15, w * 0.85]) p.bar(this.steel, [lx, 0, -0.3], [w / 2, 2.2, -0.45], 0.03);
+        p.box(this.steel, 0.05, 30, 0.05, w / 2, 17.6, -0.45); // the cable
         p.into(moving);
       } else if (s.kind === 'balloon') {
         //a hot air balloon: its wicker basket is the deck, the striped envelope over it on its ropes

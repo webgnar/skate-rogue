@@ -10,7 +10,8 @@ import { TILE } from '../src/physics/constants';
 import type { Level } from '../src/physics/level';
 
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
-const piecesOf = (l: Level) => [...(l.skyMovers ?? []).filter((m) => m.kind !== 'cloud' && m.kind !== 'balloon').map((m) => m.kind), ...(l.busts ?? []).map(() => 'bust')];
+// (set pieces: the swinging I-beams are a plain beat, any number a floor)
+const piecesOf = (l: Level) => [...(l.skyMovers ?? []).filter((m) => m.kind !== 'cloud' && m.kind !== 'balloon' && m.kind !== 'beam').map((m) => m.kind), ...(l.busts ?? []).map(() => 'bust')];
 
 // the first floor (by seed) whose sky has this
 function find(test: (l: Level) => boolean): Level {
@@ -117,5 +118,26 @@ describe('the sky route', () => {
     const events = run(sim, 60);
     expect(events.some((e) => e.type === 'repair' && e.part === 'trucks')).toBe(true);
     expect(sim.gear.trucks).toBeGreaterThan(99);
+  });
+
+  it('the I-beams swing slowly along the lane, and carry you with them as you grind', () => {
+    const level = find((l) => (l.skyMovers ?? []).some((m) => m.kind === 'beam'));
+    const sim = new FloorSim(level);
+    const p = sim.sky.pieces.find((q) => q.site.kind === 'beam')!;
+    expect(p.ledge.kind).toBe('rail');
+    const xs: number[] = [];
+    for (let f = 0; f < 300; f++) {
+      sim.sky.stepPieces(sim.skater);
+      xs.push(p.ledge.x0);
+    }
+    //a tile and a quarter either way, there and back in 5 s
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(2 * TILE);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(2.6 * TILE);
+    //riding it: it carries you along with it
+    Object.assign(sim.skater, { surface: p.ledge, mode: 'grind', x: (p.ledge.x0 + p.ledge.x1) / 2, y: p.y });
+    const before = sim.skater.x;
+    const at = p.x;
+    sim.sky.stepPieces(sim.skater);
+    expect(sim.skater.x - before).toBeCloseTo(p.x - at, 5);
   });
 });
