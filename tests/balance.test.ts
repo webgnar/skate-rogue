@@ -37,7 +37,9 @@ describe('balance (bot runs)', () => {
       expect(row.sec).toBeGreaterThan(25);
       expect(row.sec).toBeLessThan(90);
       //(two or three street chases a floor give slams more chances to bunch up: 60 before the longer floors)
-      expect(row.worn).toBeLessThan(50); // the worst part: one floor never wears it past half on its own
+      //(55, 2026-10-31: zack's ollie and kickflip keys in ?editor change where the board rides in the air (tuck.ts),
+      //and the bot's one extra slam on floor 8 over six seeds took it from 48.5 to 51.6)
+      expect(row.worn).toBeLessThan(55); // the worst part: one floor never wears it much past half on its own
       expect(row.heat).toBeLessThan(80);
     }
   }, 120000);
