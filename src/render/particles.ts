@@ -388,6 +388,7 @@ export class Particles {
       this.cycle[i] = SPARKLE;
       this.frame0[i] = Math.floor(Math.random() * 8);
       this.fps[i] = rand(10, 16);
+      this.under(i);
     }
     for (let k = 0; k < n; k++) {
       const a = Math.random() * Math.PI * 2;
@@ -397,6 +398,7 @@ export class Particles {
       p.vy[i] = Math.sin(a) * sp + 0.4;
       p.grav[i] = 4;
       p.drag[i] = 4;
+      this.under(i);
     }
   }
 
