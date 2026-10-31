@@ -19,7 +19,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
 import { surfaceTexture } from './surfaces';
 import { TUNNEL, mouths } from '../traffic/tunnel';
-import { plantTree, treeWarm } from './trees';
+import { plantBush, plantTree, treeWarm } from './trees';
 import { cables, chinatownAtlas, chinatownGlowMap, chinatownRng, tenement } from './chinatown-art';
 
 const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
@@ -422,6 +422,7 @@ function rectUv([x, y, w, h]: Rect, sub: [number, number, number, number] = [0, 
 
 export class Mesher {
   private parts = new Map<Key, { pos: number[]; nor: number[]; uv: number[] }>();
+  bushes: [number, number, number, boolean][] = []; // x, base, z, flowering
 
   // a quad, corners counter-clockwise seen from outside; uvs per corner or a mapping of positions
   quad(key: Key, a: V3, b: V3, c: V3, d: V3, uv: UvFn | [number, number][]): void {
@@ -453,6 +454,8 @@ export class Mesher {
   // build a mesh at a time, yielding when the frame's slice is spent (slice.ts)
   *buildSteps(group: THREE.Group): Generator<void, void> {
     const m = materials();
+    for (const [x, base, z, bloom] of this.bushes) plantBush(group, x, base, z, bloom);
+    if (this.bushes.length) group.add(treeWarm());
     for (const [key, part] of this.parts) {
       if (sliceDone()) yield;
       const geo = new THREE.BufferGeometry();
@@ -598,11 +601,9 @@ function oct(m: Mesher, cx: number, cz: number, r: number, yb: number, yt: numbe
   }
 }
 
-// a shrub or a bougainvillea by a door (photo 2)
+// a bush by a door (zack's pixel-leaf ref): planted when the mesh is built (trees.ts bush), flowering or plain
 function shrub(m: Mesher, x: number, z: number, base: number, bloom: boolean): void {
-  const uv = rectUv(bloom ? SWATCH.bloom : SWATCH.leaf);
-  oct(m, x, z, 0.3, base, base + 0.5, uv, 0.42);
-  oct(m, x, z, 0.42, base + 0.5, base + 0.95, uv, 0.18);
+  m.bushes.push([x, base, z, bloom]);
 }
 
 // ------------------------------------------------------------------------------------------------ the houses

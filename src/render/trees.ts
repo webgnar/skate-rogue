@@ -50,6 +50,9 @@ const CELL = {
   core: [68, 132, 8, 8] as Rect, // the canopy's solid core
   nut: [84, 132, 8, 8] as Rect,
   stem: [100, 132, 8, 8] as Rect, // frond stems where they meet the crown
+  bush: (i: number): Rect => [128 + i * 64, 128, 64, 64], // two sets of pixel leaf chips
+  flower: [72, 152, 24, 24] as Rect,
+  bushCore: [116, 132, 8, 8] as Rect,
 };
 
 const INK = '#1a1424';
@@ -144,6 +147,53 @@ function paintFrond(g: CanvasRenderingContext2D, [x0, y0, w, h]: Rect, stripes: 
   rib(2, ribColour);
 }
 
+// a bush's leaves after zack's ref: hard-edged pixel chips of green over a dark ink-green, cream four-petal flowers
+// with gold middles scattered on top. Integer rects only, so it stays crisp pixel art.
+function paintBush(g: CanvasRenderingContext2D, [x0, y0, w, h]: Rect, seed: number): void {
+  let s = seed * 7919 + 13;
+  const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  const cx = x0 + w / 2;
+  const cy = y0 + h / 2;
+  const R = w / 2 - 4;
+  const inside = (x: number, y: number, r: number) => (x - cx) ** 2 + (y - cy) ** 2 < r * r;
+  //chips in rings from the dark rim inward; the edge chips stick out ragged
+  const greens = ['#1e4a24', '#2f6e2c', '#3f8f34', '#56ad3c', '#7ccc4a'];
+  for (let pass = 0; pass < greens.length; pass++) {
+    const n = pass === 0 ? 130 : 110;
+    for (let k = 0; k < n; k++) {
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(rnd()) * R * (pass === 0 ? 1.02 : 0.96);
+      const x = Math.round(cx + Math.cos(a) * r);
+      const y = Math.round(cy + Math.sin(a) * r);
+      //lighter chips favour the top left, where the light comes from
+      if (pass >= 3 && (x - cx) + (y - cy) > R * (pass === 4 ? -0.1 : 0.5) * (0.6 + rnd())) continue;
+      const [cw, ch] = rnd() < 0.5 ? [4 + Math.floor(rnd() * 3), 2 + Math.floor(rnd() * 2)] : [2 + Math.floor(rnd() * 2), 4 + Math.floor(rnd() * 3)];
+      if (!inside(x, y, R + 2)) continue;
+      g.fillStyle = greens[pass];
+      g.fillRect(x - (cw >> 1), y - (ch >> 1), cw, ch);
+    }
+  }
+}
+
+// one flower, as in the ref: a plus of cream petals round a gold middle, on a 2 px grid, inked a cell round
+function paintFlower(g: CanvasRenderingContext2D, [x0, y0, w, h]: Rect): void {
+  const px = (x: number, y: number, pw: number, ph: number) => g.fillRect(x0 + w / 2 + x * 2, y0 + h / 2 + y * 2, pw * 2, ph * 2);
+  g.fillStyle = INK;
+  px(-5, -2, 10, 4);
+  px(-2, -5, 4, 10);
+  px(-4, -4, 8, 8);
+  g.fillStyle = '#f6e8bc';
+  px(-4, -1, 8, 2);
+  px(-1, -4, 2, 8);
+  px(-3, -3, 6, 6);
+  g.fillStyle = '#fff8e0';
+  px(-4, -1, 1, 1);
+  px(-1, -4, 1, 1);
+  px(-3, -3, 1, 1);
+  g.fillStyle = '#d8a83a';
+  px(-1, -1, 2, 2);
+}
+
 let atlas: THREE.Texture | null = null;
 
 function treeAtlas(): THREE.Texture {
@@ -186,6 +236,10 @@ function treeAtlas(): THREE.Texture {
   swatch(CELL.core, '#4e8e3e');
   swatch(CELL.nut, '#6a4a28');
   swatch(CELL.stem, '#8a7a3a');
+  swatch(CELL.bushCore, '#2a5e2a');
+  paintBush(g, CELL.bush(0), 3);
+  paintBush(g, CELL.bush(1), 5);
+  paintFlower(g, CELL.flower);
   atlas = pixelTexture(c);
   return atlas;
 }
@@ -451,9 +505,52 @@ export function leafy(rng: () => number, size: LeafySize): { solid: THREE.Buffer
   return { solid: solid.geometry(), cut: cut.geometry() };
 }
 
+// a bush, its foot at the origin: a squat solid core under leaf cards all round it (the ref's ball of leaves)
+export function bush(rng: () => number, flowers: boolean): { solid: THREE.BufferGeometry; cut: THREE.BufferGeometry } {
+  const solid = new Geo();
+  const cut = new Geo();
+  const R = 0.42 + rng() * 0.12;
+  const ry = R * (0.8 + rng() * 0.15);
+  const mid = v3(0, ry * 0.9, 0);
+  const r = v3(R, ry, R * 0.9);
+  lump(solid, mid, r.clone().multiplyScalar(0.62), CELL.bushCore, rng, 1);
+  const cards = 12;
+  for (let i = 0; i < cards; i++) {
+    const y = 1 - ((i + 0.5) / cards) * 1.5;
+    const ring = Math.sqrt(Math.max(0, 1 - y * y));
+    const a = i * 2.39996 + rng() * 0.5;
+    const dir = v3(Math.cos(a) * ring, y, Math.sin(a) * ring);
+    const p = v3(dir.x * r.x * 0.68, mid.y + dir.y * r.y * 0.68, dir.z * r.z * 0.68);
+    card(cut, p, dir.clone().add(v3((rng() - 0.5) * 0.6, 0, (rng() - 0.5) * 0.6)), R * 1.15, rng() * Math.PI * 2, CELL.bush(i % 2), mid, r, rng() < 0.5);
+  }
+  //flowers on top of the leaves, over the front and top where they show
+  if (flowers) {
+    const n = 4 + Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI * (0.1 + 0.8 * (i + rng() * 0.6) / n);
+      const y = 0.9 - rng() * 1.2;
+      const ring = Math.sqrt(Math.max(0, 1 - y * y));
+      const dir = v3(Math.cos(a) * ring, y, Math.sin(a) * ring);
+      const p = v3(dir.x * r.x * 0.98, mid.y + dir.y * r.y * 0.98, dir.z * r.z * 0.98);
+      card(cut, p, dir, R * 0.42, rng() * 0.6, CELL.flower, mid, r, false);
+    }
+  }
+  return { solid: solid.geometry(), cut: cut.geometry() };
+}
+
+// a bush stood at (x, base, z), tiles, shaped by where it stands
+export function plantBush(group: THREE.Group, x: number, base: number, z: number, flowers: boolean): void {
+  let s = Math.abs(Math.floor(x * 97 + z * 31 + base * 13)) % 2147483646 + 1;
+  const rng = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  add(group, bush(rng, flowers), x, base, z);
+}
+
 // a tree stood at (x, base, z), tiles: two meshes into `group`, for the kit's batch to merge
 export function plantTree(group: THREE.Group, rng: () => number, kind: TreeKind, size: PalmSize | LeafySize, x: number, base: number, z: number): void {
-  const geo = kind === 'palm' ? palm(rng, size as PalmSize) : leafy(rng, size as LeafySize);
+  add(group, kind === 'palm' ? palm(rng, size as PalmSize) : leafy(rng, size as LeafySize), x, base, z);
+}
+
+function add(group: THREE.Group, geo: { solid: THREE.BufferGeometry; cut: THREE.BufferGeometry }, x: number, base: number, z: number): void {
   const m = materials();
   for (const [g, mat, name] of [[geo.solid, m.solid, 'tree-solid'], [geo.cut, m.cut, 'tree-leaves']] as const) {
     const mesh = new THREE.Mesh(g, mat);
