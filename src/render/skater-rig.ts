@@ -61,7 +61,7 @@ const COLORS = {
 };
 
 const GRINDS = new Set(Object.keys(GRIND_NAMES).filter((n) => !isSwitch(n)));
-const ON_GROUND = new Set(['push', 'ride', 'towed', ...GRINDS]); // clips that make no sense in the air
+const ON_GROUND = new Set(['push', 'ride', 'towed', 'skitch', ...GRINDS]); // clips that make no sense in the air
 const DOWN = new THREE.Vector3(0, -1, 0);
 const ONE = new THREE.Vector3(1, 1, 1);
 const FWD = new THREE.Vector3(0, 0, 1); // a foot's long axis, heel to toes
@@ -892,14 +892,17 @@ export class SkaterRig {
       //riding a stair set down in a manual: the clip runs while the tail clacks each step
       const want = 'firecracker' in CLIPS ? 'firecracker' : 'manual';
       if (this.clipName !== want) this.play(want, 0.08);
-    } else if (sk.mode === 'roll' && ((sk.surface?.tow ?? 0) > 0 || sk.skitching)) {
-      //towed up a hill by the cable car, or skitching a cab, hanging on to it
+    } else if (sk.mode === 'roll' && sk.skitching) {
+      //skitching a cab: squatted behind it, a hand on the bumper
+      if (this.clipName !== 'skitch') this.play('skitch', 0.15);
+    } else if (sk.mode === 'roll' && (sk.surface?.tow ?? 0) > 0) {
+      //towed up a hill by the cable car, hanging on to it
       if (this.clipName !== 'towed') this.play('towed', 0.2);
     } else if (sk.manualing) {
       //a manual pad: on the back wheels or the front ones, taking turns (the sim's pick)
       if (this.clipName !== 'manual' && this.clipName !== 'noseManual') this.play(sk.stance || 'manual', 0.1);
     } else if (sk.mode === 'roll') {
-      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || this.clipName === 'firecracker' || this.clipName === 'towed' || GRINDS.has(this.clipName)) {
+      if (done || this.clipName === 'air' || this.clipName === 'freefall' || this.clipName === 'manual' || this.clipName === 'noseManual' || this.clipName === 'firecracker' || this.clipName === 'towed' || this.clipName === 'skitch' || GRINDS.has(this.clipName)) {
         this.play(this.wantsPush(sk) ? 'push' : 'ride');
       } else if (this.clipName === 'push') {
         // finish the stroke, with the back foot back near the board, before rolling
@@ -933,7 +936,7 @@ export class SkaterRig {
     const k = this.fade > 0 ? 1 - (this.fade = Math.max(0, this.fade - dt)) / this.fadeLen : 1;
     // a clip edited since the GLB was baked plays from its keys
     // hanging on to the cable car: the hand pinned to its pole, so the clip plays from its keys with the arm solved
-    const grabbing = this.clipName === 'towed' && this.grab !== null;
+    const grabbing = (this.clipName === 'towed' || this.clipName === 'skitch') && this.grab !== null;
     if (grabbing) pose = this.grabPose(pose);
     const baked = EDITED.has(this.shown) || grabbing ? undefined : this.baked.get(this.shown);
     if (this.bound.length) {

@@ -84,6 +84,7 @@ COLORS = {
     'sign': 0xFFB020,  # destination sign, glows
     'frame': 0xB8BCC4,  # truck box rails and corner posts
     'inside': 0x15151C,
+    'taxiSign': 0xFFF4C8,  # the cab's roof light, glows
 }
 # a CTA bus and a box truck, at their hitbox sizes (src/traffic/traffic.ts): the roofs are exactly at the hitbox roof
 BUS = {'len': 6.0, 'wide': 1.9, 'roof': 2.25, 'wheel_r': 0.32, 'axles': (1.7, -1.3), 'clear': 0.25}
@@ -281,6 +282,26 @@ def car(name, mats, kind):
         for y in (-1, 1):
             box(bm, -0.95, 0.5, y * (W / 2), y * (W / 2 + 0.008), 0.34, 0.37)
         parts.append(link('accent', bm, mats['accent']))
+
+    if kind == 'taxi':  # Chinatown's cab (zack, 2026-10-30): a checker band down each side and a lit roof sign
+        bm = bmesh.new()
+        sq = 0.075
+        for y in (-1, 1):
+            yy = y * (W / 2)
+            for i in range(int(1.9 / sq)):
+                x = -0.95 + i * sq
+                for row in (0, 1):
+                    if (i + row) % 2:
+                        z = 0.5 + row * sq
+                        yo = yy + y * 0.006  # one quad each, just proud of the door, facing out
+                        vs = [bm.verts.new(v) for v in ((x, yo, z), (x + sq, yo, z), (x + sq, yo, z + sq), (x, yo, z + sq))]
+                        bm.faces.new(vs if y < 0 else vs[::-1])
+        # the sign's black base on the roof
+        box(bm, -0.36, -0.02, -0.26, 0.26, 1.24, 1.28)
+        parts.append(link('checker', bm, mats['black']))
+        bm = bmesh.new()  # the lit sign, kept low so a car hop lands on the roof, not on it
+        prism(bm, [(-0.33, 1.28), (-0.3, 1.42), (-0.08, 1.42), (-0.05, 1.28)], -0.22, 0.22)
+        parts.append(link('taxiSign', bm, mats['taxiSign']))
 
     bpy.ops.object.select_all(action='DESELECT')
     for ob in parts:
@@ -534,7 +555,7 @@ def bus_stop(mats):
 def build():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     mats = {k: material(k, v) for k, v in COLORS.items()}
-    cars = [car('Sedan', mats, 'sedan'), car('Robotaxi', mats, 'robotaxi'), car('Cruiser', mats, 'cruiser'),
+    cars = [car('Sedan', mats, 'sedan'), car('Robotaxi', mats, 'robotaxi'), car('Cruiser', mats, 'cruiser'), car('Taxi', mats, 'taxi'),
             bus(mats), box_truck(mats), car_door(mats), bus_stop(mats)]
     # car-hop damage (art/car_damage.py): each hoppable vehicle's dented, busted and wrecked copies
     dmg = car_damage.extra_materials(material)
