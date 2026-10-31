@@ -44,6 +44,7 @@ import { Sound } from './audio/sound';
 import { SETTINGS, buzz, loadSettings } from './ui/settings';
 import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
+import { bindMissions } from './ui/missions-panel';
 
 const base = import.meta.env.BASE_URL;
 
@@ -186,6 +187,8 @@ function gearTone(c: number): string {
 
 // set up by makeHud: the drag preview, drawn on the shop it holds
 let shopPreview: (card: HTMLElement, to: HTMLElement | null) => void = () => {};
+// set once the game is up: a mission's SKIP
+let skipMission: (i: number) => void = () => {};
 
 function makeHud(): Hud {
   const callouts = makeCallouts(document.getElementById('callout')!, () => FX.reduceMotion);
@@ -201,6 +204,7 @@ function makeHud(): Hud {
   const pausedEl = document.getElementById('paused')!;
   const hintEl = document.getElementById('hint')!;
   const view = new HudView();
+  const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
   let level = 0;
   let held: Held[] = [];
   //screen juice (src/style.css): the card you picked pops while the others fall away; the shop deals its stock in
@@ -347,6 +351,7 @@ function makeHud(): Hud {
       contEl.querySelector('b')!.textContent = v.caught ? 'BUSTED' : 'DEAD';
       contEl.querySelector('.left')!.textContent = `${v.left} CONTINUE${v.left === 1 ? '' : 'S'} LEFT`;
     },
+    missions: (v) => drawMissions(v),
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
     over: (result) => {
       overEl.hidden = !result;
@@ -454,6 +459,7 @@ async function start() {
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
+  skipMission = (i) => game.skipMission(i);
   built();
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
   const bot = params.get('bot');

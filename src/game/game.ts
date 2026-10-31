@@ -14,6 +14,7 @@ import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { RunScore, SCORE } from '../run/score';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
+import { boonsOfType, Missions, statsOf, type MissionsView, type Stat } from '../run/missions';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
@@ -184,6 +185,7 @@ export interface Hud {
   gearTick(part: GearPart): void; // a part just took a hit of wear (a puddle, broken glass)
   cont(view: ContinueView | null): void; // the continue card after a bail or a bust; null hides it
   continues(left: number): void; // continues left this run
+  missions(view: MissionsView): void; // the three missions and Skater Rank (pause card and run summary)
 }
 
 type State = 'skate' | 'caught' | 'cont' | 'pick' | 'shop' | 'under' | 'over';
@@ -328,6 +330,10 @@ export class Game {
   private shopVisits = 0;
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
   private grip: GripId = loadSave().tape ?? GRIP.start; // the grip tape's colour, kept between runs (src/board/grips.ts)
+  // the three missions and Skater Rank (src/run/missions.ts), kept between runs
+  private readonly missions = new Missions(loadSave().missions);
+  private floorSlams = 0; // slams this floor, for "clear a floor without slamming"
+  private floorBusted = false; // a part busted this floor
   // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
   // next one is already there, built in the background while you skated this one
   private readonly prefetch = new FloorPrefetch();
@@ -390,6 +396,7 @@ export class Game {
     this.ghostMesh.visible = false;
     this.view.scene.add(this.ghostMesh);
     this.view.scene.add(this.smashFx.group, this.smashFx.warm);
+    this.hud.missions(this.missions.view(loadSave().stoken));
     this.playtest = { seed, floor: 0, label: '', district: this.biome, state: '', sim: '', x: 0, y: 0, mode: '', speed: 0, clip: '', boons: [], findings: [], floors: [], runs: [] };
     this.startFloor();
   }
@@ -496,6 +503,7 @@ export class Game {
     this.run = new RunScore();
     this.carry = 0;
     this.continuesLeft = CONTINUES;
+    this.missions.reset('run');
     this.road = this.firstRoad();
     this.level = this.makeLevel();
     this.hud.over(null);
@@ -622,6 +630,10 @@ export class Game {
     this.bountyView.set(this.level);
     this.twistView.set(this.level);
     this.floorStoken = this.run.stoken;
+    this.missions.reset('floor');
+    this.floorSlams = 0;
+    this.floorBusted = false;
+    this.mission('floor', this.floor);
     this.bountySeen = false;
     this.lesson = 0;
     this.shotsCalled = false;
@@ -661,6 +673,9 @@ export class Game {
     this.gear = { ...this.sim.gear };
     this.sound?.play(MOMENT.gate);
     if (this.tutorial) return this.endTutorial();
+    if (!this.floorSlams) this.mission('cleanFloor');
+    if (!this.floorBusted) this.mission('unbusted');
+    if (this.sim.road === 'high') this.mission('topRoute');
     if (this.road.kind === 'escape') return this.clearAct(now, this.road.act);
     const pts = this.run.clearFloor(this.floor);
     //a wanted poster's bounty: the floor's Stoken again, for reaching the gate hot
@@ -697,7 +712,11 @@ export class Game {
     const stoken = ESCAPE.actStoken(act) * this.run.stokenScale;
     this.run.stoken += stoken;
     this.run.score += this.run.clearFloor(this.floor) * 2;
-    if (act >= ACTS) return this.endRun(now, false, true);
+    this.mission('act', act);
+    if (act >= ACTS) {
+      this.mission('escape');
+      return this.endRun(now, false, true);
+    }
     this.advance();
     this.hud.callout(`ACT ${act} CLEAR +$${cash} +◆${whole(stoken)}`, 'good');
   }
@@ -1004,6 +1023,8 @@ export class Game {
     if (!boon) return;
     this.swapping = false;
     this.boons = addBoon(this.boons, boon.id);
+    this.mission('grindBoons', boonsOfType(this.boons, 'GRIND'));
+    this.mission('popBoons', boonsOfType(this.boons, 'POP'));
     this.hud.pick(null);
     this.advance();
     this.hud.callout(boon.name.toUpperCase(), 'good');
@@ -1025,8 +1046,10 @@ export class Game {
       wins: save.wins + (won ? 1 : 0),
       gnar: won ? Math.max(save.gnar, this.gnar) : save.gnar,
       daily: daily ? { day: today, best: daily.best } : save.daily,
+      missions: this.missionsKept(save),
     };
     writeSave(next);
+    this.hud.missions(this.missions.view(next.stoken));
     this.hud.over({
       floor: this.floor,
       act: actOf(this.floor),
@@ -1057,6 +1080,7 @@ export class Game {
     const at = this.floorStart;
     if (!at || this.continuesLeft <= 0) return;
     this.continuesLeft--;
+    this.missions.reset('floor');
     this.run = Object.assign(new RunScore(), at.run);
     this.gear = { ...at.gear };
     this.carry = at.carry;
@@ -1082,6 +1106,11 @@ export class Game {
     if (on === this.paused) return;
     this.paused = on;
     this.input.clear();
+    if (on) {
+      const save = loadSave();
+      if (this.missionsOn) writeSave({ ...save, missions: this.missionsKept(save) });
+      this.hud.missions(this.missions.view(save.stoken));
+    }
     this.hud.pause(on);
   }
 
@@ -1646,6 +1675,51 @@ export class Game {
     this.view.shake(shake);
   }
 
+  // missions count for real runs only: not the tutorial floor or the playtest bot
+  private get missionsOn(): boolean {
+    return !this.tutorial && !this.autopilot;
+  }
+
+  // the save's missions after this run: ours, unless the bot or the tutorial was skating
+  private missionsKept(save: ReturnType<typeof loadSave>) {
+    return this.missionsOn ? this.missions.state : save.missions;
+  }
+
+  // count a stat towards the missions: a finished one calls out and swaps for the next, and a rank pays at once
+  private mission(stat: Stat, n = 1): void {
+    if (!this.missionsOn) return;
+    const done = this.missions.add1(stat, n);
+    if (!done.length) return;
+    const save = loadSave();
+    let bank = save.stoken;
+    let tape = save.tape;
+    for (const d of done) {
+      this.hud.callout(`✔ ${d.text.toUpperCase()}`, 'good');
+      if (d.rank === undefined) continue;
+      bank += d.pay ?? 0;
+      this.hud.callout(`SKATER RANK ${d.rank}! +◆${d.pay}`, 'good');
+      if (d.grip) {
+        tape = d.grip;
+        this.grip = d.grip;
+        this.sprite.setGrip(gripDef(d.grip).color);
+        this.hud.callout(`${gripDef(d.grip).name.toUpperCase()} GRIP!`, 'trick');
+      }
+      this.sound?.play(MOMENT.pick);
+    }
+    writeSave({ ...save, stoken: bank, missions: this.missions.state, ...(tape ? { tape } : {}) });
+    this.hud.missions(this.missions.view(bank));
+  }
+
+  // the pause card's or run summary's SKIP: a little Stoken for a new mission
+  skipMission(i: number): void {
+    if (!this.missionsOn || !(this.paused || this.state === 'over')) return;
+    const save = loadSave();
+    const bank = this.missions.skip(i, save.stoken);
+    if (bank === null) return;
+    writeSave({ ...save, stoken: bank, missions: this.missions.state });
+    this.hud.missions(this.missions.view(bank));
+  }
+
   private handle(e: FloorSim['events'][number]): void {
     this.sound?.play(cueFor(e));
     const b = buzzFor(e);
@@ -1654,7 +1728,10 @@ export class Game {
     if (e.type === 'drone') return this.droneDown(e.index);
     if (e.type === 'smash') return this.smashed(e);
     if (e.type === 'dent') return this.dented(e);
-    if (e.type === 'wear') return this.worn(e.part, e.level);
+    if (e.type === 'wear') {
+      if (e.level === 'busted') this.floorBusted = true;
+      return this.worn(e.part, e.level);
+    }
     if (e.type === 'aim' || e.type === 'shot' || e.type === 'shotHit') return this.shotFx(e);
     if (e.type === 'dodge') this.shotFx(e);
     if (e.type === 'puddle') {
@@ -1691,6 +1768,14 @@ export class Game {
     const before = this.run.combo;
     const bank = this.run.onEvent(e, this.skater.hsp);
     if (this.run.combo > before) this.bulletTime(this.run.combo);
+    for (const st of statsOf(e)) this.mission(st);
+    if (bank) {
+      this.mission('combo', bank.count);
+      this.mission('bank', bank.points);
+      if (bank.cash) this.mission('cashOut');
+    }
+    if (e.type === 'slam') this.floorSlams++;
+    if (before > 0 && this.run.combo === 0) this.missions.reset('combo');
     const combo = this.run.combo > 1 ? ` x${this.run.combo}` : '';
     if (e.type === 'ollie' || e.type === 'hop' || e.type === 'kicker') this.view.rhythm.popped();
     switch (e.type) {

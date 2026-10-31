@@ -1583,3 +1583,58 @@ html, body {
 @keyframes wirepulse { from { filter: brightness(1); } to { filter: brightness(1.8) drop-shadow(0 0 4px var(--trigger)); } }
 @media (prefers-reduced-motion: reduce) { #shop .slots.preview .wire { animation: none; filter: brightness(1.6); } }
 #shop[data-over] .ghost { opacity: 0.4; transition: opacity 0.1s; }
+
+/* missions and Skater Rank (src/ui/missions-panel.ts), on the pause card and the run summary */
+#over { overflow-y: auto; justify-content: safe center; box-sizing: border-box; }
+.missions { display: flex; flex-direction: column; gap: 5px; width: min(440px, 92vw); font-family: 'Bangers', 'Arial Black', sans-serif; letter-spacing: 0.05em; text-shadow: none; }
+.missions:empty { display: none; }
+.missions .rank { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--trick); font-size: 16px; -webkit-text-stroke: 0; }
+.missions .rank .tag { color: #fff; opacity: 0.85; }
+.missions .rank .num { font-size: 24px; color: var(--trick); -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+.missions .pips { display: flex; gap: 4px; }
+.missions .pips i { width: 12px; height: 12px; border: 2px solid #000; background: #3a3050; transform: rotate(45deg) scale(0.8); }
+.missions .pips i.on { background: var(--trick); }
+.missions .mission {
+  display: grid;
+  grid-template-columns: 1fr 54px auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  font-size: 15px;
+  color: #fff;
+}
+.missions .txt { font-family: system-ui, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0; line-height: 1.15; }
+.missions .bar { height: 8px; background: #3a3050; border: 1.5px solid #000; overflow: hidden; }
+.missions .bar i { display: block; height: 100%; background: var(--good); }
+.missions .n { min-width: 2.6em; text-align: right; color: var(--good); }
+.missions button {
+  all: unset;
+  cursor: pointer;
+  padding: 3px 8px;
+  font-size: 13px;
+  color: #000;
+  background: var(--trick);
+  border: 2px solid #000;
+  transform: skewX(-8deg);
+}
+.missions button[disabled] { opacity: 0.35; cursor: default; }
+/* a short screen (a phone on its side): tighter rows */
+@media (max-height: 460px) {
+  .missions { gap: 3px; }
+  .missions .rank { font-size: 14px; }
+  .missions .rank .num { font-size: 18px; }
+  .missions .mission { padding: 1px 4px 1px 8px; font-size: 13px; }
+  .missions .txt { font-size: 12px; }
+  .missions button { padding: 1px 7px; font-size: 12px; }
+  #over { gap: 5px; }
+  #over b { font-size: 30px; }
+  #over .final { font-size: 22px; }
+  #over .reached { font-size: 15px; }
+  #over .best { font-size: 12px; }
+  #over .held:has(.none) { display: none; }
+  #over .metabtn { min-height: 34px; padding: 5px 14px; font-size: 17px; }
+  #over .again { margin-top: 0; font-size: 14px; }
+}
