@@ -35,6 +35,7 @@ export const GEAR = {
   // ollie pop, flip pop, grind speed, cruising speed (bearings the most, wheels a little; they multiply)
   max: { deck: 0.3, shoes: 0.3, trucks: 0.3, wheels: 0.07, bearings: 0.2 } as Gear,
   roughFrom: 50, // wheels under this can't roll over broken glass: it stops them dead, a slam
+  grassSlow: 0.4, // cruising speed grass takes off you on dead wheels (none at roughFrom or better)
   puddleDrag: { fresh: 0.06, dead: 0.45 }, // speed a puddle takes off you, fresh wheels to dead ones
   price: { deck: 25, shoes: 15, trucks: 20, wheels: 15, bearings: 15 } as Gear,
   names: { deck: 'Deck', shoes: 'Shoes', trucks: 'Trucks', wheels: 'Wheels', bearings: 'Bearings' } as Record<GearPart, string>,
