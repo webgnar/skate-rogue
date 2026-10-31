@@ -10,11 +10,11 @@ export const PHYS = {
   trick: -5, // QFS: the second jump is as strong as the first (now the weakest a flip pops, see trickEarly)
   // the flip pops harder the sooner you tap it (zack, 2026-10-31: "the flip trick second jump should make you ollie
   // higher, but less the more you wait on the first ollie"): trickEarly up to trickEarlyFrames into the air, easing
-  // to trick by trickLateFrames (about the top of an ollie), so a quick double tap goes highest and a late flip
+  // to trick by trickLateFrames (as the ollie snaps to its top), so a quick double tap goes highest and a late flip
   // pops like before (and a late, low flip is the one that can land perfect)
   trickEarly: -6, // -7 lets a quick double tap off a high rail reach the sky route's power line (tests/top-route.test.ts)
   trickEarlyFrames: 3,
-  trickLateFrames: 24,
+  trickLateFrames: 14,
   jumpCut: 2.5, // QFS jump_dampner: let go while rising -> vsp = max(vsp, ollie / 2.5)
   // the ollie snaps up (zack, 2026-10-30: "skateboarding is fast, the mechanics of an ollie happen fast"): the pop
   // leaves popSnap times faster against popSnap^2 times the gravity, so it climbs to the same height in 1/popSnap of

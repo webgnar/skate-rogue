@@ -12,13 +12,14 @@ import { CROSS } from '../traffic/cross';
 import { TILE } from '../physics/constants';
 import { ARCADE, STREET_Z, streetBuilding } from '../traffic/traffic';
 import { TURN_OFF, turnOff } from '../traffic/tunnel';
-import { inHill, type Level } from '../physics/level';
+import { inHill, sewerAt, SEWER_ROOF, type Level } from '../physics/level';
 import { label, type Road } from '../gen/roads';
 import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
 import { buildSkyBeats } from './sky-kit';
+import { buildSewers } from './sewer-kit';
 import { buildForegroundSteps, buildHillSteps } from './hillside';
 import { buildElTrack, elCuts, setColumn } from './el-view';
 import { quarters, type Quarter } from './quarters';
@@ -105,8 +106,11 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   while (c < cols) {
     if (sliceDone()) yield;
     const isStreet = level.street[c];
+    //over the sewer route the street is only a thin roof over its tunnel (sewer-kit.ts draws the tunnel and holes)
+    const under = (col: number) => sewerAt(level, (col + 0.5) * TILE) !== undefined;
+    const sewer = under(c);
     let end = c;
-    while (end + 1 < cols && level.street[end + 1] === isStreet) end++;
+    while (end + 1 < cols && level.street[end + 1] === isStreet && under(end + 1) === sewer) end++;
     const n = end - c + 1;
     const x = c + n / 2;
     if (isStreet) {
@@ -148,10 +152,13 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
           for (let px = (c * 8) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
         }
       });
-      const mesh = slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
-      mesh.position.set(x, -1.5, STREET_BACK + STREET_DEPTH / 2);
+      const roof = SEWER_ROOF / TILE;
+      const mesh = sewer
+        ? slab(n, roof, STREET_DEPTH, lambert(tileTexture([front[0]])), lambert(top), sideMat)
+        : slab(n, 3, STREET_DEPTH, lambert(tileTexture(front)), lambert(top), sideMat);
+      mesh.position.set(x, sewer ? -roof / 2 : -1.5, STREET_BACK + STREET_DEPTH / 2);
       kit.add(mesh);
-    } else if (!inHill(level, (c + n / 2) * TILE)) {
+    } else if (!sewer && !inHill(level, (c + n / 2) * TILE)) {
       //canal: water a bit below the street, QFS's clean water tiles (a stretch of hill draws its own ground)
       const pit = skin.pit === 'city' ? { top: CITY.waterTop, fill: CITY.water } : skin.pit;
       const front = [new Array(n).fill(pit.top), new Array(n).fill(pit.fill), new Array(n).fill(pit.fill)];
@@ -257,7 +264,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     const x = toX(s.x0) + w / 2;
     const y = toY(level, s.y);
     //the L's running rails are part of its track; the sky beats are drawn on their own (sky-kit.ts)
-    if (s.el || s.sky) continue;
+    if (s.el || s.sky || s.sewer) continue; // (and the sewer's floor and ramp: sewer-kit.ts)
     //the hill draws its own ground
     if (level.hills && inHill(level, s.x0) && !s.side && !s.kicker && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank')) continue;
     if (s.kind === 'roof') {
@@ -391,7 +398,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   //--- curved rails ---------------------------------------------------------------------------
   for (const rail of level.rails) {
     if (sliceDone()) yield;
-    if (rail.wire || rail.sky) continue; // a power line: the hillside draws it with its poles; a crane: sky-kit.ts
+    if (rail.wire || rail.sky || rail.sewer) continue; // (a sewer pipe: sewer-kit.ts) a power line: the hillside draws it with its poles; a crane: sky-kit.ts
     const pts = rail.xs.map((px, i) => new THREE.Vector3(toX(px), toY(level, rail.ys[i]) - 0.06, 0));
     const curve = new THREE.CatmullRomCurve3(pts);
     const tube = new THREE.Mesh(railUv(new THREE.TubeGeometry(curve, 64, 0.07, 6), curve.getLength()), railMetal());
@@ -540,6 +547,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   projectSurfaces(kit);
   if (sliceDone()) yield;
   kit.add(buildSkyBeats(level));
+  kit.add(buildSewers(level));
   return kit;
 }
 

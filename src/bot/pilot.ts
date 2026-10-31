@@ -3,15 +3,16 @@
 // to shake out states the reference line never reaches. Pure, so the validator, the sim playtest and the game's
 // ?bot autopilot all press the same way.
 import { PHYS, TILE } from '../physics/constants';
-import { isStreetAt, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
+import { isStreetAt, sewerAt, surfaceY, type Car, type CurvedRail, type Level, type Surface } from '../physics/level';
 import type { Skater, StepInput } from '../physics/skater';
 import type { FloorSim } from '../sim/floor';
 import type { Vehicle } from '../traffic/traffic';
 import type { CrossCar } from '../traffic/cross';
 import { makeRng } from '../gen/rng';
 
-// 'high' is the reference bot going for the top route (src/gen/top-route.ts): it ollies off the end of each rooftop
-export type PilotStyle = 'ref' | 'mash' | 'high';
+// 'high' is the reference bot going for the top route (src/gen/top-route.ts): it ollies off the end of each rooftop;
+// 'sewer' goes for the sewer route (src/gen/sewer.ts): it rolls into each open drain and keeps its feet down there
+export type PilotStyle = 'ref' | 'mash' | 'high' | 'sewer';
 
 function danger(level: Level, x: number, hsp: number, movers: Vehicle[], still: Car[], cross: CrossCar[]): boolean {
   for (let dx = 20; dx <= 70; dx += 4) {
@@ -185,6 +186,12 @@ export class Pilot {
     }
     //a roadblock, a bus or a truck: falling toward the side of a taller vehicle ahead, flip up onto its roof
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked([...level.cars, ...drones, ...movers], sk.x, sk.boardY)) pressed = true;
+    if (this.style === 'sewer') {
+      //roll on into a drain ahead, and no flips on the way down (the street's underside is overhead)
+      const drain = level.sewers?.find((w) => w.drain[0] - sk.x > -TILE && w.drain[0] - sk.x < 80);
+      if (drain && sk.y <= level.streetY + 1 && sk.mode === 'roll' && !sk.surface) pressed = false;
+      if (sk.mode === 'air' && sewerAt(level, sk.x) && sk.y > level.streetY - 4) pressed = false;
+    }
     return pressed;
   }
 }

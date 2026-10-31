@@ -6,7 +6,7 @@ import { PHYS, TILE } from './constants';
 import { Feel, FEEL, MATERIALS, MOMENTUM, misalign, alongSlope, landQuality, normalImpact, type LandQuality, type Material } from './feel';
 import { Tuck } from './tuck';
 import { LEDGE_GRINDS, MANUALS, NOSE_STANCES, RAIL_GRINDS, rollTrick, SPIN, TRICK_CATCH, type TrickId } from './tricks';
-import { PIT, ceilingAt, currentAt, isStreetAt, pitAt, pits, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
+import { PIT, ceilingAt, currentAt, isStreetAt, pitAt, pits, sewerAt, sewerRoof, surfaceMaterial, surfaceSlope, surfaceY, type Car, type CurvedRail, type Level, type Surface } from './level';
 
 export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
@@ -585,6 +585,13 @@ export class Skater {
       this.y = ceiling;
       this.vsp = Math.max(0, this.vsp);
     }
+    //down in the sewer the street is overhead: a quick double tap bumps your head on it
+    const roof = this.mode === 'air' ? sewerRoof(this.level, this.x, py) : undefined;
+    if (roof !== undefined && this.y < roof) {
+      this.feel.bounce(Math.max(0, -this.vsp), 0);
+      this.y = roof;
+      this.vsp = Math.max(0, this.vsp);
+    }
 
     if (this.mode === 'roll' || this.mode === 'grind') {
       //a kicker ramp standing on the street: you roll up onto it
@@ -611,7 +618,7 @@ export class Skater {
     this.checkHazards();
 
     //in the canal, or down a pit on the hill
-    const bottom = pitAt(this.level, this.x)?.floor ?? this.level.streetY + PHYS.bailDepth;
+    const bottom = pitAt(this.level, this.x)?.floor ?? (sewerAt(this.level, this.x)?.y ?? this.level.streetY) + PHYS.bailDepth;
     if (this.mode === 'air' && this.y > bottom && this.tucks > 0) {
       //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
       this.tucks--;
