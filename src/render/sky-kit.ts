@@ -68,6 +68,7 @@ export function buildSkyBeats(level: Level): THREE.Group {
   const ac = new THREE.MeshLambertMaterial({ color: 0xc8ccd4 });
   const wood = surface('planks', 0x9a6a40);
   const yellow = new THREE.MeshLambertMaterial({ color: 0xe8b020 });
+  const girder = new THREE.MeshLambertMaterial({ color: 0xc8402a }); // red oxide primer, as hoisted steel is
   const fan = new THREE.MeshLambertMaterial({ color: 0x2a2c34 });
   const solar = new THREE.MeshLambertMaterial({ color: 0x24407a, emissive: 0x0a1430 });
   const lamp = new THREE.MeshLambertMaterial({ color: 0xd8dce4, emissive: 0x403820 });
@@ -130,11 +131,26 @@ export function buildSkyBeats(level: Level): THREE.Group {
       g.add(tank);
       for (const dy of [-0.4, -1.6]) box(w + 0.05, 0.1, 0.2, cx, y + dy, 0.35, steel); // its hoops, seen from the front
       for (const [dx, dz] of [[-0.6, -0.4], [0.6, -0.4], [-0.6, -1.2], [0.6, -1.2]]) leg(cx + dx * r, y - 2, -0.6 + dz + 0.4, 0.09, wood);
-    } else if (s.sky === 'scaffold' || s.sky === 'step') {
-      //planks on a tube frame
+    } else if (s.sky === 'scaffold') {
+      //planks on a tube frame (its tubes behind the lane, so none ever crosses in front of you)
       box(w, 0.18, 1.6, cx, y - 0.09, -0.3, wood);
-      for (const lx of [x0 + 0.15, x1 - 0.15]) for (const z of [0.3, -0.9]) leg(lx, y - 0.18, z, 0.05);
+      for (const lx of [x0 + 0.15, x1 - 0.15]) for (const z of [-0.25, -0.95]) leg(lx, y - 0.18, z, 0.05);
       box(w, 0.05, 0.05, cx, y + 0.6, -0.9, steel); // the guard rail at the back
+    } else if (s.sky === 'step') {
+      //the staircase up into the clouds: steel girders hoisted on crane cables, nothing under them down to the city
+      //(zack, 2026-10-31: "in all those screen shots its stuff connected to the ground, i want sky route to go really
+      //tall"), a hook block over each and its two slings up out of sight
+      box(w, 0.32, 1.1, cx, y - 0.16, -0.25, girder);
+      box(w, 0.08, 1.3, cx, y - 0.04, -0.25, girder); // its top flange
+      box(w, 0.08, 1.3, cx, y - 0.3, -0.25, girder);
+      const hook = y + 2.2;
+      box(0.35, 0.5, 0.35, cx, hook, -0.45, yellow);
+      for (const lx of [x0 + 0.3, x1 - 0.3]) {
+        const len = Math.hypot(cx - lx, hook - y);
+        const sling = box(0.04, len, 0.04, (cx + lx) / 2, (hook + y) / 2, -0.45, steel);
+        sling.rotation.z = Math.atan2(lx - cx, hook - y);
+      }
+      box(0.05, 30, 0.05, cx, hook + 15, -0.45, steel); // the crane's cable, up out of the top of the frame
     }
   });
   //a tower crane's boom along each crane grind, its mast down to the hill at the high end

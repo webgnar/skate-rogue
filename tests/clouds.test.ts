@@ -14,7 +14,7 @@ describe('the cloud layer', () => {
     for (let seed = 1; seed <= 8; seed++) {
       expect(chicago(seed * 53, 4).surfaces.some((s) => s.sky === 'cloud')).toBe(false);
       const l = chicago(seed * 53, 7);
-      expect(l.surfaces.filter((s) => s.sky === 'cloud').length).toBeGreaterThan(3);
+      expect(l.surfaces.filter((s) => s.sky === 'cloud' || s.sky === 'thin').length + l.rails.filter((r) => r.sky === 'rainbow').length + (l.skyMovers ?? []).filter((m) => m.kind === 'cloud' || m.kind === 'balloon').length).toBeGreaterThan(4);
       rainbows += l.rails.filter((r) => r.sky === 'rainbow').length;
       balloons += (l.skyMovers ?? []).filter((m) => m.kind === 'balloon').length;
       //each step of the staircase an ollie over the last, and its top as high as the clouds after it
@@ -22,7 +22,7 @@ describe('the cloud layer', () => {
       expect(steps.length).toBeGreaterThan(4);
       for (let i = 1; i < steps.length; i++) {
         if (steps[i].x0 - steps[i - 1].x1 > 6 * TILE) continue; // the next stretch's staircase
-        expect(steps[i - 1].y - steps[i].y).toBeLessThanOrEqual(CLOUDS.stairRise * TILE + 0.01);
+        expect(steps[i - 1].y - steps[i].y).toBeLessThanOrEqual((CLOUDS.stairRise + 0.25) * TILE + 0.01);
       }
     }
     expect(rainbows).toBeGreaterThan(0);

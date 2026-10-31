@@ -657,7 +657,7 @@ export class Skater {
   // a ruin starts to crumble once you're on it, and falls a moment later (you drop if you're still there)
   private stepRuins(): void {
     const s = this.surface;
-    if (s?.crumble && this.grounded && !this.crumbling.has(s) && !this.gone.has(s)) this.crumbling.set(s, PHYS.crumbleFrames);
+    if (s?.crumble && this.grounded && !this.crumbling.has(s) && !this.gone.has(s)) this.crumbling.set(s, s.crumbleFrames ?? PHYS.crumbleFrames);
     for (const [ruin, t] of this.crumbling) {
       if (t > 1) this.crumbling.set(ruin, t - 1);
       else {

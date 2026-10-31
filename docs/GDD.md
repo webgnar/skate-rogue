@@ -207,13 +207,36 @@ All of it is physics and tap-only: nothing lifts you up there (zack owns the way
 `src/render/sky-pieces-view.ts` and `src/render/sky-kit.ts` (drawing); the level editor lists the new beats.
 
 **The cloud layer** (zack, Oct 31, 2026: "i want sky route to go really tall. we could use the clouds and the rainbow...
-if we can put as much love into the sky as we did the ground"). From floor 5, way over each stretch of hill, far above
-the rooftops and cranes with nothing reaching down to the city: big puffy clouds to land on, drifting clouds that
-wander there and back, thin clouds that puff away a moment after you land, rainbows to grind up and over (one a
-floor may hide a spin token at the top), and hot air balloons whose baskets bob. The layer falls gently with the hill.
-The way up is a **staircase** (zack picked it): about 40% down each stretch the sky beats give way to scaffold decks
-and then wisps of cloud, each 1.25 tiles over the last and an ollie apart, about 10 tiles of climb. Still physics
-only. Code: `src/gen/clouds.ts` (the CLOUDS dials); `?clouds` starts a floor on the first cloud for testing.
+if we can put as much love into the sky as we did the ground"). From floor 5, way over the hill, far above the
+rooftops and cranes with nothing reaching down to the city: big puffy clouds to land on, drifting clouds that wander
+there and back, thin clouds that puff away a moment after you land (0.66 s: time to take the landing's knock and pop
+off), rainbows to grind up and over (one a floor may hide a spin token at the top), and hot air balloons whose
+baskets bob. The layer falls gently with the hill. The way up is a **staircase** (zack picked it): 30% of the way down
+from the crest the sky beats give way to red steel girders hoisted on crane cables and then wisps of cloud, each 1.5
+tiles over the last (an ollie and a flip), about 9 tiles of climb. Only a long run down has room for it (95 tiles from
+the crest), so it's mostly a floor's first stretch, down from the top; the stretches after keep their city sky all the
+way down. Still physics only. Code: `src/gen/clouds.ts` (the CLOUDS dials); `?clouds` starts a floor on the
+staircase for testing.
+
+**Sky level design** (zack, Oct 31, 2026: "make sure sky layer is payed as much attention to with level design as the
+ground"). Up there there's no ground to fall back to, so the line is laid to rules a good player can trust, checked
+by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9 stretches in 10 end to end):
+- **The way in is the crest.** The sky starts where the hill crests (the big ollie and flip at the top), not on the
+  climb out of the cross street before it.
+- **Every piece within a flip of the last.** Measured in the sim: at base speed an ollie carries about 4 tiles to the
+  same height, an ollie and a flip about 6.5, two tiles up about 5.5, and a tile further for every two you drop. The
+  line asks for at most 4.5 tiles at the same height (`src/gen/sky-line.ts`, REACH), nothing more than a flip (1.5
+  tiles) over where you leave the last piece, and nothing more than 3 tiles under it (a long drop is a long landing
+  lockout). A big gap (with a Stoken over it) drops the next piece 1.5 tiles so the flip carries you over.
+- **Speed.** The decks are flat, so you're soon at base speed up there; crane booms always fall at least a tile in
+  seven, so a grind feeds your speed, and off the end of one the next piece is never higher (the pop's weak off a
+  falling rail).
+- **Room to land.** Water towers 4 tiles, girders 4 to 5, no stub decks: you land, take the knock, and pop again.
+  Scaffolds are a flight of steps down, a tile apart, so an ollie anywhere lands on one.
+- **No holes.** A piece that's crowded (by the power line) nudges up or down instead of vanishing, and any gap left
+  past reach gets a small deck (a rooftop, or a puff of cloud up in the clouds).
+- **Variety.** Each stretch runs its floor's recipe from its own place, so no two stretches play the same order.
+- **Nothing from the sky crosses in front of you**: scaffold tubes stand behind the lane.
 
 **The NO GROUND meter** (zack: "i need that to be visualy clear what its doing"). While a line is going, a panel under
 the combo shows NO GROUND, the live coin multiplier (it pops as it steps up), seven pips that turn gold at the x4 cap,

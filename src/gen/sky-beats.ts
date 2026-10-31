@@ -27,8 +27,8 @@ import { PICKUPS } from './descent';
 import { editFloor } from './hills';
 import { floorEdit } from './level-edits';
 import { makeRng, randInt, type Rng } from './rng';
-import { busy, groundAt } from './top-route';
-import { CLOUDS } from './clouds';
+import { busy, clearAt, groundAt } from './top-route';
+import { cloudy, crestOf, stairStart } from './clouds';
 
 export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | SkyPiece | 'lines';
 export type SkyPiece = 'blimp' | 'rig' | 'swing' | 'bust';
@@ -43,13 +43,19 @@ export const SKY = {
   roof: [6, 8], // a rooftop deck's tiles
   roofGap: [2, 3],
   billboard: [6, 8],
-  tower: 3, // the water tower's lid
+  tower: 4, // the water tower's lid (room to land, take the impact and pop again)
   towerUp: 1.5, // tiles higher than the rest
   crane: [12, 16],
-  scaffold: 2.5, // each deck
-  scaffoldDrop: 1, // tiles each deck stands under the last
-  gap: [5, 7],
+  craneFall: 7, // a crane boom falls at least a tile every this many along
+  scaffold: 3, // each deck
+  scaffoldGap: 1, // tiles between decks: a run of steps down, an ollie anywhere lands on one
+  scaffoldDrop: 0.75, // tiles each deck stands under the last
+  scaffolds: 4, // decks in a run
+  gap: [2, 3], // tiles of open sky past the usual: with the usual, a big flip gap, about as far as a flip carries you
+  gapDrop: 1.5, // tiles the piece after a gap stands lower, so the flip carries you over
   stoken: 0.5, // a Stoken in a gap beat
+  rise: 1.5, // tiles higher than where you left the last piece the next may stand (a flip makes it)
+  fall: 3, // and lower: the line steps down with the hill, but never further than you'd want to land from
   pieces: 1, // set pieces a floor, at most: the rest of a recipe's set-piece slots turn into roofs
   blimp: 16, // tiles: its back
   blimpUp: 0.5, // tiles higher than the rest
@@ -105,7 +111,11 @@ export function skyDials(floor: number) {
 // the beats a stretch of hill gets: the recipe, each slot picked from the seed (each stretch its own pick)
 export function skyPick(seed: number, floor: number, stretch: number): SkyBeat[] {
   const rng = makeRng(seed * 17 + floor * 3313 + stretch * 101);
-  return skyRecipe(floor).map((slot) => slot[randInt(rng, slot.length)]);
+  const recipe = skyRecipe(floor);
+  //each stretch starts the floor's recipe at its own place, so a floor keeps its pieces but no two stretches run the
+  //same order (the first stretch reads it from the top)
+  const k = stretch === 0 || !recipe.length ? 0 : (stretch * 3 + randInt(rng, 2)) % recipe.length;
+  return [...recipe.slice(k), ...recipe.slice(0, k)].map((slot) => slot[randInt(rng, slot.length)]);
 }
 
 const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo + 1));
@@ -143,6 +153,7 @@ export function addSkyBeats(level: Level, seed: number): void {
   const busts: SkyBust[] = [];
   const decks: Surface[] = []; // rooftop decks a golden pigeon could sit on
   let pieces = 0;
+  let ceiling = -Infinity; // the highest the next piece may stand: a flip over where the line leaves off
   const coins = (x0: number, x1: number, y: (x: number) => number) => {
     for (let c = x0 + TILE; c < x1 - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y(c) - PICKUPS.ride });
   };
@@ -150,28 +161,64 @@ export function addSkyBeats(level: Level, seed: number): void {
   const top = (base: (x: number) => number, x0: number, x1: number, up = 0) => {
     let y = Infinity;
     for (let x = x0; x <= x1; x += TILE / 2) y = Math.min(y, base(x));
-    return y - up * TILE;
+    //(a piece that stands up over the rest, a water tower, still no more than a flip over where you leave the last)
+    return Math.max(y - up * TILE, ceiling);
   };
   //a flat piece over [x0, x1], as high as its highest point needs (the hill falls away under the rest)
   const flat = (base: (x: number) => number, x0: number, x1: number, sky: SkyBeat, up = 0): Surface | null => {
-    const y = top(base, x0, x1, up);
-    if (busy(level, x0, x1, y)) return null;
+    //(crowded where it stands, by the power line or the hill: up a little, up to two tiles)
+    const y = clearAt(level, x0, x1, top(base, x0, x1, up), ceiling);
+    if (y === null) return null;
     const s: Surface = { kind: sky === 'billboard' ? 'rail' : 'ledge', x0, x1, y, row: -1, sky, ...(sky === 'billboard' ? { material: 'metal' as const } : {}) };
     surfaces.push(s);
     coins(x0, x1, () => y);
     return s;
   };
   spans.forEach(([a, b], i) => {
-    const base = heightLine(level, a, b, d.skyHeight);
+    //the height the hill would put each piece at, kept in reach of where you left the last one: never more than a
+    //flip higher, never a long drop lower (the hill's bumps and dips don't make the line jump about)
+    const hill = heightLine(level, a, b, d.skyHeight);
+    let leave: number | null = null;
+    let after = 0; // tiles the next piece drops by, after a gap
+    let grind = false; // the line leaves off the end of a falling grind: the pop's weak off it, so nothing higher next
+    ceiling = -Infinity;
+    const base = (x: number) => {
+      const y = hill(x);
+      if (leave === null) return y;
+      ceiling = leave - (grind ? 0 : SKY.rise) * TILE + after * TILE;
+      return Math.min(leave + (SKY.fall + after) * TILE, Math.max(ceiling, y));
+    };
+    const marks = (): [Surface | undefined, CurvedRail | undefined, SkyMover | undefined] => [surfaces.at(-1), rails.at(-1), movers.at(-1)];
+    let seen = marks();
+    //after each beat: where the line now leaves off, the end of what it just laid
+    const settle = () => {
+      const now = marks();
+      const ends: [number, number, boolean][] = [];
+      if (now[0] && now[0] !== seen[0]) ends.push([now[0].x1, now[0].y, false]);
+      if (now[1] && now[1] !== seen[1]) ends.push([now[1].xs[now[1].xs.length - 1], now[1].ys[now[1].ys.length - 1], now[1].ys[now[1].ys.length - 1] > now[1].ys[0] + TILE]);
+      if (now[2] && now[2] !== seen[2]) ends.push([now[2].x1, now[2].y, false]);
+      seen = now;
+      if (ends.length) {
+        const last = ends.sort((p, q) => q[0] - p[0])[0];
+        leave = last[1];
+        grind = last[2];
+        after = 0;
+      }
+    };
     //(with a cloud layer, the beats give way partway down to the staircase up into it, src/gen/clouds.ts)
-    const end = floor >= CLOUDS.from ? a + CLOUDS.stairAt * (b - a) : b - 4 * TILE;
-    let x = a + d.skyStart * (b - a);
+    const end = cloudy(level, i) ? stairStart(level, a, b) : b - 4 * TILE;
+    //(from where the hill crests: a stretch that climbs out of a cross street first has nothing to reach up there
+    //until the ground falls away)
+    const c = crestOf(level, a, b);
+    let x = c + d.skyStart * (b - c);
     const picks = skyPick(seed, floor, i);
     //Chinatown's stretch opens on its clotheslines
     if (level.chinatown?.some(([c0, c1]) => c1 > a && c0 < b)) picks.unshift('lines');
     for (let beat of picks) {
       if (x >= end) break;
       const t = (n: number) => Math.min(n * TILE, end - x);
+      //(no stubs: a beat that wouldn't have room for a deck you can land on stops the stretch's beats here)
+      if (end - x < 3 * TILE) break;
       if ((SKY_PIECES as string[]).includes(beat)) {
         //one set piece a floor, and only where it fits whole
         const need = beat === 'blimp' ? SKY.blimp : beat === 'rig' ? SKY.rig + SKY.rigGap + SKY.rigRoof[1] : beat === 'swing' ? SKY.swing : 2 * SKY.bustRoof[1] + SKY.bustGap;
@@ -180,8 +227,9 @@ export function addSkyBeats(level: Level, seed: number): void {
       }
       if (beat === 'gap') {
         const w = t(range(rng, SKY.gap));
-        if (rng() < SKY.stoken) level.pickups.push({ kind: 'stoken', x: x + w / 2, y: base(x + w / 2) - PICKUPS.arc });
+        if (rng() < SKY.stoken) level.pickups.push({ kind: 'stoken', x: x + w / 2, y: (leave ?? base(x + w / 2)) - PICKUPS.arc });
         x += w;
+        after = SKY.gapDrop;
         continue;
       }
       if (beat === 'roofs') {
@@ -204,10 +252,17 @@ export function addSkyBeats(level: Level, seed: number): void {
         flat(base, x, x + w, 'tower', SKY.towerUp);
         x += w;
       } else if (beat === 'scaffold') {
-        for (let k = 0; k < 3 && x < end; k++) {
+        //(each deck under the last, from the first's height: the hill falls away faster than the steps do)
+        const y0 = top(base, x, x + SKY.scaffold * TILE);
+        for (let k = 0; k < SKY.scaffolds && x < end; k++) {
           const w = t(SKY.scaffold);
-          flat(base, x, x + w, 'scaffold', -k * SKY.scaffoldDrop);
-          x += w + TILE;
+          //(a crowded deck is left out, not moved: the run reads as one flight of steps down)
+          const y = y0 + k * SKY.scaffoldDrop * TILE;
+          if (!busy(level, x, x + w, y)) {
+            surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky: 'scaffold' });
+            coins(x, x + w, () => y);
+          }
+          x += w + SKY.scaffoldGap * TILE;
         }
       } else if (beat === 'crane') {
         //the boom: falling with the hill, never rising (a grind doesn't climb), smoothed
@@ -215,7 +270,14 @@ export function addSkyBeats(level: Level, seed: number): void {
         const pts: [number, number][] = [];
         for (let px = x; px <= x + w; px += TILE / 2) pts.push([px, base(px) - TILE]);
         for (let k = 1; k < pts.length; k++) pts[k][1] = Math.max(pts[k][1], pts[k - 1][1]);
-        const ok = pts.length >= 4 && !pts.some(([px, py]) => busy(level, px, px + TILE / 2, py));
+        //(never under the ground ahead, a bank or a crest: the boom stands clear of it, raised a little if it has to)
+        for (const p of pts) p[1] = Math.min(p[1], (groundAt(level, p[0]) ?? level.streetY) - 2 * TILE);
+        for (let k = pts.length - 2; k >= 0; k--) pts[k][1] = Math.min(pts[k][1], pts[k + 1][1]);
+        //(and always falling some, a tile every `craneFall` along: a flat grind bleeds your speed, a falling one feeds it)
+        for (const p of pts) p[1] = Math.max(p[1], pts[0][1] + (p[0] - x) / SKY.craneFall);
+        const clash = () => pts.some(([px, py]) => busy(level, px, px + TILE / 2, py));
+        for (let k = 1; k <= 8 && clash(); k++) for (const p of pts) p[1] += (k % 2 ? -1 : 1) * k * (TILE / 2);
+        const ok = pts.length >= 4 && !clash();
         if (ok) {
           const r = polyRail(pts);
           r.sky = 'crane';
@@ -237,12 +299,13 @@ export function addSkyBeats(level: Level, seed: number): void {
           x += w + range(rng, SKY.lineGap) * TILE;
           y += SKY.lineDrop * TILE;
         }
+        settle();
         continue;
       } else if (beat === 'blimp') {
         //an ad blimp moored over the hill: a long back to cruise along, a touch higher than the rest
         const w = SKY.blimp * TILE;
-        const y = top(base, x, x + w, SKY.blimpUp);
-        if (!busy(level, x, x + w, y)) {
+        const y = clearAt(level, x, x + w, top(base, x, x + w, SKY.blimpUp), ceiling);
+        if (y !== null) {
           movers.push({ kind: 'blimp', x0: x, x1: x + w, y });
           coins(x, x + w, () => y);
         }
@@ -252,8 +315,8 @@ export function addSkyBeats(level: Level, seed: number): void {
         const w = SKY.rig * TILE;
         const rw = range(rng, SKY.rigRoof) * TILE;
         const rx = x + w + SKY.rigGap * TILE;
-        const y = top(base, x, rx + rw);
-        if (!busy(level, x, rx + rw, y)) {
+        const y = clearAt(level, x, rx + rw, top(base, x, rx + rw), ceiling);
+        if (y !== null) {
           const ground = groundAt(level, x + w / 2) ?? level.streetY;
           movers.push({ kind: 'rig', x0: x, x1: x + w, y, floor: ground - TILE });
           surfaces.push({ kind: 'ledge', x0: rx, x1: rx + rw, y, row: -1, sky: 'roofs' });
@@ -264,8 +327,8 @@ export function addSkyBeats(level: Level, seed: number): void {
       } else if (beat === 'swing') {
         //a tower crane's flat jib, slewing out of the lane and back
         const w = SKY.swing * TILE;
-        const y = top(base, x, x + w, 1);
-        if (!busy(level, x, x + w, y)) {
+        const y = clearAt(level, x, x + w, top(base, x, x + w, 1), ceiling);
+        if (y !== null) {
           movers.push({ kind: 'swing', x0: x, x1: x + w, y, mast: x + w * 0.25, phase: Math.floor(rng() * 300) });
           coins(x, x + w, () => y);
         }
@@ -275,8 +338,8 @@ export function addSkyBeats(level: Level, seed: number): void {
         const w1 = range(rng, SKY.bustRoof) * TILE;
         const w2 = range(rng, SKY.bustRoof) * TILE;
         const gap = SKY.bustGap * TILE;
-        const y = top(base, x, x + w1 + gap + w2);
-        if (!busy(level, x, x + w1 + gap + w2, y)) {
+        const y = clearAt(level, x, x + w1 + gap + w2, top(base, x, x + w1 + gap + w2), ceiling);
+        if (y !== null) {
           surfaces.push({ kind: 'ledge', x0: x, x1: x + w1, y, row: -1, sky: 'roofs' });
           surfaces.push({ kind: 'ledge', x0: x + w1 + gap, x1: x + w1 + gap + w2, y, row: -1, sky: 'roofs' });
           busts.push({ x: x + w1 + gap / 2, y0: y - SKY.bustUp * TILE, y1: y + SKY.bustDown * TILE });
@@ -285,6 +348,7 @@ export function addSkyBeats(level: Level, seed: number): void {
         }
         x += w1 + gap + w2;
       }
+      settle();
       x += range(rng, SKY.between) * TILE;
     }
   });

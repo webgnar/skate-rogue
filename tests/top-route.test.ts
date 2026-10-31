@@ -70,19 +70,23 @@ describe('the top route', () => {
     expect(sim.skater.mode).not.toBe('bail');
   });
 
-  it("the bots clear top-route floors, and nothing lifts them onto the high power line (there's no way up yet)", () => {
+  it('the bots clear top-route floors, and nothing lifts them onto the high power line: only ever down onto it from the sky', () => {
     for (let s = 1; s <= 4; s++) {
       const seed = s * 7919;
       const level = validatedFloor(seed, 4, { twist: floorTwist(seed, 4), hills: true, danger: 2 }).level;
       const sim = new FloorSim(level);
       const pilot = new Pilot('high');
-      let wire = 0;
+      //(since the sky starts at each hill's crest, 2026-10-31, an ollie off the crest reaches it, and from up there
+      //you can come down onto the wire)
+      let from = 'street';
       for (let f = 0; f < 7200 && sim.state === 'skate'; f++) {
         sim.step(pilot.input(sim));
-        if (sim.skater.rail?.top) wire++;
+        const sk = sim.skater;
+        if (sk.rail?.top) expect(from).toBe('sky');
+        else if (sk.surface?.sky || sk.rail?.sky || sk.surface?.top) from = 'sky';
+        else if (sk.mode !== 'air') from = 'street';
       }
       expect(['exit', 'bail']).toContain(sim.state);
-      expect(wire).toBe(0);
     }
   }, 60000);
 });

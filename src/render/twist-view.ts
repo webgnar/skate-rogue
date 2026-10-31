@@ -46,7 +46,7 @@ export class TwistView {
     this.group.clear();
     this.movers = [];
     this.ruins = [];
-    for (const s of level.surfaces) if (s.crumble) this.addRuin(level, s);
+    for (const s of level.surfaces) if (s.crumble && !s.sky) this.addRuin(level, s); // (a thin cloud breaks up its own way: sky-pieces-view.ts)
     for (const c of level.currents ?? []) this.addCurrent(level, c.x0, c.x1, Math.sign(c.push));
     for (const c of level.ceiling ?? []) this.addCeiling(level, c.x0, c.x1, c.y);
     for (const s of level.surfaces) if (s.conveyor) this.addConveyor(toX(s.x0), toX(s.x1), toY(level, s.y), Math.sign(s.conveyor));
