@@ -70,6 +70,13 @@ const lag = new THREE.Vector3();
 const q1 = new THREE.Quaternion();
 const q2 = new THREE.Quaternion();
 
+// a bone's world matrix from its parent's, which is already up to date: the solver works down each chain, so this
+// skips the walk up to the scene root that getWorldPosition and updateMatrixWorld would do for every bone, every step
+function place(bone: THREE.Object3D): void {
+  bone.updateMatrix();
+  bone.matrixWorld.multiplyMatrices(bone.parent!.matrixWorld, bone.matrix);
+}
+
 export class Springs {
   private readonly chains: Link[][] = [];
   private readonly feels: SpringFeel[] = [];
@@ -185,10 +192,11 @@ export class Springs {
     for (let i = 0; i < chain.length; i++) {
       const l = chain[i];
       l.bone.quaternion.copy(l.rest);
-      l.bone.updateMatrixWorld(true);
-      const head = i ? chain[i - 1].p : l.bone.getWorldPosition(v1).sub(back);
+      place(l.bone);
+      const at = v3.setFromMatrixPosition(l.bone.matrixWorld);
+      const head = i ? chain[i - 1].p : v1.copy(at).sub(back);
       const posed = v2.copy(l.tail).applyMatrix4(l.bone.matrixWorld);
-      posed.sub(l.bone.getWorldPosition(v3)).add(head); // the posed direction, hung from the (swung) head
+      posed.sub(at).add(head); // the posed direction, hung from the (swung) head
       const len = l.tail.length() * scale;
       const next = v3
         .copy(l.p)
@@ -229,15 +237,15 @@ export class Springs {
   private aim(chain: Link[]): void {
     for (const l of chain) {
       l.bone.quaternion.copy(l.rest);
-      l.bone.updateMatrixWorld(true);
-      const head = l.bone.getWorldPosition(v1);
+      place(l.bone);
+      const head = v1.setFromMatrixPosition(l.bone.matrixWorld);
       const from = v2.copy(l.tail).applyMatrix4(l.bone.matrixWorld).sub(head).normalize();
       const to = v3.copy(l.p).sub(head).normalize();
       const turn = q1.setFromUnitVectors(from, to);
-      l.bone.getWorldQuaternion(q2).premultiply(turn);
-      l.bone.parent!.getWorldQuaternion(q1).invert();
-      l.bone.quaternion.copy(q1.multiply(q2));
-      l.bone.updateMatrixWorld(true);
+      // world turn -> the bone's own: rest * parent⁻¹ · turn · parent
+      l.bone.parent!.matrixWorld.decompose(v2, q2, v3);
+      l.bone.quaternion.copy(q2).invert().multiply(turn).multiply(q2).multiply(l.rest);
+      place(l.bone);
     }
   }
 }

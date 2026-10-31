@@ -398,29 +398,39 @@ def cowl_mesh(mat, build):
     return ob
 
 
-# the sweatshirt's body: a loose band round the torso from the chest down past the waistband, hanging off the Spine
-# bone, that swings out with speed and flaps on landings over the skin-tight body underneath
+# A shirt's body: a loose band round the torso, tucked into the body at the top so there is no seam, then out to hang
+# loose over the skin-tight figure underneath. It swings out with speed and flaps on landings. Keanu's sweatshirt
+# hangs from the chest down past the waistband; Roxy's and Goldie's crop tops from under the arms to above the navel.
 SHIRT_COLS = [30 * i for i in range(12)]  # degrees round the torso from the back (+ to the lead side)
 SHIRT_US = (0.4, 0.7, 1.0, 1.3)
 SHIRT_ROWS = (0, 0.2, 0.4, 0.55, 0.7, 0.85, 1.0)
-SHIRT_TOP, SHIRT_HEM = SPINE + 0.22, SPINE - 0.04
+SHIRTS = {
+    # top and hem heights, the band's half-width and half-depth tucked in at the top, how far it flares, the bone
+    'sweatshirt': {'top': SPINE + 0.22, 'hem': SPINE - 0.04, 'r': (0.142, 0.096), 'flare': (0.026, 0.024), 'bone': 'Spine'},
+    'crop': {'top': SPINE + 0.36, 'hem': SPINE + 0.17, 'r': (0.146, 0.097), 'flare': (0.022, 0.022), 'bone': 'Spine1'},
+}
 
 
-def shirt_at(col, u, build=1.0):
+def shirt_of(spec):
+    return 'sweatshirt' if spec['hair'] == 'hood' else 'crop' if spec.get('crop') and spec['top'] != 'skin' else None
+
+
+def shirt_at(kind, col, u, build=1.0):
+    k = SHIRTS[kind]
     a = math.radians(col)
-    # tucked inside the body's chest at the top, so there is no seam, then out to hang loose below
     out = min(1.0, u / 0.35)
-    rx, ry = (0.142 + 0.026 * out + 0.006 * u) * build, (0.096 + 0.024 * out + 0.005 * u) * build
-    return Vector((math.sin(a) * rx, math.cos(a) * ry, SHIRT_TOP + (SHIRT_HEM - SHIRT_TOP) * u))
+    rx = (k['r'][0] + k['flare'][0] * out + 0.006 * u) * build
+    ry = (k['r'][1] + k['flare'][1] * out + 0.005 * u) * build
+    return Vector((math.sin(a) * rx, math.cos(a) * ry, k['top'] + (k['hem'] - k['top']) * u))
 
 
-def shirt_bones(rig, build):
-    cloth_bones(rig, 'SpringShirt', lambda c, u: shirt_at(c, u, build), SHIRT_COLS, SHIRT_US, 'Spine')
+def shirt_bones(rig, kind, build):
+    cloth_bones(rig, 'SpringShirt', lambda c, u: shirt_at(kind, c, u, build), SHIRT_COLS, SHIRT_US, SHIRTS[kind]['bone'])
 
 
-def shirt_mesh(mat, build):
-    at = lambda c, u: shirt_at(c, u, build)
-    return cloth_mesh('SpringShirt', at, SHIRT_COLS, SHIRT_US, SHIRT_ROWS, 'Spine', mat, lambda p: Vector((0, 0, p.z)), thickness=0.012)
+def shirt_mesh(mat, kind, build):
+    at = lambda c, u: shirt_at(kind, c, u, build)
+    return cloth_mesh('SpringShirt', at, SHIRT_COLS, SHIRT_US, SHIRT_ROWS, SHIRTS[kind]['bone'], mat, lambda p: Vector((0, 0, p.z)), thickness=0.012)
 
 
 def chain_bones(rig, specs):
@@ -511,9 +521,11 @@ def build(name, spec):
     bpy.ops.object.select_all(action='DESELECT')
     specs = chains(spec)
     chain_bones(rig, specs)  # after the body's automatic weights, so it never skins to them
+    shirt = shirt_of(spec)
     if spec['hair'] == 'hood':
         hood_bones(rig)
-        shirt_bones(rig, spec['build'])
+    if shirt:
+        shirt_bones(rig, shirt, spec['build'])
     # smooth shading on the body, the head and the clothes (zack, 2026-10-31: "clean up the texture on him"): the flat
     # facets of the low-poly figure lit up as blotches under the toon light. Hair, shoes and shades stay faceted.
     smooth = [ob] if spec.get('smooth') else []
@@ -522,11 +534,13 @@ def build(name, spec):
         part.select_set(True)
         if spec.get('smooth') and part.name.split('.')[0] in ('head', 'handLeft', 'handRight', 'fringe'):
             smooth.append(part)
-    if spec['hair'] == 'hood':
-        for part in (hood_mesh(mats['top']), cowl_mesh(mats['top'], spec['build']), shirt_mesh(mats['top'], spec['build'])):
-            part.select_set(True)
-            if spec.get('smooth'):
-                smooth.append(part)
+    clothes = [hood_mesh(mats['top']), cowl_mesh(mats['top'], spec['build'])] if spec['hair'] == 'hood' else []
+    if shirt:
+        clothes.append(shirt_mesh(mats['top'], shirt, spec['build']))
+    for part in clothes:
+        part.select_set(True)
+        if spec.get('smooth'):
+            smooth.append(part)
     for c in specs:
         chain_mesh(c, mats['top'] if c[0].startswith('SpringString') else mats['hair']).select_set(True)
     for part in smooth:
