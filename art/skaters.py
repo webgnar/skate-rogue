@@ -1,7 +1,13 @@
 # Builds the QFS skaters (Webster, Keanu, Roxy, Goldie) on Lou Gnar's rig and exports public/models/<name>.glb.
 #
-#   blender -b -P art/skaters.py                 (all four)
+#   blender -b -P art/skaters.py                 (all four, from their .blend files)
 #   blender -b -P art/skaters.py -- roxy         (one)
+#   blender -b -P art/skaters.py -- --rebuild roxy
+#                                                (from this script, over the .blend: hand edits there are lost)
+#
+# Once a skater's .blend exists it is the source (zack, 2026-10-31: "i might modify the meshes a bit too"): edit or
+# paint it in Blender, and the export writes the GLB from it as it is. Change a skater's look in this script only with
+# --rebuild, and only for a skater nobody has edited by hand; otherwise make the change in the .blend.
 #
 # Each skater is one skinned mesh on the same 20-bone armature and bind pose as art/lou_gnar.py, so the game plays
 # Lou's clips (the actions in lou-gnar.glb) on them unchanged; their GLBs carry no animation. Looks follow the QFS
@@ -17,6 +23,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lou_gnar as lg  # noqa: E402  (the rig, the bind pose and the mesh helpers)
+import paint  # noqa: E402  (art/tex/<skater>.png on the model)
 from lou_gnar import ANKLE_Z, ARM_X, ELBOW_Z, HAND_Z, HEAD_Z, HIP_X, HIP_Z, KNEE_Z, PELVIS, SHOULDER_Z, SPINE  # noqa: E402
 
 OUT = os.path.join(lg.ROOT, 'public', 'models')
@@ -557,99 +564,11 @@ def build(name, spec):
     return rig, ob
 
 
-# Texture painting (zack, 2026-10-31: "can i texture paint these models?"). Each skater is unwrapped onto one texture,
-# art/tex/<skater>.png, that the GLB carries. The first build bakes today's flat colours into it; after that the PNG
-# is the source: paint it in Blender (open art/<skater>.blend, Texture Paint workspace, Image > Save) or any paint
-# app, and the next build puts it on. The unwrap comes from the mesh, so if a skater's shape changes, the paint has to
-# be carried over to the new layout (bake from the old .blend). The gear-wear decals keep their own colours.
-TEX = os.path.join(lg.HERE, 'tex')
-TEX_SIZE = 1024
-
-
-def paintable(ob):
-    return [i for i, slot in enumerate(ob.material_slots) if slot.material and not slot.material.name.startswith('Wear')]
-
-
-def unwrap(ob):
-    """One UV layout over every paintable face, islands split at sharp edges, packed into the square."""
-    paint = set(paintable(ob))
-    me = ob.data
-    while me.uv_layers:
-        me.uv_layers.remove(me.uv_layers[0])
-    me.uv_layers.new(name='paint')
-    bpy.ops.object.select_all(action='DESELECT')
-    ob.select_set(True)
-    bpy.context.view_layer.objects.active = ob
-    for p in me.polygons:
-        p.select = p.material_index in paint
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.mesh.select_mode(type='FACE')
-    bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=0.004, scale_to_bounds=True)
-    bpy.ops.object.mode_set(mode='OBJECT')
-
-
-def bake_colours(ob, image):
-    """Today's flat material colours, baked into `image` through the UV layout."""
-    scene = bpy.context.scene
-    scene.render.engine = 'CYCLES'
-    scene.cycles.device = 'CPU'
-    scene.cycles.samples = 1
-    scene.render.bake.use_pass_direct = False
-    scene.render.bake.use_pass_indirect = False
-    scene.render.bake.use_pass_color = True
-    scene.render.bake.margin = 6
-    for i in paintable(ob):
-        nt = ob.material_slots[i].material.node_tree
-        node = nt.nodes.new('ShaderNodeTexImage')
-        node.image = image
-        nt.nodes.active = node
-    bpy.ops.object.select_all(action='DESELECT')
-    ob.select_set(True)
-    bpy.context.view_layer.objects.active = ob
-    bpy.ops.object.bake(type='DIFFUSE', pass_filter={'COLOR'}, use_clear=True)
-
-
-def paint_material(name, image):
-    m = bpy.data.materials.new(f'{name}Paint')
-    nt = m.node_tree
-    tex = nt.nodes.new('ShaderNodeTexImage')
-    tex.image = image
-    bsdf = nt.nodes['Principled BSDF']
-    bsdf.inputs['Roughness'].default_value = 0.9
-    nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color'])
-    nt.nodes.active = tex  # what Texture Paint paints on
-    return m
-
-
-def texture(name, ob):
-    """Unwraps the skater and puts it on its painted texture, baking one from its colours if there's none yet."""
-    unwrap(ob)
-    path = os.path.join(TEX, f'{name}.png')
-    if os.path.exists(path):
-        image = bpy.data.images.load(path)
-    else:
-        os.makedirs(TEX, exist_ok=True)
-        image = bpy.data.images.new(f'{name}Paint', TEX_SIZE, TEX_SIZE)
-        bake_colours(ob, image)
-        image.filepath_raw = path
-        image.file_format = 'PNG'
-        image.save()
-    image.name = f'{name}Paint'
-    image.filepath = f'//tex/{name}.png'  # relative to the .blend, so painting in Blender saves over it
-    mat = paint_material(name, image)
-    paint = set(paintable(ob))
-    ob.data.materials.append(mat)
-    slot = len(ob.data.materials) - 1
-    for p in ob.data.polygons:
-        if p.material_index in paint:
-            p.material_index = slot
-    bpy.context.view_layer.objects.active = ob
-    bpy.ops.object.material_slot_remove_unused()
-
-
 def export(name):
     path = os.path.join(OUT, f'{name}.glb')
-    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in bpy.data.objects:  # the rig and what hangs on it, not whatever else is in the file
+        ob.select_set(ob.type == 'ARMATURE' or (ob.type == 'MESH' and ob.parent and ob.parent.type == 'ARMATURE'))
     bpy.ops.export_scene.gltf(
         filepath=path,
         export_format='GLB',
@@ -665,10 +584,16 @@ def export(name):
 
 if __name__ == '__main__':
     args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-    for name in args or SKATERS:
-        rig, ob = build(name, SKATERS[name])
-        texture(name, ob)
-        # the Blender file too, to look at or paint in; rebuilding from this script overwrites it
-        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(lg.HERE, f'{name}.blend'), compress=True)
+    rebuild = '--rebuild' in args
+    for name in [a for a in args if not a.startswith('--')] or SKATERS:
+        blend = os.path.join(lg.HERE, f'{name}.blend')
+        if rebuild or not os.path.exists(blend):
+            rig, ob = build(name, SKATERS[name])
+            paint.texture(name, ob)
+            bpy.ops.wm.save_as_mainfile(filepath=blend, compress=True)
+        else:
+            bpy.ops.wm.open_mainfile(filepath=blend)
+            ob = bpy.data.objects[name.capitalize()]
+        paint.check(ob)
         tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
         print(f'{name}: {len(ob.data.vertices)} verts, {tris} tris -> {export(name)}')
