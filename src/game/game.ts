@@ -21,7 +21,8 @@ import { boonsOfType, Missions, statsOf, type MissionsView, type MissionTick, ty
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
 import type { Sound } from '../audio/sound';
-import { buzz } from '../ui/settings';
+import { SETTINGS, buzz } from '../ui/settings';
+import { CAM } from '../render/camera';
 import { cashScale, dayKey, DECK_SLOTS, FULL_LIBRARY, firstPick, STOCK, withLoadout, type Library, type Loadout } from '../run/meta';
 import { PickupView } from '../render/pickups';
 
@@ -730,6 +731,7 @@ export class Game {
       this.view.zoom.reset();
       this.view.drift.reset();
       this.view.rhythm.reset();
+      this.view.close.reset();
       this.view.follow(this.skater.x, this.skater.y);
       this.sprite.play('push');
     }
@@ -1505,6 +1507,7 @@ export class Game {
     if (line === 0) this.skyBonus = 0;
     this.hud.gear(this.sim.gear);
     this.view.zoom.update(dt, this.skater.mode);
+    this.view.close.update(realDt * this.timeScale * devSpeed(), this.skater.mode, CAM.closeUp && SETTINGS.closeUp && !FX.reduceMotion);
     this.view.follow(x, y, dt, realDt * this.timeScale * devSpeed());
     this.view.adapt(realDt * 1000);
     this.view.render();
@@ -2048,6 +2051,7 @@ export class Game {
       case 'trick':
         this.visor.ping();
         this.view.zoom.trick();
+        this.view.close.trick(this.run.combo);
         this.flip = { rgb: TRICK_TRAIL[e.name] ?? TRICK_TRAIL.kickflip, left: FLIP_TRAIL_SECS, at: this.clock };
         this.flipLines.trick(this.flip.rgb);
         this.hud.callout(trickName(e.name, e.fakie, e.nollie) + combo, 'trick');
@@ -2055,6 +2059,7 @@ export class Game {
       case 'grind':
       case 'rail':
         this.grindStart();
+        this.view.close.grind();
         if (e.perfect) this.perfectFx();
         this.hud.callout((e.perfect ? 'PERFECT ' : '') + this.sprite.grindName + combo, 'trick');
         break;

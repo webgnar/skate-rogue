@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CamDrift, LOU_CAM, LouZoom, PHONE_CAM, framing, viewHeight } from '../src/render/camera';
+import { CLOSE_CAM, CamDrift, CloseUp, LOU_CAM, LouZoom, PHONE_CAM, USER_ZOOM, clampUserZoom, framing, softFloor, viewHeight } from '../src/render/camera';
 
 const run = (z: LouZoom, secs: number, mode: 'roll' | 'grind' | 'air' = 'roll') => {
   for (let i = 0; i < Math.round(secs * 60); i++) z.update(1 / 60, mode);
@@ -127,5 +127,61 @@ describe('gyro tilt', () => {
     expect(leanOf(0, 0, 0)).toBe(0); // flat on a table: no up
     expect(counterRoll(0.05)).toBe(0); // inside the dead zone
     expect(counterRoll(0.6)).toBeCloseTo(0.5);
+  });
+});
+
+describe('the close-up', () => {
+  const step = (c: CloseUp, secs: number, mode: 'roll' | 'grind' | 'air' = 'roll', on = true) => {
+    for (let i = 0; i < Math.round(secs * 60); i++) c.update(1 / 60, mode, on);
+    return c.amount;
+  };
+
+  it('rushes in on a grind, holds it for the whole grind, then glides back out', () => {
+    const c = new CloseUp();
+    c.grind();
+    expect(step(c, 0.6, 'grind')).toBeGreaterThan(0.85);
+    expect(step(c, 3, 'grind')).toBeGreaterThan(0.99);
+    expect(step(c, 0.3, 'roll')).toBeGreaterThan(0.6); // still in just after the grind
+    expect(step(c, 3, 'roll')).toBeLessThan(0.02);
+  });
+
+  it('only goes in on a flip from the 3rd trick of a combo', () => {
+    const c = new CloseUp();
+    c.trick(2);
+    expect(step(c, 0.5, 'air')).toBe(0);
+    c.trick(CLOSE_CAM.comboFrom);
+    expect(step(c, 0.5, 'air')).toBeGreaterThan(0.7);
+    expect(step(c, 3, 'roll')).toBeLessThan(0.02);
+  });
+
+  it('stays out when switched off (the setting or reduce motion)', () => {
+    const c = new CloseUp();
+    c.grind();
+    expect(step(c, 1, 'grind', false)).toBe(0);
+  });
+
+  it('never moves in a step: each frame changes it a little', () => {
+    const c = new CloseUp();
+    c.grind();
+    let last = 0;
+    for (let i = 0; i < 300; i++) {
+      const a = c.update(1 / 60, i < 120 ? 'grind' : 'roll', true);
+      expect(Math.abs(a - last)).toBeLessThan(0.06);
+      last = a;
+    }
+  });
+
+  it('a soft floor keeps Lou in frame without a kink', () => {
+    expect(softFloor(10, 4, 0.6)).toBe(10);
+    expect(softFloor(1, 4, 0.6)).toBe(4);
+    expect(softFloor(4, 4, 0.6)).toBeGreaterThan(4);
+    expect(softFloor(4.6, 4, 0.6)).toBeCloseTo(4.6, 6);
+    expect(softFloor(3.4, 4, 0.6)).toBeCloseTo(4, 6);
+  });
+
+  it('keeps the pinch zoom in range', () => {
+    expect(clampUserZoom(5)).toBe(USER_ZOOM.max);
+    expect(clampUserZoom(0.1)).toBe(USER_ZOOM.min);
+    expect(clampUserZoom(Number.NaN)).toBe(1);
   });
 });
