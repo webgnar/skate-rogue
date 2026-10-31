@@ -1,12 +1,14 @@
 # Builds Lou Gnar's astronaut (the Gnar Run player model) in Blender and exports public/models/lou-gnar.glb.
 #
-#   blender -b -P art/lou_gnar.py            (or run it from Blender's Text Editor; it rebuilds the scene)
-#   blender -b art/lou-gnar.blend -P art/lou_gnar.py -- --export-only
-#                                            (after editing the actions in Blender: writes the GLB from the file)
+#   blender -b -P art/lou_gnar.py            (writes the GLB from art/lou-gnar.blend as it is)
+#   blender -b -P art/lou_gnar.py -- --rebuild
+#                                            (from this script, over the .blend: hand edits there are lost)
 #
-# The clips: art/bake_clips.cjs records them from the game into art/anim/clips.json, this script keys them as one
-# action per clip, and the GLB carries them to the game, which plays them in place of the code clips. Rebuilding
-# from scratch re-keys every action from clips.json, so after hand edits in Blender use --export-only.
+# The .blend is the source: edit the mesh, paint it (art/paint.py) or edit the actions in Blender, and the export
+# writes the GLB from it. The clips: art/bake_clips.cjs records them from the game into art/anim/clips.json, this
+# script keys them as one action per clip, and the GLB carries them to the game, which plays them in place of the
+# code clips. Rebuilding re-keys every action from clips.json and remakes the mesh, so changes after a hand edit go
+# into the .blend, the way --add-scarf did.
 #
 # Everything is in the skater rig's own units (see openspec/changes/m6-skinned-skater/design.md): Blender +X is the
 # way you skate (the lead, left side), Blender -Y faces the game camera, Z is up. The model is in the bind pose:
@@ -520,17 +522,29 @@ def actions(rig):
     return made
 
 
+def open_blend():
+    if 'LouGnarRig' not in bpy.data.objects:
+        bpy.ops.wm.open_mainfile(filepath=BLEND)
+    return bpy.data.objects['LouGnarRig'], bpy.data.objects['LouGnar']
+
+
+def texture(suit):
+    # Lou on his own painted texture, art/tex/lou-gnar.png (zack, 2026-10-31: "might as well get lou set up")
+    sys.path.insert(0, HERE)
+    import paint
+    if not paint.painted('lou-gnar'):  # once only: the export saves it into the .blend
+        paint.texture('lou-gnar', suit)
+    paint.check(suit)
+
+
 if __name__ == '__main__' and '--add-scarf' in sys.argv:
     # blender -b art/lou-gnar.blend -P art/lou_gnar.py -- --add-scarf: the scarf onto the saved model and its actions
-    rig, suit = bpy.data.objects['LouGnarRig'], bpy.data.objects['LouGnar']
+    rig, suit = open_blend()
     if 'SpringScarfA0_0' not in rig.data.bones:  # once only: the export saves it into the .blend
         add_scarf(rig, suit, material('scarf', COLORS['scarf']))
     export()
     print('wrote', GLB)
-elif __name__ == '__main__' and '--export-only' in sys.argv:
-    export()
-    print('wrote', GLB)
-elif __name__ == '__main__':
+elif __name__ == '__main__' and '--rebuild' in sys.argv:
     rig, suit = build()
     tris = sum(len(p.vertices) - 2 for p in suit.data.polygons)
     print(f'LouGnar: {len(suit.data.vertices)} verts, {tris} tris, {len(rig.data.bones)} bones')
@@ -539,5 +553,11 @@ elif __name__ == '__main__':
     acts = actions(rig)
     print(f'{len(acts)} actions, board {"in" if deck else "missing"}')
     rig.animation_data.action = None
+    texture(suit)
+    export()
+    print('wrote', GLB)
+elif __name__ == '__main__':
+    rig, suit = open_blend()
+    texture(suit)
     export()
     print('wrote', GLB)
