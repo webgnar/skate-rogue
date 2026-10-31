@@ -17,8 +17,11 @@ function dropIn(level: Level, presses: number[] = [], frames = 900) {
   const sim = new FloorSim({ ...level, startX: w.drain[0] - 3 * TILE, startY: level.streetY });
   const events: string[] = [];
   let top = Infinity;
+  let stairs = -99; // (an ollie off the stair set's landing, if it has one)
   for (let f = 0; f < frames && sim.state === 'skate' && sim.skater.x < w.x1 + 2 * TILE; f++) {
-    sim.step({ pressed: presses.includes(f), held: presses.some((p) => f >= p && f < p + 20) });
+    const st = w.stairs?.[0];
+    if (st && stairs < 0 && sim.skater.grounded && sim.skater.x > st.top - 1.2 * TILE && sim.skater.x < st.top) stairs = f;
+    sim.step({ pressed: presses.includes(f) || f === stairs, held: presses.some((p) => f >= p && f < p + 20) || (f >= stairs && f < stairs + 20) });
     for (const e of sim.events) events.push(e.type === 'sewer' ? `sewer:${e.down}` : e.type);
     if (sim.down && presses.length && f >= presses[0] && f < presses[0] + 40) top = Math.min(top, sim.skater.y);
   }
@@ -82,8 +85,11 @@ describe('the sewer route', { timeout: 30000 }, () => {
     const sim = new FloorSim({ ...level, startX: w.drain[0] - 3 * TILE, startY: level.streetY });
     sim.heat.value = 60;
     let inside = -1;
+    let stairs = -99; // (an ollie off the stair set's landing, if it has one)
     for (let f = 0; f < 600 && sim.skater.x < w.outlet[0]; f++) {
-      sim.step({ pressed: false, held: false });
+      const st = w.stairs?.[0];
+      if (st && stairs < 0 && sim.skater.grounded && sim.skater.x > st.top - 1.2 * TILE && sim.skater.x < st.top) stairs = f;
+      sim.step({ pressed: f === stairs, held: f >= stairs && f < stairs + 20 });
       if (sim.down && inside < 0) inside = sim.heat.value;
     }
     expect(inside).toBeGreaterThan(0);
@@ -127,12 +133,15 @@ import { floorLevel } from '../src/run/floor-level';
 import { FIRST_ROAD } from '../src/gen/roads';
 import type { Sewer } from '../src/physics/level';
 
-// the first floor (seeds 1.., floors 2-8) with a sewer s matching want, and that sewer
-function find(want: (s: Sewer) => boolean): { level: Level; s: Sewer } {
+// the first floor (seeds 1.., floors 2-8) with a sewer s matching want, and that sewer (without a stair set, unless
+// stairs: those that roll on through from the way in would slam on its steps)
+let lastFound: Level | null = null; // (the floor find() is looking at)
+function find(want: (s: Sewer) => boolean, stairs = false): { level: Level; s: Sewer } {
   for (let seed = 1; seed < 60; seed++) {
     for (const floor of [2, 3, 5, 8]) {
       const level = floorOf(seed * 7919, floor);
-      const s = level.sewers?.find(want);
+      lastFound = level;
+      const s = level.sewers?.find((w) => want(w) && (stairs || !w.stairs?.length));
       if (s) return { level, s };
     }
   }
@@ -140,8 +149,9 @@ function find(want: (s: Sewer) => boolean): { level: Level; s: Sewer } {
 }
 
 // skate from x on the sewer's floor (or the street over the way in) with presses at these frames; the events seen
-function ride(level: Level, s: Sewer, x: number, onFloor: boolean, presses: (sim: FloorSim, f: number) => boolean, frames = 700) {
-  const sim = new FloorSim({ ...level, startX: x, startY: onFloor ? s.y : level.streetY });
+function ride(level: Level, s: Sewer, x: number, onFloor: boolean | number, presses: (sim: FloorSim, f: number) => boolean, frames = 700) {
+  //(onFloor: on the sewer's floor, or at this y; else on the street)
+  const sim = new FloorSim({ ...level, startX: x, startY: typeof onFloor === 'number' ? onFloor : onFloor ? s.y : level.streetY });
   const events: string[] = [];
   let tap = -99;
   for (let f = 0; f < frames && sim.state === 'skate' && sim.skater.x < s.x1 + 4 * TILE; f++) {
@@ -172,17 +182,24 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
   });
 
   it('a kick-out throws you up through its grate onto the street; ollie it and you stay down', () => {
-    //(one that comes down on the street, not over the outlet onto its ramp)
-    const { level, s } = find((w) => !!w.kicks?.length && w.kicks[0].grate[1] + SEWER.kickRunOut * TILE < w.outlet[0]);
-    const k = s.kicks![0];
-    //(on the street, rolling, by the end of the grate's run-out)
+    //(one that comes down on the street, not over the outlet onto its ramp, and with no traffic driving through the
+    //spot it comes down on: the street's cars are the street's, a kick-out up into one is a slam like any other)
     let after = NaN;
-    const up = ride(level, s, k.x0 - 3 * TILE, true, (sim) => {
-      if (Number.isNaN(after) && sim.skater.x > k.grate[1] + SEWER.kickRunOut * TILE) after = sim.skater.y;
-      return false;
-    }, 260);
+    let up: ReturnType<typeof ride> | null = null;
+    const { level, s } = find((w) => {
+      if (!w.kicks?.length || w.kicks[0].grate[1] + SEWER.kickRunOut * TILE >= w.outlet[0]) return false;
+      const k = w.kicks[0];
+      after = NaN;
+      up = ride(lastFound!, w, k.x0 - 3 * TILE, true, (sim) => {
+        if (Number.isNaN(after) && sim.skater.x > k.grate[1] + SEWER.kickRunOut * TILE) after = sim.skater.y;
+        return false;
+      }, 260);
+      return !up.events.includes('slam');
+    }, true);
+    const k = s.kicks![0];
+    up = up!;
     expect(up.events).toContain('sewer:false:kicked');
-    expect(up.events).not.toContain('slam');
+    expect(up.events, `${up.events}`).not.toContain('slam');
     expect(after).toBe(level.streetY);
     //(an ollie a few tiles before it)
     let at = -1;
@@ -226,7 +243,7 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
   }, 60000);
 
   it('a rat pack runs at you: roll into it and it trips you, ollie it and it is cleared', () => {
-    const { level, s } = find((w) => w.piece?.kind === 'rats');
+    const { level, s } = find((w) => w.piece?.kind === 'rats', true);
     const from = (s.piece as { x: number }).x - 9 * TILE;
     const trip = ride(level, s, from, true, never, 200);
     expect(trip.events).toContain('ratBump');
@@ -240,7 +257,7 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
   });
 
   it('the alligator bites if you roll into it, and pays a spin token if you ollie it', () => {
-    const { level, s } = find((w) => !!w.gator);
+    const { level, s } = find((w) => !!w.gator, true);
     const [g0] = s.gator!;
     const bite = ride(level, s, g0 - 4 * TILE, true, never, 120);
     expect(bite.events).toContain('bite');
@@ -255,7 +272,7 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
   });
 
   it('the subway: hop off a passing train, or ollie the gap; drop in with no train and you bail', () => {
-    const { level, s } = find((w) => w.piece?.kind === 'subway');
+    const { level, s } = find((w) => w.piece?.kind === 'subway', true);
     const p = s.piece as { x0: number; x1: number; phase: number };
     //roll off the edge with a train under the gap: a hop off its roof, and across
     const onTrain = (sim: FloorSim) => sim.sewer.tunnels.find((t) => t.s === s)!.train!;
@@ -286,7 +303,7 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
   });
 
   it('the full pipe: the floor dips through its bowl and carves you out the far side', () => {
-    const { level, s } = find((w) => w.piece?.kind === 'bowl');
+    const { level, s } = find((w) => w.piece?.kind === 'bowl', true);
     const p = s.piece as { x0: number; x1: number; depth: number };
     let low = 0;
     const { sim } = ride(level, s, p.x0 - 3 * TILE, true, (sim) => {
@@ -329,51 +346,50 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
   });
 });
 
-// zack (2026-10-31): "do a second pass with art and design": a stair set in the tunnels, from the ledges ref
+// zack (2026-10-31): a stair set where you come down into the tunnel, from the ledges ref. Steps are steps: "you
+// shouldnt be able to push up stairs". Ollie them or grind the handrail; roll onto them and you slam
 describe('the sewer stair set', { timeout: 30000 }, () => {
-  it('you roll up its steps, over the landing and back down without a slam, or ollie onto its handrail and grind it down', () => {
-    const { level, s } = find((w) => !!w.stairs?.length && !w.gator && w.piece?.kind !== 'rats' && w.piece?.kind !== 'surge');
-    const st = s.stairs![0];
-    //(rolling: up onto the landing, then down to the floor past it)
-    let topY = Infinity;
-    const roll = ride(level, s, st.x0 - 3 * TILE, true, (sim) => {
-      if (sim.skater.x > st.up && sim.skater.x < st.top) topY = Math.min(topY, sim.skater.y);
-      return false;
-    }, 260);
-    expect(roll.events).not.toContain('slam');
-    expect(topY).toBeLessThanOrEqual(s.y - st.h + 1);
-    expect(roll.sim.skater.x).toBeGreaterThan(st.x1);
-    //(an ollie off the landing's edge: onto the handrail)
-    let grind = false;
-    let at = -1;
-    ride(level, s, st.x0 - 3 * TILE, true, (sim, f) => {
-      if (sim.skater.mode === 'rail') grind = true;
-      if (at < 0 && sim.skater.x > st.top - 2.2 * TILE) at = f;
-      return f === at;
-    }, 260);
-    expect(grind).toBe(true);
-  });
-
-  it('most tunnels with room get one, and nothing else sits on it', () => {
-    let roomy = 0;
-    let withStairs = 0;
+  it('you come down onto its landing, and the steps only go down', () => {
+    let sets = 0;
     for (let seed = 1; seed <= 12; seed++) {
       const level = floorOf(seed * 7919, 3);
       for (const w of level.sewers ?? []) {
-        //(a short dip, 16-20 tiles, only has room to drop in and come back up)
-        if (w.x1 - w.x0 >= 24 * TILE) {
-          roomy++;
-          if (w.stairs?.length) withStairs++;
-        }
         for (const st of w.stairs ?? []) {
-          const on = (a: number, b: number) => a < st.x1 && b > st.x0;
-          expect((w.kicks ?? []).some((k) => on(k.x0, k.x1))).toBe(false);
-          if (w.gator) expect(on(w.gator[0], w.gator[1])).toBe(false);
-          const p = w.piece;
-          if (p?.kind === 'bowl' || p?.kind === 'subway') expect(on(p.x0, p.x1)).toBe(false);
+          sets++;
+          expect(st.up).toBe(st.x0);
+          const steps = level.surfaces.filter((f) => f.sewer && f.kind === 'stairs' && f.x0 >= w.x0 && f.x1 <= w.x1);
+          expect(steps.length).toBe(1);
+          expect(steps[0].y1!).toBeGreaterThan(steps[0].y); // down, left to right
+          //(nothing in the tunnel rises as steps, and nothing else sits on the set)
+          expect((w.kicks ?? []).some((k) => k.x0 < st.x1 && k.x1 > st.x0)).toBe(false);
+          if (w.gator) expect(w.gator[0] < st.x1 && w.gator[1] > st.x0).toBe(false);
         }
       }
     }
-    expect(withStairs).toBeGreaterThanOrEqual(roomy / 2);
+    expect(sets).toBeGreaterThanOrEqual(3); // (of 12 floors: tunnels long enough for one)
+  });
+
+  it('roll onto the steps and you slam; ollie off the landing and you clear them or grind the handrail down', () => {
+    const { level, s } = find((w) => !!w.stairs?.length && !w.gator && w.piece?.kind !== 'rats' && w.piece?.kind !== 'surge', true);
+    const st = s.stairs![0];
+    const roll = ride(level, s, st.top - 3 * TILE, s.y - st.h, never, 120);
+    expect(roll.events).toContain('slam');
+    let at = -1;
+    let grind = false;
+    const ollie = ride(level, s, st.top - 3 * TILE, s.y - st.h, (sim, f) => {
+      if (sim.skater.mode === 'rail') grind = true;
+      if (at < 0 && sim.skater.x > st.top - 1.2 * TILE) at = f;
+      return f === at;
+    }, 200);
+    expect(ollie.events).not.toContain('slam');
+    expect(ollie.sim.skater.x).toBeGreaterThan(st.x1);
+    //(and a later ollie, right at the edge, catches the handrail)
+    at = -1;
+    ride(level, s, st.top - 3 * TILE, s.y - st.h, (sim, f) => {
+      if (sim.skater.mode === 'rail') grind = true;
+      if (at < 0 && sim.skater.x > st.top - 0.4 * TILE) at = f;
+      return f === at;
+    }, 200);
+    expect(grind).toBe(true);
   });
 });

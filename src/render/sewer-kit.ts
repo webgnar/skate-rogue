@@ -477,13 +477,13 @@ export function buildSewers(level: Level): THREE.Group {
         box(Math.min(xa, xb), Math.max(xa, xb), y - 0.06, y + 0.02, z0, FRONT - 0.4, archBrick);
       }
     };
-    flight(a, u, fy, fy + h);
+    if (u > a) flight(a, u, fy, fy + h);
     box(u, tp, fy - 0.3, fy + h, z0, FRONT - 0.4, stone);
     box(u, tp, fy + h - 0.06, fy + h + 0.02, z0, FRONT - 0.4, archBrick);
     flight(b, tp, fy, fy + h);
     //the hubba wall along the back: up the steps, flat over the landing, down the far steps, its lights in a row
     const wall = 0.55;
-    wedge(a, fy + wall, u, fy + h + wall, fy - 0.3, BACK, z0, stone);
+    if (u > a) wedge(a, fy + wall, u, fy + h + wall, fy - 0.3, BACK, z0, stone);
     box(u, tp, fy - 0.3, fy + h + wall, BACK, z0, stone);
     wedge(tp, fy + h + wall, b, fy + wall, fy - 0.3, BACK, z0, stone);
     for (let x = a + 0.4; x < b - 0.2; x += 0.6) {

@@ -264,8 +264,9 @@ export interface Sewer {
   stairs?: SewerStairs[];
 }
 
-// a stair set (zack's ledges ref, 2026-10-31): steps up onto a landing, steps down off it with a lit handrail over
-// them to grind. x0..x1: the whole set; up / top: where the steps up end and the landing ends (px); h: its height (px)
+// a stair set (zack's ledges ref, 2026-10-31): a raised landing where you come down into the tunnel, and steps down
+// off it to the floor with a lit handrail over them to grind (ollie them or grind; roll onto steps and you slam).
+// x0..top: the landing; top..x1: the steps; up: x0 (no steps up: zack, "you shouldnt be able to push up stairs"); h: its height (px)
 export interface SewerStairs {
   x0: number;
   up: number;
@@ -309,6 +310,7 @@ export const SEWER_ROOF = 12; // px: the street's thickness over the tunnel
 // the deepest the sewer's floor goes at x (the full pipe's bowl dips under the rest), for where a fall ends
 export function sewerFloor(s: Sewer, x: number): number {
   const p = s.piece;
+  if (s.stairs?.some((t) => x >= t.x0 && x < t.top)) return s.y - s.stairs.find((t) => x >= t.x0 && x < t.top)!.h;
   return p?.kind === 'bowl' && x >= p.x0 && x < p.x1 ? s.y + p.depth : s.y;
 }
 
