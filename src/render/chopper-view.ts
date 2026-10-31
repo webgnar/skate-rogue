@@ -89,8 +89,9 @@ export class ChopperView {
 
     const r = CHOPPER.radius / TILE;
     this.coneMat = new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-    //apex at the chopper, the open base on the street
-    this.cone = new THREE.Mesh(new THREE.ConeGeometry(r, HIGH - 0.6, 24, 1, true).translate(0, -(HIGH - 0.6) / 2, 0), this.coneMat);
+    //apex at the chopper, the open base on the street. Only its far half, behind the lane (zack's clips, 2026-10-31:
+    //the whole cone's near side drew its glow over the skater): seen from the camera it still reads as a cone of light
+    this.cone = new THREE.Mesh(new THREE.ConeGeometry(r, HIGH - 0.6, 24, 1, true, Math.PI / 2, Math.PI).translate(0, -(HIGH - 0.6) / 2, 0), this.coneMat);
     this.cone.position.set(0, HIGH - 0.6, -0.5);
     this.poolMat = new THREE.MeshBasicMaterial({ color: 0xfff6d0, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending });
     this.pool = new THREE.Mesh(new THREE.CircleGeometry(r, 32).rotateX(-Math.PI / 2), this.poolMat);

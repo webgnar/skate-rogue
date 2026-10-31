@@ -28,7 +28,7 @@ import { editFloor } from './hills';
 import { floorEdit } from './level-edits';
 import { makeRng, randInt, type Rng } from './rng';
 import { busy, clearAt, groundAt } from './top-route';
-import { cloudy, crestOf, stairStart } from './clouds';
+import { cloudy, crestOf, lipOf, stairStart } from './clouds';
 
 export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | SkyPiece | 'lines';
 export type SkyPiece = 'blimp' | 'rig' | 'swing' | 'bust';
@@ -54,6 +54,7 @@ export const SKY = {
   gap: [2, 3], // tiles of open sky past the usual: with the usual, a big flip gap, about as far as a flip carries you
   gapDrop: 1.5, // tiles the piece after a gap stands lower, so the flip carries you over
   stoken: 0.5, // a Stoken in a gap beat
+  entryUp: 2.5, // tiles over the hill's lip the first piece stands, at most: a big ollie and a flip off the lip makes it
   rise: 1.5, // tiles higher than where you left the last piece the next may stand (a flip makes it)
   fall: 3, // and lower: the line steps down with the hill, but never further than you'd want to land from
   pieces: 1, // set pieces a floor, at most: the rest of a recipe's set-piece slots turn into roofs
@@ -211,6 +212,10 @@ export function addSkyBeats(level: Level, seed: number): void {
     //until the ground falls away)
     const c = crestOf(level, a, b);
     let x = c + d.skyStart * (b - c);
+    //the way in (zack's clips, 2026-10-31: the bot ollied off the crest and never reached the sky): the first piece
+    //stands low enough over the hill's lip that a big ollie and a flip off it lands on it; the line climbs from there
+    const [, lipTop] = lipOf(level, a, b);
+    leave = lipTop - (SKY.entryUp - SKY.rise) * TILE;
     const picks = skyPick(seed, floor, i);
     //Chinatown's stretch opens on its clotheslines
     if (level.chinatown?.some(([c0, c1]) => c1 > a && c0 < b)) picks.unshift('lines');
@@ -268,7 +273,7 @@ export function addSkyBeats(level: Level, seed: number): void {
         //the boom: falling with the hill, never rising (a grind doesn't climb), smoothed
         const w = t(range(rng, SKY.crane));
         const pts: [number, number][] = [];
-        for (let px = x; px <= x + w; px += TILE / 2) pts.push([px, base(px) - TILE]);
+        for (let px = x; px <= x + w; px += TILE / 2) pts.push([px, Math.max(base(px) - TILE, ceiling)]);
         for (let k = 1; k < pts.length; k++) pts[k][1] = Math.max(pts[k][1], pts[k - 1][1]);
         //(never under the ground ahead, a bank or a crest: the boom stands clear of it, raised a little if it has to)
         for (const p of pts) p[1] = Math.min(p[1], (groundAt(level, p[0]) ?? level.streetY) - 2 * TILE);
@@ -277,7 +282,7 @@ export function addSkyBeats(level: Level, seed: number): void {
         for (const p of pts) p[1] = Math.max(p[1], pts[0][1] + (p[0] - x) / SKY.craneFall);
         const clash = () => pts.some(([px, py]) => busy(level, px, px + TILE / 2, py));
         for (let k = 1; k <= 8 && clash(); k++) for (const p of pts) p[1] += (k % 2 ? -1 : 1) * k * (TILE / 2);
-        const ok = pts.length >= 4 && !clash();
+        const ok = pts.length >= 4 && !clash() && pts[0][1] >= ceiling - 0.5;
         if (ok) {
           const r = polyRail(pts);
           r.sky = 'crane';

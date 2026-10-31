@@ -178,7 +178,13 @@ export class Pilot {
   private sky(sim: FloorSim): boolean {
     const sk = sim.skater;
     const piece = sk.mode === 'rail' ? sk.rail?.sky || sk.rail?.top : sk.surface?.sky || sk.surface?.top;
-    if (!piece && sk.mode !== 'air') return this.ref(sim);
+    //on the street or the hill: a big ollie when the first piece of the sky is just ahead and in reach (the flip comes
+    //in the air, below), else skate as the reference bot does
+    if (!piece && sk.mode !== 'air') {
+      const up = sim.level.surfaces.some((s) => s.sky && s.x0 - sk.x > 2.5 * sk.hsp * 6 && s.x0 - sk.x < 2.5 * sk.hsp * 9 && sk.y - s.y > TILE && sk.y - s.y < 3.5 * TILE);
+      if (up && sk.grounded && sk.mode !== 'rail') return true;
+      return this.ref(sim);
+    }
     const level = sim.level;
     const near = nearby(level, sk);
     const decks = sim.sky.pieces.map((p) => p.ledge).filter((l) => l.x1 > sk.x);
