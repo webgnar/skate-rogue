@@ -13,6 +13,7 @@ export type Stat =
   | 'grind' | 'rail' | 'ledge' | 'manual' | 'perfect'
   | 'hop' | 'near' | 'doorSlam' | 'wreck' | 'kicker' | 'skitch' | 'slip' | 'firecracker'
   | 'smash' | 'stoken' | 'dodge' | 'drone'
+  | 'grindDist' | 'travel' // metres on a rail or ledge, metres skated (the game adds whole metres as they pile up)
   | 'combo' | 'bank' | 'floor' | 'act' | 'escape'
   | 'cleanFloor' | 'unbusted' | 'topRoute' | 'grindBoons' | 'popBoons' | 'cashOut';
 
@@ -26,7 +27,11 @@ export interface MissionDef {
   goal: number;
   scope: Scope;
   tier: number; // the rank it starts turning up at: early ranks get the easy ones
+  unit?: 'm'; // a distance, in metres
 }
+
+// px to the metre: Lou is 48 px tall, call him 1.8 m. Base speed is then about 8 m/s
+export const PX_PER_M = 27;
 
 // each one teaches something the game already has (GDD: The pool)
 export const MISSIONS: MissionDef[] = [
@@ -39,6 +44,8 @@ export const MISSIONS: MissionDef[] = [
   { id: 'floor3', text: 'Reach floor 3', stat: 'floor', goal: 3, scope: 'best', tier: 0 },
   { id: 'combo4', text: 'Land a x4 combo', stat: 'combo', goal: 4, scope: 'best', tier: 0 },
   { id: 'manual3', text: 'Manual 3 pads', stat: 'manual', goal: 3, scope: 'ever', tier: 0 },
+  { id: 'grind50m', text: 'Grind 50 m', stat: 'grindDist', goal: 50, scope: 'ever', tier: 0, unit: 'm' },
+  { id: 'travel1k', text: 'Skate 1 km', stat: 'travel', goal: 1000, scope: 'ever', tier: 0, unit: 'm' },
   // rank 1
   { id: 'rails3combo', text: 'Grind 3 rails in one combo', stat: 'rail', goal: 3, scope: 'combo', tier: 1 },
   { id: 'near3', text: 'Pull 3 close calls', stat: 'near', goal: 3, scope: 'ever', tier: 1 },
@@ -49,6 +56,8 @@ export const MISSIONS: MissionDef[] = [
   { id: 'smash10floor', text: 'Smash 10 props in one floor', stat: 'smash', goal: 10, scope: 'floor', tier: 1 },
   { id: 'clean1', text: 'Clear a floor without slamming', stat: 'cleanFloor', goal: 1, scope: 'ever', tier: 1 },
   { id: 'combo8', text: 'Land a x8 combo', stat: 'combo', goal: 8, scope: 'best', tier: 1 },
+  { id: 'grind15combo', text: 'Grind 15 m in one combo', stat: 'grindDist', goal: 15, scope: 'combo', tier: 1, unit: 'm' },
+  { id: 'travelRun1', text: 'Skate 2 km in one run', stat: 'travel', goal: 2000, scope: 'run', tier: 1, unit: 'm' },
   // rank 2
   { id: 'fakie5', text: 'Land 5 fakie flips', stat: 'fakie', goal: 5, scope: 'ever', tier: 2 },
   { id: 'spin3', text: 'Land 3 180 flips', stat: 'spin', goal: 3, scope: 'run', tier: 2 },
@@ -58,6 +67,8 @@ export const MISSIONS: MissionDef[] = [
   { id: 'top1', text: 'Finish a floor on the top route', stat: 'topRoute', goal: 1, scope: 'ever', tier: 2 },
   { id: 'bank5k', text: 'Bank 5,000 in one combo', stat: 'bank', goal: 5000, scope: 'best', tier: 2 },
   { id: 'cashout3', text: 'Cash out 3 combos', stat: 'cashOut', goal: 3, scope: 'run', tier: 2 },
+  { id: 'grind250m', text: 'Grind 250 m', stat: 'grindDist', goal: 250, scope: 'ever', tier: 2, unit: 'm' },
+  { id: 'travel5k', text: 'Skate 5 km', stat: 'travel', goal: 5000, scope: 'ever', tier: 2, unit: 'm' },
   // rank 3
   { id: 'nollie1', text: 'Land a nollie flip', stat: 'nollie', goal: 1, scope: 'ever', tier: 3 },
   { id: 'dodge5', text: 'Dodge 5 guard bullets', stat: 'dodge', goal: 5, scope: 'ever', tier: 3 },
@@ -67,6 +78,8 @@ export const MISSIONS: MissionDef[] = [
   { id: 'grindBoons3', text: 'Hold 3 GRIND boons', stat: 'grindBoons', goal: 3, scope: 'best', tier: 3 },
   { id: 'combo15', text: 'Land a x15 combo', stat: 'combo', goal: 15, scope: 'best', tier: 3 },
   { id: 'act1', text: 'Escape act 1', stat: 'act', goal: 1, scope: 'best', tier: 3 },
+  { id: 'grind40combo', text: 'Grind 40 m in one combo', stat: 'grindDist', goal: 40, scope: 'combo', tier: 3, unit: 'm' },
+  { id: 'grindRun', text: 'Grind 100 m in one run', stat: 'grindDist', goal: 100, scope: 'run', tier: 3, unit: 'm' },
   // rank 4 and up
   { id: 'tre3', text: 'Land 3 tre flips in one run', stat: 'tre', goal: 3, scope: 'run', tier: 4 },
   { id: 'drone3', text: 'Stomp 3 drones', stat: 'drone', goal: 3, scope: 'ever', tier: 4 },
@@ -76,6 +89,8 @@ export const MISSIONS: MissionDef[] = [
   { id: 'firecracker1', text: 'Firecracker down a stair set', stat: 'firecracker', goal: 1, scope: 'ever', tier: 4 },
   { id: 'smash25run', text: 'Smash 25 props in one run', stat: 'smash', goal: 25, scope: 'run', tier: 4 },
   { id: 'bank20k', text: 'Bank 20,000 in one combo', stat: 'bank', goal: 20000, scope: 'best', tier: 5 },
+  { id: 'grind1k', text: 'Grind 1 km', stat: 'grindDist', goal: 1000, scope: 'ever', tier: 5, unit: 'm' },
+  { id: 'travel25k', text: 'Skate 25 km', stat: 'travel', goal: 25000, scope: 'ever', tier: 5, unit: 'm' },
   { id: 'act2', text: 'Escape act 2', stat: 'act', goal: 2, scope: 'best', tier: 5 },
   { id: 'combo25', text: 'Land a x25 combo', stat: 'combo', goal: 25, scope: 'best', tier: 6 },
   { id: 'escape', text: 'Escape the city', stat: 'escape', goal: 1, scope: 'ever', tier: 6 },
@@ -123,6 +138,7 @@ export function cleanMissions(raw: unknown): MissionSave {
 // what the screens draw
 export interface MissionRow {
   text: string;
+  unit?: 'm';
   count: number;
   goal: number;
   scope: Scope;
@@ -139,6 +155,7 @@ export interface MissionsView {
 export interface MissionDone {
   text: string;
   goal: number;
+  unit?: 'm';
   rank?: number; // the new rank, when this one raised it
   pay?: number; // Stoken for the rank
   grip?: GripId; // a rank grip
@@ -149,6 +166,7 @@ export interface MissionTick {
   text: string;
   count: number;
   goal: number;
+  unit?: 'm';
 }
 
 export class Missions {
@@ -214,8 +232,9 @@ export class Missions {
       else this.live[i] += n;
       const now = this.count(i);
       if (now >= d.goal) done.push(this.finish(i));
-      //a 'best' that didn't beat the old best isn't news
-      else if (now > was) this.ticked.push({ text: d.text, count: now, goal: d.goal });
+      //a 'best' that didn't beat the old best isn't news; a long one (metres, points) only at each tenth of the way
+      else if (now > was && (d.goal < 20 || Math.floor((10 * now) / d.goal) > Math.floor((10 * was) / d.goal)))
+        this.ticked.push({ text: d.text, count: now, goal: d.goal, ...(d.unit ? { unit: d.unit } : {}) });
     }
     return done;
   }
@@ -225,7 +244,7 @@ export class Missions {
     const before = this.rank;
     this.state.done++;
     this.state.seen.push(d.id);
-    const out: MissionDone = { text: d.text, goal: d.goal };
+    const out: MissionDone = { text: d.text, goal: d.goal, ...(d.unit ? { unit: d.unit } : {}) };
     if (this.rank > before) {
       out.rank = this.rank;
       out.pay = RANK.pay(this.rank);
@@ -261,7 +280,7 @@ export class Missions {
     return {
       rank: this.rank,
       toNext: this.state.done % RANK.per,
-      rows: this.state.active.map((_, i) => ({ text: this.def(i).text, count: Math.min(this.count(i), this.def(i).goal), goal: this.def(i).goal, scope: this.def(i).scope })),
+      rows: this.state.active.map((_, i) => ({ text: this.def(i).text, ...(this.def(i).unit ? { unit: this.def(i).unit } : {}), count: Math.min(this.count(i), this.def(i).goal), goal: this.def(i).goal, scope: this.def(i).scope })),
       skip: RANK.skip,
       bank,
     };
@@ -318,6 +337,13 @@ export function statsOf(e: FloorEvent): Stat[] {
 }
 
 // how many of the boons held are of a type
+// a mission's count as the screens show it: metres (km past 1000), a share for big point goals, else 3/10
+export function countText(count: number, goal: number, unit?: 'm'): string {
+  const c = Math.min(count, goal);
+  if (unit === 'm') return goal >= 1000 ? `${(Math.floor(c / 100) / 10).toFixed(1)}/${goal / 1000} km` : `${c}/${goal} m`;
+  return goal >= 1000 ? `${Math.round((100 * c) / goal)}%` : `${c}/${goal}`;
+}
+
 export function boonsOfType(held: readonly Held[], type: string): number {
   return held.filter((h) => boonById(h.id)?.type === type).length;
 }

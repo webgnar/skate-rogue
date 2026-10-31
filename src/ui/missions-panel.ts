@@ -1,6 +1,6 @@
 // The three missions and Skater Rank (src/run/missions.ts), on the pause card and the run summary: each mission's
 // count as a bar, and a SKIP for a little Stoken. The rank's pips fill with the missions done towards the next.
-import type { MissionsView } from '../run/missions';
+import { countText, type MissionsView } from '../run/missions';
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 
@@ -9,7 +9,7 @@ export function missionsHtml(v: MissionsView): string {
   const rows = v.rows
     .map((r, i) => {
       const share = Math.round((100 * r.count) / r.goal);
-      const n = r.goal >= 1000 ? `${Math.round(share)}%` : `${r.count}/${r.goal}`;
+      const n = countText(r.count, r.goal, r.unit);
       return `<div class="mission"><span class="txt">${esc(r.text)}</span><span class="bar"><i style="width:${share}%"></i></span><span class="n">${n}</span><button data-skip="${i}"${v.bank < v.skip ? ' disabled' : ''}>SKIP ◆${v.skip}</button></div>`;
     })
     .join('');
