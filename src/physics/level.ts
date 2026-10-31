@@ -227,7 +227,7 @@ export interface Level {
 // built: a blimp's back bobs on the air, a window washer's rig drops under you once you land on it (down to
 // `floor`), a tower crane's jib swings out of the lane and back
 export interface SkyMover {
-  kind: 'blimp' | 'rig' | 'swing';
+  kind: 'blimp' | 'rig' | 'swing' | 'cloud' | 'balloon'; // cloud, balloon: up in the cloud layer (src/gen/clouds.ts)
   x0: number;
   x1: number;
   y: number;

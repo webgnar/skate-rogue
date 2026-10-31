@@ -33,7 +33,7 @@ export type FloorEvent =
   | { type: 'decoy' } // the Decoy boon pulled the cruiser back
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
   | { type: 'skyChain'; n: number; mult: number } // NO GROUND: another sky piece on the line, n pieces in
-  | { type: 'skyBank'; n: number } // and down on the ground again, the line banked
+  | { type: 'skyBank'; n: number; mult: number } // and down on the ground again, the line banked
   | { type: 'bust'; index: number; x: number; y: number; mult: number } // burst through a sky billboard (level.busts)
   | { type: 'goldBird'; x: number; y: number } // cleared the golden pigeon: a spin token
   | { type: 'repair'; part: GearPart } // a sky stash's fresh gear part, fitted
@@ -257,7 +257,7 @@ export class FloorSim {
       if (this.skyLine >= 2) this.events.push({ type: 'skyChain', n: this.skyLine, mult: skyMult(this.skyLine) });
       return;
     }
-    if (this.skyLine >= 2 && sk.mode !== 'bail') this.events.push({ type: 'skyBank', n: this.skyLine });
+    if (this.skyLine >= 2 && sk.mode !== 'bail') this.events.push({ type: 'skyBank', n: this.skyLine, mult: skyMult(this.skyLine) });
     this.skyLine = 0;
     this.skyPiece = null;
   }

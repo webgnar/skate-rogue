@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { at } from '../game/interp';
 import { TILE } from '../physics/constants';
-import type { Level } from '../physics/level';
+import type { Level, Surface } from '../physics/level';
 import type { Sky, SkyPieceSim } from '../sim/sky';
 import { groundAt } from '../gen/top-route';
 import { toX, toY } from './kit';
@@ -88,6 +88,49 @@ function mast(p: Parts, m: THREE.Material, x: number, z: number, y0: number, y1:
   }
 }
 
+// a cloud you land on, its top along y = 0 from x = 0 to w (tiles): a row of puffs whose tops are the deck, fatter
+// darker ones bulging under them (zack's Mario refs: soft, round, comic)
+function cloud(p: Parts, top: THREE.Material, under: THREE.Material, w: number, seed: number, thin = false): void {
+  const n = Math.max(2, Math.round(w / (thin ? 0.9 : 1.2)));
+  for (let i = 0; i < n; i++) {
+    const k = (seed * 7 + i * 13) % 5;
+    const r = (thin ? 0.45 : 0.75) + k * 0.06;
+    const x = ((i + 0.5) / n) * w;
+    const s = new THREE.SphereGeometry(r, 12, 8);
+    s.scale(1.25, 0.8, 1);
+    p.add(top, s, x, -r * 0.8 + 0.04 + (k % 3) * 0.06, 0.1 + (k % 2) * 0.15);
+    if (!thin && i % 2 === 0) {
+      const b = new THREE.SphereGeometry(r * 1.2, 12, 8);
+      b.scale(1.3, 0.75, 1);
+      p.add(under, b, x + 0.3, -r * 1.55, -0.2);
+    }
+  }
+  //and a puff or two up behind, so it reads as a heap, not a slab
+  if (!thin) for (const t of [0.3, 0.7]) p.add(top, new THREE.SphereGeometry(0.7 + (seed % 3) * 0.1, 12, 8).scale(1.3, 0.9, 1), w * t, 0.2, -1.0);
+}
+
+let balloonSkin: THREE.Texture | null = null;
+// a hot air balloon's envelope: bright gores, red and gold and white
+function balloonTexture(): THREE.Texture {
+  if (balloonSkin) return balloonSkin;
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 64;
+  const g = c.getContext('2d')!;
+  const cols = ['#e83a5a', '#ffd21a', '#f2eef8', '#2a6ad8'];
+  for (let i = 0; i < 16; i++) {
+    g.fillStyle = cols[i % cols.length];
+    g.fillRect(i * 16, 0, 16, 64);
+  }
+  g.fillStyle = 'rgba(26,20,36,0.5)';
+  for (let i = 0; i < 16; i++) g.fillRect(i * 16, 0, 1.5, 64);
+  balloonSkin = new THREE.CanvasTexture(c);
+  balloonSkin.colorSpace = THREE.SRGBColorSpace;
+  return balloonSkin;
+}
+
+const RAINBOW = [0xe8322a, 0xff8a1e, 0xffd21a, 0x3cc85a, 0x2a6ad8, 0x8a4ae0];
+
 let blimpSkin: THREE.Texture | null = null;
 // the blimp's side: a silver envelope with panel seams, its name in big dark letters along the middle
 function blimpTexture(): THREE.Texture {
@@ -144,9 +187,20 @@ export class SkyPiecesView {
   private readonly rope = new THREE.MeshBasicMaterial({ color: 0x1a1424 });
   private readonly skin = new THREE.MeshLambertMaterial({ map: blimpTexture() });
   private readonly paper = new THREE.MeshLambertMaterial({ map: adTexture(), side: THREE.DoubleSide });
+  private readonly puff = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x5a5866 });
+  private readonly puffUnder = new THREE.MeshLambertMaterial({ color: 0xc8d4f4, emissive: 0x2a3050 });
+  private readonly bands = RAINBOW.map((c) => new THREE.MeshLambertMaterial({ color: c, emissive: new THREE.Color(c).multiplyScalar(0.25) }));
+  private readonly wicker = new THREE.MeshLambertMaterial({ color: 0x9a6a40 });
+  private readonly envelope = new THREE.MeshLambertMaterial({ map: balloonTexture() });
+  // the cloud layer's still clouds (src/gen/clouds.ts), and the thin ones, which break up once you've stood on them
+  private clouds: THREE.Group | null = null;
+  private thin: { s: Surface; g: THREE.Object3D }[] = [];
 
   reset(sky: Sky): void {
     for (const p of this.pieces) this.group.remove(p.g);
+    if (this.clouds) this.group.remove(this.clouds);
+    this.clouds = null;
+    this.thin = [];
     for (const b of this.busts) this.group.remove(b);
     this.pieces = [];
     this.busts = [];
@@ -161,7 +215,21 @@ export class SkyPiecesView {
       const ropes: THREE.Object3D[] = [];
       const w = T(s.x1 - s.x0);
       const p = new Parts();
-      if (s.kind === 'blimp') {
+      if (s.kind === 'cloud') {
+        cloud(p, this.puff, this.puffUnder, w, Math.round(s.x0));
+        p.into(moving);
+      } else if (s.kind === 'balloon') {
+        //a hot air balloon: its wicker basket is the deck, the striped envelope over it on its ropes
+        p.box(this.wicker, w, 0.9, 1.4, w / 2, -0.45, -0.2);
+        p.box(this.steel, w + 0.1, 0.1, 1.5, w / 2, -0.02, -0.2);
+        const env = new THREE.SphereGeometry(2.3, 20, 14);
+        env.scale(1, 1.15, 1);
+        p.add(this.envelope, env, w / 2, 4.6, -0.6);
+        p.add(this.envelope, new THREE.ConeGeometry(1.2, 1.4, 16).rotateX(Math.PI), w / 2, 2.0, -0.6);
+        for (const rx of [0.15, w - 0.15]) p.bar(this.rope, [rx, 0, -0.2], [w / 2 + (rx < w / 2 ? -0.9 : 0.9), 1.6, -0.6], 0.04);
+        p.box(this.orange, 0.4, 0.3, 0.4, w / 2, 1.2, -0.6); // the burner
+        p.into(moving);
+      } else if (s.kind === 'blimp') {
         //the envelope (zack's Goodyear ref): a long silver capsule whose top is the deck, its name along the side,
         //a cross of navy fins at the tail, the cabin slung under its middle
         const r = 1.9;
@@ -282,14 +350,76 @@ export class SkyPiecesView {
       this.busts.push(sheet);
       this.group.add(sheet);
     });
+    //the cloud layer's clouds and rainbows: still, so merged into a few meshes; the thin clouds each their own, to
+    //break up
+    const cl = new Parts();
+    const group = new THREE.Group();
+    for (const s of level.surfaces) {
+      if (s.sky !== 'cloud' && s.sky !== 'wisp' && s.sky !== 'thin') continue;
+      const w = T(s.x1 - s.x0);
+      if (s.sky === 'thin') {
+        const tp = new Parts();
+        cloud(tp, this.puffUnder, this.puffUnder, w, Math.round(s.x0), true);
+        const tg = new THREE.Group();
+        tp.into(tg);
+        tg.position.set(toX(s.x0), Y(s.y), 0);
+        group.add(tg);
+        this.thin.push({ s, g: tg });
+        continue;
+      }
+      const c = new Parts();
+      cloud(c, this.puff, this.puffUnder, w, Math.round(s.x0), s.sky === 'wisp');
+      const cg = new THREE.Group();
+      c.into(cg);
+      cg.position.set(toX(s.x0), Y(s.y), 0);
+      group.add(cg);
+    }
+    //a rainbow: six bands stacked under the rail you grind (red on top), a cloud at each foot
+    for (const r of level.rails) {
+      if (r.sky !== 'rainbow') continue;
+      for (let i = 1; i < r.xs.length; i++) {
+        const [ax, ay, bx, by] = [toX(r.xs[i - 1]), Y(r.ys[i - 1]), toX(r.xs[i]), Y(r.ys[i])];
+        const len = Math.hypot(bx - ax, by - ay) + 0.04;
+        const ang = Math.atan2(by - ay, bx - ax);
+        this.bands.forEach((m, k) => {
+          const off = -0.11 - k * 0.2;
+          cl.box(m, len, 0.2, 0.7, (ax + bx) / 2 - Math.sin(ang) * off, (ay + by) / 2 + Math.cos(ang) * off, 0, ang);
+        });
+      }
+      for (const k of [0, r.xs.length - 1]) {
+        const c = new Parts();
+        cloud(c, this.puff, this.puffUnder, 2.4, k + Math.round(r.xs[0]), true);
+        const cg = new THREE.Group();
+        c.into(cg);
+        cg.position.set(toX(r.xs[k]) - 1.2, Y(r.ys[k]) - 0.9, 0.3);
+        group.add(cg);
+      }
+    }
+    cl.into(group);
+    inkify(group);
+    this.clouds = group;
+    this.group.add(group);
   }
 
-  update(level: Level, skaterX: number): void {
+  update(level: Level, skaterX: number, gone?: ReadonlySet<Surface>): void {
+    //a thin cloud you've stood on breaks up: it puffs out and is gone
+    for (const t of this.thin) {
+      const g = gone?.has(t.s) ?? false;
+      if (!g) {
+        t.g.visible = true;
+        t.g.scale.setScalar(1);
+      } else if (t.g.visible) {
+        const k = t.g.scale.x * 1.06;
+        t.g.scale.set(k, k * 0.8, k);
+        if (k > 1.5) t.g.visible = false;
+      }
+    }
     for (const { sim, g, moving, ropes } of this.pieces) {
       g.visible = Math.abs(sim.site.x0 - skaterX) < 1400 || Math.abs(sim.site.x1 - skaterX) < 1400;
       if (!g.visible) continue;
       const dy = toY(level, at(sim, 'y')) - toY(level, sim.site.y);
       moving.position.y = dy;
+      moving.position.x = at(sim, 'x') / TILE;
       if (sim.site.kind === 'swing') (g.userData.pivot as THREE.Object3D).rotation.y = at(sim, 'angle');
       //the ropes from the davit down to the cradle, wherever it's dropped to
       for (const r of ropes) {

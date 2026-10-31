@@ -28,6 +28,7 @@ import { editFloor } from './hills';
 import { floorEdit } from './level-edits';
 import { makeRng, randInt, type Rng } from './rng';
 import { busy, groundAt } from './top-route';
+import { CLOUDS } from './clouds';
 
 export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | SkyPiece | 'lines';
 export type SkyPiece = 'blimp' | 'rig' | 'swing' | 'bust';
@@ -162,7 +163,8 @@ export function addSkyBeats(level: Level, seed: number): void {
   };
   spans.forEach(([a, b], i) => {
     const base = heightLine(level, a, b, d.skyHeight);
-    const end = b - 4 * TILE;
+    //(with a cloud layer, the beats give way partway down to the staircase up into it, src/gen/clouds.ts)
+    const end = floor >= CLOUDS.from ? a + CLOUDS.stairAt * (b - a) : b - 4 * TILE;
     let x = a + d.skyStart * (b - a);
     const picks = skyPick(seed, floor, i);
     //Chinatown's stretch opens on its clotheslines

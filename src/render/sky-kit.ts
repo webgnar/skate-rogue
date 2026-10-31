@@ -130,7 +130,7 @@ export function buildSkyBeats(level: Level): THREE.Group {
       g.add(tank);
       for (const dy of [-0.4, -1.6]) box(w + 0.05, 0.1, 0.2, cx, y + dy, 0.35, steel); // its hoops, seen from the front
       for (const [dx, dz] of [[-0.6, -0.4], [0.6, -0.4], [-0.6, -1.2], [0.6, -1.2]]) leg(cx + dx * r, y - 2, -0.6 + dz + 0.4, 0.09, wood);
-    } else if (s.sky === 'scaffold') {
+    } else if (s.sky === 'scaffold' || s.sky === 'step') {
       //planks on a tube frame
       box(w, 0.18, 1.6, cx, y - 0.09, -0.3, wood);
       for (const lx of [x0 + 0.15, x1 - 0.15]) for (const z of [0.3, -0.9]) leg(lx, y - 0.18, z, 0.05);

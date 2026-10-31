@@ -112,6 +112,8 @@ export function placeProps(level: Level): Prop[] {
   //bottles, cans and planters on ledges and roofs, away from their ends
   for (const s of level.surfaces) {
     if ((s.kind !== 'ledge' && s.kind !== 'roof') || s.side || s.y1 !== undefined || s.x1 - s.x0 < PROPS.ledgeMin) continue;
+    //(nothing left lying about up on the cloud layer or its staircase, src/gen/clouds.ts)
+    if (s.sky === 'cloud' || s.sky === 'thin' || s.sky === 'wisp' || s.sky === 'step') continue;
     if (s.x0 < level.startX + 4 * TILE) continue;
     const n = 1 + (s.x1 - s.x0 > 8 * TILE ? Math.floor(rng() * 3) : Math.floor(rng() * 2));
     for (let i = 0; i < n; i++) {

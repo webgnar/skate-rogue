@@ -375,6 +375,28 @@ html, body {
 #combobox .c { font-size: calc(var(--u) * 2.2); line-height: 1; color: var(--pink); -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
 #combo { font-style: normal; color: var(--yellow); font-size: 1.15em; }
 #pending { font-size: calc(var(--u) * 1.4); color: #fff; line-height: 1.1; }
+/* NO GROUND (src/sim/sky.ts): up on the sky route, the coin multiplier, a pip per sky piece chained (filling to the
+   cap), and the extra cash it's paid so far; it flashes when it steps up and when it banks */
+#ngbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--u) * 0.2) calc(var(--u) * 1.1) calc(var(--u) * 0.35);
+  border-color: #5fe8ff;
+  transition: opacity 0.2s, transform 0.2s;
+}
+#ngbox[data-live='0'] { opacity: 0; transform: skewX(-10deg) scale(0.85); }
+#ngbox[data-banked='1'] { border-color: var(--yellow); }
+#ngbox .c { font-size: calc(var(--u) * 1.15); line-height: 1; color: #5fe8ff; letter-spacing: 0.06em; }
+#ngbox .m { font-size: calc(var(--u) * 1.9); line-height: 1; color: #fff; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+#ngmult { font-style: normal; color: var(--yellow); font-size: 1.2em; display: inline-block; }
+#ngbox.step #ngmult { animation: ngstep 0.35s ease-out; }
+@keyframes ngstep { 0% { transform: scale(1.8); } 100% { transform: scale(1); } }
+#ngpips { display: flex; gap: calc(var(--u) * 0.25); margin-top: calc(var(--u) * 0.25); }
+#ngpips b { width: calc(var(--u) * 0.9); height: calc(var(--u) * 0.9); border: 1.5px solid #000; background: #2a2c3a; transform: skewX(-10deg); }
+#ngpips b.on { background: #5fe8ff; }
+#ngbox[data-cap='1'] #ngpips b.on { background: var(--yellow); }
+#ngbonus { font-size: calc(var(--u) * 1.2); color: #1fd67a; line-height: 1.2; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
 
 #right { display: flex; gap: calc(var(--u) * 1); align-items: flex-start; }
 #money {
@@ -542,6 +564,7 @@ html, body {
   #center { justify-content: center; }
   #scorebox { min-width: calc(var(--u) * 8); padding: calc(var(--u) * 0.2) calc(var(--u) * 0.9) calc(var(--u) * 0.3); }
   #combobox { position: absolute; top: calc(100% + var(--u) * 0.8); left: 50%; translate: -50% 0; }
+  #ngbox { position: absolute; top: calc(100% + var(--u) * 6.6); left: 50%; translate: -50% 0; }
   #money { flex-direction: column; align-items: flex-start; gap: calc(var(--u) * 0.2); font-size: calc(var(--u) * 1.7); padding: calc(var(--u) * 0.3) calc(var(--u) * 0.9); }
   #meters { grid-column: 1 / 4; flex-direction: column; gap: calc(var(--u) * 0.5); padding: 0 calc(var(--u) * 0.6); }
   #stoke, #heat { justify-content: flex-start; }

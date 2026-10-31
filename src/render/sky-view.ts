@@ -4,7 +4,7 @@
 // escape's chopper view (src/render/chopper-view.ts) fed the top route's.
 import * as THREE from 'three';
 import { at } from '../game/interp';
-import type { Level } from '../physics/level';
+import type { Level, Surface } from '../physics/level';
 import type { Sky } from '../sim/sky';
 import { toX, toY } from './kit';
 import { model } from './models';
@@ -105,9 +105,9 @@ export class SkyView {
     });
   }
 
-  update(level: Level, sky: Sky, skaterX: number, skaterY: number, up: boolean, dt: number): void {
+  update(level: Level, sky: Sky, skaterX: number, skaterY: number, up: boolean, dt: number, gone?: ReadonlySet<Surface>): void {
     this.t += dt;
-    this.pieces.update(level, skaterX);
+    this.pieces.update(level, skaterX, gone);
     sky.flocks.forEach((f, i) => {
       const g = this.flocks[i];
       if (!g) return;
