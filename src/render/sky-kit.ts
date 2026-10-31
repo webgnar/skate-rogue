@@ -152,12 +152,8 @@ export function buildSkyBeats(level: Level): THREE.Group {
     box(2, 0.5, 0.8, mx - 1.4, my - 0.1, -0.6, steel); // the counterweight
   }
   //Chinatown's clotheslines: a thin line on a bracket at each end, washing pegged along it
-<<<<<<< HEAD
   //(zack's refs: NYC Chinatown's washing is mostly white sheets and shirts, a bright one here and there)
   const cloth = [0xf2eef8, 0xe8e4dc, 0xf2eef8, 0xdcd8e8, 0xe83a5a, 0xf2eef8, 0x2a6ad8, 0xf2eef8, 0xffb020].map((c) => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
-=======
-  const cloth = [0xe83a5a, 0xf2eef8, 0x2a6ad8, 0xffb020, 0x5fe8ff].map((c) => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
->>>>>>> origin/main
   const line = new THREE.MeshBasicMaterial({ color: 0x1a1424 });
   lines.forEach((r, n) => {
     for (let k = 1; k < r.xs.length; k++) {
@@ -176,16 +172,12 @@ export function buildSkyBeats(level: Level): THREE.Group {
     for (let x = X(r.xs[0]) + 0.6; x < X(r.xs[r.xs.length - 1]) - 0.4; x += 0.9) {
       const top = Y(r.yAt(x * TILE) ?? r.ys[0]);
       const h = 0.5 + (i % 3) * 0.2;
-<<<<<<< HEAD
       const m = cloth[i % cloth.length];
       if (i++ % 2) {
         //a shirt: its body and sleeves out either side
         box(0.5, h, 0.03, x, top - h / 2 - 0.05, -0.12, m);
         box(0.9, 0.2, 0.03, x, top - 0.15, -0.12, m);
       } else box(0.7, h + 0.25, 0.03, x, top - (h + 0.25) / 2 - 0.05, -0.12, m).rotation.z = ((i % 5) - 2) * 0.04;
-=======
-      box(0.6, h, 0.03, x, top - h / 2 - 0.05, -0.12, cloth[i++ % cloth.length]);
->>>>>>> origin/main
     }
   });
   return g;
