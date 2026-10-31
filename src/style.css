@@ -1662,7 +1662,9 @@ html, body {
   #over .again { margin-top: 0; font-size: 14px; }
 }
 
-/* the end-of-run slot machine (src/ui/slots-panel.ts): one machine per spin token */
+/* the end-of-run slot machine (src/ui/slots-panel.ts): one comic arcade cabinet, a reel window per spin token
+   (zack's mockup, 2026-10-31): star coins on a burst up top, a pink marquee ringed with chasing bulbs, chrome reel
+   windows with a yellow prize plaque under each, a lever, and a big pink button on the deck */
 #spin {
   position: absolute;
   inset: 0;
@@ -1670,45 +1672,178 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   box-sizing: border-box;
-  background: rgba(18, 12, 30, 0.8);
+  background: rgba(18, 12, 30, 0.72);
   font-family: 'Bangers', 'Arial Black', sans-serif;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   animation: fade 0.2s ease-out;
-  --cell: 54px;
+  --cell: 52px;
+  --bulbs: radial-gradient(circle, #fffbd0 0 2px, #ffd23a 2.6px 3.6px, #000 4px 4.6px, transparent 5px) 0 0 / 14px 14px;
 }
-#spin.many { --cell: 36px; gap: 8px; }
-#spin .title { font-size: clamp(30px, 8vw, 52px); color: #ff3b4e; -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; transform: skewX(-8deg); }
-#spin .machines { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 16px; max-width: 760px; }
-#spin .machine { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+#spin.many { --cell: 34px; }
+#spin .cab { position: relative; display: flex; flex-direction: column; align-items: center; width: fit-content; min-width: min(320px, 84vw); max-width: min(560px, 86vw); }
+/* the topper: three star coins on a pink and yellow burst */
+#spin .topper { position: relative; height: calc(var(--cell) * 1.15); width: min(70%, 260px); margin-bottom: -10px; z-index: 1; }
+#spin .burst {
+  position: absolute;
+  inset: -30% 14% 0;
+  background: conic-gradient(from 10deg, #ff2fb4 0 6%, #ffd23a 0 12%, #ff2fb4 0 18%, #ffb52a 0 24%, #ff2fb4 0 30%, #ffd23a 0 36%, transparent 0 64%, #ffd23a 0 70%, #ff2fb4 0 76%, #ffb52a 0 82%, #ff2fb4 0 88%, #ffd23a 0 94%, #ff2fb4 0);
+  clip-path: polygon(50% 0, 56% 38%, 75% 6%, 66% 44%, 96% 24%, 72% 58%, 100% 62%, 0 62%, 28% 58%, 4% 24%, 34% 44%, 25% 6%, 44% 38%);
+  filter: drop-shadow(2px 2px 0 #000);
+}
+#spin .coin {
+  position: absolute;
+  bottom: 0;
+  width: calc(var(--cell) * 0.95);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6b0 0 12%, #ffd23a 30%, #e09a12 68%, #a86a08);
+  border: 2.5px solid #000;
+  box-shadow: inset 0 0 0 4px #ffcf3a, inset 0 0 0 6px #b77a0c, 2px 3px 0 #000;
+  color: #ffe36a;
+  font-size: calc(var(--cell) * 0.55);
+  -webkit-text-stroke: 2px #8a5600;
+  paint-order: stroke fill;
+}
+#spin .coin.c { left: 50%; translate: -50% 0; width: calc(var(--cell) * 1.2); bottom: 8%; font-size: calc(var(--cell) * 0.7); z-index: 1; }
+#spin .coin.l { left: 18%; }
+#spin .coin.r { right: 18%; }
+/* the marquee: bulbs round a pink sign */
+#spin .marquee {
+  position: relative;
+  z-index: 2;
+  padding: 9px;
+  background: var(--bulbs), linear-gradient(#f2b03a, #b8700e);
+  border: 3px solid #000;
+  border-radius: 14px;
+  box-shadow: 3px 4px 0 #000;
+  animation: spin-bulbs 0.6s steps(2) infinite;
+}
+#spin .title {
+  padding: 2px 18px 0;
+  background: linear-gradient(#ff4fa6, #d11a72);
+  border: 3px solid #000;
+  border-radius: 8px;
+  font-size: clamp(28px, 7vw, 46px);
+  line-height: 1.15;
+  color: #ffd23a;
+  -webkit-text-stroke: 2px #000;
+  paint-order: stroke fill;
+  text-shadow: 3px 3px 0 #000;
+  white-space: nowrap;
+}
+@keyframes spin-bulbs { to { background-position: 7px 0, 0 0; } }
+/* the body: chrome bezel with bulb-lit pink pillars, the reel windows in a dark well */
+#spin .body {
+  position: relative;
+  margin-top: -6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 22px 14px;
+  background: var(--bulbs), var(--bulbs), linear-gradient(90deg, #e2265a, #ff4f8a 10px, #c01650 16px, transparent 16px calc(100% - 16px), #c01650 calc(100% - 16px), #ff4f8a calc(100% - 10px), #e2265a), linear-gradient(#cfd6e2, #8d96a8);
+  background-size: 14px 14px, 14px 14px, auto, auto;
+  background-repeat: repeat-y, repeat-y, no-repeat, no-repeat;
+  background-position: 1px 0, right 1px top 0, 0 0, 0 0;
+  border: 3px solid #000;
+  border-radius: 12px 12px 4px 4px;
+  box-shadow: 3px 4px 0 #000;
+}
+#spin .machines {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 12px;
+  padding: 10px;
+  background: linear-gradient(#3a1e5c, #23103a);
+  border: 3px solid #000;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px #7a5aa8;
+}
+#spin .machine { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 #spin .reels {
   display: flex;
-  gap: 4px;
-  padding: 6px;
-  background: #e8203a;
-  border: 3px solid #000;
-  border-radius: 10px;
-  box-shadow: 0 0 0 3px #ffd84a, 4px 5px 0 3px #000;
+  gap: 3px;
+  padding: 5px;
+  background: linear-gradient(#f4f7fb, #9aa3b2 45%, #e4e8ef 55%, #7d8698);
+  border: 2.5px solid #000;
+  border-radius: 8px;
 }
-#spin .reel { width: var(--cell); height: var(--cell); overflow: hidden; background: #fffaeb; border: 2px solid #000; border-radius: 4px; box-shadow: inset 0 6px 8px rgba(0, 0, 0, 0.35), inset 0 -6px 8px rgba(0, 0, 0, 0.35); }
+#spin .reel {
+  width: var(--cell);
+  height: calc(var(--cell) * 1.1);
+  overflow: hidden;
+  background: linear-gradient(#cfc8b8, #fffaeb 22% 78%, #cfc8b8);
+  border: 2px solid #000;
+  border-radius: 5px;
+  box-shadow: inset 0 7px 8px rgba(0, 0, 0, 0.35), inset 0 -7px 8px rgba(0, 0, 0, 0.35);
+}
 #spin .strip { display: flex; flex-direction: column; }
-#spin .sym { flex: none; height: var(--cell); display: grid; place-items: center; font: 900 calc(var(--cell) * 0.62) / 1 "Arial Black", sans-serif; -webkit-text-stroke: 3px #000; paint-order: stroke fill; }
-#spin .sym.stoken { color: #b98cff; }
-#spin .sym.cash { color: #3fd46a; }
-#spin .sym.boon { font-size: calc(var(--cell) * 0.5); -webkit-text-stroke: 0; }
-#spin .sym.heart { color: #ff3b4e; }
-#spin .sym.star { color: #ffd84a; }
-#spin .prize { font-size: 20px; color: var(--good); text-shadow: 2px 2px 0 #000; }
-#spin .machine.big .prize { font-size: 26px; color: var(--trick); }
-#spin.many .prize { font-size: 15px; }
-#spin.many .machine.big .prize { font-size: 18px; }
-#spin .again { font: 15px system-ui, sans-serif; opacity: 0.8; }
+#spin .sym { flex: none; height: calc(var(--cell) * 1.1); display: grid; place-items: center; }
+#spin .sym svg { width: 70%; height: 70%; overflow: visible; }
+#spin .sym.cash { font: 900 calc(var(--cell) * 0.72) / 1 'Arial Black', sans-serif; color: #2fc25a; -webkit-text-stroke: 3px #000; paint-order: stroke fill; }
+#spin .prize {
+  min-width: calc(var(--cell) * 3);
+  box-sizing: border-box;
+  padding: 3px 10px 1px;
+  background: linear-gradient(#ffe46a, #ffc21a);
+  border: 2.5px solid #000;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #fff3a8, 2px 2px 0 #000;
+  font-size: 17px;
+  line-height: 1.1;
+  text-align: center;
+  color: #1a1028;
+}
+#spin .machine.big .prize { font-size: 19px; background: linear-gradient(#ff8ac6, #ff3d9a); color: #fff; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; }
+#spin.many .prize { font-size: 13px; padding: 2px 6px 0; }
+#spin.many .machine.big .prize { font-size: 14px; }
+/* the lever, on the cabinet's right */
+#spin .lever { position: absolute; right: -16px; top: 22%; width: 8px; height: 46%; background: linear-gradient(90deg, #6b7383, #eef1f6, #6b7383); border: 2px solid #000; border-radius: 4px; }
+#spin .lever::before { content: ''; position: absolute; left: 50%; top: -14px; translate: -50% 0; width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffb0b0, #e8203a 45%, #8a0d1e); border: 2px solid #000; }
+#spin .lever::after { content: ''; position: absolute; left: -9px; bottom: -6px; width: 18px; height: 16px; background: #3a3050; border: 2px solid #000; border-radius: 4px; }
+#spin.pulled .lever { animation: spin-pull 0.45s ease-in-out; transform-origin: 50% 100%; }
+@keyframes spin-pull { 50% { transform: scaleY(-0.6); } }
+/* the deck: a purple shelf with the big button */
+#spin .deck {
+  width: 104%;
+  margin-top: -2px;
+  padding: 10px 0 12px;
+  display: flex;
+  justify-content: center;
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 6px), linear-gradient(#7a3fc0 0 20%, #ffd23a 20% 26%, #5a2a96 26%);
+  border: 3px solid #000;
+  border-radius: 6px 6px 14px 14px;
+  box-shadow: 3px 4px 0 #000;
+}
+#spin .btn {
+  padding: 4px 34px 2px;
+  font-size: clamp(24px, 6vw, 34px);
+  color: #fff;
+  -webkit-text-stroke: 2px #000;
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 #000;
+  background: linear-gradient(#ff7ab8, #ff2f8f 50%, #c8146a);
+  border: 3px solid #000;
+  border-radius: 14px;
+  box-shadow: 0 0 0 4px #d4dae4, 0 0 0 6.5px #000, 3px 6px 0 6px #000;
+}
+#spin .btn.go { animation: spin-btn 0.9s ease-in-out infinite; }
+@keyframes spin-btn { 50% { transform: scale(1.06); } }
+#app.calm #spin .marquee, #app.calm #spin .btn.go { animation: none; }
 @media (max-height: 460px) {
-  #spin { --cell: 44px; gap: 8px; }
-  #spin.many { --cell: 30px; }
-  #spin .title { font-size: 30px; }
+  #spin { --cell: 38px; }
+  #spin.many { --cell: 28px; }
+  #spin .topper { height: calc(var(--cell) * 1.05); }
+  #spin .title { font-size: 26px; }
+  #spin .marquee { padding: 6px; }
+  #spin .body { padding: 8px 18px 8px; }
+  #spin .machines { padding: 6px; gap: 6px 10px; }
+  #spin .deck { padding: 6px 0 8px; }
+  #spin .btn { font-size: 22px; padding: 2px 26px 0; }
+  #spin .prize { font-size: 14px; }
 }
 
 /* the in-run mission popup (src/ui/mission-toast.ts): above the gear wear, bottom right, clear of the callouts.
