@@ -37,7 +37,7 @@ export function groundAt(level: Level, x: number): number | null {
   let near = Infinity;
   let nearH = 0;
   for (const s of level.surfaces) {
-    if (s.side || (s.kind !== 'roof' && s.kind !== 'bank' && s.kind !== 'stairs') || !inHill(level, s.x0)) continue;
+    if (s.side || s.sewer || (s.kind !== 'roof' && s.kind !== 'bank' && s.kind !== 'stairs') || !inHill(level, s.x0)) continue;
     const h = (y: number) => (level.streetY - y) / TILE;
     if (x < s.x0 || x > s.x1) {
       const d = x < s.x0 ? s.x0 - x : x - s.x1;
@@ -63,7 +63,7 @@ export function mouths(level: Level): Mouth[] {
     const high = (s: Level['surfaces'][number]) => Math.max(level.streetY - s.y, level.streetY - (s.y1 ?? s.y)) / TILE > TUNNEL.flat;
     spans.forEach(([a, b], i) => {
       const ground = level.surfaces
-        .filter((s) => !s.side && s.x0 >= a - TILE && s.x1 <= b + TILE && (s.kind === 'roof' || s.kind === 'bank' || s.kind === 'stairs'))
+        .filter((s) => !s.side && !s.sewer && s.x0 >= a - TILE && s.x1 <= b + TILE && (s.kind === 'roof' || s.kind === 'bank' || s.kind === 'stairs'))
         .sort((p, q) => p.x0 - q.x0);
       const up = ground.filter(high);
       if (!up.length) return;

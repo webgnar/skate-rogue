@@ -3,13 +3,30 @@
 import { describe, expect, it } from 'vitest';
 import { validatedFloor } from '../src/gen/validate';
 import { floorTwist } from '../src/gen/twists';
-import { SEWER } from '../src/gen/sewer';
+import { DEEP, SEWER } from '../src/gen/sewer';
 import { FloorSim } from '../src/sim/floor';
 import { Pilot } from '../src/bot/pilot';
 import { PHYS, TILE } from '../src/physics/constants';
-import { isStreetAt, SEWER_ROOF, type Level } from '../src/physics/level';
+import { isStreetAt, SEWER_ROOF, type Level, type Sewer } from '../src/physics/level';
 
 const floorOf = (seed: number, floor: number): Level => validatedFloor(seed, floor, { twist: floorTwist(seed, floor), hills: true, danger: 2 }).level;
+
+// the first floor (seeds 1.., this floor) whose first sewer is a tunnel of its own: down its drain, up its outlet
+function tunnelFloor(floor = 1): Level {
+  for (let seed = 1; seed < 40; seed++) {
+    const level = floorOf(seed * 7919, floor);
+    const w = level.sewers?.[0];
+    if (w && w.outlet[1] > w.outlet[0] && !w.stairs?.length && !w.piece && !w.kicks?.length) return level;
+  }
+  throw new Error('no tunnel of its own');
+}
+
+// the rooms of the route a sewer's in, from it on: each runs on into the next
+function routeOf(level: Level, s: Sewer): Sewer[] {
+  const out = [s];
+  for (let n = level.sewers!.find((w) => w.x0 === s.x1); n; n = level.sewers!.find((w) => w.x0 === n!.x1)) out.push(n);
+  return out;
+}
 
 // roll up to the first sewer's drain and let the sim run, pressing on the given frames (held for 20)
 function dropIn(level: Level, presses: number[] = [], frames = 900) {
@@ -17,11 +34,8 @@ function dropIn(level: Level, presses: number[] = [], frames = 900) {
   const sim = new FloorSim({ ...level, startX: w.drain[0] - 3 * TILE, startY: level.streetY });
   const events: string[] = [];
   let top = Infinity;
-  let stairs = -99; // (an ollie off the stair set's landing, if it has one)
   for (let f = 0; f < frames && sim.state === 'skate' && sim.skater.x < w.x1 + 2 * TILE; f++) {
-    const st = w.stairs?.[0];
-    if (st && stairs < 0 && sim.skater.grounded && sim.skater.x > st.top - 1.2 * TILE && sim.skater.x < st.top) stairs = f;
-    sim.step({ pressed: presses.includes(f) || f === stairs, held: presses.some((p) => f >= p && f < p + 20) || (f >= stairs && f < stairs + 20) });
+    sim.step({ pressed: presses.includes(f), held: presses.some((p) => f >= p && f < p + 20) });
     for (const e of sim.events) events.push(e.type === 'sewer' ? `sewer:${e.down}` : e.type);
     if (sim.down && presses.length && f >= presses[0] && f < presses[0] + 40) top = Math.min(top, sim.skater.y);
   }
@@ -30,29 +44,67 @@ function dropIn(level: Level, presses: number[] = [], frames = 900) {
 
 // (whole floors get built and skated here: seconds each, more with the rest of the suite running alongside)
 describe('the sewer route', { timeout: 30000 }, () => {
-  it('floors with hills get one under a street chase, with its holes in the street', () => {
-    //(about 1 layout in 13 has no stretch of unbroken street long enough for one: 7 of 90 floors, before and after the
-    //sky route's level design pass, 2026-10-31)
+  it('floors with hills get a route: a way in on the street, the deep under the hills and canals, up at the far end', () => {
+    //(about 1 floor in 5 has no stretch of street that fits a way in, 2026-10-31; most of the rest, a route on under
+    //the hills to the floor's end)
     let floors = 0;
     let dug = 0;
+    let routes = 0;
     for (let s = 1; s <= 4; s++) {
       for (const floor of [1, 4, 7]) {
         const level = floorOf(s * 7919, floor);
         floors++;
-        if (level.sewers?.length) dug++;
-        for (const w of level.sewers ?? []) {
-          expect(w.y).toBe(level.streetY + SEWER.depth);
-          expect(isStreetAt(level, (w.drain[0] + w.drain[1]) / 2)).toBe(false);
-          expect(isStreetAt(level, (w.outlet[0] + w.outlet[1]) / 2)).toBe(false);
-          expect(isStreetAt(level, (w.drain[1] + w.outlet[0]) / 2)).toBe(true);
+        const all = level.sewers ?? [];
+        if (all.length) dug++;
+        if (all.some((w) => w.deep)) routes++;
+        for (const [i, w] of all.entries()) {
+          expect(w.y).toBe(level.streetY + (w.deep ? DEEP.depth : SEWER.depth));
+          //a way in is a hole in the street; along the route each room runs on from the last
+          if (w.drain[1] > w.drain[0]) expect(isStreetAt(level, (w.drain[0] + w.drain[1]) / 2)).toBe(false);
+          else expect(all[i - 1]?.x1).toBe(w.x0);
+          //it comes up for good at an outlet in the street, or runs on into the next room
+          if (w.outlet[1] > w.outlet[0]) expect(isStreetAt(level, (w.outlet[0] + w.outlet[1]) / 2)).toBe(false);
+          else expect(all[i + 1]?.x0).toBe(w.x1);
+          //the storm drain's under whole street; the deep is under the hills and canals, its roof well under the street
+          if (!w.deep) expect(isStreetAt(level, (w.drain[1] + Math.max(w.drain[1] + TILE, w.outlet[0])) / 2)).toBe(true);
+          else expect(w.top).toBe(level.streetY + DEEP.top);
         }
+        //(and the deep only ever comes up into a storm drain under the street)
+        for (const [i, w] of all.entries()) if (w.deep && !all[i + 1]?.deep) expect(all[i + 1]?.entry).toBe('climb');
       }
     }
-    expect(dug).toBeGreaterThanOrEqual(floors - 2);
+    expect(dug).toBeGreaterThanOrEqual(floors - 3);
+    expect(routes).toBeGreaterThanOrEqual(floors / 2);
   });
 
+  it('the sewer bot rides a route through: down the drop, through the deep under the hill, up at the far end', () => {
+    let rode = 0;
+    for (let seed = 1; seed <= 6; seed++) {
+      const level = floorOf(seed * 7919, 1);
+      const all = level.sewers ?? [];
+      if (!all.some((w) => w.deep)) continue;
+      const route = routeOf(level, all[0]);
+      const end = route[route.length - 1];
+      const sim = new FloorSim({ ...level, startX: all[0].drain[0] - 3 * TILE, startY: level.streetY });
+      const pilot = new Pilot('sewer');
+      let down = 0;
+      let deep = 0;
+      for (let f = 0; f < 4000 && sim.state === 'skate' && sim.skater.x < end.x1 + 2 * TILE; f++) {
+        sim.step(pilot.input(sim));
+        if (sim.down) down++;
+        if (sim.down && sim.skater.y > level.streetY + SEWER.depth + TILE) deep++;
+      }
+      if (sim.state === 'bail') continue;
+      expect(sim.skater.y).toBeLessThanOrEqual(level.streetY + 1); // up the outlet onto the street
+      expect(deep / 60).toBeGreaterThan(5);
+      expect(down / 60).toBeGreaterThan(15); // (zack, 2026-10-31: the sewer grows from a 4-second dip to a route)
+      rode++;
+    }
+    expect(rode).toBeGreaterThanOrEqual(2);
+  }, 60000);
+
   it('rolling into the drain drops you in, and the outlet ramp brings you back up without a slam', () => {
-    const { sim, events } = dropIn(floorOf(7919, 1));
+    const { sim, events } = dropIn(tunnelFloor());
     expect(events).toContain('sewer:true');
     expect(events).toContain('sewer:false');
     expect(events).not.toContain('slam');
@@ -80,7 +132,7 @@ describe('the sewer route', { timeout: 30000 }, () => {
   });
 
   it('down there the Heat cools', () => {
-    const level = floorOf(7919, 1);
+    const level = tunnelFloor();
     const w = level.sewers![0];
     const sim = new FloorSim({ ...level, startX: w.drain[0] - 3 * TILE, startY: level.streetY });
     sim.heat.value = 60;
@@ -114,7 +166,7 @@ describe('the sewer route', { timeout: 30000 }, () => {
       }
       if (sim.state === 'exit') {
         cleared++;
-        sewers += level.sewers.length;
+        sewers += level.sewers.filter((w) => w.drain[1] > w.drain[0]).length; // (its ways in: a route's rooms run on)
         downs += d;
       }
     }
@@ -131,7 +183,6 @@ describe('the sewer route', { timeout: 30000 }, () => {
 import { SEWER_SIM } from '../src/sim/sewer';
 import { floorLevel } from '../src/run/floor-level';
 import { FIRST_ROAD } from '../src/gen/roads';
-import type { Sewer } from '../src/physics/level';
 
 // the first floor (seeds 1.., floors 2-8) with a sewer s matching want, and that sewer (without a stair set, unless
 // stairs: those that roll on through from the way in would slam on its steps)
@@ -200,7 +251,7 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
     up = up!;
     expect(up.events).toContain('sewer:false:kicked');
     expect(up.events, `${up.events}`).not.toContain('slam');
-    expect(after).toBe(level.streetY);
+    expect(after).toBeLessThanOrEqual(level.streetY); // (up on the street, or onto something on it: a rail, a ledge)
     //(an ollie a few tiles before it)
     let at = -1;
     const down = ride(level, s, k.x0 - 3 * TILE, true, (sim, f) => {
@@ -225,10 +276,11 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
     let banked = 0;
     for (let seed = 1; seed <= 8; seed++) {
       const level = floorOf(seed * 7919, 2 + (seed % 3) * 3);
-      for (const s of level.sewers ?? []) {
+      for (const s of (level.sewers ?? []).filter((w) => w.drain[1] > w.drain[0])) {
         const sim = new FloorSim({ ...level, startX: s.drain[0] - 2 * TILE, startY: level.streetY });
         const pilot = new Pilot('sewer');
-        for (let f = 0; f < 1500 && sim.state === 'skate' && sim.skater.x < s.x1 + 2 * TILE; f++) {
+        const end = routeOf(level, s).at(-1)!;
+        for (let f = 0; f < 4000 && sim.state === 'skate' && sim.skater.x < end.x1 + 2 * TILE; f++) {
           sim.step(pilot.input(sim));
           for (const e of sim.events) {
             if (e.type === 'flowChain') chained++;

@@ -10,7 +10,7 @@
 // alligator) are src/render/sewer-view.ts. Plain shared materials, so the floor's batching (batch.ts) merges them.
 import * as THREE from 'three';
 import { TILE } from '../physics/constants';
-import { SEWER_ROOF, type Level, type Sewer } from '../physics/level';
+import { inHill, SEWER_ROOF, type Level, type Sewer } from '../physics/level';
 import { SEWER } from '../gen/sewer';
 import { makeRng } from '../gen/rng';
 import { surface } from './surfaces';
@@ -19,6 +19,7 @@ const BACK = -2.6; // the tunnel's back wall (the skater rolls at z 0)
 const FRONT = 4; // the near sidewalk's front (hillside.ts HILLSIDE.nearWalk)
 const STREET_BACK = -3.5;
 const ROCK = -9; // how deep the ground under the tunnel is drawn
+const DEEP_ROCK = -18; // and under the deep (as far down as the hill's ground goes: hillside.ts HILLSIDE.bottom)
 const SUBWAY_BACK = -40; // the subway line runs off this far into the city
 
 let tagTex: THREE.CanvasTexture | null = null;
@@ -224,30 +225,74 @@ export function buildSewers(level: Level): THREE.Group {
     return mesh;
   };
 
-  level.sewers.forEach((s, i) => {
+  const all = level.sewers;
+  all.forEach((s, i) => {
     const rng = makeRng(level.layout.seed * 31 + i * 977 + 7);
     const x0 = X(s.x0);
     const x1 = X(s.x1);
     const fy = Y(s.y);
-    const ramp = x1 - SEWER.ramp;
+    //(the route's rooms run on into each other: ends only where one stops)
+    const before = all.some((o) => o !== s && o.x1 === s.x0);
+    const after = all.some((o) => o !== s && o.x0 === s.x1);
+    const ramp = s.outlet[1] > s.outlet[0] ? x1 - SEWER.ramp : x1;
+    //the deep's roof: under the street at first in the drop's room, then down under the hills and canals
+    const at = s.top !== undefined ? X(s.topAt ?? s.x0) : x1;
+    const low = s.top !== undefined ? Y(s.top) : roof;
+    const high = s.top0 !== undefined ? Y(s.top0) : roof; // (over a drop deeper in the deep: the last room's roof)
+    const roofAt = (x: number) => (x >= at ? low : high);
     const p = s.piece;
     const bowl = p?.kind === 'bowl' ? p : null;
     const sub = p?.kind === 'subway' ? p : null;
     const deep = bowl ? fy - bowl.depth / TILE : fy;
+    const rock = s.deep ? DEEP_ROCK : ROCK;
+    const wall = s.deep ? archBrick : brick;
     //the ground: under the tunnel (split round the subway's gap), and either side of it under the street's usual 3 tiles
     const gaps: [number, number][] = sub ? [[X(sub.x0), X(sub.x1)]] : [];
-    let gx = x0 - 0.5;
+    let gx = before ? x0 : x0 - 0.5;
     for (const [a, b] of gaps) {
-      box(gx, a, ROCK, deep - 0.3, STREET_BACK, FRONT, ground);
+      box(gx, a, rock, deep - 0.3, STREET_BACK, FRONT, ground);
       gx = b;
     }
-    box(gx, x1 + 0.5, ROCK, deep - 0.3, STREET_BACK, FRONT, ground);
-    box(x0 - 6, x0 - 0.5, ROCK, -3, STREET_BACK, FRONT, ground);
-    box(x1 + 0.5, x1 + 6, ROCK, -3, STREET_BACK, FRONT, ground);
+    box(gx, after ? x1 : x1 + 0.5, rock, deep - 0.3, STREET_BACK, FRONT, ground);
+    if (!before) box(x0 - 6, x0 - 0.5, ROCK, -3, STREET_BACK, FRONT, ground);
+    if (!after) box(x1 + 0.5, x1 + 6, ROCK, -3, STREET_BACK, FRONT, ground);
     //the tunnel's ends and back wall
-    box(x0 - 0.5, x0, deep - 0.3, roof, STREET_BACK, FRONT, brick);
-    box(x1, x1 + 0.5, fy - 0.3, roof, STREET_BACK, FRONT, brick);
-    box(x0, x1, deep, roof, STREET_BACK, BACK, brick);
+    if (!before) box(x0 - 0.5, x0, deep - 0.3, roof, STREET_BACK, FRONT, brick);
+    if (!after) box(x1, x1 + 0.5, fy - 0.3, roof, STREET_BACK, FRONT, brick);
+    if (at > x0) box(x0, Math.min(at, x1), deep, high, STREET_BACK, BACK, wall);
+    if (at < x1) {
+      box(at, x1, deep, low, STREET_BACK, BACK, wall);
+      //the deep's roof: the ground between it and the street (or the canal) over it (under the hill, the hill's own
+      //ground comes down to it: hillside.ts), a brick lintel where it comes down
+      for (let x = Math.floor(at); x < x1; ) {
+        const hilled = inHill(level, (x + 0.5) * TILE);
+        let e = x + 1;
+        while (e < x1 && inHill(level, (e + 0.5) * TILE) === hilled) e++;
+        if (!hilled) box(Math.max(x, at), Math.min(e, x1), low, -3, STREET_BACK, FRONT - 0.01, ground);
+        x = e;
+      }
+      box(at, x1, low - 0.25, low, BACK, FRONT - 0.02, archBrick);
+      if (at > x0 || !before) box(at - 0.3, at, low - 0.25, high, STREET_BACK, FRONT - 0.02, archBrick);
+    }
+    //(and where the next room's roof is higher, the lintel goes back up to it)
+    const next = all.find((o) => o.x0 === s.x1);
+    const nextRoof = next ? (next.top !== undefined && (next.topAt ?? next.x0) <= next.x0 ? Y(next.top) : next.top0 !== undefined ? Y(next.top0) : roof) : roof;
+    if (s.top !== undefined && next && nextRoof > low + 0.01) box(x1, x1 + 0.3, low - 0.25, nextRoof, STREET_BACK, FRONT - 0.02, archBrick);
+    //the drop into the deep: the shallow tunnel's runoff falls off the edge in a sheet, foaming at the foot
+    if (s.entry === 'drop') {
+      const up = all.find((o) => o.x1 === s.x0);
+      if (up) {
+        const uy = Y(up.y);
+        box(x0 - 0.3, x0, fy, uy - 0.3, STREET_BACK, FRONT, archBrick); // (the drop's face, brick)
+        box(x0, x0 + 0.18, fy, uy, BACK, FRONT - 0.8, water);
+        for (let k = 0; k < 5; k++) {
+          const foam = new THREE.Mesh(new THREE.SphereGeometry(0.35 + rng() * 0.25, 8, 6), white);
+          foam.position.set(x0 + 0.2 + rng() * 0.8, fy + 0.1, BACK + 0.4 + k * ((FRONT - BACK - 1.4) / 4));
+          foam.scale.y = 0.45;
+          g.add(foam);
+        }
+      }
+    }
     //the floor, as the physics has it: flat runs as slabs, slopes (the bowl's sides, kick-outs, ramps) as wedges
     const inStairs = (f: { x0: number; x1: number }) => (s.stairs ?? []).some((t) => f.x0 >= t.x0 && f.x1 <= t.x1);
     for (const f of level.surfaces) {
@@ -280,7 +325,12 @@ export function buildSewers(level: Level): THREE.Group {
         g.add(deck);
         for (const t of [0.3, 0.7]) box(a + (b - a) * t - 0.06, a + (b - a) * t + 0.06, fy, ya + (yb - ya) * t - 0.1, -1.3, -1.1, bracket);
       } else if (f.y1 !== undefined) {
-        wedge(a, ya, b, yb, Math.min(ya, yb, fy) - 0.3, BACK, FRONT, f.x1 === s.x1 ? floor : tile);
+        wedge(a, ya, b, yb, Math.min(ya, yb, fy) - 0.3, BACK, FRONT, f.x1 === s.x1 || f.x0 === s.climb?.[0] ? floor : tile);
+      } else if (f.kind === 'ledge') {
+        //a walkway along the deep's back wall, over its channel: a stone shelf on corbels, a kerb along its edge
+        box(a, b, ya - 0.3, ya, BACK, 0.7, stone);
+        box(a, b, ya - 0.05, ya + 0.04, 0.6, 0.72, pillar);
+        for (let x = a + 0.6; x < b - 0.3; x += 1.6) wedge(x - 0.2, ya - 0.3, x + 0.2, ya - 0.3, ya - 1, BACK, 0.3, stone);
       } else box(a, b, ya - 0.3, ya, BACK, FRONT, bowl && f.y > s.y ? tile : floor);
     }
     //runoff: a trickle along the back, and streams of it across the floor with chevrons running your way
@@ -303,7 +353,7 @@ export function buildSewers(level: Level): THREE.Group {
     //brick arches down the back wall, the tunnel running off into the dark through each, and iron ribs between them
     //(zack's brick sewer refs); a toxic green pipe mouth now and then, oozing into the runoff
     const lower = bowl || sub ? (x: number) => (bowl && x > X(bowl.x0) - 1.6 && x < X(bowl.x1) + 1.6) || (sub && x > X(sub.x0) - 1.6 && x < X(sub.x1) + 1.6) : () => false;
-    const archR = Math.min(1.5, (roof - fy) * 0.42);
+    const archR = Math.min(1.5, (low - fy) * 0.42);
     for (let x = x0 + 5.5; x < ramp - 2; x += 9) {
       if (lower(x)) continue;
       const ring = new THREE.Mesh(new THREE.RingGeometry(archR, archR + 0.35, 14, 1, 0, Math.PI), archBrick);
@@ -316,8 +366,8 @@ export function buildSewers(level: Level): THREE.Group {
     }
     for (let x = x0 + 1; x < ramp; x += 3) {
       if (lower(x)) continue;
-      box(x - 0.08, x + 0.08, fy, roof, BACK, BACK + 0.1, iron);
-      box(x - 0.14, x + 0.14, roof - 0.18, roof, BACK, 0.6, iron);
+      box(x - 0.08, x + 0.08, fy, roofAt(x), BACK, BACK + 0.1, iron);
+      box(x - 0.14, x + 0.14, roofAt(x) - 0.18, roofAt(x), BACK, 0.6, iron);
     }
     for (let x = x0 + 9.5; x < ramp - 2; x += 13) {
       if (lower(x) || rng() < 0.35) continue;
@@ -341,8 +391,9 @@ export function buildSewers(level: Level): THREE.Group {
     }
     //caged work lamps along the back wall, and graffiti between them
     for (let x = x0 + 2.5; x < ramp - 1; x += 6) {
-      box(x - 0.18, x + 0.18, roof - 0.7, roof - 0.4, BACK, BACK + 0.12, cage);
-      box(x - 0.12, x + 0.12, roof - 0.66, roof - 0.44, BACK + 0.12, BACK + 0.2, lamp);
+      const r = roofAt(x);
+      box(x - 0.18, x + 0.18, r - 0.7, r - 0.4, BACK, BACK + 0.12, cage);
+      box(x - 0.12, x + 0.12, r - 0.66, r - 0.44, BACK + 0.12, BACK + 0.2, lamp);
       if (rng() < 0.7) {
         const tag = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.65), tagMat.clone());
         const m = tag.material as THREE.MeshBasicMaterial;
@@ -356,6 +407,7 @@ export function buildSewers(level: Level): THREE.Group {
     }
     //light falling in through the holes, and hazard paint round them on the street
     for (const [h0, h1] of [s.drain, s.outlet]) {
+      if (h1 <= h0) continue;
       const [a, b] = [X(h0), X(h1)];
       light(a + 0.1, b - 0.1, fy, roof);
       for (const [p0, p1] of [[a - 0.35, a], [b, b + 0.35]]) {
@@ -363,8 +415,8 @@ export function buildSewers(level: Level): THREE.Group {
         for (let z = STREET_BACK + 1.4; z < FRONT - 0.2; z += 0.6) box(p0, p1, 0.02, 0.03, z, z + 0.25, stripe);
       }
     }
-    construction(s);
-    if (s.entry !== 'ramp') dig(s, fy);
+    if (s.entry === 'dig' || s.entry === 'ramp') construction(s);
+    if (s.entry === 'dig') dig(s, fy);
     for (const t of s.stairs ?? []) stairs(t, fy);
     //a green slime fall now and then, from a broken pipe in the roof down the back wall into a glowing pool
     if (rng() < 0.6) {
@@ -372,14 +424,14 @@ export function buildSewers(level: Level): THREE.Group {
       const busy = (s.stairs ?? []).some((t) => x > X(t.x0) - 1 && x < X(t.x1) + 1) || lower(x);
       if (!busy) {
         const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.5, 10), pipeMat);
-        pipe.position.set(x, roof - 0.2, BACK + 0.4);
-        box(x - 0.13, x + 0.13, fy, roof - 0.4, BACK + 0.3, BACK + 0.5, ooze);
+        pipe.position.set(x, roofAt(x) - 0.2, BACK + 0.4);
+        box(x - 0.13, x + 0.13, fy, roofAt(x) - 0.4, BACK + 0.3, BACK + 0.5, ooze);
         const pool = new THREE.Mesh(new THREE.CircleGeometry(0.9, 14), ooze);
         pool.rotation.x = -Math.PI / 2;
         pool.scale.y = 0.6;
         pool.position.set(x, fy + 0.05, BACK + 0.9);
-        const glow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, roof - fy + 1), oozeGlow);
-        glow.position.set(x, (fy + roof) / 2, BACK + 0.06);
+        const glow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, roofAt(x) - fy + 1), oozeGlow);
+        glow.position.set(x, (fy + roofAt(x)) / 2, BACK + 0.06);
         g.add(pipe, pool, glow);
       }
     }
@@ -412,7 +464,7 @@ export function buildSewers(level: Level): THREE.Group {
       g.add(ring);
       const sign = board('FULL PIPE', 'carve it', '#2c3a3a', '#bff5e6');
       sign.scale.setScalar(0.6);
-      sign.position.set(a - 0.8, roof - 1.2, BACK + 0.05);
+      sign.position.set(a - 0.8, roofAt(a) - 1.2, BACK + 0.05);
       g.add(sign);
     }
     //the subway crossing: the gap onto the tracks, the line running off into the city, a third rail and a signal
@@ -422,22 +474,33 @@ export function buildSewers(level: Level): THREE.Group {
       box(a, b, ROCK, bed, SUBWAY_BACK, FRONT, ground);
       box(a - 0.3, a, bed, fy - 0.3, SUBWAY_BACK, BACK, brick);
       box(b, b + 0.3, bed, fy - 0.3, SUBWAY_BACK, BACK, brick);
-      box(a, b, fy + 0.5, roof, SUBWAY_BACK, BACK - 0.01, dark); // the line's tunnel mouth over the gap, back into the dark
+      box(a, b, fy + 0.5, roofAt(a), SUBWAY_BACK, BACK - 0.01, dark); // the line's tunnel mouth over the gap, back into the dark
       for (const x of [a + (b - a) * 0.3, a + (b - a) * 0.7]) box(x - 0.05, x + 0.05, bed, bed + 0.12, SUBWAY_BACK, FRONT, rail);
       box(a + (b - a) * 0.88 - 0.06, a + (b - a) * 0.88 + 0.06, bed, bed + 0.18, SUBWAY_BACK, FRONT, yellow);
       box(b + 0.35, b + 0.5, fy, fy + 1.4, BACK + 0.2, BACK + 0.35, dark);
       const sign = board('MIND THE GAP', 'trains cross here', '#7a1e1e', '#ffffff');
       sign.scale.setScalar(0.55);
-      sign.position.set(a - 1, roof - 1.1, BACK + 0.05);
+      sign.position.set(a - 1, roofAt(a) - 1.1, BACK + 0.05);
       g.add(sign);
     }
     //the surge's storm gate, at the tunnel's start: a ribbed steel gate in the end wall, hazard bars on it
     if (p?.kind === 'surge') {
-      box(x0, x0 + 0.25, fy, roof - 0.3, BACK, FRONT - 0.8, steel);
-      for (let y = fy + 0.4; y < roof - 0.5; y += 0.6) box(x0 + 0.25, x0 + 0.32, y, y + 0.12, BACK, FRONT - 0.8, dark);
+      const r = roofAt(x0);
+      if (!before) {
+        box(x0, x0 + 0.25, fy, r - 0.3, BACK, FRONT - 0.8, steel);
+        for (let y = fy + 0.4; y < r - 0.5; y += 0.6) box(x0 + 0.25, x0 + 0.32, y, y + 0.12, BACK, FRONT - 0.8, dark);
+      } else {
+        //(along the route, the gate's in the back wall: a round steel flood door, its wheel and hazard bars)
+        const door = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.2, 20).rotateX(Math.PI / 2), steel);
+        door.position.set(x0 + 1.6, fy + 1.4, BACK + 0.1);
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.07, 6, 16), dark);
+        wheel.position.set(x0 + 1.6, fy + 1.4, BACK + 0.25);
+        g.add(door, wheel);
+        for (const dy of [-0.8, 0.8]) box(x0 + 0.6, x0 + 2.6, fy + 1.4 + dy - 0.06, fy + 1.4 + dy + 0.06, BACK + 0.2, BACK + 0.24, hazard);
+      }
       const sign = board('FLOOD GATE', 'keep moving', '#3a3a10', '#f2c230');
       sign.scale.setScalar(0.55);
-      sign.position.set(x0 + 2, roof - 1.1, BACK + 0.05);
+      sign.position.set(x0 + 3.2, r - 1.1, BACK + 0.05);
       g.add(sign);
     }
     //the tunnel to the gate comes up into the underground spot

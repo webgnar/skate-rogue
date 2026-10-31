@@ -268,11 +268,22 @@ for all three:
 | --- | --- | --- | --- | --- | --- |
 | **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and spin tokens | Yes |
 | **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
-| **Sewer** | A storm tunnel under each street chase | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, a stair set with a handrail to grind, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's spin tokens; the sewer road to the underground spot | Yes |
+| **Sewer** | One route under the floor: storm drains under the street, the deep under the hills and canals | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, a stair set with a handrail to grind, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's spin tokens; the sewer road to the underground spot | Yes |
 
 **The sewer route** (first version Oct 31, 2026; built out the same day from zack's "build all of it"; code:
 `src/gen/sewer.ts`, moving pieces `src/sim/sewer.ts`, drawn by `src/render/sewer-kit.ts` and `src/render/sewer-view.ts`).
 Under each street chase where the street is clear runs a brick storm tunnel, drawn as a cutaway under a thin street.
+
+- **One route under the whole floor** (zack, Oct 31, 2026: "very under developed"; picked "Full-floor route" over a
+  4-second dip): from the first way in that fits, the sewer runs on to the floor's end, about 20-45 s if you stay down.
+  Under each long stretch of whole street it's the **storm drain** (5 tiles down, kick-outs up through grates, ways in
+  of its own). Where the street ends at a hill or a canal it **drops into the deep**: 10 tiles down, a brick main with
+  its roof 4 tiles under the street (canals and hills sit over it), walkways an ollie up over a fast channel, pipes
+  high enough to grind off the walkways, and a set piece in every room (rats, the subway, the full pipe, the flood
+  main: a surge room's channel runs its whole length). No way up but on: at the next long stretch of street it
+  **climbs** a bank back into a storm drain, and at the last it comes up an outlet (or at the gate, the sewer road).
+  On about 1 floor in 5 no stretch fits a way in, and on some others the route is a single tunnel. `?sewer=deep` starts
+  at the top of the first drop.
 
 - **Ways in are construction spots** (zack: "the ways down from surface to sewer are construction spots"): a 3-tile dig
   in the street with hazard paint, cones, a striped barricade, the trench plate dragged aside, a dirt pile and a little
