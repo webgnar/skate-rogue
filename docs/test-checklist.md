@@ -723,6 +723,8 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 - [ ] Flip pop by timing: double tap fast (ollie then flip right away) and you go much higher than flipping at the top of the ollie; the later the flip, the smaller the extra pop.
 
+- [ ] Sewer route: on a street chase, roll into the open drain (yellow and black paint) and you drop into the tunnel with DOWN THE DRAIN!; the Heat bar falls while you're down there; roll through the blue runoff and the deck ticks (SPLSH!); ollie onto a pipe and grind it; a quick double tap bonks the roof; the ramp at the end brings you up with BACK UP!. Ollie the drain and you stay on the street. `?bot=sewer` shows it.
+
 ## Performance
 
 - [ ] The street kit draws in about 50 calls instead of 190: check the fps on a phone with `?debug`. A normal floor

@@ -10,7 +10,7 @@ export interface Repro {
   escape?: number; // the act whose escape this is
   gnar?: number;
   biome?: string;
-  bot?: 'ref' | 'mash' | 'high';
+  bot?: 'ref' | 'mash' | 'high' | 'sewer';
 }
 
 export function reproQuery(r: Repro): string {

@@ -1830,6 +1830,11 @@ export class Game {
       this.hud.gearTick('wheels');
       return;
     }
+    if (e.type === 'sewer') {
+      //into the sewer route: out of sight, the Heat cools; and back up through the outlet
+      this.hud.callout(e.down ? 'DOWN THE DRAIN!' : 'BACK UP!', 'good');
+      return;
+    }
     if (e.type === 'doorSlam') {
       //BAM: the door slams shut under the hop, a puff off its edge and a jolt
       this.hud.callout('DOOR SLAM!', 'good');

@@ -570,6 +570,8 @@ and listed it here for review. Any of these can be flipped in the morning.
 
 - 2026-10-31 (zack): the flip pops higher the sooner you tap it after the ollie (PHYS.trickEarly -6 easing to the old -5 by frame 24), riding on the ollie's remaining rise. Kept at -6 so it can't reach the sky route's wire; wheel wear per fast second trimmed 1.0 to 0.96 for the balance test. The official roadmap is in the GDD.
 
+- 2026-10-31: sewer route first version built from the GDD draft (zack handed over the roadmap: build it, ask only for blockers). Choices: drains are in the street chases only (not the hills), entered by rolling in; runoff soaks the deck only; Heat cools 4/s down there; the sewer comes back up before the gate (no own road yet). Flip pop eases back to the old pop by frame 14 (was 24) so ollie-top flips stay the same; wheel wear per fast second 0.92.
+
 ## Models thread: animation
 
 - 2026-10-28: Backside 180 feet (zack: "a weird glitch with his feet on backside 180's"). Two causes, both fixed:

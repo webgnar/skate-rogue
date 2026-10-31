@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { run, sliceDone } from './slice';
 import { TOP } from '../gen/top-route';
 import { TILE } from '../physics/constants';
-import { PIT, hillGround, inHill, type Level, type Surface } from '../physics/level';
+import { PIT, SEWER_ROOF, hillGround, inHill, type Level, type Surface } from '../physics/level';
 import { makeRng, randInt } from '../gen/rng';
 import { pixelTexture } from './textures';
 import { surfaceTexture } from './surfaces';
@@ -1042,7 +1042,9 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
   const holes = gaps(ground);
   //where there's no ground in front: canals on the street, the crest jumps' cross streets on the hill
   const through = throughStreets(level);
-  const open = (x0: number, x1: number) => [...holes, ...through].some(([a, b]) => x1 > a - 0.1 && x0 < b + 0.1);
+  //and the sewer route's cutaway: the near sidewalk is a thin roof over it and no houses stand in front of it
+  const sewers = (level.sewers ?? []).map((w): [number, number] => [tx(w.x0) - 0.5, tx(w.x1) + 0.5]);
+  const open = (x0: number, x1: number) => [...holes, ...through, ...sewers].some(([a, b]) => x1 > a - 0.1 && x0 < b + 0.1);
   //the street's near sidewalk and the low wall (the hill's sidewalk is part of buildHill; its wall is here)
   let x = level.hills ? Math.floor(finale) : Math.max(0, Math.floor(finale));
   while (x < cols) {
@@ -1052,7 +1054,15 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
     }
     let e = x;
     while (e + 1 < cols && level.street[e + 1]) e++;
-    m.box(x, e + 1, B, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+    //(split round the sewers, where it's only as thick as the street over the tunnel)
+    let a = x;
+    for (const [w0, w1] of sewers.filter(([w0, w1]) => w1 > x && w0 < e + 1)) {
+      if (w0 > a) m.box(a, w0, B, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+      const [b0, b1] = [Math.max(a, w0), Math.min(e + 1, w1)];
+      m.box(b0, b1, -SEWER_ROOF / TILE, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+      a = b1;
+    }
+    if (a < e + 1) m.box(a, e + 1, B, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
     x = e + 1;
   }
   //the low wall: along the hill's sidewalk (following it) and the street's

@@ -11,7 +11,8 @@ import { TOP } from '../gen/top-route';
 import { Chaser } from './chaser';
 import { Shooter, type ShotEvent } from './shots';
 import { Swarm } from './drones';
-import type { Car, Level, PickupKind } from '../physics/level';
+import { sewerAt, type Car, type Level, type PickupKind } from '../physics/level';
+import { SEWER } from '../gen/sewer';
 import { PROP_SIZE } from '../gen/props';
 import { makeRng } from '../gen/rng';
 import { Skater, type Mode, type SkaterEvent, type StepInput } from '../physics/skater';
@@ -31,6 +32,7 @@ export type FloorEvent =
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'decoy' } // the Decoy boon pulled the cruiser back
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
+  | { type: 'sewer'; down: boolean } // dropped into the sewer route, or came back up out of it (src/gen/sewer.ts)
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
@@ -79,6 +81,7 @@ export class FloorSim {
   road: 'high' | 'low' | null = null; // which road the skater left the floor on
   readonly chopper: Chopper | null; // the helicopter escape's spotlight
   up = false; // on the top route (src/gen/top-route.ts)
+  down = false; // in the sewer route (src/gen/sewer.ts)
   readonly sky: Sky; // its pigeons and helicopter
   readonly swarm: Swarm | null; // the drone swarm escape
   readonly chaser: Chaser | null; // act 3's chaser
@@ -96,6 +99,19 @@ export class FloorSim {
       if (g > 0.3 && Math.abs(p.y - y) < 0.2 * TILE && Math.abs(x - p.x) < p.w * (0.15 + 0.75 * g)) return p;
     }
     return null;
+  }
+
+  // in the sewer route, under the street (src/gen/sewer.ts)
+  inSewer(): boolean {
+    const sk = this.skater;
+    return sk.mode !== 'bail' && sk.y > this.level.streetY + TILE && sewerAt(this.level, sk.x) !== undefined;
+  }
+
+  // a stretch of runoff on the sewer's floor at (x, y): it soaks the deck like a puddle
+  runoffAt(x: number, y: number): object | null {
+    const s = sewerAt(this.level, x);
+    if (!s || Math.abs(y - s.y) > 2) return null;
+    return s.wet.find(([w0, w1]) => x >= w0 && x < w1) ?? null;
   }
 
   private readonly flip: () => number; // the board's coin flips, from the floor seed
@@ -182,8 +198,13 @@ export class FloorSim {
     this.runOver();
     this.wear(skaterEvents);
     this.heat.step(this.skater, skaterEvents);
+    //down in the sewer nobody sees you: no helicopter, no traffic, and the Heat cools off
+    const down = this.inSewer();
+    if (down !== this.down) this.events.push({ type: 'sewer', down });
+    this.down = down;
+    if (down) this.heat.add(-SEWER.coolPerSec / 60);
     //in the helicopter's light, the Heat climbs
-    if (this.chopper?.step(this.skater)) this.heat.add(CHOPPER.heatPerSec / 60);
+    if (this.chopper?.step(this.skater) && !down) this.heat.add(CHOPPER.heatPerSec / 60);
     //up on the top route the police helicopter sees you (zack: "the upper route could have heat with a
     //helicopter"): from getting onto a top wire or rooftop until you're back on the ground below
     const sk = this.skater;
@@ -436,9 +457,11 @@ export class FloorSim {
     if (isGrind(sk.mode)) use.trucks += (GEAR.grindSec / 60) * soft;
     //rolling into a puddle washes out the bearings (zack, 2026-10-30), and drags you: fresh wheels push through it,
     //worn ones bog down
-    const wet = sk.mode === 'roll' ? this.puddleAt(sk.x, sk.y) : null;
+    //(the sewer's runoff is shallow and running: it soaks the deck, but doesn't sit in the bearings)
+    const runoff = sk.mode === 'roll' ? this.runoffAt(sk.x, sk.y) : null;
+    const wet = sk.mode === 'roll' ? (this.puddleAt(sk.x, sk.y) ?? runoff) : null;
     if (wet && wet !== this.wading) {
-      use.bearings += GEAR.puddle;
+      if (wet !== runoff) use.bearings += GEAR.puddle;
       use.deck += GEAR.puddleDeck;
       const drag = GEAR.puddleDrag.fresh + (GEAR.puddleDrag.dead - GEAR.puddleDrag.fresh) * (1 - sk.gear.grip);
       sk.hsp *= 1 - drag;

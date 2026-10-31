@@ -468,7 +468,7 @@ async function start() {
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
   const bot = params.get('bot');
   if (bot !== null) {
-    game.setAutopilot(bot === 'mash' || bot === 'high' ? bot : 'ref');
+    game.setAutopilot(bot === 'mash' || bot === 'high' || bot === 'sewer' ? bot : 'ref');
     game.timeScale = Math.min(8, Math.max(1, Number(params.get('turbo')) || 1));
   }
   //?debug (and ?bot) expose the game for headless checks: the playtest runner reads game.playtest and window.rig

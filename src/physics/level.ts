@@ -29,6 +29,7 @@ export interface Surface {
   tow?: number; // a cable car climb (src/gen/hills.ts): px/frame the cable pulls you up it, whatever the slope
   sky?: string; // a sky beat (src/gen/sky-beats.ts): roofs, billboard, tower or scaffold, drawn by src/render/sky-kit.ts
   top?: boolean; // part of the top route (src/gen/top-route.ts): a rooftop up where the helicopter sees you
+  sewer?: boolean; // the sewer route's floor and outlet ramp (src/gen/sewer.ts), drawn by src/render/sewer-kit.ts
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
@@ -87,6 +88,7 @@ export class CurvedRail {
   material: Material = 'metal'; // handrails and curved rails are steel
   wire = false; // a power line strung low over a block of hill (src/gen/hills.ts): drawn as a wire, not a tube
   top = false; // the top route's power line (src/gen/top-route.ts)
+  sewer = false; // a pipe in the sewer (src/gen/sewer.ts)
   sky?: string; // a sky beat's grind (src/gen/sky-beats.ts): a crane's boom
 
   constructor(
@@ -216,7 +218,34 @@ export interface Level {
   chinatown?: [number, number][]; // Chinatown's blocks of hill, px (src/gen/hills.ts)
   hillCross?: { x: number; y: number }[]; // their intersections with cross traffic: the cross street's middle, the ground (src/traffic/hill-cross.ts)
   cabs?: CabRun[]; // their cab flats (src/traffic/cab.ts)
+  sewers?: Sewer[]; // the sewer route under the street chases (src/gen/sewer.ts)
 }
+
+// a stretch of the sewer route, px: an open drain in the street drops you in, a tunnel runs under the street, and a
+// storm outlet ramps you back up through a hole further on. y is the tunnel's floor; the street's underside is its roof
+export interface Sewer {
+  x0: number; // the tunnel's start (just before the drain)
+  x1: number; // its end (the top of the outlet ramp)
+  y: number;
+  drain: [number, number]; // the open drain's hole in the street
+  outlet: [number, number]; // the outlet's hole in the street, over the top of its ramp
+  wet: [number, number][]; // stretches of runoff on the floor: rolling through one soaks the deck
+}
+
+// the sewer under x, if there is one
+export function sewerAt(level: Level, x: number): Sewer | undefined {
+  return level.sewers?.find((s) => x >= s.x0 && x < s.x1);
+}
+
+// the lowest your feet can go up at x in the sewer (a y), when you're down in it: the street's underside overhead,
+// except under its holes. undefined up on the street, or with nothing overhead
+export function sewerRoof(level: Level, x: number, y: number): number | undefined {
+  const s = sewerAt(level, x);
+  if (!s || x >= s.drain[0] && x < s.drain[1] || x >= s.outlet[0]) return undefined;
+  const roof = level.streetY + SEWER_ROOF + PHYS.height;
+  return y >= roof - 1 ? roof : undefined;
+}
+export const SEWER_ROOF = 12; // px: the street's thickness over the tunnel
 
 // a Chinatown cab flat: where the cab waits rolling (its back), the ground's height, where it turns off and lets go
 // (its front), and the kicker's lip just past that
