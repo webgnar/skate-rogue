@@ -37,6 +37,7 @@ Settled Oct 31, 2026 (zack, after looking at Jetpack Joyride, Alto's Odyssey and
 
 - Clean timing and combos keep you fast and alive. Sloppy skating slows you down, and slow gets you caught.
 - The city is a playground of lines to read: rails, ledges, wires, cars, rooftops.
+- Every floor has three routes stacked on top of each other: **sky, surface and sewer** (see Three routes).
 - Runs are short, with a quick restart.
 - A light meta (missions, the end-of-run payout, the shop) brings you back.
 
@@ -129,7 +130,7 @@ them), boons are about skate physics, and the run adds a shop and a board build 
 1. **Floor** (30–90 s). Skate from the start to the exit portal across a generated stretch of street, rooftops,
    rails, gaps and traffic. Grab cash (run currency) and Stoken (meta currency). Land tricks for stoke.
 2. **Boon pick.** Three cards; take one. Reroll costs cash.
-3. **Fork:** pick the next road (high or low) by skating, toward a boon, cash, a shop or an event.
+3. **Fork:** pick the next road (sky, surface or sewer) by skating, toward a boon, cash, a shop or an event.
 4. **Act change** after 3 floors and an escape set piece: a new district with its own 3D kit, gravity and traffic.
 5. **Run over.** Fall into a gap, or let the AI's Heat catch you, and the run ends. Score, deepest floor and Stoken earned are shown and posted.
 6. **Between runs**, spend Stoken on the unlock tree, then go again. Restart is one tap.
@@ -183,6 +184,30 @@ height, so whichever height you reach the gate at decides your road. Up there th
 helicopter is on you: clean skating and grinding don't cool your Heat, and it climbs slowly (tricks still cool it).
 Pigeons sit on the rooftops and the wire, so ollie them or take a bird strike, which costs speed and a little Heat.
 Airliners cross the sky behind. Code: `src/gen/top-route.ts`, `src/sim/sky.ts`.
+
+### Three routes: sky, surface, sewer
+
+Decided Oct 31, 2026 (zack): the game has **three routes**, stacked vertically through every floor. Sky is built
+(the top route above); surface is the street; the sewer is new and still to design and build. The rules that hold for
+all three:
+
+- **All physics.** You get onto a route by how you skate, never by something that lifts or drops you for you.
+- **You can always see the other routes.** The camera frames the one you're on, with the others in view above or
+  below, so switching is a read you make, not a guess.
+- **Each route has its own trade.** Reward and danger differ, so picking one is a real choice:
+
+| Route | Where | How you get on | Danger | Reward | Built |
+| --- | --- | --- | --- | --- | --- |
+| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, Stoken and spin tokens | Yes |
+| **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
+| **Sewer** | Storm drains and tunnels under the street | Draft: drop on purpose into a marked open drain (an open manhole or a broken grate) instead of ollieing it | Draft: dark, low ceilings (no high flips), water channels that soak the deck, rats to ollie, falls into deep runoff end the run | Draft: no traffic and no helicopter, so Heat cools; pipe grinds; the way to the underground spot | No |
+
+**Sewer draft** (to hash out with zack before building): the sewer runs under the street finale and the hill flats.
+Drains are marked so they never read as a gap that ends your run, and a plain canal still bails you. Inside: a
+concrete tunnel with a runoff channel down the middle, ledges either side, pipes to grind and a low ceiling. You come
+back up through a ramped storm outlet or a ladder shaft you ollie into, or stay down to the gate. The gate reads
+which route you reach it on: sky picks the high road, surface the street road, sewer the underground road (the
+underground spot, or a stash). Art comes from the QFS tiles and the comic ink look, lit by grates and work lamps.
 
 Branching is only one step deep (you see the next choice, not a whole map), which suits short mobile sessions.
 A full Slay the Spire map is an option for later.
@@ -909,6 +934,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 
 ## Open questions
 
+- **The sewer route**: how you get in and out, and what's down there (draft under Three routes).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
