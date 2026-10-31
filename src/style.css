@@ -1268,7 +1268,7 @@ html, body {
   #pick .card, #under .card { flex: 1 1 calc(var(--u) * 15); max-width: calc(var(--u) * 17); min-height: calc(var(--u) * 24); }
 }
 
-/* the run-over and continue headline: DUNZO (zack, 2026-10-26) in the shop's graffiti style, over a red spray */
+/* the run-over and continue headline: DEAD (zack, 2026-10-31; was DUNZO) in the shop's graffiti style, over a red spray */
 #over > b, #cont > b {
   position: relative;
   isolation: isolate;
