@@ -638,7 +638,9 @@ export class Skater {
     const sewer = sewerAt(this.level, this.x);
     const deep = !!sewer && inDeep(sewer, this.x, this.y);
     const open = sewer && (deep || sewer.top === undefined || this.x < (sewer.topAt ?? sewer.x0));
-    const bottom = deep ? sewerFloor(sewer, this.x) + PHYS.bailDepth : pitAt(this.level, this.x)?.floor ?? (open ? sewerFloor(sewer, this.x) : this.level.streetY) + PHYS.bailDepth;
+    //(down a pit that's the sewer's shaft, the deep's floor)
+    const shaft = sewer?.entry === 'shaft' && this.x >= sewer.drain[0] && this.x <= sewer.drain[1];
+    const bottom = deep || shaft ? sewerFloor(sewer!, this.x) + PHYS.bailDepth : pitAt(this.level, this.x)?.floor ?? (open ? sewerFloor(sewer, this.x) : this.level.streetY) + PHYS.bailDepth;
     if (this.mode === 'air' && this.y > bottom && this.tucks > 0) {
       //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
       this.tucks--;
@@ -822,11 +824,18 @@ export class Skater {
     const fy = this.boardY;
     //(down in the deep, the hill's pits are overhead)
     const deep = sewerAt(this.level, this.x);
-    if (deep && inDeep(deep, this.x, this.y)) return;
+    //(down a shaft, not till you're all the way under the deep's roof)
+    if (deep && inDeep(deep, this.x, this.y - (deep.entry === 'shaft' ? PHYS.height : 0))) return;
     for (const p of pits(this.level)) {
       const at = p.x1 - truckReach(p.far);
       if (px > at || this.x <= at || fy <= p.lip) continue;
       this.x = at;
+      //(the sewer's shaft, src/gen/sewer.ts: down the far wall you go, into the deep, no slam; and no pops on the
+      //way down, as down any pit)
+      if (deep?.entry === 'shaft' && deep.drain[0] === p.x0) {
+        this.walled = true;
+        return;
+      }
       if (fy - p.lip <= PIT.catch && !this.walled) {
         this.feel.settle(this.tuck.lift);
         this.y = p.lip;

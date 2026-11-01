@@ -275,6 +275,8 @@ export class Pilot {
       const drain = level.sewers?.find((w) => w.drain[1] > w.drain[0] && w.drain[0] - sk.x > -TILE && w.drain[0] - sk.x < 4 * TILE);
       if (drain && sk.y <= level.streetY + 1 && sk.mode === 'roll' && (!sk.surface || Math.abs(sk.surface.y - level.streetY) < 1)) pressed = false;
       if (sk.mode === 'air' && sewerAt(level, sk.x) && sk.y > level.streetY - 4) pressed = false;
+      //a pit on the hill that's the sewer's shaft: roll on into it, and no flips on the way down
+      if (level.sewers?.some((w) => w.entry === 'shaft' && sk.x > w.drain[0] - 8 * TILE && sk.x < w.drain[1] + TILE)) pressed = false;
       //and no big ollie off the top of a hill (that's the way up into the sky): roll on down where the hill goes on
       const on = sk.surface;
       if (on && sk.mode === 'roll' && !on.sky && !on.top && on.x1 - sk.x < 30 && level.surfaces.some((o) => o !== on && !o.sky && !o.top && o.kind !== 'rail' && o.x0 <= on.x1 + 4 && o.x1 > on.x1 + 4 && Math.abs(surfaceY(o, on.x1 + 4) - surfaceY(on, on.x1)) < 10)) pressed = false;

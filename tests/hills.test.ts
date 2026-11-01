@@ -18,7 +18,7 @@ describe('Chicago hills', () => {
     for (let floor = 1; floor <= 15; floor++) {
       const l = chicago(floor * 7, floor);
       expect(l.hills).toBe(true);
-      const descent = l.surfaces.filter((s) => s.x0 < l.finaleX && !s.side);
+      const descent = l.surfaces.filter((s) => s.x0 < l.finaleX && !s.side && !s.sewer);
       expect(descent.some((s) => s.hill && s.y1! > s.y)).toBe(true);
       expect(descent.some((s) => s.kind === 'stairs')).toBe(true);
       expect(l.rails.some((r) => r.x1 <= l.finaleX && r.y1 > r.y0)).toBe(true);

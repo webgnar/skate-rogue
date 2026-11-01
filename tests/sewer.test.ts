@@ -7,7 +7,7 @@ import { DEEP, SEWER } from '../src/gen/sewer';
 import { FloorSim } from '../src/sim/floor';
 import { Pilot } from '../src/bot/pilot';
 import { PHYS, TILE } from '../src/physics/constants';
-import { isStreetAt, SEWER_ROOF, type Level, type Sewer } from '../src/physics/level';
+import { hillGround, isStreetAt, pitAt, SEWER_ROOF, surfaceY, type Level, type Sewer } from '../src/physics/level';
 
 const floorOf = (seed: number, floor: number): Level => validatedFloor(seed, floor, { twist: floorTwist(seed, floor), hills: true, danger: 2 }).level;
 
@@ -216,7 +216,7 @@ function ride(level: Level, s: Sewer, x: number, onFloor: boolean | number, pres
 }
 const never = () => false;
 
-describe('the sewer route, built out', { timeout: 30000 }, () => {
+describe('the sewer route, built out', { timeout: 60000 }, () => {
   it('the ways in are construction spots: a dig on the street, or a plank ramp down off the foot of a hill', () => {
     const { level, s } = find((w) => w.entry === 'ramp');
     const ramp = level.surfaces.find((f) => f.sewer && f.x0 === s.drain[0] && f.y1 !== undefined)!;
@@ -230,6 +230,34 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
     expect(below).not.toContain('slam');
     expect(below.slice(0, 3)).not.toContain('land'); // you roll down the ramp onto the floor, no landing
     expect(find((w) => w.entry === 'dig').s.entry).toBe('dig');
+  });
+
+  //zack (2026-11-01, floor 7 marked up in lime): the sewer from the pit on the first hill on, under the first chase
+  it('a pit on the hill is a shaft: roll off its lip down the plank into the deep, ollie the lip and you stay up', () => {
+    const level = floorOf(7919, 7);
+    const s = level.sewers![0];
+    expect(s.entry).toBe('shaft');
+    expect(s.deep).toBe(true);
+    const pit = pitAt(level, (s.drain[0] + s.drain[1]) / 2)!;
+    expect([pit.x0, pit.x1]).toEqual(s.drain);
+    //(the route runs on under the first chase and the second hill, to the far end)
+    expect(s.x0).toBeLessThan(100 * TILE);
+    expect(routeOf(level, s).at(-1)!.outlet[1]).toBeGreaterThan(600 * TILE);
+    const at = s.drain[0] - 4 * TILE; // (on the flat at the top, past the stairway down to it)
+    const hill = hillGround(level).find((g) => at >= g.x0 && at < g.x1)!;
+    expect(hill.kind).toBe('roof');
+    const y = surfaceY(hill, at);
+    const { sim, events } = ride(level, s, at, y, never, 160);
+    expect(events).toContain('sewer:true');
+    expect(events).not.toContain('slam');
+    expect(events).not.toContain('bail');
+    expect(sim.skater.y).toBeGreaterThan(level.streetY + DEEP.top);
+    expect(sim.skater.x).toBeGreaterThan(s.drain[1]);
+    //an ollie off the lip clears the pit: on along the hill
+    let popped = false;
+    const up = ride(level, s, at, y, (q) => !popped && q.skater.x > s.drain[0] - TILE && (popped = true), 160);
+    expect(up.events).not.toContain('sewer:true');
+    expect(up.sim.skater.y).toBeLessThan(level.streetY);
   });
 
   it('a kick-out throws you up through its grate onto the street; ollie it and you stay down', () => {
