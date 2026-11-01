@@ -114,6 +114,8 @@ export const DEEP = {
   drop: 5, // tiles of the drop's room under the end of the street it drops from (the street's still its roof)
   under: 14, // tiles a stretch of street needs, past the climb, to have a storm drain under it on the way
   climb: 8, // tiles of bank up out of it, at the next street chase
+  ledgeH: 1.1 * TILE, // the cement ledge on the deep's floor up to the climb: an ollie gets onto it
+  ledge: 9, // tiles of it
   walk: [7, 12], // tiles of walkway
   walkH: 1.25 * TILE, // over the channel: an ollie gets you up
   walks: 2, // at most this many a room
@@ -452,6 +454,19 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
   if (s.climb) {
     const [c0, c1] = s.climb;
     level.surfaces.push({ kind: 'bank', x0: c0, x1: c1, y: room.from!, y1: s.y, row: -1, sewer: true });
+    s.climbFrom = room.from;
+    //(zack, 2026-11-01: "a cement ledge for him to grind"): a concrete ledge out of the back wall on the deep's floor
+    //up to the climb, an ollie onto it; it runs out over the foot of the bank. (Not up the bank: a grind can't carry
+    //you up 5 tiles, you'd stall halfway)
+    const lh = DEEP.ledgeH;
+    const l0 = c0 - DEEP.ledge * TILE;
+    {
+      const ledge = polyRail([[l0, room.from! - lh], [c0 - TILE, room.from! - lh], [c0 + 2 * TILE, room.from! - lh - 0.9 * TILE]]);
+      ledge.sewer = true;
+      ledge.material = 'concrete';
+      level.rails.push(ledge);
+      for (let x = l0 + TILE; x < c0; x += 2 * TILE) level.pickups.push({ kind: 'cash', x, y: room.from! - lh - PICKUPS.ride });
+    }
     f0 = c1;
   }
   for (const [a, c, kind] of floors.sort((p, q) => p[0] - q[0])) {
