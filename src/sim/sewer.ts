@@ -16,6 +16,10 @@ export const SEWER_SIM = {
   surgeFrom: 2 * TILE, // the gate bursts once you're this far past the way in
   surgeH: 1.4 * TILE, // the wall of water's height over the floor
   surgeSoak: 3, // it soaks the deck this many puddles' worth (src/sim/floor.ts)
+  //(zack, 2026-10-31: "make it stay close to the player for dramatic effect": it never falls more than this far
+  //behind you down there, rushing up to it when it does; it still only catches you at surgeSpeed)
+  surgeLead: 3.5 * TILE,
+  surgeRush: 0.25, // of the gap past surgeLead it closes each frame
   trainFrames: 72, // frames a train takes to cross under the tunnel, in every SEWER.subwayPeriod
   trainWarn: 45, // frames before one that its headlight shows down the line
   gatorWake: 5 * TILE, // the alligator opens its jaws as you come this close
@@ -157,7 +161,8 @@ export class SewerSim {
           this.events.push({ type: 'surge', x: s.x0, y: s.y });
         }
         if (surge.on) {
-          surge.front += SEWER_SIM.surgeSpeed;
+          const behind = mine && !surge.caught ? sk.x - SEWER_SIM.surgeLead - surge.front : 0;
+          surge.front += Math.max(SEWER_SIM.surgeSpeed, behind * SEWER_SIM.surgeRush);
           if (surge.front > s.x1 - (s.outlet[1] > s.outlet[0] ? SEWER.ramp * TILE : 0)) surge.done = true;
           if (!surge.caught && mine && surge.front >= sk.x - half && sk.y > s.y - SEWER_SIM.surgeH && sk.mode !== 'bail') {
             surge.caught = true;
