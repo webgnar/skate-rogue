@@ -3,7 +3,7 @@
 #
 #   blender -b -P art/meshy_skater.py -- webster --src <folder with the Meshy .glb files>
 #
-# The Meshy files (20-40 MB each) stay out of git; they're in the project's shared files under meshy/. Each one goes:
+# The Meshy files (20-40 MB each) stay out of git; download them from Meshy into any folder. Each one goes:
 #
 #   1. Reduced and baked by art/game_ready.py (underground-LA's pass, copied): welded, cut to TRIS triangles, unwrapped
 #      fresh, and the full-detail model's colours baked onto a TEX_SIZE texture.
