@@ -1,6 +1,7 @@
 // The pause card's DEV TOOLS (zack, 2026-10-25: debug switches you can reach on a phone, no URL flags): the collision
-// overlay, the fps line, slow motion, the momentum rule and the autopilot apply at once; a floor jump and unlock-all
-// reload into a new run. Plus the SLOW / STEP bar over the game while the overlay is on or time is slowed.
+// overlay, the fps line, slow motion, the momentum rule and the autopilot apply at once; a floor jump, unlock-all and
+// the MODELS switch (the old skaters or the Meshy rebuilds) reload into a new run. Plus the SLOW / STEP bar over the
+// game while the overlay is on or time is slowed.
 import { MOMENTUM, MOMENTUM_MODES } from '../physics/feel';
 import type { PilotStyle } from '../bot/pilot';
 import { DEV, devSpeed, saveDev, slower, stepFrame } from './dev';
@@ -19,6 +20,8 @@ export interface DevHooks {
   unlockAll: boolean;
   setUnlockAll(on: boolean): void; // reloads
   reset(): void; // wipes the saved progress, reloads as a fresh player
+  meshy: boolean; // the NEW (Meshy) skater models are on (src/ui/dev.ts meshyModels)
+  reload(): void; // reloads with the MODELS switch flipped
 }
 
 export class DevPanel {
@@ -40,6 +43,7 @@ export class DevPanel {
         <button class="row" data-dev="speed"><span>GAME SPEED</span><b></b></button>
         <button class="row" data-dev="momentum"><span>MOMENTUM</span><b></b></button>
         <button class="row" data-dev="pilot"><span>AUTOPILOT</span><b></b></button>
+        <button class="row" data-dev="models"><span>MODELS</span><b></b></button>
         <button class="row" data-dev="unlock"><span>UNLOCK ALL</span><b></b></button>
         <button class="row reset" data-dev="reset"><span>RESET PROGRESS</span><b></b></button>
         <div class="row jump"><span>JUMP</span><button data-dev="prev">◀</button><b></b><button data-dev="next">▶</button><button data-dev="go">GO</button></div>
@@ -61,6 +65,12 @@ export class DevPanel {
       else if (key === 'momentum') MOMENTUM.mode = MOMENTUM_MODES[(MOMENTUM_MODES.indexOf(MOMENTUM.mode) + 1) % MOMENTUM_MODES.length];
       else if (key === 'pilot') hooks.setPilot(PILOTS[(PILOTS.indexOf(hooks.pilot()) + 1) % PILOTS.length]);
       else if (key === 'unlock') hooks.setUnlockAll(!hooks.unlockAll);
+      else if (key === 'models') {
+        //the skater loads once, at the start: switch and reload
+        DEV.meshy = !hooks.meshy;
+        saveDev();
+        return hooks.reload();
+      }
       else if (key === 'prev') this.target = (this.target + n - 1) % n;
       else if (key === 'next') this.target = (this.target + 1) % n;
       else if (key === 'go') hooks.jump(this.target);
@@ -102,6 +112,7 @@ export class DevPanel {
     const pilot = this.hooks.pilot();
     set('pilot', pilot ? pilot.toUpperCase() : 'OFF', !!pilot);
     onOff('unlock', this.hooks.unlockAll);
+    set('models', this.hooks.meshy ? 'NEW' : 'OLD', this.hooks.meshy);
     const asking = performance.now() - this.confirmReset < 4000;
     set('reset', asking ? 'TAP AGAIN' : 'WIPE', asking);
     this.body.querySelector('.jump b')!.textContent = this.hooks.targets[this.target].toUpperCase();

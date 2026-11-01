@@ -15,8 +15,10 @@
 #      bone lengths. The head, hands and feet only move, they keep their size. The weights carry over by bone name.
 #   3. Hair: Spring chains (src/render/springs.ts) at the biggest spikes and clumps, found as the hair points furthest
 #      from the skull; the hair round each is weighted along its chain. Keanu's drawstrings get theirs too.
-#   4. Saved over art/<name>.blend (rig and Board bone kept, the old mesh and its Spring bones replaced), the bake as
-#      art/tex/<name>.png (the paint texture), then exported like the other skaters (art/skaters.py).
+#   4. Saved as art/meshy/<name>.blend (the old art/<name>.blend's rig and Board bone, its mesh and Spring bones
+#      replaced), the bake as art/meshy/tex/<name>.png (the paint texture).
+#   5. art/meshy_refit.py then gives it its own leg length back and slims it, and exports public/models/meshy/<name>.glb
+#      (the NEW models behind the game's DEV TOOLS MODELS switch; the old skaters stay the default).
 #
 # After this the .blend is the source again (docs/painting-models.md): paint and edit it there. Running this again
 # throws those edits away.
@@ -37,6 +39,7 @@ import skaters  # noqa: E402
 
 TRIS = 6000  # the old built skaters were 2.5-4k; the Meshy detail holds up at 6k, and only the player's skater is drawn
 TEX_SIZE = paint.TEX_SIZE
+MESHY_DIR = os.path.join(lg.HERE, 'meshy')  # the NEW skaters live apart from the old (the game's DEV TOOLS MODELS switch)
 
 # The model's joints (left side, +X; mirrored), in Meshy's units as game_ready.py leaves it (1.904 tall, feet at 0,
 # facing -Y): (x, z), the depth found from the mesh. neck: where the neck meets the shoulders; head: the jaw hinge,
@@ -485,8 +488,9 @@ def build(name, src, blender):
     work = tempfile.mkdtemp(prefix=f'meshy_{name}_')
     reduce(name, src, work, blender)
 
-    blend = os.path.join(lg.HERE, f'{name}.blend')
-    bpy.ops.wm.open_mainfile(filepath=blend)
+    # the old model's .blend for the rig (its proportions are what the fit aims at); saved as art/meshy/<name>.blend
+    bpy.ops.wm.open_mainfile(filepath=os.path.join(lg.HERE, f'{name}.blend'))
+    blend = os.path.join(MESHY_DIR, f'{name}.blend')
     rig = bpy.data.objects[spec.get('rig', f'{name}Rig')]
     obname = spec.get('object', name.capitalize())
     old = bpy.data.objects.get(obname)
@@ -550,8 +554,9 @@ def build(name, src, blender):
     skaters.chain_bones(rig, specs)
     print(f'{name}: chains', [c[0] for c in specs])
 
-    # the paint texture: the bake, as art/tex/<name>.png
-    path = os.path.join(paint.TEX, f'{name}.png')
+    # the paint texture: the bake, as art/meshy/tex/<name>.png
+    os.makedirs(os.path.join(MESHY_DIR, 'tex'), exist_ok=True)
+    path = os.path.join(MESHY_DIR, 'tex', f'{name}.png')
     image.filepath_raw = path
     image.file_format = 'PNG'
     image.save()
@@ -592,8 +597,7 @@ if __name__ == '__main__':
         ob = build(name, src, blender)
         paint.check(ob)
         tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
-        if name == 'lou-gnar':
-            lg.export()  # with his clips, as art/lou_gnar.py does
-            print(f'{name}: {len(ob.data.vertices)} verts, {tris} tris -> {lg.GLB}')
-        else:
-            print(f'{name}: {len(ob.data.vertices)} verts, {tris} tris -> {skaters.export(name)}')
+        print(f'{name}: {len(ob.data.vertices)} verts, {tris} tris')
+        # its own proportions back, slimmed, and exported to public/models/meshy (art/meshy_refit.py)
+        import meshy_refit
+        print(meshy_refit.refit(name))

@@ -20,6 +20,7 @@ const QUICK = !!opt('quick', false);
 //--video records each scenario at real speed (turbo off, one page at a time) to playtest-report/videos, as mp4 when
 //ffmpeg is installed
 const VIDEO = !!opt('video', false);
+const MODELS = opt('models', null); // --models new: the Meshy skaters (DEV TOOLS MODELS)
 const OUT = 'playtest-report';
 const SHOTS = `${OUT}/shots`;
 
@@ -45,7 +46,7 @@ const STRETCH = 1.03;
 
 function urlFor(base, s) {
   const bot = s.bot ? `bot=${s.bot}` : 'bot';
-  return `${base}?${s.q}&unlockall&skater=${s.skater ?? 'lou-gnar'}&${bot}&turbo=${VIDEO ? 1 : s.turbo}`;
+  return `${base}?${s.q}&unlockall&skater=${s.skater ?? 'lou-gnar'}&${bot}&turbo=${VIDEO ? 1 : s.turbo}${MODELS ? `&models=${MODELS}` : ''}`;
 }
 
 async function startVite() {

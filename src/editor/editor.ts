@@ -4,6 +4,7 @@
 // or set any of the pose's values on the right. Editing between keys adds a key there. The clip plays on the same
 // rig, model and leg IK as the game. Save writes src/render/clip-edits.json through the dev server (npm run dev),
 // which the game plays over the clips in poses.ts; elsewhere it downloads that file instead.
+import { loadDev, meshyModels } from '../ui/dev';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
@@ -325,12 +326,15 @@ export async function startEditor(base: string): Promise<void> {
   if (params.has('debug')) Object.assign(window, { editorView: { camera, orbit } });
 
   status.textContent = 'loading the skater…';
-  const rig = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar');
+  // the same models as the game (?models=new / old, else the DEV TOOLS switch)
+  loadDev();
+  const meshy = meshyModels(params);
+  const rig = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar', meshy);
   inkify(rig.mesh, { toon: false });
   if (params.has('debug')) Object.assign(window, { editorRig: rig });
   scene.add(rig.mesh);
   // the ghost: the same rig, see-through, showing the key before the playhead
-  const ghost = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar');
+  const ghost = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar', meshy);
   ghost.mesh.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
     const mats = [o.material].flat().map((m: THREE.Material) => {

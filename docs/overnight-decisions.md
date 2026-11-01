@@ -923,3 +923,29 @@ and listed it here for review. Any of these can be flipped in the morning.
   wherever its side is flattest. They're hidden until the shoes wear, so they're unchecked in play.
 - The raw Meshy files (22-39 MB each, 140 MB together) are not committed, and zack had the project copies deleted
   (2026-11-01). Download them from Meshy again to rerun art/meshy_skater.py.
+
+## The Meshy skaters behind a switch, with their own legs back (2026-11-01)
+
+zack, after playing them: "im not sure if i like the new models", "they are too chunky", "its hard to see the
+board", "websters torso is too big", "since we had to shrink thier legs.. it looks all off". The focus is the feet
+and the board.
+
+- **Old models are the default again.** The old `.blend`, texture and GLB files are back at `art/<name>.blend`,
+  `art/tex/`, `public/models/<name>.glb`. The Meshy ones moved to `art/meshy/` and `public/models/meshy/`. The pause
+  card's DEV TOOLS has a MODELS row (OLD / NEW, saved, reloads the run); `?models=new` or `?models=old` in the
+  address overrides it, and the animation editor follows the same switch. The new models still play the clips
+  from the old `lou-gnar.glb`.
+- **The legs.** The first fit squashed every limb to the old rig's lengths, and the Meshy bodies have longer legs
+  and shorter torsos than the rig. With the Meshy originals deleted, `art/meshy_refit.py` undoes it on the fitted
+  mesh: the hips and knees go back to the heights in meshy_skater.py's joint guesses (same scale as the fit), the
+  torso shortens to match, and the shoulders, arms, head and feet stay where they were. Hips rise by: Webster +0.11
+  (legs 0.80 to 0.91), Roxy and Goldie +0.09, Lou +0.06, Keanu barely (his legs were already the rig's).
+- **Slimmer.** The torso, arms and legs are narrowed about their bones (`SLIM`): torso to 80% across and 88% front
+  to back, arms 80%, legs 84% / 88%. Webster's torso to 74% / 84% and his arms to 76%. The head, hands and feet keep
+  their size, so the shoes read on the board.
+- **The rig follows the model.** skater-rig.ts used to fix the leg lengths (0.4 + 0.4) and joint heights. It now
+  reads them off each model's skeleton when it binds (the old models give the same numbers as before). The code
+  clips lift the pelvis by the extra leg length and solve the knees with the model's own lengths. For the Blender
+  clips (keyed on Lou's legs), each foot goes where Lou's would land with the same joint angles, and the leg reaches
+  for it, so the feet stay on the deck. The shoulders don't move, so the hands land where they did on grabs.
+- If zack prefers the new ones after this, the switch flips the default in `src/ui/dev.ts` (`meshy: false`).
