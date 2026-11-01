@@ -144,7 +144,7 @@ export function buildElTrack(level: Level, kit: THREE.Group): void {
 
 // ------------------------------------------------------------------------------------------------------ trains
 
-const CAR = { len: EL.carLen / TILE, h: EL.carH / TILE - 0.05, w: 1.9 };
+export const CAR = { len: EL.carLen / TILE, h: EL.carH / TILE - 0.05, w: 1.9 };
 
 // a CTA car, code-built: stainless body, a dark window band, the blue and red stripe, doors, a sign at the front
 function fallbackCar(front: boolean): THREE.Group {
@@ -184,7 +184,8 @@ function fallbackCar(front: boolean): THREE.Group {
   return g;
 }
 
-function trainCar(front: boolean): THREE.Group {
+// one car of the L's train, its length along x, its wheels at y 0 (also the sewer's subway trains: sewer-view.ts)
+export function trainCar(front: boolean): THREE.Group {
   const name = front && hasModel('ElCarFront') ? 'ElCarFront' : 'ElCar';
   if (hasModel(name)) {
     //one vertex-coloured mesh per car, so a train costs two draws (and two outlines), not one per material
