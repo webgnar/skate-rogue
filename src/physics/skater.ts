@@ -12,7 +12,7 @@ export type Mode = 'roll' | 'air' | 'grind' | 'rail' | 'bail' | 'exit';
 
 export type SkaterEvent =
   | { type: 'ollie'; spin: 0 | 180; lip?: boolean; nose?: boolean } // lip: popped right at the edge of the ground (or just off it); nose: off a nose grind or nose manual
-  | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean; nollie?: boolean } // fakie: the stance it was thrown from; nollie: in the air off the nose
+  | { type: 'trick'; index: number; name: TrickId; spin: 0 | 180; fakie: boolean; nollie?: boolean; dead?: boolean } // fakie: the stance it was thrown from; nollie: in the air off the nose; dead: thrown with no jumps left (no pop)
   | { type: 'land'; impact?: number; quality?: LandQuality; manual?: boolean; pad?: string; perfect?: boolean; drop?: ImpactTier; lock?: number; lined?: number; spare?: number; flush?: number; lost?: number } // impact: px/frame into the surface, along its normal; manual: onto a manual pad (pad: a manual or a nose manual); perfect: a flip caught just before touchdown (PHYS.perfectFrames), worth a burst of speed; drop: how big a drop it was, and lock: the frames of no-ollie it gave (not on a manual); lined: 0..1, how lined up with a falling slope (?momentum=transfer); spare: frames between a flip's catch and the touchdown (only after a flip); flush: rad off the line of a slope that falls away (only on one); lost: px/frame of speed the landing cost you (only if any)
   | { type: 'grind'; name: string; perfect?: boolean } // name: the grind (its clip), LEDGE_GRINDS or RAIL_GRINDS; perfect: onto it just after a flip's catch
   | { type: 'rail'; name: string; perfect?: boolean }
@@ -201,6 +201,9 @@ export class Skater {
     if (this.buffer > 0) {
       if (this.grounded || (this.mode === 'air' && this.coyote > 0)) this.ollie();
       else if (this.mode === 'air' && (this.jumps > 0 || this.spare >= 1)) this.trick();
+      //jumps all used: a dead flip, the board spins and you keep falling (zack, 2026-11-01). One at a time, and a tap
+      //right before touchdown stays the buffered ollie off whatever you land on (a rail, a pad)
+      else if (this.mode === 'air' && this.caught >= 1 && !this.landingSoon()) this.trick(true);
       if (this.buffer > 0) this.buffer--;
     }
 
@@ -411,26 +414,38 @@ export class Skater {
     this.snap = true;
   }
 
-  private trick(): void {
-    this.kicked = false;
-    this.snap = false;
-    if (this.jumps > 0) this.jumps--;
-    else this.spare -= 1;
+  // dead: no jumps left, so no pop and no jump spent: the board spins while the arc carries on, and landing before it's
+  // caught is the slam it always was (landQuality). The flip boons (Boostin, Sky Line) only come with a real flip
+  private trick(dead = false): void {
     this.flipLow = this.vsp > 0 ? this.y : null;
-    this.vsp = this.flipPop();
     this.buffer = 0;
-    this.flipped = true;
-    if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
+    if (!dead) {
+      this.kicked = false;
+      this.snap = false;
+      if (this.jumps > 0) this.jumps--;
+      else this.spare -= 1;
+      this.vsp = this.flipPop();
+      this.flipped = true;
+      if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
+    }
     const name = rollTrick(this.tricks);
     const spin = SPIN[name];
     this.trickT = 0;
     this.trickCatch = Math.round(TRICK_CATCH[name] * 60);
     //off the nose it's a nollie flip; riding fakie, the nose pop is a fakie flip (the callout says fakie)
-    this.events.push({ type: 'trick', index: this.tricks++, name, spin, fakie: this.fakie, ...(this.nose && !this.fakie ? { nollie: true } : {}) });
+    this.events.push({ type: 'trick', index: this.tricks++, name, spin, fakie: this.fakie, ...(this.nose && !this.fakie ? { nollie: true } : {}), ...(dead ? { dead } : {}) });
     //a 180 lands you riding the other way round
     if (spin === 180) this.fakie = !this.fakie;
     //Sky Line: a ghost rail under your feet to come down on
-    if (this.mods.skyLine) this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.skyLineTiles * TILE, y: this.y + PHYS.skyLineDrop, row: -1, ttl: PHYS.ghostFrames };
+    if (this.mods.skyLine && !dead) this.ghost = { kind: 'rail', x0: this.x, x1: this.x + PHYS.skyLineTiles * TILE, y: this.y + PHYS.skyLineDrop, row: -1, ttl: PHYS.ghostFrames };
+  }
+
+  // the ground (or a rail) comes up within the input buffer at this fall: a tap now means "pop when I land"
+  private landingSoon(): boolean {
+    const b = this.below();
+    if (!b || this.vsp <= 0) return false;
+    const t = PHYS.bufferFrames;
+    return b.depth <= this.vsp * t + 0.5 * this.grav * t * t;
   }
 
   // the vsp a flip tapped now pops you to: harder the sooner after leaving the ground. It rides on top of the
