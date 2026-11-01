@@ -463,6 +463,14 @@ export class Game {
     this.view.withActor.add(this.flipLines.mesh); // in depth with the skater: the board covers the lines (zack)
     this.impacts = new Impacts(() => this.view.resolution);
     this.splashes = new WaterSplashes(() => this.view.resolution);
+    //the flood's wave crashing at its tunnel's end: the canal's splash, as big as the wave (zack, 2026-10-31)
+    this.sewerView.onCrash = (x, y, h) => {
+      this.splashes.spawn(x, y, 0.45 * h);
+      this.particles.splash(x, y, 2.2);
+      this.particles.splash(x, y + h * 0.5, 1.4);
+      this.words.spawn(x, y + h * 0.7, 'KRASH!');
+      this.view.shake(0.2);
+    };
     this.view.over.add(this.impacts.group, this.splashes.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.sewerView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
@@ -1461,7 +1469,7 @@ export class Game {
     const top = this.sim.sky.chopper;
     this.topChopper.update(this.level, this.sim.chopper || top.gone ? null : top, dt, { y: toY(this.level, this.sim.up ? y : this.level.streetY), pool: this.skater.grounded && this.sim.up });
     this.skyView.update(this.level, this.sim.sky, x, y, this.sim.up, dt, this.skater.gone);
-    this.sewerView.update(dt);
+    this.sewerView.update(dt, toX(x));
     this.droneView.update(this.level, this.sim.swarm, dt);
     this.chaserView.update(this.level, this.sim.chaser, dt, (this.sim.shooter?.aimT ?? 0) > 0);
     this.shotsView.update(this.level, this.sim.shooter, this.chaserView.x + SHOTS.gun / TILE, this.sprite.mesh.position.x, dt);
