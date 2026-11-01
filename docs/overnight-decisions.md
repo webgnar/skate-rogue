@@ -893,3 +893,33 @@ and listed it here for review. Any of these can be flipped in the morning.
 - Where he's hidden, his shape shows as a 50% checker dither in chunky 2 px cells, with no outline. It's hot pink
   by default, or yellow with ?ghost=yellow (FX.ghost, saved), for zack to pick. It costs one extra draw of his
   meshes, and the fisheye bends it like everything else.
+
+## The skaters rebuilt from zack's Meshy models (2026-11-01)
+- zack sent Meshy models of all five skaters, made from the DBZ-style concept sheets (art/reference/characters/).
+  `art/meshy_skater.py` puts each on the existing rig, so the clips, the animation editor, the springs and the
+  paintable .blend all keep working. The reduce-and-bake step is underground-LA's `game_ready.py`, copied to
+  `art/game_ready.py`.
+- **The mesh moves to the rig, not the rig to the mesh.** The game drives the bones from fixed joint positions
+  (skater-rig.ts), and Lou's clips key them from that bind pose. So each model is fitted onto the rig: arms brought
+  down from Meshy's A-pose, legs straightened under the hips, and each limb stretched or squashed to the rig's bone
+  length. The Meshy figures have long anime legs and short torsos, while the rig is the other way round. So the legs
+  come out about 10% shorter and the torsos about 15% longer than in Meshy. The head, hands and feet keep their size.
+  The models are scaled so their shoulders sit at the rig's shoulders.
+- **6,000 triangles a skater** (the old built ones were 2.5-4k) and a 1024 texture, which goes into the GLB as a JPEG
+  (the PNG stays the paint source). The GLBs are 0.6-0.8 MB each (Lou 1.2 MB with his clips), up from 0.36-0.86 MB.
+  Only the skater being ridden is loaded.
+- **Weights** are automatic (Blender's heat weighting) on a voxel-remeshed copy, then copied across. Roxy and
+  Goldie hang their hands against their hips, so their copy is remeshed finer, which keeps a gap between hand and
+  trousers. Otherwise the trousers would follow the hands. The head and everything above the jaw is on the Head
+  bone only.
+- **Springs:** the hair chains are hung on the hair points furthest from the skull (Webster 6 spikes, Roxy 7,
+  Goldie 6), with the hair around each weighted along its chain. Keanu's drawstrings each get a chain. Lou's red
+  scarf tail behind the backpack gets one chain. The old hood, sweatshirt and crop-top cloth chains are gone, because
+  the Meshy clothes are fitted (Keanu's hood sits on his head).
+- **Lou's visor** stays painted, with the pixel highlights from Meshy's model, instead of the game's plain shiny
+  visor material. The neon glint streak (visor-glint.ts) is laid over it again, fitted to the new visor.
+- **Known leftovers:** Goldie has a few denim-coloured spots on the inside of her forearms, where her hands touched
+  her jeans in the Meshy model. They can be painted over in the .blend. The gear-wear decals sit on the new lead shoe
+  wherever its side is flattest. They're hidden until the shoes wear, so they're unchecked in play.
+- The raw Meshy files (22-39 MB each, 140 MB together) are not committed. They're in the project's shared files
+  under meshy/.
