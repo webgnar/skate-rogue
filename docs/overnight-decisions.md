@@ -921,5 +921,5 @@ and listed it here for review. Any of these can be flipped in the morning.
 - **Known leftovers:** Goldie has a few denim-coloured spots on the inside of her forearms, where her hands touched
   her jeans in the Meshy model. They can be painted over in the .blend. The gear-wear decals sit on the new lead shoe
   wherever its side is flattest. They're hidden until the shoes wear, so they're unchecked in play.
-- The raw Meshy files (22-39 MB each, 140 MB together) are not committed. They're in the project's shared files
-  under meshy/.
+- The raw Meshy files (22-39 MB each, 140 MB together) are not committed, and zack had the project copies deleted
+  (2026-11-01). Download them from Meshy again to rerun art/meshy_skater.py.

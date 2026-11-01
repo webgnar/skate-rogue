@@ -15,8 +15,8 @@ It reduces the model to 6,000 triangles and bakes its colours onto `art/tex/<nam
 pass from underground-LA), fits the mesh to the rig's bind pose (arms straight down, each limb stretched or squashed
 to the rig's bone lengths, the head, hands and feet kept their size), skins it with automatic weights, hangs the hair
 spikes, Keanu's drawstrings and Lou's scarf tail on Spring chains, and writes the `.blend` and the GLB. Lou keeps his
-clips and the neon glint over his visor. The Meshy files (20-40 MB each) are not in git: they
-are in the project's shared files, under `meshy/`.
+clips and the neon glint over his visor. The Meshy files (20-40 MB each) are not in git: download
+them from Meshy to rerun it.
 
 Running it again replaces the skater's mesh, texture and Spring bones in the `.blend`, so paint and mesh edits made
 since are lost. After the first run the `.blend` is the source, as below.
