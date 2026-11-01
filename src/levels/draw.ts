@@ -1,7 +1,7 @@
 // Side views for the level editor: a floor to scale (1 tile = 32 px), as an SVG string. Pure drawing, no game state.
 import { label } from '../gen/roads';
 import { TILE } from '../physics/constants';
-import { inHill, type Level } from '../physics/level';
+import { inHill, pitAt, type Level } from '../physics/level';
 import type { Spawn } from '../traffic/traffic';
 
 export interface BotLine {
@@ -162,9 +162,14 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
   if (lay.sewer) {
     for (const [i, sw] of (L.sewers ?? []).entries()) {
       g.push(`<rect x="${f(X(sw.x0))}" y="${f(Y(L.streetY) + 40 * scale + 6)}" width="${f((sw.x1 - sw.x0) * scale)}" height="${f(Math.max(4, Y(sw.y) - Y(L.streetY) - 40 * scale - 6))}" fill="${C.sewer}"/>`);
-      for (const [a, b] of [sw.drain, sw.outlet].filter(([a, b]) => b > a)) g.push(`<rect x="${f(X(a))}" y="${f(Y(L.streetY) - 2)}" width="${f((b - a) * scale)}" height="${f(40 * scale + 10)}" fill="#0c1612" stroke="#f2c230" stroke-width="1.2"/>`);
+      const pit = sw.entry === 'shaft' ? pitAt(L, (sw.drain[0] + sw.drain[1]) / 2) : undefined;
+      if (pit) {
+        g.push(`<rect x="${f(X(sw.drain[0]))}" y="${f(Y(pit.floor))}" width="${f((sw.drain[1] - sw.drain[0]) * scale)}" height="${f(Y(sw.y) - Y(pit.floor))}" fill="#0c1612" stroke="#f2c230" stroke-width="1.2"/>`);
+        text(X(sw.drain[0]), Y(pit.floor) - 6, 'shaft ↓', '#f2c230');
+      }
+      for (const [a, b] of [sw.drain, sw.outlet].filter(([a, b]) => b > a && !pit)) g.push(`<rect x="${f(X(a))}" y="${f(Y(L.streetY) - 2)}" width="${f((b - a) * scale)}" height="${f(40 * scale + 10)}" fill="#0c1612" stroke="#f2c230" stroke-width="1.2"/>`);
       for (const [a, b] of sw.wet) g.push(`<rect x="${f(X(a))}" y="${f(Y(sw.y) - 3)}" width="${f((b - a) * scale)}" height="3" fill="${C.runoff}"/>`);
-      if (sw.drain[1] > sw.drain[0]) text(X(sw.drain[0]), Y(L.streetY) - 6, sw.entry === 'ramp' ? 'plank ramp ↓' : 'dig ↓', '#f2c230');
+      if (sw.drain[1] > sw.drain[0] && !pit) text(X(sw.drain[0]), Y(L.streetY) - 6, sw.entry === 'ramp' ? 'plank ramp ↓' : 'dig ↓', '#f2c230');
       if (sw.outlet[1] > sw.outlet[0]) text(X(sw.outlet[0]), Y(L.streetY) - 6, sw.gate ? 'SEWER ROAD → spot' : 'outlet ↑', '#f2c230');
       if (sw.entry === 'drop') text(X(sw.x0), Y(sw.y) + 12, 'the deep ↓', '#7cff4a');
       //kick-outs: a quarterpipe up through a grate in the street

@@ -12,7 +12,7 @@
 // physics: you get in by rolling into the hole instead of ollieing it, and out by rolling up a ramp.
 // Drawn by src/render/sewer-kit.ts; the moving pieces are src/sim/sewer.ts.
 import { TILE } from '../physics/constants';
-import { hillGround, inHill, pits, polyRail, type Level, type Sewer, type SewerKick, type SewerStairs, type Surface } from '../physics/level';
+import { hillGround, inHill, pits, polyRail, type Level, type Pit, type Sewer, type SewerKick, type SewerStairs, type Surface } from '../physics/level';
 import type { Road } from './roads';
 import { PICKUPS } from './descent';
 import { makeRng, type Rng } from './rng';
@@ -124,6 +124,12 @@ export const DEEP = {
   stoken: 0.6, // chance of a Stoken on one of its pipes (deeper pays)
 };
 
+// the shaft: a pit on the hill over the deep, its cross street dug up, as the route's way in
+export const SHAFT = {
+  from: 20, // tiles from the floor's start at least (not under the start)
+  plank: 0.9, // the plank ramp's fall per px along: steep, you roll off the lip onto it and it takes you down
+};
+
 // a room of the route as it's planned
 interface Room {
   s: Sewer;
@@ -203,13 +209,13 @@ function addSewerRoute(level: Level, seed: number): Sewer[] {
   const gateOf = (r: (typeof runs)[number], x1: number) => (r.gate && x1 >= end ? { gate: true } : {});
   //the route from a way in at x0 in stretch i, coming up for good in stretch `last` (its outlet's end at out); null
   //if the deep before it would be too short to read (a dip under a canal)
-  const plan = (i: number, x0: number, entry: 'dig' | 'ramp', last: number, out: number): Room[] | null => {
+  //(from a pit on the hill instead, `shaft`: i the last stretch before it, and the deep starts right under it)
+  const plan = (i: number, x0: number, entry: 'dig' | 'ramp' | 'shaft', last: number, out: number, shaft?: Pit): Room[] | null => {
     const rooms: Room[] = [];
     const shallow = (s: Sewer, outlet: boolean, isFirst: boolean, from?: number) => rooms.push({ s, shallow: true, outlet, first: isFirst, ...(from !== undefined ? { from } : {}) });
-    const first = runs[i];
-    shallow({ x0, x1: first.b - drop, y, drain: [x0, x0 + SEWER.drain * TILE], outlet: [first.b - drop, first.b - drop], wet: [], entry }, false, true);
-    let deep0 = first.b - drop; // where the deep starts (its drop, under the street)
-    let open = first.b; // its roof comes down from here
+    let deep0 = shaft ? shaft.x0 : runs[i].b - drop; // where the deep starts (its drop, under the street)
+    let open = shaft ? shaft.x0 : runs[i].b; // its roof comes down from here
+    if (!shaft) shallow({ x0, x1: deep0, y, drain: [x0, x0 + SEWER.drain * TILE], outlet: [deep0, deep0], wet: [], entry: entry as 'dig' | 'ramp' }, false, true);
     for (let k = i + 1; k <= last; k++) {
       const r = runs[k];
       const fin = k === last;
@@ -227,6 +233,15 @@ function addSewerRoute(level: Level, seed: number): Sewer[] {
       if ((x1 - r.a) / TILE < climb + SEWER.land + (fin ? 2 + SEWER.ramp : DEEP.under) + (fin ? 0 : DEEP.drop)) {
         if (fin) return null;
         continue;
+      }
+      if (shaft && !rooms.length) {
+        //the shaft: the pit's floor is open, straight down into the deep's first room (zack, 2026-11-01, floor 7: the
+        //sewer from the pit on the first hill on)
+        const s0 = deepest.rooms[0].s;
+        s0.entry = 'shaft';
+        s0.drain = [shaft.x0, shaft.x1];
+        delete s0.topAt;
+        deepest.rooms[0].first = true;
       }
       rooms.push(...deepest.rooms);
       const dy = deepest.y;
@@ -257,6 +272,18 @@ function addSewerRoute(level: Level, seed: number): Sewer[] {
     const w = wayIn(level, r.a, r.b - (SEWER.min + 2) * TILE, Math.min(r.b, r.a + (after + SEWER.min) * TILE), rng, !r.foot, after);
     return w && { x0: w.c0 * TILE, entry: (w.ramp ? 'ramp' : 'dig') as 'ramp' | 'dig' };
   });
+  //the earliest way in of all: a pit on a hill (the opening descent's, most often) with the deep under it, if the
+  //route from it fits (fall short of its far lip, or roll into it, and down you go; clear it and you're on the hill)
+  for (const p of pits(level)) {
+    if (rooms.length || p.x0 < SHAFT.from * TILE || p.x1 > end) continue;
+    const i = runs.filter((r) => r.b <= p.x0).length - 1;
+    for (let k = runs.length - 1; k > i && !rooms.length; k--) {
+      const q = runs[k];
+      if (q.b - q.a < up || !whole(level, q.a, q.a + up - SEWER.ramp * TILE)) continue;
+      const out = outletAt(level, q.a, q.b, q.gate, up / TILE);
+      if (out !== null) rooms = plan(i, p.x0, 'shaft', k, out, p) ?? [];
+    }
+  }
   for (let i = 0; i < runs.length && !rooms.length; i++) {
     const w = ways[i];
     //(the first stretch has to leave room to drop on)
@@ -343,9 +370,10 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
   //the stair set: the way in comes down onto its landing, and its steps go down to the floor (only where the tunnel
   //starts: along the route its landing would stand in your way)
   const holed = s.entry === 'dig' || s.entry === 'ramp';
-  const top = s.drain[1] + SEWER.land * TILE;
+  //(down a shaft you fall a long way, and well along: the landing's longer)
+  const top = s.drain[1] + (SEWER.land + (s.entry === 'shaft' ? 4 : 0)) * TILE;
   const foot = top + SEWER.stairDown * TILE;
-  const st: SewerStairs | null = holed && room.first && more() < SEWER.stairs && foot + (SEWER.stairOut + 4) * TILE <= end - 2 * TILE ? { x0: s.entry === 'ramp' ? s.drain[1] : s.x0, up: s.entry === 'ramp' ? s.drain[1] : s.x0, top, x1: foot, h: SEWER.stairH } : null;
+  const st: SewerStairs | null = (holed || s.entry === 'shaft') && room.first && more() < SEWER.stairs && foot + (SEWER.stairOut + 4) * TILE <= end - 2 * TILE ? { x0: s.entry === 'ramp' ? s.drain[1] : s.x0, up: s.entry === 'ramp' ? s.drain[1] : s.x0, top, x1: foot, h: SEWER.stairH } : null;
   if (st) {
     s.stairs = [st];
     const rail = polyRail([[st.top - TILE / 2, s.y - st.h - SEWER.railH], [st.x1 + TILE / 2, s.y - SEWER.railH]]);
@@ -355,6 +383,13 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
   }
   //the way in: a plank ramp down into the dig (onto the landing, if there is one), or just the hole
   if (s.entry === 'ramp') level.surfaces.push({ kind: 'bank', x0: s.drain[0], x1: s.drain[1], y: level.streetY, y1: s.y - (st?.h ?? 0), row: -1, sewer: true });
+  //the shaft: a plank ramp off the pit's near lip, down into the hole (ollie off the lip and you clear the pit)
+  if (s.entry === 'shaft') {
+    const near = hillGround(level).find((g) => Math.abs(g.x1 - s.drain[0]) < 1);
+    const ly = near ? (near.y1 ?? near.y) : level.streetY;
+    const x1 = s.drain[1] - TILE / 2;
+    level.surfaces.push({ kind: 'bank', x0: s.drain[0], x1, y: ly, y1: ly + (x1 - s.drain[0]) * SHAFT.plank, row: -1, sewer: true });
+  }
   //what's along it
   const slots: Slot[] = [];
   const deep = !room.shallow;
@@ -375,7 +410,7 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
   //(the set piece goes first or second, so it gets its room)
   const at = slots.findIndex((sl) => sl.kind === 'piece');
   if (at > 1) slots.unshift(...slots.splice(at, 1));
-  const start = st ? st.x1 + SEWER.stairOut * TILE : s.climb ? s.climb[1] + SEWER.land * TILE : s.entry === 'flat' ? s.x0 + 2 * TILE : s.entry === 'drop' ? (s.topAt ?? s.x0) + (SEWER.land + 2) * TILE : holed ? s.drain[1] + SEWER.land * TILE : s.x0 + SEWER.land * TILE;
+  const start = st ? st.x1 + SEWER.stairOut * TILE : s.climb ? s.climb[1] + SEWER.land * TILE : s.entry === 'flat' ? s.x0 + 2 * TILE : s.entry === 'drop' ? (s.topAt ?? s.x0) + (SEWER.land + 2) * TILE : s.entry === 'shaft' ? s.drain[1] + (SEWER.land + 2) * TILE : holed ? s.drain[1] + SEWER.land * TILE : s.x0 + SEWER.land * TILE;
   let x = start;
   const stop = end - 2 * TILE;
   const floors: [number, number, number][] = []; // floor that dips, breaks or stands up: [x0, x1, kind 0 bowl / 1 gap / 2 stairs]
@@ -399,7 +434,7 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
       level.surfaces.push({ kind: 'ledge', x0: w0, x1: w1, y: s.y - DEEP.walkH, row: -1, sewer: true });
       for (let c = w0 + TILE; c < w1; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: s.y - DEEP.walkH - PICKUPS.ride });
       x += w;
-      if (more() < 0.6 && x + 7 * TILE < stop) {
+      if (more() < 0.6 && SEWER.pipes > 0 && x + 7 * TILE < stop) {
         const y = s.y - DEEP.pipeH;
         const pipe = polyRail([[w1 - 2 * TILE, y], [w1 + 2 * TILE, y], [w1 + 6 * TILE, y]]);
         pipe.sewer = true;

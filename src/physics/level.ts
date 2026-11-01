@@ -259,7 +259,8 @@ export interface Sewer {
   // how you get in: an open dig you drop into or (at the foot of a hill) a plank ramp you roll down, both holes in the
   // street at drain; or from the room before it along the route (drain is then empty, [x0, x0]): a drop off its
   // floor's end down into this deeper one, a climb up out of a deeper one (a bank at climb), or straight on
-  entry?: 'dig' | 'ramp' | 'drop' | 'climb' | 'flat';
+  // (or a shaft: the deep's first room, under a pit on the hill whose cross street is dug up; drain is the pit)
+  entry?: 'dig' | 'ramp' | 'drop' | 'climb' | 'flat' | 'shaft';
   top?: number; // the roof's underside, px, where it isn't the street (the deep: under hills and canals)
   topAt?: number; // from here on (px; else from x0): the drop into the deep starts under the street
   top0?: number; // the roof before topAt, if not the street: a drop deeper in the deep, under the last room's roof
@@ -310,7 +311,7 @@ export function sewerAt(level: Level, x: number): Sewer | undefined {
 // except under its holes and grates. undefined up on the street, or with nothing overhead
 export function sewerRoof(level: Level, x: number, y: number): number | undefined {
   const s = sewerAt(level, x);
-  if (!s || x >= s.drain[0] && x < s.drain[1] || x >= s.outlet[0]) return undefined;
+  if (!s || x >= s.drain[0] && (x < s.drain[1] || (s.entry === 'shaft' && x < s.drain[1] + TILE / 2)) || x >= s.outlet[0]) return undefined;
   if (s.kicks?.some((k) => x >= k.grate[0] && x < k.grate[1])) return undefined;
   const low = s.top !== undefined && x >= (s.topAt ?? s.x0);
   const roof = (low ? s.top! : (s.top0 ?? level.streetY + SEWER_ROOF)) + PHYS.height;

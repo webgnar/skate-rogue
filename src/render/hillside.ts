@@ -884,9 +884,20 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   }
   //under each crest jump, the cross street it clears, running from the city behind to the camera
   const holes = gaps(ground);
+  //(the sewer's shaft, src/gen/sewer.ts: a pit whose cross street is dug up over the lane, straight down to the deep)
+  const shafts = (level.sewers ?? []).filter((s) => s.entry === 'shaft' && s.top !== undefined);
   for (const [x0, x1, t] of holes) {
     const low = t - PIT.depth; // the pit's bottom, where you bail
-    m.box(x0, x1, B, low, low, HILLSIDE.crossFar, HILLSIDE.rowB[1], { top: ['road', (p) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]] });
+    const road = { top: ['road', (p: V3) => [p[2] / 4, (p[0] - x0) / (x1 - x0)]] } as Parameters<Mesher['box']>[7];
+    const shaft = shafts.find((s) => Math.abs(tx(s.drain[0]) - x0) < 0.5);
+    if (shaft) {
+      const [h0, h1] = [HILLSIDE.backWalk, HILLSIDE.nearWalk];
+      const top = (level.streetY - shaft.top!) / TILE;
+      m.box(x0, x1, B, low, low, HILLSIDE.crossFar, h0, road);
+      m.box(x0, x1, B, low, low, h1, HILLSIDE.rowB[1], road);
+      //the hole's back, the cross street's dirt and its kerb's edge, down to the deep's roof
+      m.box(x0, x1, top, low, low, h0 - 0.2, h0, { front: ['concrete', cf] });
+    } else m.box(x0, x1, B, low, low, HILLSIDE.crossFar, HILLSIDE.rowB[1], road);
     yield* tee(x0, x1, low);
   }
   const cut = (xa: number, xb: number) => [...crossings, ...holes].some(([a, b]) => xb > a - 0.1 && xa < b + 0.1);

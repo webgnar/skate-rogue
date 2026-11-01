@@ -10,7 +10,7 @@
 // alligator) are src/render/sewer-view.ts. Plain shared materials, so the floor's batching (batch.ts) merges them.
 import * as THREE from 'three';
 import { TILE } from '../physics/constants';
-import { inHill, SEWER_ROOF, type Level, type Sewer } from '../physics/level';
+import { inHill, pitAt, SEWER_ROOF, type Level, type Sewer } from '../physics/level';
 import { SEWER } from '../gen/sewer';
 import { makeRng } from '../gen/rng';
 import { surface } from './surfaces';
@@ -426,6 +426,7 @@ export function buildSewers(level: Level): THREE.Group {
     }
     if (s.entry === 'dig' || s.entry === 'ramp') construction(s);
     if (s.entry === 'dig') dig(s, fy);
+    if (s.entry === 'shaft') shaftDig(s, fy, low);
     for (const t of s.stairs ?? []) stairs(t, fy);
     //a green slime fall now and then, from a broken pipe in the roof down the back wall into a glowing pool
     if (rng() < 0.6) {
@@ -602,6 +603,39 @@ export function buildSewers(level: Level): THREE.Group {
       flange.position.set(x, fy + 1.1, BACK + 0.5);
       g.add(flange);
     }
+  }
+
+  // the shaft down from a pit on the hill (src/gen/sewer.ts): the cross street dug up, timber shoring down the hole's
+  // sides to the deep's roof, a ladder down it to the floor, a work lamp hung in it, barrels and DETOUR at its lip
+  function shaftDig(s: Sewer, fy: number, top: number): void {
+    const pit = pitAt(level, (s.drain[0] + s.drain[1]) / 2);
+    if (!pit) return;
+    const [a, b] = [X(s.drain[0]), X(s.drain[1])];
+    const lip = Y(pit.floor);
+    for (const x of [a + 0.08, b - 0.08]) for (let z = BACK - 0.8; z < FRONT - 0.4; z += 1.4) box(x - 0.08, x + 0.08, top, lip, z, z + 0.28, plank);
+    for (let y = top + 0.6; y < lip - 0.3; y += 1.3) {
+      const brace = box(a + 0.1, b - 0.1, y, y + 0.14, BACK - 0.7, BACK - 0.55, plank);
+      brace.rotation.z = Math.round(y * 3) % 2 ? 0.22 : -0.22;
+    }
+    //a brick collar where it comes through the deep's roof
+    box(a - 0.3, a, top - 0.3, top + 0.4, STREET_BACK, FRONT - 0.02, archBrick);
+    box(b, b + 0.3, top - 0.3, top + 0.4, STREET_BACK, FRONT - 0.02, archBrick);
+    const lx = a + 0.5;
+    for (const dx of [-0.22, 0.22]) box(lx + dx - 0.04, lx + dx + 0.04, fy, lip + 0.6, BACK - 0.6, BACK - 0.5, yellow);
+    for (let y = fy + 0.3; y < lip + 0.5; y += 0.35) box(lx - 0.22, lx + 0.22, y, y + 0.05, BACK - 0.58, BACK - 0.52, yellow);
+    light(a + 0.2, b - 0.2, top, lip, 1.4);
+    for (const x of [a - 0.7, b + 0.8]) {
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.33, 0.9, 12), barrel);
+      bar.position.set(x, lip + 0.45, -2.2);
+      g.add(bar);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.315, 0.325, 0.1, 12), white);
+      band.position.set(x, lip + 0.55, -2.2);
+      g.add(band);
+    }
+    const detour = board('DETOUR ▼', 'sewer this way', '#ff7a1a', '#141018');
+    detour.scale.setScalar(0.42);
+    detour.position.set(a - 0.6, lip + 1.5, -2.3);
+    g.add(detour);
   }
 
   // a construction spot on the street at a sewer's way in: cones, a striped barricade behind the hole, the trench plate

@@ -120,9 +120,9 @@ describe('level edits', () => {
     useLevelEdits({ floors: { '3': { clouds: { on: true, room: 40, mix: ['puff'] }, sewer: { pipes: 0, stoken: 0.5 } } } });
     const on = buildFloor(2026, 3, PIECES, opts);
     expect(on.surfaces.some((s) => s.sky === 'cloud')).toBe(true);
-    //(no pipes: the only sewer rail left is a stair set's handrail)
+    //(no pipes: the only sewer rails left are a stair set's handrail and the cement ledges up to the climbs)
     const handrail = (r: { x0: number; x1: number }) => (on.sewers ?? []).some((w) => (w.stairs ?? []).some((t) => r.x0 >= t.top - TILE && r.x1 <= t.x1 + TILE));
-    expect(on.rails.some((r) => r.sky === 'rainbow') || on.rails.some((r) => r.sewer && !handrail(r))).toBe(false);
+    expect(on.rails.some((r) => r.sky === 'rainbow') || on.rails.some((r) => r.sewer && !handrail(r) && r.material !== 'concrete')).toBe(false);
     expect(JSON.stringify([CLOUDS, SEWER])).toBe(before);
     expect(isLevelEdits({ floors: { '3': { sewer: { len: [30, 40], on: true } } } })).toBe(true);
     expect(isLevelEdits({ floors: { '3': { sewer: { len: 'long' } } } })).toBe(false);

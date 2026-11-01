@@ -26,7 +26,7 @@ import { CAM } from '../render/camera';
 import { cashScale, dayKey, DECK_SLOTS, FULL_LIBRARY, firstPick, STOCK, withLoadout, type Library, type Loadout } from '../run/meta';
 import { PickupView } from '../render/pickups';
 
-import { inHill, pitAt, type Level } from '../physics/level';
+import { hillGround, inHill, pitAt, surfaceY, type Level } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { StreetView } from '../render/scene';
 import { TrafficView } from '../render/traffic-view';
@@ -274,11 +274,18 @@ export class Game {
     const all = this.level.sewers ?? [];
     const want = this.sewerStart;
     const s =
-      all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate) || (want === 'stairs' && w.stairs?.length) || (want === 'deep' && w.entry === 'drop')) ?? all[0];
+      all.find((w) => w.piece?.kind === want || (want === 'gator' && w.gator) || (want === 'kick' && w.kicks?.length) || (want === 'gate' && w.gate) || (want === 'stairs' && w.stairs?.length) || (want === 'deep' && w.entry === 'drop') || (want === 'shaft' && w.entry === 'shaft')) ?? all[0];
     //(down on its floor, just past the way in: a few tiles up the street from a dig can be a hill's foot or a canal;
     //along the route, past the climb up out of the deep, or at the top of the drop into it)
     const x = s?.entry === 'climb' ? s.climb![1] + TILE : s?.entry === 'drop' ? s.x0 - 2 * TILE : (s?.drain[1] ?? 0) + TILE;
     const y = s?.entry === 'drop' ? all.find((w) => w.x1 === s.x0)?.y ?? s.y : s?.y;
+    //(?sewer=shaft: up on the hill a little before its pit, rolling at it)
+    if (s?.entry === 'shaft') {
+      const at = s.drain[0] - 4 * TILE;
+      const ground = hillGround(this.level).find((g) => at >= g.x0 && at < g.x1);
+      if (ground) Object.assign(this.sim.skater, { x: at, y: surfaceY(ground, at), mode: 'roll', surface: ground, hsp: 3, carry: 0, vsp: 0 });
+      return;
+    }
     if (s) Object.assign(this.sim.skater, { x, y, mode: 'roll', surface: null, hsp: 4, carry: 0, vsp: 0 });
   }
 
