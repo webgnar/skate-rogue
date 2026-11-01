@@ -31,7 +31,7 @@ const BACK_LANE_Z = STREET_Z.back;
 const DOOR_PAINTS = [0xf2c230, 0x2fb8c8, 0x3a7be8, 0x48b86a]; // door cars: bright against the brick, never the cones' orange
 const DOOR_OPEN = (64 * Math.PI) / 180; // how far an open door swings: flung wide, across your lane
 const DOOR_SIZE = [1.75, 1.15, 1.8]; // the door drawn bigger than life so it reads (zack: "exaggerate the door")
-const CRUISER_Z = STREET_Z.back; // the back lane, behind the skate lane
+const CRUISER_Z = STREET_Z.cruiser; // the near lane, between the centre line and the camera
 // Heat this low and the cruiser gives up: it drops back out of the frame and is only hidden once it's fully off
 // screen (zack: "the cop car shouldnt dissapear when its chasing you while its still on screen"). Before, it was
 // hidden the moment it fell 8.8 tiles back, which is still well inside a landscape phone's view.
@@ -443,7 +443,7 @@ export class TrafficView {
       const k = Math.min(1, 0.08 * frames);
       turn.x += (turn.to - turn.x) * k;
       if (Math.abs(turn.to - turn.x) < 0.6) turn.u += frames / TUNNEL.turnFrames;
-      const t = turnAt(turn.u);
+      const t = turnAt(turn.u, CRUISER_Z);
       this.cruiser.position.set(turn.x, toY(level, level.startY), t.z);
       this.cruiser.rotation.y = (t.turn * Math.PI) / 2;
       this.cruiser.visible = true;

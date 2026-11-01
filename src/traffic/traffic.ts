@@ -39,6 +39,9 @@ export interface Spawn {
 // bus stops and the L's columns stand
 export const STREET_Z = {
   back: -1.5, // the back lane's middle: a 1.6 wide car reaches the curb, the skate lane's cars just clear it
+  line: -0.2, // the painted centre line (kit.ts paints it 55% of the way from the back of the street)
+  cruiser: 0.9, // the Heat cruiser's middle: the near lane, between the centre line and the camera (zack, 2026-11-01:
+  //a 2 wide car in the back lane drove half on the sidewalk). Its near side clears the line, its far side the kerb
   curb: -2.3,
   lamp: -2.45, // street lamps, signals and the L's columns, at the curb
   walk: -2.8, // where people stand and stroll, and the bus stops and wanted posters
