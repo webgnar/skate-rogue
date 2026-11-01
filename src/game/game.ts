@@ -42,7 +42,7 @@ import { Particles, TRICK_TRAIL } from '../render/particles';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
-import { BulletTime, landCall } from './bullet-time';
+import { beatOf, BulletTime, landCall } from './bullet-time';
 import { glowMaterial, INK, inkify, outlineMaterial, silhouetteInk } from '../render/toon';
 import { SpeedLines } from '../render/speed-lines';
 import { FlipLines } from '../render/flip-lines';
@@ -1724,6 +1724,20 @@ export class Game {
     this.view.zoom.trick();
   }
 
+  // a quick chain (bullet-time.ts): moves landing right on each other's heels, judged by the player's speed and how far
+  // out the camera is, glide the game into a lighter slow-mo. Not on a landing by itself, never on a dead flip
+  private chainBeat(e: FloorEvent): void {
+    const beat = beatOf(e);
+    if (!beat) return;
+    const speed = Math.abs(this.skater.hsp) / PHYS.baseSpeed;
+    const s = this.bullet.beat(beat, this.clock, speed, this.view.camOut, this.run.combo);
+    if (!s) return;
+    this.hud.callout('QUICK!', 'trick');
+    if (FX.reduceMotion) return;
+    this.warp.glide(s.enter, s.slow, s.hold, s.ease);
+    this.view.zoom.trick();
+  }
+
   // a board mod fired: the effects the sim can't do itself
   private fire(effect: EffectId, slot: number): void {
     this.hud.fire(slot);
@@ -2080,6 +2094,8 @@ export class Game {
     const bank = this.run.onEvent(e, this.skater.hsp);
     if (e.type === 'pickup' && e.mult) this.skyBonus += Math.max(0, this.run.cash - cashBefore - SCORE.cashCoin);
     if (this.run.combo > before) this.bulletTime(this.run.combo);
+    if (e.type === 'slam' || e.type === 'tuck') this.bullet.chainBreak();
+    else this.chainBeat(e);
     if (bank) {
       this.mission('combo', bank.count);
       this.mission('bank', bank.points);
