@@ -253,13 +253,22 @@ export function buildSewers(level: Level): THREE.Group {
       box(gx, a, rock, deep - 0.3, STREET_BACK, FRONT, ground);
       gx = b;
     }
-    box(gx, after ? x1 : x1 + 0.5, rock, deep - 0.3, STREET_BACK, FRONT, ground);
+    //(not under a climb up from deeper: the bank's own wedge is the ground there, all the way down)
+    const gEnd = after ? x1 : x1 + 0.5;
+    if (s.climb) {
+      const [c0, c1] = [X(s.climb[0]), X(s.climb[1])];
+      if (c0 > gx) box(gx, c0, rock, deep - 0.3, STREET_BACK, FRONT, ground);
+      box(c0, c1, s.deep ? DEEP_ROCK : ROCK - 6, Math.min(fy, ...all.filter((o) => o.x1 === s.x0).map((o) => Y(o.y))) - 0.3, STREET_BACK, FRONT, ground);
+      gx = Math.max(gx, c1);
+    }
+    if (gEnd > gx) box(gx, gEnd, rock, deep - 0.3, STREET_BACK, FRONT, ground);
     if (!before) box(x0 - 6, x0 - 0.5, ROCK, -3, STREET_BACK, FRONT, ground);
     if (!after) box(x1 + 0.5, x1 + 6, ROCK, -3, STREET_BACK, FRONT, ground);
     //the tunnel's ends and back wall
     if (!before) box(x0 - 0.5, x0, deep - 0.3, roof, STREET_BACK, FRONT, brick);
     if (!after) box(x1, x1 + 0.5, fy - 0.3, roof, STREET_BACK, FRONT, brick);
-    if (at > x0) box(x0, Math.min(at, x1), deep, high, STREET_BACK, BACK, wall);
+    const wallFoot = s.climbFrom !== undefined ? Math.min(deep, Y(s.climbFrom)) : deep; // (down the climb's foot too)
+    if (at > x0) box(x0, Math.min(at, x1), wallFoot, high, STREET_BACK, BACK, wall);
     if (at < x1) {
       box(at, x1, deep, low, STREET_BACK, BACK, wall);
       //the deep's roof: the ground between it and the street (or the canal) over it (under the hill, the hill's own
@@ -651,9 +660,18 @@ export function buildSewers(level: Level): THREE.Group {
     stick.rotation.z = 0.3;
   }
 
-  //pipes on brackets off the back wall
+  //pipes on brackets off the back wall (a concrete one's a cement ledge out of the wall, from zack's ledge ref)
   for (const r of level.rails) {
     if (!r.sewer) continue;
+    if (r.material === 'concrete') {
+      for (let k = 1; k < r.xs.length; k++) {
+        const [a, b] = [X(r.xs[k - 1]), X(r.xs[k])];
+        const [ya, yb] = [Y(r.ys[k - 1]), Y(r.ys[k])];
+        wedge(a, ya, b, yb, Math.min(ya, yb) - 0.35, BACK, 0.45, pillar);
+        wedge(a, ya + 0.02, b, yb + 0.02, Math.min(ya, yb) - 0.05, 0.35, 0.5, steel); // (a steel nose along its edge)
+      }
+      continue;
+    }
     const pts = r.xs.map((px, i) => new THREE.Vector3(X(px), Y(r.ys[i]) - 0.12, 0));
     const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.13, 8), pipeMat);
     g.add(tube);

@@ -265,6 +265,7 @@ export interface Sewer {
   top0?: number; // the roof before topAt, if not the street: a drop deeper in the deep, under the last room's roof
   deep?: boolean; // the deep: under the hills and canals, no way up but on
   climb?: [number, number]; // the bank up out of the deep, px
+  climbFrom?: number; // the floor (px) it climbs up from
   walks?: [number, number][]; // the deep's side walkways over its channel, px (ledges walkH over the floor)
   kicks?: SewerKick[];
   piece?: SewerPiece;
@@ -330,6 +331,8 @@ export function inDeep(s: Sewer, x: number, y: number): boolean {
 export function sewerFloor(s: Sewer, x: number): number {
   const p = s.piece;
   if (s.stairs?.some((t) => x >= t.x0 && x < t.top)) return s.y - s.stairs.find((t) => x >= t.x0 && x < t.top)!.h;
+  //(up the climb out of the deep: the bank's foot, as deep as the floor it comes up from)
+  if (s.climb && s.climbFrom !== undefined && x < s.climb[1]) return Math.max(s.y, s.climbFrom);
   return p?.kind === 'bowl' && x >= p.x0 && x < p.x1 ? s.y + p.depth : s.y;
 }
 
