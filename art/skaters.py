@@ -578,6 +578,9 @@ def export(name):
         export_animations=False,  # they play Lou's clips
         export_apply=True,
         export_materials='EXPORT',
+        # the paint texture goes in as a JPEG: the Meshy bakes are full of detail, 1.2 MB as PNG, ~150 KB as JPEG
+        export_image_format='JPEG',
+        export_jpeg_quality=88,
     )
     return path
 

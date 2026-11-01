@@ -431,6 +431,8 @@ def export():
         export_frame_step=1,
         export_apply=True,
         export_materials='EXPORT',
+        export_image_format='JPEG',  # the paint texture (a Meshy bake since Nov 2026): ~1.2 MB as PNG
+        export_jpeg_quality=88,
     )
     # the scarf's Spring bones are swung by the game, not the clips: drop their sampled rest pose from every action
     sys.path.insert(0, HERE)

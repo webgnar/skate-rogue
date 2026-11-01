@@ -4,13 +4,30 @@ Lou (`art/lou-gnar.blend`) and the QFS skaters (`art/webster.blend`, `keanu`, `r
 file. That file is the source of truth for the model. The export writes the game's GLB (`public/models/<name>.glb`)
 from it exactly as it is.
 
+## Where the models come from
+
+Since Nov 1, 2026 all five skaters are zack's Meshy models of the DBZ-style concept sheets
+(`art/reference/characters/`), put on the game's rig by `art/meshy_skater.py`:
+
+    blender -b -P art/meshy_skater.py -- webster --src <folder with the Meshy .glb files>
+
+It reduces the model to 6,000 triangles and bakes its colours onto `art/tex/<name>.png` (`art/game_ready.py`, the
+pass from underground-LA), fits the mesh to the rig's bind pose (arms straight down, each limb stretched or squashed
+to the rig's bone lengths, the head, hands and feet kept their size), skins it with automatic weights, hangs the hair
+spikes, Keanu's drawstrings and Lou's scarf tail on Spring chains, and writes the `.blend` and the GLB. Lou keeps his
+clips and the neon glint over his visor. The Meshy files (20-40 MB each) are not in git: they
+are in the project's shared files, under `meshy/`.
+
+Running it again replaces the skater's mesh, texture and Spring bones in the `.blend`, so paint and mesh edits made
+since are lost. After the first run the `.blend` is the source, as below.
+
 ## Paint
 
 1. Open the skater's `.blend` file and switch to the **Texture Paint** workspace.
 2. Paint on the model. The model reads one texture, `art/tex/<name>.png` (Lou's is `lou-gnar.png`).
 3. Choose **Image > Save**. It writes over that PNG.
 
-You can also paint the PNG in any image app. Lou's visor and its glint, and the shoe-wear decals, are not on the
+You can also paint the PNG in any image app. Lou's visor glint and the shoe-wear decals are not on the
 texture, because the game shades them itself.
 
 ## Edit the mesh
@@ -32,8 +49,8 @@ Make shape changes in **Edit Mode**, then save the `.blend`. Keep these intact, 
 
 ### Hair and cloth
 
-Hair spikes, Keanu's hood, sweatshirt and drawstrings, the crop tops and Lou's scarf swing on the `Spring...` bone
-chains (`src/render/springs.ts`). Each strand or strip of cloth is weighted to its chain. You can reshape them freely
+Hair spikes and locks, Keanu's drawstrings and Lou's scarf tail swing on the `Spring...` bone chains
+(`src/render/springs.ts`). The Meshy models' hood, hoodie and crop tops are fitted, so they have none. Each strand or strip of cloth is weighted to its chain. You can reshape them freely
 as long as they keep those weights. The chains stay where they are, so a spike you move far from its bone swings
 around that bone. To move, lengthen or add chains, ask for the change in the script.
 
