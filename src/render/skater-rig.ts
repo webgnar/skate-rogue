@@ -142,6 +142,14 @@ export class SkaterRig {
   private boardBone: THREE.Bone | null = null;
   private springs: Springs | null = null; // hair and loose cloth that trail the motion (skater GLBs with Spring bones)
   private boardRest = new THREE.Matrix4(); // the Board bone's rest pose (rig space), inverted
+  // The skeleton's proportions, read off the model in bind(). The old models are built on the rig's own numbers; the
+  // Meshy ones (public/models/meshy, art/meshy_refit.py) have longer legs and the pelvis higher, so the code clips
+  // lift the pelvis by `lift` and the knees solve with the model's own bone lengths, and the Blender clips (keyed on
+  // Lou's legs) get their feet put back where Lou's would land (louFeet).
+  private thigh = THIGH;
+  private shin = SHIN;
+  private lift = 0;
+  private refit = false;
   // the bones and board where a crossfade starts from (skinned model only)
   private snap: { pos: THREE.Vector3[]; rot: THREE.Quaternion[]; board: THREE.Matrix4 } | null = null;
 
@@ -248,7 +256,9 @@ export class SkaterRig {
   }
 
   // the QFS skaters (art/skaters.py) share Lou's rig and play his clips, from lou-gnar.glb
-  static async create(base: string, skater: SkaterId = 'lou-gnar'): Promise<SkaterRig> {
+  // meshy: the skaters rebuilt from zack's Meshy models (public/models/meshy, the DEV TOOLS MODELS switch); they still
+  // play the clips in the old lou-gnar.glb
+  static async create(base: string, skater: SkaterId = 'lou-gnar', meshy = false): Promise<SkaterRig> {
     const load = (file: string) =>
       new GLTFLoader().loadAsync(`${base}models/${file}`).catch((err) => {
         console.warn(`${file} failed to load, using the built-in one`, err);
@@ -257,7 +267,7 @@ export class SkaterRig {
     const [lou, board, own] = await Promise.all([
       load('lou-gnar.glb'),
       load('board.glb'),
-      skater === 'lou-gnar' ? undefined : load(`${skater}.glb`),
+      meshy ? load(`meshy/${skater}.glb`) : skater === 'lou-gnar' ? undefined : load(`${skater}.glb`),
     ]);
     const model = own ?? lou;
     return new SkaterRig(model?.scene, board?.scene, lou?.animations);
@@ -405,8 +415,29 @@ export class SkaterRig {
       });
     }
 
+    // the model's joints (rig space, bind pose) set the drivers' places, so each bone turns about its own joint
+    this.mesh.add(model);
+    this.mesh.updateMatrixWorld(true);
+    const inv = this.mesh.matrixWorld.clone().invert();
+    const joint = (name: string) => {
+      const o = model.getObjectByName(name);
+      return o && (o as THREE.Bone).isBone ? new THREE.Vector3().setFromMatrixPosition(o.matrixWorld).applyMatrix4(inv) : undefined;
+    };
+    const [pelvis, spine, upLeg, knee, ankle, arm, fore, head] = ['Hips', 'Spine', 'LeftUpLeg', 'LeftLeg', 'LeftFoot', 'LeftArm', 'LeftForeArm', 'Head'].map(joint);
+    if (pelvis && spine && upLeg && knee && ankle && arm && fore && head) {
+      this.thigh = upLeg.y - knee.y;
+      this.shin = knee.y - ankle.y;
+      this.lift = pelvis.y - BASE_HIP_Y;
+      this.refit = Math.abs(this.lift) > 1e-3 || Math.abs(this.thigh - THIGH) > 1e-3 || Math.abs(this.shin - SHIN) > 1e-3;
+      this.hips.forEach((h) => (h.position.y = upLeg.y - pelvis.y));
+      this.spine.position.y = spine.y - pelvis.y;
+      this.head.position.y = head.y - spine.y;
+      this.shoulders.forEach((sh) => (sh.position.y = arm.y - spine.y));
+      this.elbows.forEach((el) => (el.position.y = fore.y - arm.y));
+    }
+
     // drivers in the bind pose
-    this.pelvis.position.set(0, BASE_HIP_Y, 0);
+    this.pelvis.position.set(0, BASE_HIP_Y + this.lift, 0);
     this.pelvis.rotation.set(0, 0, 0);
     this.spine.rotation.set(0, 0, 0);
     this.head.rotation.set(0, 0, 0);
@@ -416,13 +447,12 @@ export class SkaterRig {
       this.elbows[i].rotation.set(0, 0, 0);
       this.thighs[i].position.copy(hip);
       this.thighs[i].quaternion.identity();
-      this.shins[i].position.set(hip.x, hip.y - THIGH, hip.z);
+      this.shins[i].position.set(hip.x, hip.y - this.thigh, hip.z);
       this.shins[i].quaternion.identity();
-      this.feet[i].position.set(hip.x, hip.y - THIGH - SHIN - ANKLE, 0.05);
+      this.feet[i].position.set(hip.x, hip.y - this.thigh - this.shin - ANKLE, 0.05);
       this.feet[i].rotation.set(0, 0, 0);
       this.toes[i].rotation.set(0, 0, 0);
     }
-    this.mesh.add(model);
     this.mesh.updateMatrixWorld(true);
     const toRig = this.mesh.matrixWorld.clone().invert();
     model.traverse((o) => {
@@ -518,9 +548,13 @@ export class SkaterRig {
   // a Blender clip at time t: bones straight from its keys, the board riding the Board bone
   private applyBaked(tracks: { bone: THREE.Bone; pos?: THREE.Interpolant; rot?: THREE.Interpolant }[], t: number): void {
     for (const { bone, pos, rot } of tracks) {
-      if (pos) bone.position.fromArray(pos.evaluate(t));
       if (rot) bone.quaternion.fromArray(rot.evaluate(t));
+      if (!pos) continue;
+      if (!this.refit || bone.name === 'Board') bone.position.fromArray(pos.evaluate(t));
+      else if (bone.name === 'Hips') bone.position.fromArray(pos.evaluate(t)).y += this.lift;
+      else bone.position.copy(this.bound.find((b) => b.bone === bone)?.rest.p ?? bone.position); // the model's own bone lengths
     }
+    if (this.refit) this.louFeet();
     if (this.boardBone) {
       // at rest the board sits on the bone with its origin at the deck top, over the middle of the feet
       const deck = new THREE.Matrix4().makeTranslation(0, BOARD.deckTop, 0);
@@ -825,7 +859,7 @@ export class SkaterRig {
     const m = (pos: THREE.Vector3, q: THREE.Quaternion) => new THREE.Matrix4().compose(pos, q, ONE);
     const e = (x: number, y: number, z: number, order: THREE.EulerOrder = 'XYZ') => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, order));
     const elbow = arm === 0 ? p.armLElbow : p.armRElbow;
-    const shoulder = m(new THREE.Vector3(p.hipX, p.hipY, p.hipZ), e(0, p.yaw, p.tumble, 'ZYX'))
+    const shoulder = m(new THREE.Vector3(p.hipX, p.hipY + this.lift, p.hipZ), e(0, p.yaw, p.tumble, 'ZYX'))
       .multiply(m(this.spine.position, e(p.bend, 0, -p.lean)))
       .multiply(m(this.shoulders[arm].position, shoulderTurn(p, arm)));
     return { shoulder, elbow: shoulder.clone().multiply(m(this.elbows[arm].position, e(-elbow, 0, 0))) };
@@ -1004,6 +1038,11 @@ export class SkaterRig {
       m.premultiply(new THREE.Matrix4().makeTranslation(-at.x, -at.y, -at.z)).premultiply(body).premultiply(about);
       this.setInRig(hips, m);
     }
+    this.legsTo(legs, feet);
+  }
+
+  // the legs (thigh, shin, foot bones) re-aimed by two-bone IK from the hips so each foot lands on its target (rig space)
+  private legsTo(legs: (THREE.Bone | undefined)[][], feet: (THREE.Matrix4 | null)[]): void {
     const at = (o: THREE.Object3D) => new THREE.Vector3().setFromMatrixPosition(this.inRig(o));
     legs.forEach(([up, low, foot], i) => {
       const target = feet[i];
@@ -1024,6 +1063,25 @@ export class SkaterRig {
       this.aim(low, at(low), at(foot), goal);
       this.setInRig(foot, target.setPosition(at(foot)));
     });
+  }
+
+  // A Blender clip keys Lou's legs (THIGH and SHIN long, the pelvis at BASE_HIP_Y): on a model with other legs, each
+  // foot goes where Lou's would be with the same joint angles, and the legs reach for it
+  private louFeet(): void {
+    const bone = (name: string) => this.bound.find((b) => b.bone.name === name)?.bone;
+    const legs = (['Left', 'Right'] as const).map((side) => [bone(`${side}UpLeg`), bone(`${side}Leg`), bone(`${side}Foot`)]);
+    const at = (o: THREE.Object3D) => new THREE.Vector3().setFromMatrixPosition(this.inRig(o));
+    const feet = legs.map(([up, low, foot]) => {
+      if (!up || !low || !foot) return null;
+      const hip = at(up);
+      const knee = at(low);
+      const ankle = at(foot);
+      const goal = hip.clone().setY(hip.y - this.lift)
+        .addScaledVector(knee.clone().sub(hip), THIGH / this.thigh)
+        .addScaledVector(ankle.clone().sub(knee), SHIN / this.shin);
+      return this.inRig(foot).setPosition(goal);
+    });
+    this.legsTo(legs, feet);
   }
 
   // turn a bone about its head so the point `from` swings to `to`
@@ -1105,7 +1163,7 @@ export class SkaterRig {
     this.boardSpin.rotation.set(p.boardRoll, p.boardYaw, 0, 'YXZ');
 
     // body
-    this.pelvis.position.set(p.hipX, p.hipY, p.hipZ);
+    this.pelvis.position.set(p.hipX, p.hipY + this.lift, p.hipZ);
     this.pelvis.rotation.set(0, p.yaw, p.tumble, 'ZYX');
     this.spine.rotation.set(p.bend, 0, -p.lean);
     this.head.rotation.set(p.nod, p.head, -p.headTilt, 'YXZ');
@@ -1146,7 +1204,7 @@ export class SkaterRig {
       const base = new THREE.Vector3(d.x, d.y, d.z).normalize().multiplyScalar(POLE_OUT).add(mid);
       const target = base.clone().add(front ? new THREE.Vector3(p.kneeFX, p.kneeFY, p.kneeFZ) : new THREE.Vector3(p.kneeBX, p.kneeBY, p.kneeBZ));
       this.poles[i] = { base, target };
-      const knee = kneePoint(hip, ankle, THIGH, SHIN, target.clone().sub(mid));
+      const knee = kneePoint(hip, ankle, this.thigh, this.shin, target.clone().sub(mid));
       const k = new THREE.Vector3(knee.x, knee.y, knee.z);
       place(this.thighs[i], hip, k);
       place(this.shins[i], k, ankle);

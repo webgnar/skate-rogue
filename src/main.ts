@@ -39,7 +39,7 @@ import { MODEL_FILES, loadModels, missingModels } from './render/models';
 import { Loading } from './ui/loading';
 import { parseBoons } from './bot/repro';
 import { ACTS, FLOORS_PER_ACT } from './gen/escape';
-import { DEV, loadDev, saveDev, slower, stepFrame } from './ui/dev';
+import { DEV, loadDev, meshyModels, saveDev, slower, stepFrame } from './ui/dev';
 import { DevPanel } from './ui/dev-panel';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
@@ -440,7 +440,9 @@ async function start() {
   const skater = isSkater(urlSkater) ? urlSkater : owns(save.skater) ? save.skater : 'lou-gnar';
   const deck = owns(save.deck) ? save.deck : 'popsicle';
   //the loading screen (src/ui/loading.ts): every model (the car-hop damage too), tile sheet and the skater, all at once
-  const rig = loading.track(SkaterRig.create(base, skater));
+  //?models=new rides the Meshy rebuilds (DEV TOOLS MODELS), ?models=old the old skaters
+  const meshy = meshyModels(params);
+  const rig = loading.track(SkaterRig.create(base, skater, meshy));
   await Promise.all([loading.track(loadCityTiles(`${base}tex/chicago_tiles.png`)), loadModels(base, MODEL_FILES, loading.add(MODEL_FILES.length))]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await loading.track(view.loadBackdrop(base));
@@ -600,6 +602,14 @@ async function start() {
     unlockAll: all,
     setUnlockAll: (on) => reloadWith('unlockall', on),
     reset: resetAndReload,
+    meshy,
+    reload: () => {
+      //the switch decides from now on, not a ?models= in the address
+      const q = new URLSearchParams(location.search);
+      q.delete('models');
+      if (q.toString() === new URLSearchParams(location.search).toString()) location.reload();
+      else location.search = q.toString();
+    },
   });
   if (DEV.collision || params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
   showFps(DEV.fps);

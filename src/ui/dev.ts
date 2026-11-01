@@ -12,7 +12,14 @@ export const DEV = {
   fps: false, // the fps / draws / triangles line
   speed: 0, // index into SPEEDS
   full: false, // the overlay's full readout (tap it), else one line
+  meshy: false, // MODELS: the skaters rebuilt from zack's Meshy models (NEW) or the old ones; ?models=new or old wins
 };
+
+// the skater models to load: the URL's ?models=new / ?models=old, else the DEV TOOLS switch
+export function meshyModels(params: URLSearchParams): boolean {
+  const m = params.get('models');
+  return m === 'new' ? true : m === 'old' ? false : DEV.meshy;
+}
 
 let stepAsk = false;
 
@@ -40,10 +47,11 @@ export function takeStep(): boolean {
 
 export function loadDev(): void {
   try {
-    const d = JSON.parse(localStorage.getItem(KEY) ?? '{}') as { collision?: unknown; fps?: unknown; full?: unknown; momentum?: unknown };
+    const d = JSON.parse(localStorage.getItem(KEY) ?? '{}') as { collision?: unknown; fps?: unknown; full?: unknown; momentum?: unknown; meshy?: unknown };
     DEV.collision = d.collision === true;
     DEV.fps = d.fps === true;
     DEV.full = d.full === true;
+    DEV.meshy = d.meshy === true;
     if (MOMENTUM_MODES.includes(d.momentum as MomentumMode)) MOMENTUM.mode = d.momentum as MomentumMode;
   } catch {
     //blocked storage: all off
@@ -52,7 +60,7 @@ export function loadDev(): void {
 
 export function saveDev(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ collision: DEV.collision, fps: DEV.fps, full: DEV.full, momentum: MOMENTUM.mode }));
+    localStorage.setItem(KEY, JSON.stringify({ collision: DEV.collision, fps: DEV.fps, full: DEV.full, momentum: MOMENTUM.mode, meshy: DEV.meshy }));
   } catch {
     //not remembered in a private window
   }
