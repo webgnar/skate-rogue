@@ -98,10 +98,11 @@ export const mouthX = (m: Mouth) => m.x0 + ((TUNNEL.open[0] + TUNNEL.open[1]) / 
 
 // where a vehicle turning into (u 0 -> 1) or out of (u 1 -> 0) a mouth is: z from the back lane deep into the
 // tunnel, and how far round it has turned (0 along the street, 1 facing straight into the hill)
-export function turnAt(u: number): { z: number; turn: number } {
+// (from: the lane it leaves from, the back lane for traffic, the near lane for the Heat cruiser)
+export function turnAt(u: number, from = STREET_Z.back): { z: number; turn: number } {
   const k = Math.min(1, Math.max(0, u));
   const ease = k * k * (3 - 2 * k);
-  return { z: STREET_Z.back + (TUNNEL.deep - STREET_Z.back) * ease, turn: Math.min(1, k * 1.6) };
+  return { z: from + (TUNNEL.deep - from) * ease, turn: Math.min(1, k * 1.6) };
 }
 
 // The Heat cruiser's way down the street, behind you (tiles, for the view). It drives where the ground is street
@@ -112,7 +113,7 @@ export class CruiserPath {
   mode: CruiserMode = 'street';
   x = 0; // the middle of the car, tiles
   y = 0; // tiles above the street (a canal jump)
-  z: number = STREET_Z.back;
+  z: number = STREET_Z.cruiser;
   turn = 0; // 0 driving along the street, 1 nose into the hill
   private u = 0; // through a turn in or out
   private mouth: Mouth | null = null;
@@ -191,7 +192,7 @@ export class CruiserPath {
       this.x = from + (Math.max(from, want) - from) * k;
       if (this.u <= 0) this.mode = 'street';
     }
-    const t = this.mode === 'in' || this.mode === 'out' ? turnAt(this.u) : turnAt(this.mode === 'gone' ? 1 : 0);
+    const t = turnAt(this.mode === 'in' || this.mode === 'out' ? this.u : this.mode === 'gone' ? 1 : 0, STREET_Z.cruiser);
     this.z = t.z;
     this.turn = t.turn;
     this.y = this.mode === 'street' ? this.jump(this.x) : 0;

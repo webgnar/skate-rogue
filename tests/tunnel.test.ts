@@ -33,7 +33,7 @@ describe('tunnels under the hills', () => {
         path.step(x / TILE - 5);
         if (seen[seen.length - 1] !== path.mode) seen.push(path.mode);
         if (path.mode === 'street') expect(high(l, (path.x - 1.1) * TILE, (path.x + 1.1) * TILE)).toBe(false);
-        if (path.mode === 'street') expect(path.z).toBe(STREET_Z.back);
+        if (path.mode === 'street') expect(path.z).toBe(STREET_Z.cruiser);
       }
       //down the opening hill out of sight, out of its tunnel, then in and out again under every later stretch
       const spans = l.hillSpans!.length;
