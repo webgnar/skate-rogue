@@ -381,6 +381,22 @@ describe('the sewer route, built out', { timeout: 30000 }, () => {
     expect(events).toContain('washed');
   });
 
+  it('the flood stays close behind you, but only catches you if you dawdle (zack: "stay close to the player")', () => {
+    const { level, s } = find((w) => w.piece?.kind === 'surge' && !w.kicks?.length);
+    const sim = new FloorSim({ ...level, startX: s.drain[1] + TILE, startY: s.y });
+    Object.assign(sim.skater, { hsp: 4, mode: 'roll' });
+    const pilot = new Pilot('sewer', 1);
+    const t = sim.sewer.tunnels.find((w) => w.s === s)!;
+    let far = 0;
+    for (let f = 0; f < 1200 && sim.state === 'skate' && sim.skater.x < s.x1; f++) {
+      sim.step(pilot.input(sim));
+      if (t.surge!.on && !t.surge!.caught && sim.skater.x > s.x0 + 12 * TILE) far = Math.max(far, sim.skater.x - t.surge!.front);
+    }
+    expect(t.surge!.on).toBe(true);
+    expect(far).toBeGreaterThan(0);
+    expect(far).toBeLessThan(SEWER_SIM.surgeLead + TILE);
+  });
+
   it('the tunnel to the gate is the sewer road: up out of it at the gate, on to the underground spot', () => {
     let roads = 0;
     for (let seed = 1; seed <= 12 && roads < 2; seed++) {
