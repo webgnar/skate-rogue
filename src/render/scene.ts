@@ -170,6 +170,7 @@ export class StreetView {
   private lagY = 0; // world units the camera trails the feet in y, easing to 0 (a soft follow on jumps and drops)
   private lastY = 2;
   private dist = 22;
+  camOut = 1; // the view's height over its resting height: >1 pulled out (air, speed), <1 punched in (a trick, a close-up)
   private frame: Framing = framing(16, 9); // the framing on screen now, gliding to frameTo after a rotation
   private frameTo: Framing = this.frame;
   private readonly frameS = { viewH: new Spring(16), fov: new Spring(40), lead: new Spring(0), low: new Spring(0), punch: new Spring(1) };
@@ -526,6 +527,7 @@ export class StreetView {
     const short = Math.min(1, this.camera.aspect); // the short side's share of the height
     const viewH = softFloor(f.viewH / zoom / closer, CLOSE_CAM.minShort / short, 0.6);
     this.dist = Math.max(DYN_CAM.minDist, viewH / (2 * tanHalf));
+    this.camOut = viewH / f.viewH;
     //and the lens drawn wider still by its swell, so Lou keeps their size
     const tanY = lensWiden(this.lensK, viewH / (2 * this.dist), this.camera.aspect);
     this.camera.fov = (2 * Math.atan(tanY) * 180) / Math.PI;
