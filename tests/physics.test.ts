@@ -82,6 +82,49 @@ describe('ollie', () => {
   });
 });
 
+describe('dead flips (zack, 2026-11-01: flip with no jumps left, land mid-flip and you slam)', () => {
+  // ollie + flip up high off a tall tower of air, so the fall is long enough for another flip
+  function spent(): Skater {
+    const sk = new Skater(levelOf(FLAT));
+    sk.step({ pressed: true, held: true }); // ollie
+    sk.step({ pressed: true, held: true }); // flip
+    while (sk.caught < 1) sk.step({ pressed: false, held: true });
+    return sk;
+  }
+
+  it('a tap with no jumps left flips the board without popping you up or spending anything', () => {
+    const sk = spent();
+    expect(sk.jumps).toBe(0);
+    const vsp = sk.vsp;
+    sk.step({ pressed: true, held: true });
+    const last = sk.events.filter((e) => e.type === 'trick').at(-1);
+    expect(last && 'dead' in last && last.dead).toBe(true);
+    expect(sk.vsp).toBeGreaterThanOrEqual(vsp); // no pop
+    expect(sk.jumps).toBe(0);
+    expect(sk.caught).toBeLessThan(1);
+  });
+
+  it('only one at a time: a tap while a flip is still spinning does nothing', () => {
+    const sk = spent();
+    sk.step({ pressed: true, held: true });
+    const n = sk.events.filter((e) => e.type === 'trick').length;
+    sk.step({ pressed: false, held: true });
+    sk.step({ pressed: true, held: true });
+    for (let i = 0; i < 6; i++) sk.step({ pressed: false, held: true });
+    expect(sk.events.filter((e) => e.type === 'trick').length).toBe(n);
+  });
+
+  it('landing before a dead flip is caught is a slam', () => {
+    const sk = spent();
+    //wait until the street is about 9 frames of fall away: under the catch, over the buffer
+    while (sk.vsp < 0 || sk.level.streetY - sk.boardY > 9 * sk.vsp + 0.5 * sk.grav * 81) sk.step({ pressed: false, held: true });
+    sk.step({ pressed: true, held: true });
+    expect(sk.events.at(-1)?.type).toBe('trick');
+    for (let i = 0; i < 30 && sk.mode === 'air'; i++) sk.step({ pressed: false, held: true });
+    expect(sk.events.some((e) => e.type === 'slam')).toBe(true);
+  });
+});
+
 describe('surfaces', () => {
   it('jumps up through a rooftop and lands on top of it', () => {
     const roof = [
