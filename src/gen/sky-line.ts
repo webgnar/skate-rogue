@@ -68,14 +68,23 @@ function openAt(level: Level, x0: number, x1: number, y: number): boolean {
   return !level.rails.some((r) => r.xs.some((rx, k) => rx > x0 - TILE && rx < x1 + TILE && near(r.ys[k])));
 }
 
+// the floor's sky lines, each piece by piece in order along it: the city sky over each stretch of hill, and the cloud
+// layer, which (once you're up in it) runs on over the whole floor (src/gen/clouds.ts)
+export function skyLines(level: Level): Piece[][] {
+  const spans = level.hillSpans ?? [];
+  if (!spans.length) return [];
+  const out = spans.map(([a, b]) => piecesOf(level, a, b).filter((p) => !p.cloud));
+  out.push(piecesOf(level, spans[0][0], level.width).filter((p) => p.cloud));
+  return out.filter((l) => l.length);
+}
+
 // bridge every gap on each stretch's sky line that's past reach: deck after deck from where you leave the last piece,
 // each a comfortable jump on and stepping toward the next piece's height, until the next piece is in reach
 export function bridgeSky(level: Level): void {
   const spans = level.hillSpans;
   if (!spans?.length) return;
   const inReach = (from: Piece, to: Piece) => (to.x0 - from.x1) / TILE <= maxGap((to.y0 - from.y1) / TILE) && to.y0 - from.y1 >= -REACH.rise * TILE;
-  for (const [a, b] of spans) {
-    const line = piecesOf(level, a, b);
+  for (const line of skyLines(level)) {
     for (let i = 1; i < line.length; i++) {
       //the furthest along you could be leaving from: the piece that ends last before this one starts
       let from = line.slice(0, i).filter((p) => p.x1 <= line[i].x0 + 1).sort((p, q) => q.x1 - p.x1)[0];
