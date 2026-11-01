@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { TILE } from '../physics/constants';
 import { inHill, pitAt, SEWER_ROOF, type Level, type Sewer } from '../physics/level';
 import { SEWER } from '../gen/sewer';
+import { EL } from '../traffic/el';
 import { makeRng } from '../gen/rng';
 import { surface } from './surfaces';
 
@@ -176,6 +177,8 @@ export function buildSewers(level: Level): THREE.Group {
   const dirt = new THREE.MeshLambertMaterial({ color: 0x6a4a30 });
   const yellow = new THREE.MeshLambertMaterial({ color: 0xf2b21a });
   const dark = new THREE.MeshLambertMaterial({ color: 0x1c1a1e });
+  const ballast = surface('asphalt', 0x6e665e);
+  const sleeper = new THREE.MeshLambertMaterial({ color: 0x4a3426 });
   const plank = surface('plywood', 0xc89a5a);
   const steel = new THREE.MeshLambertMaterial({ color: 0x9aa4b4 });
   const rail = new THREE.MeshLambertMaterial({ color: 0xb8bcc8 });
@@ -480,10 +483,15 @@ export function buildSewers(level: Level): THREE.Group {
     //the subway crossing: the gap onto the tracks, the line running off into the city, a third rail and a signal
     if (sub) {
       const [a, b] = [X(sub.x0), X(sub.x1)];
-      const bed = fy - 3.2;
-      box(a, b, ROCK, bed, SUBWAY_BACK, FRONT, ground);
-      box(a - 0.3, a, bed, fy - 0.3, SUBWAY_BACK, BACK, brick);
-      box(b, b + 0.3, bed, fy - 0.3, SUBWAY_BACK, BACK, brick);
+      //(the bed's as deep as an L car's roof is high: its roof just under the floor, sewer-view.ts; zack, 2026-11-01:
+      //"move it up". Ballast and sleepers under a light, the black of the line only off back in the city. Its ground
+      //goes down to the deep's rock in the deep: down to ROCK it was drawn inside out there, a black hole to the sky)
+      const bed = fy - EL.carH / TILE - 0.1;
+      box(a, b, Math.min(rock, bed - 1), bed, SUBWAY_BACK, FRONT, ballast);
+      for (let z = SUBWAY_BACK + 0.5; z < FRONT; z += 0.7) box(a + 0.15, b - 0.15, bed, bed + 0.08, z, z + 0.25, sleeper);
+      light(a + 0.3, b - 0.3, bed, fy + 1.2, 1.6);
+      box(a - 0.3, a, bed, fy - 0.3, SUBWAY_BACK, FRONT, brick);
+      box(b, b + 0.3, bed, fy - 0.3, SUBWAY_BACK, FRONT, brick);
       box(a, b, fy + 0.5, roofAt(a), SUBWAY_BACK, BACK - 0.01, dark); // the line's tunnel mouth over the gap, back into the dark
       for (const x of [a + (b - a) * 0.3, a + (b - a) * 0.7]) box(x - 0.05, x + 0.05, bed, bed + 0.12, SUBWAY_BACK, FRONT, rail);
       box(a + (b - a) * 0.88 - 0.06, a + (b - a) * 0.88 + 0.06, bed, bed + 0.18, SUBWAY_BACK, FRONT, yellow);

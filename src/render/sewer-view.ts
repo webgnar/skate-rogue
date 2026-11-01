@@ -10,9 +10,11 @@ import { SEWER_ROOF, type Level } from '../physics/level';
 import { SEWER_SIM, type SewerSim } from '../sim/sewer';
 import { SEWER } from '../gen/sewer';
 import { inkify } from './toon';
+import { CAR, trainCar } from './el-view';
+import { EL } from '../traffic/el';
 import { warmMesh } from './shader-keep';
 
-const TRAIN_LEN = 9; // tiles of train, along the line
+const TRAIN_LEN = (2 * EL.carLen + EL.coupling) / TILE; // tiles of train, along the line: two of the L's cars
 const TRAIN_FAR = -40; // where the line comes out of the city (z)
 const TRAIN_NEAR = 14; // and where it goes back into it, past the camera
 const WAVE_DEPTH = 5; // the flood wave across the tunnel
@@ -90,9 +92,6 @@ export class SewerView {
   private readonly tail = new THREE.MeshLambertMaterial({ color: 0xe8a0a8 });
   private readonly eye = new THREE.MeshBasicMaterial({ color: 0xff3a3a });
   private readonly foam = new THREE.MeshLambertMaterial({ color: 0xeaf8ff });
-  private readonly car = new THREE.MeshLambertMaterial({ color: 0xa8b0bc });
-  private readonly stripe = new THREE.MeshLambertMaterial({ color: 0x2a6ad8 });
-  private readonly window = new THREE.MeshBasicMaterial({ color: 0xfff2b0 });
   private readonly beam = new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.35, depthWrite: false });
   //(the gator low-poly and faceted, bright green, like zack's ref)
   private readonly scales = new THREE.MeshLambertMaterial({ color: 0x3fb03a, flatShading: true });
@@ -139,27 +138,21 @@ export class SewerView {
       }
       const p = t.s.piece;
       if (p?.kind === 'subway' && t.train) {
+        //the L's own cars (zack, 2026-11-01: "use the L train car in the sewer, move it up"), length along the line,
+        //their roofs just under the tunnel's floor: you hop off one as it crosses
         const m = new THREE.Group();
-        const w = (p.x1 - p.x0) / TILE + 0.2;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(w, 2.8, TRAIN_LEN), this.car);
-        body.position.y = -1.4;
-        const band = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.35, TRAIN_LEN + 0.02), this.stripe);
-        band.position.y = -1.9;
-        m.add(body, band);
-        for (let z = -TRAIN_LEN / 2 + 0.8; z < TRAIN_LEN / 2 - 0.5; z += 1.4) {
-          for (const x of [-w / 2 - 0.01, w / 2 + 0.01]) {
-            const win = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), this.window);
-            win.rotation.y = x < 0 ? -Math.PI / 2 : Math.PI / 2;
-            win.position.set(x, -1.0, z);
-            m.add(win);
-          }
+        for (const [i, front] of [[0, true], [1, false]] as const) {
+          const car = trainCar(front);
+          car.rotation.y = -Math.PI / 2; // (its front, +x, down the line toward the camera)
+          car.position.z = TRAIN_LEN / 2 - CAR.len / 2 - i * (CAR.len + EL.coupling / TILE);
+          m.add(car);
         }
         inkify(m);
         //the headlight down the line, before a train comes
         const light = new THREE.Mesh(new THREE.ConeGeometry(1.2, 14, 16, 1, true).rotateX(-Math.PI / 2), this.beam);
         light.position.set((p.x0 + p.x1) / 2 / TILE, fy - 1.6, TRAIN_FAR + 7);
         light.visible = false;
-        m.position.set((p.x0 + p.x1) / 2 / TILE, fy - 3 / TILE, TRAIN_FAR);
+        m.position.set((p.x0 + p.x1) / 2 / TILE, fy - CAR.h - 0.04, TRAIN_FAR);
         this.group.add(m, light);
         this.trains.push({ mesh: m, light, t });
       }
