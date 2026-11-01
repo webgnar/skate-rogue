@@ -36,6 +36,9 @@ export const CLOUDS = {
   between: [2, 3], // tiles of open sky between beats, to ollie
   gap: [4, 6],
   step: 0.6, // tiles each beat drops under the last, the layer falling gently with the hill
+  over: 10, // tiles over the highest ground ahead the layer always stands, on to the end of the floor
+  ahead: 40, // tiles ahead that counts
+  exitShort: 10, // tiles before the floor's exit the layer ends: you drop to the street for the gate
   stoken: 0.35, // chance of a Stoken over each gap
   spin: 0.25, // chance the floor's layer hides a spin token at the top of a rainbow
 };
@@ -129,6 +132,11 @@ export function addClouds(level: Level, seed: number): void {
   const coins = (x0: number, x1: number, y: (x: number) => number) => {
     for (let c = x0 + TILE; c < x1 - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y(c) - PICKUPS.ride });
   };
+  //the layer, once you're up in it, runs on to the end of the floor (zack, 2026-11-01, drawing it across his route
+  //map: "see how i kind of made the sky route go the whole way"): over the cross streets and the chases between the
+  //hills too, never down within `over` of the ground ahead. A later stretch with room still gets its own staircase up
+  //into it, for whoever came down
+  let layer = false;
   for (const [i, [a, b]] of spans.entries()) {
     if (!cloudy(level, i)) continue;
     //the staircase: from the last sky beat on the stretch (or the sky beats' height, where there are none), deck after
@@ -161,7 +169,15 @@ export function addClouds(level: Level, seed: number): void {
       coins(x, x + w, () => at);
       x += w + CLOUDS.stairGap * TILE;
     }
-    const end = b - 2 * TILE;
+    if (layer) continue;
+    layer = true;
+    const end = level.exitX - CLOUDS.exitShort * TILE;
+    //the lowest the layer may stand at x: `over` tiles over the highest ground in the `ahead` tiles from there
+    const lowest = (x: number) => {
+      let top = Infinity;
+      for (let gx = x; gx < Math.min(end, x + CLOUDS.ahead * TILE); gx += TILE) top = Math.min(top, groundAt(level, gx) ?? level.streetY);
+      return top === Infinity ? Infinity : top - CLOUDS.over * TILE;
+    };
     let last: CloudBeat = 'gap';
     let first = true;
     while (x < end - 6 * TILE) {
@@ -223,7 +239,8 @@ export function addClouds(level: Level, seed: number): void {
       }
       last = beat;
       x += range(rng, CLOUDS.between) * TILE;
-      y += CLOUDS.step * TILE;
+      //(falling gently with the floor; where the ground ahead climbs, up again, a step at a time: a flip makes it)
+      y = Math.max(y - CLOUDS.stairRise * TILE, Math.min(y + CLOUDS.step * TILE, lowest(x)));
     }
   }
   level.surfaces.push(...surfaces);

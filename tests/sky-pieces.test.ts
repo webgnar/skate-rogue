@@ -46,7 +46,7 @@ describe('the sky route', () => {
       expect(chicago(seed * 53, 5).rails.some((r) => r.sky === 'lines')).toBe(true);
     }
     expect([...seen].sort()).toEqual(['blimp', 'bust', 'rig', 'swing']);
-  });
+  }, 30000); // (132 floors built, each with its cloud layer the whole way)
 
   it('NO GROUND: chaining sky pieces multiplies the coins, and the ground banks it', () => {
     expect(skyMult(0)).toBe(1);

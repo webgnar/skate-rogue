@@ -247,6 +247,10 @@ by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9
   grindables: these and the tower crane's slewing jib.
 - **Skyscrapers** (zack: "super tall sky scrapers that do go up to the height of the sky route"): every rooftop deck
   up there is the top of a glass tower that runs all the way down to the city, behind the lane.
+- **The whole way** (zack, Nov 1: drew it across his route map, "see how i kind of made the sky route go the whole
+  way"): once you're up in the cloud layer it runs on to just before the floor's exit, over the chases and cross
+  streets between the hills too, always at least 10 tiles over the ground ahead, falling gently and climbing a flip at a
+  time where the ground ahead rises. A later hill with room still gets its own staircase up into it.
 - **Clouds are honest**: a cloud's puffs never draw past where you can land on it (its deck plus a truck's overhang).
 
 **The NO GROUND meter** (zack: "i need that to be visualy clear what its doing"). While a line is going, a panel under

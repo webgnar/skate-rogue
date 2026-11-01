@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { buildFloor } from '../src/gen/descent';
 import { FloorSim } from '../src/sim/floor';
 import { Pilot } from '../src/bot/pilot';
-import { maxGap, piecesOf } from '../src/gen/sky-line';
+import { maxGap, skyLines } from '../src/gen/sky-line';
 import { cloudy } from '../src/gen/clouds';
 import { TILE } from '../src/physics/constants';
 import type { Level } from '../src/physics/level';
@@ -42,8 +42,8 @@ describe('the sky line', () => {
   it('nothing on the line is further than a flip from the piece before it', () => {
     for (let seed = 1; seed <= 6; seed++) for (let f = 5; f <= 12; f++) {
       const l = chicago(seed * 53, f);
-      for (const [a, b] of l.hillSpans ?? []) {
-        const line = piecesOf(l, a, b);
+      //(each stretch's city sky, and the cloud layer over the whole floor)
+      for (const line of skyLines(l)) {
         for (let i = 1; i < line.length; i++) {
           const from = line.slice(0, i).sort((p, q) => q.x1 - p.x1)[0];
           if (from.x1 >= line[i].x0) continue; // one over another: either way on
