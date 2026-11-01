@@ -7,6 +7,21 @@
       {"t":0.6,"pose":{"yaw":0.4538,"hipY":0.72,"lean":-0.1,"head":0.2,"armLRaise":1.3,"armLElbow":0.4,"armRRaise":1.4,"armRElbow":0.3,"boardY":-0.09,"boardYaw":1.5708}}
     ]
   },
+  "idle": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"hipY":0.87,"bend":0.06,"armLRaise":0.25,"armLElbow":0.35,"armRRaise":0.3,"armRElbow":0.5}},
+      {"t":0.2333,"pose":{"hipX":-0.0139,"hipY":0.7836,"bend":0.0667,"head":0.6008,"nod":0.0832,"armLRaise":0.1267,"armLFwd":0.0579,"armLElbow":0.456,"armRRaise":0.2876,"armRFwd":-0.2617,"armRElbow":0.9392,"footFX":0.2138,"footFTurn":0.4765,"footBX":-0.209,"footBTurn":0.2496,"footBPitch":-0.014,"kneeBX":0.0424}},
+      {"t":0.4,"pose":{"hipX":-0.0139,"hipY":0.8205,"bend":0.0667,"head":0.6008,"nod":0.0832,"armLRaise":0.2601,"armLElbow":0.3668,"armRRaise":0.3067,"armRElbow":0.5168,"footFX":0.2138,"footBX":-0.209,"kneeBX":0.0424}},
+      {"t":0.6,"pose":{"hipX":-0.0139,"hipY":0.8666,"bend":0.0667,"head":0.6008,"nod":0.0832,"armLRaise":0.101,"armLFwd":-0.0379,"armLElbow":0.6453,"armRRaise":0.059,"armRFwd":-0.2381,"armRElbow":0.4904,"footFX":0.2138,"footBX":-0.209,"kneeBX":0.0424}},
+      {"t":0.8,"pose":{"hipX":-0.0103,"hipY":0.8087,"bend":0.065,"head":0.5747,"nod":0.0876,"armLRaise":0.2575,"armLElbow":0.3624,"armRRaise":0.305,"armRElbow":0.5124,"footFX":0.2284,"footBX":-0.2248,"kneeBX":0.0314}},
+      {"t":1,"pose":{"hipX":-0.0052,"hipY":0.8394,"bend":0.0625,"head":0.5373,"nod":0.0938,"armLRaise":0.5822,"armLFwd":0.1139,"armLElbow":0.6834,"armRRaise":0.533,"armRFwd":-0.0822,"armRElbow":0.7303,"footFX":0.2163,"footFTurn":0.0812,"footBX":-0.2217,"footBTurn":-0.0148,"kneeBX":0.0157}},
+      {"t":1.2,"pose":{"hipY":0.87,"bend":0.06,"armLRaise":0.4442,"armLFwd":-0.0148,"armLElbow":0.8207,"armRRaise":0.4582,"armRFwd":-0.0157,"armRElbow":0.6295,"footFX":0.2043,"footFTurn":0.1623,"footBX":-0.2185,"footBTurn":-0.0297}},
+      {"t":1.5333,"pose":{"hipX":-0.0571,"hipY":0.9802,"bend":0.0717,"head":0.296,"nod":0.1291,"armLRaise":0.1244,"armLFwd":0.1971,"armLElbow":0.1597,"armRRaise":0.0616,"armRFwd":-0.4348,"armRElbow":0.3105,"footFX":0.2185,"footFTurn":0.6161,"footBX":-0.2565,"footBTurn":0.267}},
+      {"t":1.8,"pose":{"hipX":-0.0425,"hipY":0.9127,"bend":0.08,"head":0.15,"nod":0.15,"armLRaise":0.3841,"armLFwd":-0.1499,"armLElbow":0.4587,"armRRaise":0.1209,"armRFwd":-0.3053,"armRElbow":0.3683,"footFX":0.19,"footFTurn":0.6161,"footBX":-0.2897,"footBTurn":-0.274}},
+      {"t":2.4,"pose":{"hipY":0.87,"bend":0.06,"armLRaise":0.25,"armLElbow":0.35,"armRRaise":0.3,"armRElbow":0.5}}
+    ]
+  },
   "kickflip": {
     "loop": false,
     "keys": [
