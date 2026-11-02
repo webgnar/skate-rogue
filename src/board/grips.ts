@@ -52,3 +52,23 @@ export function gripFor(seed: number, visit: number, current: GripId): GripId {
   const others = GRIPS.filter((g) => g.id !== current);
   return others[randInt(rng, others.length)].id;
 }
+
+// the colour the shop card draws its frame, tag and name in: the grip's own colour, or for a dark grip (black, navy,
+// camo) that colour lifted toward white until it reads against the card's near-black (zack, 2026-11-02: "need to be able to read black grip"). The tape picture
+// on the card keeps the true colour.
+export function gripCardColor(color: number): number {
+  const ch = (c: number, s: number) => (c >> s) & 255;
+  const lin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lum = ([r, g, b]: number[]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const mix = (t: number) => [16, 8, 0].map((s) => Math.round(ch(color, s) + (255 - ch(color, s)) * t));
+  if (lum(mix(0)) >= 0.1) return color; // red, pink, purple... already read
+  for (let t = 0; t <= 1; t += 0.05) {
+    const [r, g, b] = mix(t);
+    // relative luminance 0.3 = about 7:1 against black, as bright as the colourful grips
+    if (lum([r, g, b]) >= 0.3) return (r << 16) | (g << 8) | b;
+  }
+  return 0xffffff;
+}
