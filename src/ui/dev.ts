@@ -12,8 +12,12 @@ export const DEV = {
   fps: false, // the fps / draws / triangles line
   speed: 0, // index into SPEEDS
   full: false, // the overlay's full readout (tap it), else one line
-  meshy: false, // MODELS: the skaters rebuilt from zack's Meshy models (NEW) or the old ones; ?models=new or old wins
+  // MODELS: the skaters rebuilt from zack's Meshy models (NEW) or the old ones. zack (2026-11-02): OLD is the default,
+  // always: NEW lasts only for this tab (session storage), so a fresh visit or a relaunch from the home screen is back
+  // on OLD, and an older saved NEW is ignored. ?models=new or ?models=old wins.
+  meshy: false,
 };
+const MESHY_KEY = 'gnarrun.meshy';
 
 // the skater models to load: the URL's ?models=new / ?models=old, else the DEV TOOLS switch
 export function meshyModels(params: URLSearchParams): boolean {
@@ -47,21 +51,31 @@ export function takeStep(): boolean {
 
 export function loadDev(): void {
   try {
-    const d = JSON.parse(localStorage.getItem(KEY) ?? '{}') as { collision?: unknown; fps?: unknown; full?: unknown; momentum?: unknown; meshy?: unknown };
+    const d = JSON.parse(localStorage.getItem(KEY) ?? '{}') as { collision?: unknown; fps?: unknown; full?: unknown; momentum?: unknown };
     DEV.collision = d.collision === true;
     DEV.fps = d.fps === true;
     DEV.full = d.full === true;
-    DEV.meshy = d.meshy === true;
     if (MOMENTUM_MODES.includes(d.momentum as MomentumMode)) MOMENTUM.mode = d.momentum as MomentumMode;
   } catch {
     //blocked storage: all off
+  }
+  try {
+    DEV.meshy = sessionStorage.getItem(MESHY_KEY) === '1';
+  } catch {
+    DEV.meshy = false;
   }
 }
 
 export function saveDev(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ collision: DEV.collision, fps: DEV.fps, full: DEV.full, momentum: MOMENTUM.mode, meshy: DEV.meshy }));
+    localStorage.setItem(KEY, JSON.stringify({ collision: DEV.collision, fps: DEV.fps, full: DEV.full, momentum: MOMENTUM.mode }));
   } catch {
     //not remembered in a private window
+  }
+  try {
+    if (DEV.meshy) sessionStorage.setItem(MESHY_KEY, '1');
+    else sessionStorage.removeItem(MESHY_KEY);
+  } catch {
+    //no storage: the switch can't carry over the reload, so it stays OLD
   }
 }

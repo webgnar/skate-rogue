@@ -78,6 +78,7 @@ const BASE_HIP_Y = 0.9; // pelvis height in the model's bind pose
 const SLOPE_DROP = 0.35; // on a slope the hips sink by this times the sine of the angle, so the low leg still reaches
 const SQUASH_DROP = 0.18; // how far a full landing squash sinks the hips
 
+const SKATER_FILES = 2; // bumped when a skater GLB is replaced at the same address (see create)
 export const SKATERS = ['lou-gnar', 'webster', 'keanu', 'roxy', 'goldie'] as const;
 export type SkaterId = (typeof SKATERS)[number];
 export const isSkater = (s: string | null): s is SkaterId => SKATERS.includes(s as SkaterId);
@@ -259,8 +260,10 @@ export class SkaterRig {
   // meshy: the skaters rebuilt from zack's Meshy models (public/models/meshy, the DEV TOOLS MODELS switch); they still
   // play the clips in the old lou-gnar.glb
   static async create(base: string, skater: SkaterId = 'lou-gnar', meshy = false): Promise<SkaterRig> {
+    // ?v: the skater files at public/models/<name>.glb held the Meshy models for a day (PR #332) before the old ones
+    // came back (#334); a new address keeps a phone from showing a cached Meshy model with MODELS on OLD
     const load = (file: string) =>
-      new GLTFLoader().loadAsync(`${base}models/${file}`).catch((err) => {
+      new GLTFLoader().loadAsync(`${base}models/${file}${file === 'board.glb' ? '' : `?v=${SKATER_FILES}`}`).catch((err) => {
         console.warn(`${file} failed to load, using the built-in one`, err);
         return undefined;
       });

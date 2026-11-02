@@ -949,3 +949,14 @@ and the board.
   clips (keyed on Lou's legs), each foot goes where Lou's would land with the same joint angles, and the leg reaches
   for it, so the feet stay on the deck. The shoulders don't move, so the hands land where they did on grabs.
 - If zack prefers the new ones after this, the switch flips the default in `src/ui/dev.ts` (`meshy: false`).
+
+## OLD skaters by default, always (2026-11-02)
+
+zack: switching MODELS back to OLD "isn't working", "please default the models to be the old version".
+
+- The switch itself flips both ways in headless Chromium, on main and now. The likely cause on zack's phone is the
+  browser cache: `public/models/<name>.glb` held the Meshy models for a day (PR #332) before the old ones came back at
+  the same address (#334), so a phone could keep showing a cached Meshy model with the switch on OLD. The skater
+  files now load with `?v=2` (`SKATER_FILES` in skater-rig.ts; bump it whenever a skater GLB is replaced in place).
+- MODELS = NEW now lasts only for the tab (session storage). A fresh visit, or a relaunch from the home screen, is
+  always OLD, and a NEW saved by the earlier build is ignored. `?models=new` still forces the Meshy set.
