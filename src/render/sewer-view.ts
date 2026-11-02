@@ -18,6 +18,7 @@ const TRAIN_LEN = (2 * EL.carLen + EL.coupling) / TILE; // tiles of train, along
 const TRAIN_FAR = -40; // where the line comes out of the city (z)
 const TRAIN_NEAR = 14; // and where it goes back into it, past the camera
 const WAVE_DEPTH = 5; // the flood wave across the tunnel
+const WAVE_MAX = 2.5; // tiles tall at most
 const WAVE_Z = 0.2; // its middle (the skate lane's about 0.4..1.9)
 const WAVE_RISE = 0.5; // seconds it takes to rise up out of the floor when the gate bursts
 const WAVE_SHOW = 7; // tiles behind you the wave starts to rise
@@ -25,22 +26,29 @@ const WAVE_FALL = 0.45; // and to fall back down into it when it crashes
 // a sine eased to hang at its ends and pass quickly through the middle (-1..1): the lurk's swell and lean
 const ease = (v: number) => Math.sign(v) * Math.sin((Math.abs(v) * Math.PI) / 2);
 
-// the flood's water (zack's ref, 2026-10-31): cel caustics, a thick white web of cell edges with a thin black gap
-// inside each cell over a gradient, teal up at the lip to deep blue at the foot, the web running down the tunnel with
-// the water. One pass; the facets catch the light a little (their own normals, from the screen derivatives)
+// the flood's water (zack's ref, 2026-10-31): cel caustics, a thick web of cell edges with a thin dark gap inside
+// each cell over a gradient. Sewer water (zack, 2026-11-02): murky green-brown at the foot to a scummy yellow-green at
+// the lip, the web a dirty cream. The web runs along the curl (uv.x, foot to lip), so the water climbs up the inside of
+// the wave and over its lip, as a breaking wave draws it up its face. One pass; the facets catch the light a little
+// (their own normals, from the screen derivatives)
 const waterVertex = /* glsl */ `
   varying vec3 vWorld;
+  varying vec2 vUv;
   void main() {
     vec4 w = modelMatrix * vec4(position, 1.0);
     vWorld = w.xyz;
+    vUv = uv;
     gl_Position = projectionMatrix * viewMatrix * w;
   }
 `;
 const waterFragment = /* glsl */ `
   uniform float uTime;
   uniform float uFloor;
+  uniform float uAlong;
+  uniform float uX; // (the water behind the wave, scaled out to the gate: its web runs along the tunnel instead)
   uniform float uH;
   varying vec3 vWorld;
+  varying vec2 vUv;
   vec2 hash2(vec2 p) {
     p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
     return fract(sin(p) * 43758.5453);
@@ -64,15 +72,15 @@ const waterFragment = /* glsl */ `
   }
   void main() {
     float up = clamp((vWorld.y - uFloor) / uH, 0.0, 1.0);
-    vec3 col = mix(vec3(0.03, 0.14, 0.42), vec3(0.12, 0.48, 0.88), smoothstep(0.0, 0.55, up));
-    col = mix(col, vec3(0.42, 0.95, 0.84), smoothstep(0.5, 1.0, up));
+    vec3 col = mix(vec3(0.03, 0.07, 0.04), vec3(0.13, 0.22, 0.11), smoothstep(0.0, 0.55, up));
+    col = mix(col, vec3(0.34, 0.42, 0.17), smoothstep(0.5, 1.0, up));
     vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     col *= 0.82 + 0.22 * abs(n.z) + 0.1 * n.y;
-    // the web: on the face it runs along x (down the tunnel with the water), squashed a little up the wave
-    vec2 q = vec2(vWorld.x * 1.7 - uTime * 1.7 + vWorld.z * 0.6, vWorld.y * 2.2 + vWorld.z * 0.9);
+    // the web: along the curl, foot to lip (up the inside, over the crest), uAlong cells of it; across the tunnel by z
+    vec2 q = vec2(vUv.x * uAlong + vWorld.x * uX - uTime * 1.3 + vWorld.z * 0.25, vUv.y * 2.0 + vWorld.z * 0.9);
     float e = edge(q);
-    if (e < 0.085) col = vec3(0.96, 0.99, 1.0);
-    else if (e < 0.13) col = vec3(0.02, 0.04, 0.1);
+    if (e < 0.085) col = vec3(0.72, 0.74, 0.5);
+    else if (e < 0.13) col = vec3(0.03, 0.05, 0.02);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -80,7 +88,7 @@ const waterFragment = /* glsl */ `
 export class SewerView {
   readonly group = new THREE.Group();
   private rats: { mesh: THREE.Group; rat: { x: number; alive: boolean } }[] = [];
-  private surges: { mesh: THREE.Group; body: THREE.Mesh; wave: THREE.Group; foam: THREE.Mesh; mat: THREE.ShaderMaterial; rise: number; fall: number; t: SewerSim['tunnels'][number] }[] = [];
+  private surges: { mesh: THREE.Group; body: THREE.Mesh; wave: THREE.Group; foam: THREE.Mesh; mat: THREE.ShaderMaterial; bodyMat: THREE.ShaderMaterial; rise: number; fall: number; t: SewerSim['tunnels'][number] }[] = [];
   // the wave crashed at the tunnel's end (x, y in world units, h its height): the game puts the canal's splash there
   onCrash: (x: number, y: number, h: number) => void = () => {};
   //(the water's shader compiled with the loading screen's, not on the frame the gate bursts: shader-keep.ts)
@@ -120,13 +128,14 @@ export class SewerView {
         this.rats.push({ mesh: m, rat });
       }
       if (t.surge) {
-        //the wave fills the tunnel up to just under its roof
+        //the wave: under half the tunnel's height, its lip well under the roof (zack, 2026-11-02: "make the wave smaller")
         const roof = t.s.top ?? level.streetY + SEWER_ROOF;
-        const h = Math.max(SEWER_SIM.surgeH, (t.s.y - roof) * 0.9) / TILE;
+        const h = Math.min(WAVE_MAX, Math.max(SEWER_SIM.surgeH * 1.4, (t.s.y - roof) * 0.42) / TILE);
         const m = new THREE.Group();
         const mat = this.waterMaterial(fy, h);
         const wave = this.wave(h, t.s.x0, mat);
-        const body = new THREE.Mesh(this.slab(0.22 * h, WAVE_DEPTH - 0.2, t.s.x0 + 1), mat);
+        const bodyMat = this.waterMaterial(fy, h, true);
+        const body = new THREE.Mesh(this.slab(0.22 * h, WAVE_DEPTH - 0.2, t.s.x0 + 1), bodyMat);
         body.position.z = WAVE_Z;
         const foam = this.spray(h, t.s.x0);
         m.add(body, wave, foam);
@@ -134,7 +143,7 @@ export class SewerView {
         m.position.y = fy;
         m.visible = false;
         this.group.add(m);
-        this.surges.push({ mesh: m, body, wave, foam, mat, rise: 0, fall: 0, t });
+        this.surges.push({ mesh: m, body, wave, foam, mat, bodyMat, rise: 0, fall: 0, t });
       }
       const p = t.s.piece;
       if (p?.kind === 'subway' && t.train) {
@@ -210,11 +219,11 @@ export class SewerView {
     }
   }
 
-  private waterMaterial(floor: number, h: number): THREE.ShaderMaterial {
+  private waterMaterial(floor: number, h: number, slab = false): THREE.ShaderMaterial {
     return new THREE.ShaderMaterial({
       vertexShader: waterVertex,
       fragmentShader: waterFragment,
-      uniforms: { uTime: { value: 0 }, uFloor: { value: floor }, uH: { value: h } },
+      uniforms: { uTime: { value: 0 }, uFloor: { value: floor }, uH: { value: h }, uAlong: { value: slab ? 0 : Math.max(3, h * 2.2) }, uX: { value: slab ? 1.7 : 0 } },
       side: THREE.DoubleSide,
     });
   }
@@ -255,10 +264,18 @@ export class SewerView {
       //(the far side's shape lags the near one a little, so the wave peels across the tunnel)
       return [x + (side < 0 ? -0.25 * h : 0) + n * 0.6, y + n * 0.4, side * depth / 2 + (rand() - 0.5) * 0.5];
     };
-    const near = grid.map((row, k) => row.map((_, i) => front(k, i, 1)));
-    const far = grid.map((row, k) => row.map((_, i) => front(k, i, -1)));
+    //(each corner carries where it is along the curl and across it, the water's uv: the web runs along u)
+    const at = (k: number, i: number, side: 1 | -1) => [...front(k, i, side), i / (cols - 1), k / Math.max(1, rows - 1)];
+    const near = grid.map((row, k) => row.map((_, i) => at(k, i, 1)));
+    const far = grid.map((row, k) => row.map((_, i) => at(k, i, -1)));
     const pos: number[] = [];
-    const quad = (a: number[], b: number[], d: number[], e: number[]) => pos.push(...a, ...b, ...d, ...a, ...d, ...e);
+    const uvs: number[] = [];
+    const quad = (...c: number[][]) => {
+      for (const v of [c[0], c[1], c[2], c[0], c[2], c[3]]) {
+        pos.push(v[0], v[1], v[2]);
+        uvs.push(v[3], v[4]);
+      }
+    };
     //the near face: its ribbons
     for (let k = 0; k < rows - 1; k++) {
       for (let i = 0; i < cols - 1; i++) quad(near[k][i], near[k + 1][i], near[k + 1][i + 1], near[k][i + 1]);
@@ -273,6 +290,7 @@ export class SewerView {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     //(its corners unshared, so every triangle's normal is its own: flat shaded)
     geo.computeVertexNormals();
     return geo;
@@ -356,6 +374,7 @@ export class SewerView {
       s.mesh.visible = sg.on && (!sg.done || (s.rise > 0 && s.fall < 1));
       if (!s.mesh.visible) continue;
       s.mat.uniforms.uTime.value = this.time;
+      s.bodyMat.uniforms.uTime.value = this.time;
       //the wave at its front, the water behind it back to the gate; it rises up out of the floor when the gate bursts,
       //then lurks: a slow swell up and a lean out over you, out of step, gathering behind you (zack: not bobbing)
       if (!sg.done) {

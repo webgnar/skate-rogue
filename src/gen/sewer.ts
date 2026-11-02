@@ -100,7 +100,7 @@ function runOutAt(level: Level, s: Sewer, x: number): boolean {
 
 // what goes along a room, left to right from where you come down to its end: pipes (overhead, they don't block the
 // floor), kick-outs (under the street only), the deep's walkways, and the set piece, each with clear floor after it
-type Slot = { kind: 'pipe' | 'kick' | 'piece' | 'walk'; w: number };
+type Slot = { kind: 'pipe' | 'kick' | 'piece' | 'walk' | 'dip'; w: number };
 type PieceKind = 'rats' | 'surge' | 'bowl' | 'subway';
 
 // the deep (zack, 2026-10-31: the sewer is one route under the whole floor, not a dip under each street chase): where
@@ -108,7 +108,7 @@ type PieceKind = 'rats' | 'surge' | 'bowl' | 'subway';
 // fast channel down the middle and walkways along it, one set piece after another, no way up but on; at the hill's
 // foot it climbs back up under the next street chase, where kick-outs can throw you out again
 export const DEEP = {
-  depth: 10 * TILE, // its floor under the street
+  depth: 12 * TILE, // its floor under the street (zack, 2026-11-02: "the sewer should be taller"; was 10)
   top: 4 * TILE, // its roof's underside under the street (the hill's above it)
   room: [30, 46], // tiles per room (each with its set piece)
   drop: 5, // tiles of the drop's room under the end of the street it drops from (the street's still its roof)
@@ -121,6 +121,15 @@ export const DEEP = {
   walks: 2, // at most this many a room
   pipeH: 2.4 * TILE, // its pipes hang high: a grind from a walkway, not from the channel
   channel: [10, 18], // tiles of fast runoff in a stretch
+  // dips in the floor (zack, 2026-11-02: "more dips to gain speed"): down a bank dipSide tiles long, dipBottom tiles
+  // along the bottom dipDepth under the floor, up a bank as long. The slope's pull is per frame, so you gain more
+  // rolling down in, slow, than you lose carving up out, fast: each one leaves you quicker
+  lockout: 6, // tiles more of clear floor after a drop or the shaft: you land locked out of an ollie a while
+  dips: 3, // at most this many a room
+  dip: 0.8, // the chance of each
+  dipSide: 2.5,
+  dipBottom: 2,
+  dipDepth: 1.5 * TILE,
   stoken: 0.6, // chance of a Stoken on one of its pipes (deeper pays)
 };
 
@@ -370,8 +379,8 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
   //the stair set: the way in comes down onto its landing, and its steps go down to the floor (only where the tunnel
   //starts: along the route its landing would stand in your way)
   const holed = s.entry === 'dig' || s.entry === 'ramp';
-  //(down a shaft you fall a long way, and well along: the landing's longer)
-  const top = s.drain[1] + (SEWER.land + (s.entry === 'shaft' ? 4 : 0)) * TILE;
+  //(down a shaft you fall a long way, well along, and land locked out of an ollie a while: the landing's longer)
+  const top = s.drain[1] + (SEWER.land + (s.entry === 'shaft' ? 4 + DEEP.lockout : 0)) * TILE;
   const foot = top + SEWER.stairDown * TILE;
   const st: SewerStairs | null = (holed || s.entry === 'shaft') && room.first && more() < SEWER.stairs && foot + (SEWER.stairOut + 4) * TILE <= end - 2 * TILE ? { x0: s.entry === 'ramp' ? s.drain[1] : s.x0, up: s.entry === 'ramp' ? s.drain[1] : s.x0, top, x1: foot, h: SEWER.stairH } : null;
   if (st) {
@@ -398,6 +407,8 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
   if (room.shallow && more() < SEWER.kicks[0]) slots.push({ kind: 'kick', w: SEWER.kick + SEWER.kickClear });
   if (room.shallow && more() < SEWER.kicks[1]) slots.push({ kind: 'kick', w: SEWER.kick + SEWER.kickClear });
   if (deep) for (let k = 0; k < DEEP.walks; k++) if (more() < 0.8) slots.push({ kind: 'walk', w: range(more, DEEP.walk) + 3 });
+  //(not where rats run at you along the floor, nor in the flood main)
+  if (deep && piece !== 'rats' && piece !== 'surge') for (let k = 0; k < DEEP.dips; k++) if (more() < DEEP.dip) slots.push({ kind: 'dip', w: 2 * DEEP.dipSide + DEEP.dipBottom + 5 });
   if (piece === 'rats') slots.push({ kind: 'piece', w: 8 });
   if (piece === 'bowl') slots.push({ kind: 'piece', w: 3 * SEWER.bowl + 3 });
   if (piece === 'subway') slots.push({ kind: 'piece', w: SEWER.subway + 4 });
@@ -410,10 +421,10 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
   //(the set piece goes first or second, so it gets its room)
   const at = slots.findIndex((sl) => sl.kind === 'piece');
   if (at > 1) slots.unshift(...slots.splice(at, 1));
-  const start = st ? st.x1 + SEWER.stairOut * TILE : s.climb ? s.climb[1] + SEWER.land * TILE : s.entry === 'flat' ? s.x0 + 2 * TILE : s.entry === 'drop' ? (s.topAt ?? s.x0) + (SEWER.land + 2) * TILE : s.entry === 'shaft' ? s.drain[1] + (SEWER.land + 2) * TILE : holed ? s.drain[1] + SEWER.land * TILE : s.x0 + SEWER.land * TILE;
+  const start = st ? st.x1 + SEWER.stairOut * TILE : s.climb ? s.climb[1] + SEWER.land * TILE : s.entry === 'flat' ? s.x0 + 2 * TILE : s.entry === 'drop' ? (s.topAt ?? s.x0) + (SEWER.land + 2 + DEEP.lockout) * TILE : s.entry === 'shaft' ? s.drain[1] + (SEWER.land + 2 + DEEP.lockout) * TILE : holed ? s.drain[1] + SEWER.land * TILE : s.x0 + SEWER.land * TILE;
   let x = start;
   const stop = end - 2 * TILE;
-  const floors: [number, number, number][] = []; // floor that dips, breaks or stands up: [x0, x1, kind 0 bowl / 1 gap / 2 stairs]
+  const floors: [number, number, number][] = []; // floor that dips, breaks or stands up: [x0, x1, kind 0 bowl / 1 gap / 2 stairs / 3 dip]
   if (st) floors.push([st.x0, st.x1, 2]);
   for (const slot of slots) {
     const w = slot.kind === 'pipe' && deep ? slot.w * TILE : slot.w * TILE;
@@ -426,6 +437,17 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
       for (let c = x + TILE; c < x + w - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y - PICKUPS.ride });
       if (more() < (deep ? DEEP.stoken : SEWER.stoken)) level.pickups.push({ kind: 'stoken', x: x + w - TILE, y: y - PICKUPS.ride });
       x += w + range(more, [3, 5]) * TILE;
+    } else if (slot.kind === 'dip') {
+      const d0 = x + TILE;
+      const d1 = d0 + (2 * DEEP.dipSide + DEEP.dipBottom) * TILE;
+      (s.dips ??= []).push({ x0: d0, x1: d1, depth: DEEP.dipDepth });
+      floors.push([d0, d1, 3]);
+      //coins down into it, along the bottom and up out of it
+      for (let c = 0.5; c < 2 * DEEP.dipSide + DEEP.dipBottom; c += 1) {
+        const t = Math.min(c / DEEP.dipSide, 1, (2 * DEEP.dipSide + DEEP.dipBottom - c) / DEEP.dipSide);
+        level.pickups.push({ kind: 'cash', x: d0 + c * TILE, y: s.y + DEEP.dipDepth * t - PICKUPS.ride });
+      }
+      x += w;
     } else if (slot.kind === 'walk') {
       //a walkway along the channel, up a step from it; a pipe hangs on from its end now and then, a grind from it
       const w0 = x + TILE;
@@ -491,12 +513,13 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
     level.surfaces.push({ kind: 'bank', x0: c0, x1: c1, y: room.from!, y1: s.y, row: -1, sewer: true });
     s.climbFrom = room.from;
     //(zack, 2026-11-01: "a cement ledge for him to grind"): a concrete ledge out of the back wall on the deep's floor
-    //up to the climb, an ollie onto it; it runs out over the foot of the bank. (Not up the bank: a grind can't carry
-    //you up 5 tiles, you'd stall halfway)
+    //up to the climb, an ollie onto it; it stops short of the bank's foot and you come off its end onto the bank. (Not
+    //up the bank: a grind can't carry you up 5 tiles, you'd stall halfway. Nor over its foot: rolling up the bank you
+    //went through its end, zack 2026-11-02)
     const lh = DEEP.ledgeH;
     const l0 = c0 - DEEP.ledge * TILE;
     {
-      const ledge = polyRail([[l0, room.from! - lh], [c0 - TILE, room.from! - lh], [c0 + 2 * TILE, room.from! - lh - 0.9 * TILE]]);
+      const ledge = polyRail([[l0, room.from! - lh], [c0 - TILE / 2, room.from! - lh]]);
       ledge.sewer = true;
       ledge.material = 'concrete';
       level.rails.push(ledge);
@@ -509,6 +532,12 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
     if (kind === 2) {
       roof(a, st!.top, s.y - st!.h);
       level.surfaces.push({ kind: 'stairs', x0: st!.top, x1: c, y: s.y - st!.h, y1: s.y, row: -1, sewer: true });
+    }
+    if (kind === 3) {
+      const d = DEEP.dipSide * TILE;
+      level.surfaces.push({ kind: 'bank', x0: a, x1: a + d, y: s.y, y1: s.y + DEEP.dipDepth, row: -1, sewer: true });
+      roof(a + d, c - d, s.y + DEEP.dipDepth);
+      level.surfaces.push({ kind: 'bank', x0: c - d, x1: c, y: s.y + DEEP.dipDepth, y1: s.y, row: -1, sewer: true });
     }
     if (kind === 0) {
       const d = SEWER.bowl * TILE;
@@ -591,6 +620,7 @@ function clearFloor(s: Sewer, w: number, rng: Rng): number | null {
   if (s.gator) busy.push([s.gator[0] - 4 * TILE, s.gator[1] + 4 * TILE]);
   for (const t of s.stairs ?? []) busy.push([t.x0 - 2 * TILE, t.x1 + 3 * TILE]);
   for (const [a, b] of s.walks ?? []) busy.push([a - TILE, b + TILE]);
+  for (const d of s.dips ?? []) busy.push([d.x0 - 2 * TILE, d.x1 + 4 * TILE]);
   const tries = Math.floor((hi - lo) / TILE) + 1;
   const from = Math.floor(rng() * tries);
   for (let k = 0; k < tries; k++) {

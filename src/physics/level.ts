@@ -273,6 +273,7 @@ export interface Sewer {
   gator?: [number, number]; // the sewer alligator, nose to tail: ollie it for a spin token, roll into it and it bites
   gate?: boolean; // it runs to the gate and comes up into the underground spot: the sewer road
   stairs?: SewerStairs[];
+  dips?: { x0: number; x1: number; depth: number }[]; // the deep's dips in the floor (px): roll down in, carve up out faster
 }
 
 // a stair set (zack's ledges ref, 2026-10-31): a raised landing where you come down into the tunnel, and steps down
@@ -334,6 +335,8 @@ export function sewerFloor(s: Sewer, x: number): number {
   if (s.stairs?.some((t) => x >= t.x0 && x < t.top)) return s.y - s.stairs.find((t) => x >= t.x0 && x < t.top)!.h;
   //(up the climb out of the deep: the bank's foot, as deep as the floor it comes up from)
   if (s.climb && s.climbFrom !== undefined && x < s.climb[1]) return Math.max(s.y, s.climbFrom);
+  const dip = s.dips?.find((d) => x >= d.x0 && x < d.x1);
+  if (dip) return s.y + dip.depth;
   return p?.kind === 'bowl' && x >= p.x0 && x < p.x1 ? s.y + p.depth : s.y;
 }
 

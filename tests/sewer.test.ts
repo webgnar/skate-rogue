@@ -260,6 +260,29 @@ describe('the sewer route, built out', { timeout: 60000 }, () => {
     expect(up.sim.skater.y).toBeLessThan(level.streetY);
   });
 
+  //zack (2026-11-02): "more dips to gain speed", and "that block on the up-ramp that the player moves through"
+  it('the deep has dips that leave you faster, and the cement ledge stops short of the climb', () => {
+    let tried = 0;
+    for (let seed = 1; seed <= 6 && tried < 3; seed++) {
+      const level = floorOf(seed * 7919, 4);
+      for (const s of level.sewers ?? []) {
+        for (const c of [s].filter((w) => w.climb)) {
+          for (const r of level.rails.filter((q) => q.sewer && q.material === 'concrete' && q.x1 <= c.climb![1] && q.x1 > c.x0 - DEEP.ledge * TILE - TILE)) expect(r.x1).toBeLessThanOrEqual(c.climb![0]);
+        }
+        const d = s.dips?.[0];
+        if (!d || tried >= 3) continue;
+        tried++;
+        expect(s.deep).toBe(true);
+        //rolling through it from cruising speed, you come out with flow speed on top
+        const { sim } = ride(level, s, d.x0 - 3 * TILE, true, never, 200);
+        expect(sim.skater.x).toBeGreaterThan(d.x1);
+        expect(sim.skater.mode).toBe('roll');
+        expect(sim.skater.carry).toBeGreaterThan(1);
+      }
+    }
+    expect(tried).toBeGreaterThan(0);
+  });
+
   it('a kick-out throws you up through its grate onto the street; ollie it and you stay down', () => {
     //(one that comes down on the street, not over the outlet onto its ramp, and with no traffic driving through the
     //spot it comes down on: the street's cars are the street's, a kick-out up into one is a slam like any other)
@@ -427,7 +450,7 @@ describe('the sewer route, built out', { timeout: 60000 }, () => {
 
   it('the tunnel to the gate is the sewer road: up out of it at the gate, on to the underground spot', () => {
     let roads = 0;
-    for (let seed = 1; seed <= 12 && roads < 2; seed++) {
+    for (let seed = 1; seed <= 40 && roads < 2; seed++) {
       const level = floorLevel({ seed: seed * 7919, floor: 2, road: FIRST_ROAD, library: { types: ['POP', 'GRIND', 'FLOW', 'COOL', 'LUCK', 'STREET'] } as never, gnar: 0 });
       const s = level.sewers?.find((w) => w.gate && w.entry === 'dig' && !w.kicks?.length && !w.piece);
       if (!s) continue;

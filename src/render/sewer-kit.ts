@@ -246,25 +246,38 @@ export function buildSewers(level: Level): THREE.Group {
     const p = s.piece;
     const bowl = p?.kind === 'bowl' ? p : null;
     const sub = p?.kind === 'subway' ? p : null;
-    const deep = bowl ? fy - bowl.depth / TILE : fy;
+    //(the ground under the room comes up to the lowest of its floor: the bowl's, a dip's)
+    const deep = fy - Math.max(bowl ? bowl.depth / TILE : 0, ...(s.dips ?? []).map((d) => d.depth / TILE));
     const rock = s.deep ? DEEP_ROCK : ROCK;
     const wall = s.deep ? archBrick : brick;
     //the ground: under the tunnel (split round the subway's gap), and either side of it under the street's usual 3 tiles
     const gaps: [number, number][] = sub ? [[X(sub.x0), X(sub.x1)]] : [];
+    //(up to just under the floor, and down under the bowl and the dips: no gap under the floor's slab)
+    const lows = [...(bowl ? [[X(bowl.x0), X(bowl.x1), bowl.depth / TILE]] : []), ...(s.dips ?? []).map((d) => [X(d.x0), X(d.x1), d.depth / TILE])].sort((p, q) => p[0] - q[0]);
+    const groundRun = (a: number, b: number) => {
+      let x = a;
+      for (const [l0, l1, d] of lows) {
+        if (l1 <= x || l0 >= b) continue;
+        if (l0 > x) box(x, l0, rock, fy - 0.3, STREET_BACK, FRONT, ground);
+        box(Math.max(x, l0), Math.min(b, l1), rock, fy - d - 0.3, STREET_BACK, FRONT, ground);
+        x = Math.min(b, l1);
+      }
+      if (b > x) box(x, b, rock, fy - 0.3, STREET_BACK, FRONT, ground);
+    };
     let gx = before ? x0 : x0 - 0.5;
     for (const [a, b] of gaps) {
-      box(gx, a, rock, deep - 0.3, STREET_BACK, FRONT, ground);
+      groundRun(gx, a);
       gx = b;
     }
     //(not under a climb up from deeper: the bank's own wedge is the ground there, all the way down)
     const gEnd = after ? x1 : x1 + 0.5;
     if (s.climb) {
       const [c0, c1] = [X(s.climb[0]), X(s.climb[1])];
-      if (c0 > gx) box(gx, c0, rock, deep - 0.3, STREET_BACK, FRONT, ground);
+      if (c0 > gx) groundRun(gx, c0);
       box(c0, c1, s.deep ? DEEP_ROCK : ROCK - 6, Math.min(fy, ...all.filter((o) => o.x1 === s.x0).map((o) => Y(o.y))) - 0.3, STREET_BACK, FRONT, ground);
       gx = Math.max(gx, c1);
     }
-    if (gEnd > gx) box(gx, gEnd, rock, deep - 0.3, STREET_BACK, FRONT, ground);
+    if (gEnd > gx) groundRun(gx, gEnd);
     if (!before) box(x0 - 6, x0 - 0.5, ROCK, -3, STREET_BACK, FRONT, ground);
     if (!after) box(x1 + 0.5, x1 + 6, ROCK, -3, STREET_BACK, FRONT, ground);
     //the tunnel's ends and back wall
