@@ -93,6 +93,11 @@ describe('COOL boons', () => {
     expect(steps(sim(CANAL), 600)).toContain('bail');
   });
 
+  it('a bail is one event: the steps the game keeps taking while he sinks make none (its sound played every frame)', () => {
+    const ev = steps(sim(CANAL), 600);
+    expect(ev.filter((e) => e === 'bail')).toHaveLength(1);
+  });
+
   it('Siren Song: car hops take more Heat off; Decoy pulls Heat back once', () => {
     expect(skaterMods(held('sirenSong', 'sirenSong')).hopCool).toBe(20);
     const s = sim(FLAT, 'decoy');
