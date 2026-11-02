@@ -13,7 +13,7 @@ import { inkify } from './toon';
 const W = DRONE.w / TILE;
 const H = DRONE.h / TILE;
 
-function makeDrone(): { group: THREE.Group; rotors: THREE.Mesh[] } {
+export function makeDrone(): { group: THREE.Group; rotors: THREE.Mesh[] } {
   const group = new THREE.Group();
   const rotors: THREE.Mesh[] = [];
   const body = model('Drone');

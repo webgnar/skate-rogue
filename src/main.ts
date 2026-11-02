@@ -50,6 +50,7 @@ import { SettingsPanel } from './ui/settings-panel';
 import { bindMissions } from './ui/missions-panel';
 import { SlotsPanel } from './ui/slots-panel';
 import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
+import { TitleScene } from './title/title-scene';
 
 const base = import.meta.env.BASE_URL;
 
@@ -445,6 +446,10 @@ async function start() {
   //?models=new rides the Meshy rebuilds (DEV TOOLS MODELS), ?models=old the old skaters
   const meshy = meshyModels(params);
   const rig = loading.track(SkaterRig.create(base, skater, meshy));
+  //the title screen (src/ui/title.ts) and its own scene (src/title/title-scene.ts), on a plain visit: Webster stands
+  //at the bottom of it, so his rig loads too
+  const titled = wantTitle(params, ['floor', 'seed', 'biome', 'daily', 'gnar', 'escape', 'boons', 'bot'].some((k) => params.has(k)));
+  const titleRig = titled ? loading.track(SkaterRig.create(base, 'webster', meshy)) : null;
   await Promise.all([loading.track(loadCityTiles(`${base}tex/chicago_tiles.png`)), loadModels(base, MODEL_FILES, loading.add(MODEL_FILES.length))]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await loading.track(view.loadBackdrop(base));
@@ -547,7 +552,7 @@ async function start() {
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
   //the title screen (src/ui/title.ts), on a plain visit: its music is fetched now so it starts on the first tap
-  const titled = wantTitle(params, testing || bot !== null);
+  //its music is fetched now so it starts on the first tap
   if (titled) sound.prefetch('title');
   const settings = new SettingsPanel(document.querySelector<HTMLElement>('#paused .settings')!, {
     volumes: () => sound.applyVolumes(),
@@ -677,15 +682,26 @@ async function start() {
   view.render();
   built();
   if (titled) {
+    loading.say('PAINTING THE SKY');
+    await loading.paint();
+    const scene = new TitleScene(view.renderer, await titleRig);
+    await view.renderer.compileAsync(scene.scene, scene.camera);
     game.titled = true;
-    new TitleScreen(document.getElementById('title')!, {
+    game.titleDraw = (dt) => scene.frame(dt);
+    const screen = new TitleScreen(document.getElementById('title')!, {
       music: () => SETTINGS.music > 0 && MUSIC.title.length > 0,
       wake: unlock,
+      down: () => scene.go(),
       go: () => {
         game.titled = false;
+        game.titleDraw = null;
         input.clear();
+        view.resize();
       },
-    }, save.best).show();
+    }, save.best);
+    scene.onArrive = () => screen.arrived();
+    if (import.meta.env.DEV) Object.assign(window, { titleScene: scene }); // stills of the way down in headless checks
+    screen.show();
   }
   loading.finish();
 

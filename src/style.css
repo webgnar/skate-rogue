@@ -1969,3 +1969,11 @@ html, body {
   #title { padding-top: max(calc(var(--u) * 4), env(safe-area-inset-top)); }
   #title .mark { font-size: clamp(40px, calc(var(--u) * 12.5), 110px); }
 }
+/* the title scene's camera on its way down (src/title/title-scene.ts): the logo lifts away so the city shows, and
+   comes back smaller once it's down at Webster, over SKATE */
+#title { transition: background 0.6s; }
+#title .head { transition: opacity 0.5s, transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1); }
+#title.flying { background: none; }
+#title.flying .head { opacity: 0; transform: translateY(-40%) scale(0.8); }
+#title.landed { background: linear-gradient(180deg, rgba(18, 12, 30, 0.6) 0%, rgba(18, 12, 30, 0) 28%, rgba(18, 12, 30, 0) 70%, rgba(18, 12, 30, 0.55) 100%); }
+#title.landed .head { transform: scale(0.62); transform-origin: 50% 0; }
