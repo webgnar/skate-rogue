@@ -205,7 +205,7 @@ function ride(level: Level, boost: number, record: boolean): Built['cruise'] {
 
 export function startLevels(): void {
   document.getElementById('app')?.remove();
-  document.title = 'Gnar Run · level editor';
+  document.title = 'Skate Escape · level editor';
   const params = new URLSearchParams(location.search);
 
   // ---------- state ----------

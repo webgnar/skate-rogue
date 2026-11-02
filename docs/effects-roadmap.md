@@ -1,6 +1,6 @@
 # Effects roadmap
 
-Shaders and visual effects for Gnar Run. Each item is an OpenSpec change in `openspec/changes/`.
+Shaders and visual effects for Skate Escape. Each item is an OpenSpec change in `openspec/changes/`.
 
 | Change | What | State |
 | --- | --- | --- |

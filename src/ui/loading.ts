@@ -4,7 +4,7 @@
 // shader. The meter fills as each piece comes in. Its look is inline in index.html so it shows at once.
 const TIPS = [
   'TAP / HOLD = OLLIE · TAP IN THE AIR = FLIP',
-  'Add Gnar Run to your Home Screen to play it fullscreen',
+  'Add Skate Escape to your Home Screen to play it fullscreen',
 ];
 
 export class Loading {

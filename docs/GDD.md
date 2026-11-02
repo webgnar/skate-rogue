@@ -1,4 +1,4 @@
-# Gnar Run — Game Design Document
+# Skate Escape — Game Design Document
 
 Oct 23, 2026 · @webgnar · Draft 4
 
@@ -32,7 +32,7 @@ about social credit, cameras that turn to follow you, and sirens that grow loude
 
 ## What the game is
 
-Settled Oct 31, 2026 (zack, after looking at Jetpack Joyride, Alto's Odyssey and OlliOlli World). Gnar Run is a
+Settled Oct 31, 2026 (zack, after looking at Jetpack Joyride, Alto's Odyssey and OlliOlli World). Skate Escape is a
 **one-touch phone skate runner where style is speed**:
 
 - Clean timing and combos keep you fast and alive. Sloppy skating slows you down, and slow gets you caught.
@@ -1050,7 +1050,7 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
 
 ## UI
 
-- **HUD:** decided Oct 24, 2026 from zack's comic ink mockup (openspec change ui1-hud): the GNAR RUN logo with act
+- **HUD:** decided Oct 24, 2026 from zack's comic ink mockup (openspec change ui1-hud): the SKATE ESCAPE logo with act
   and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the
   Stoke meter into GNAR MODE and the Heat meter (the cruiser, 10 segments, stars at 25/50/75/90) under them; board
   mods bottom left and gear wear bottom right. The middle of the screen stays clear. Heat keeps its world cues
@@ -1175,4 +1175,4 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
       once Heat, traffic and the economy exist.
 7. ~~Skaters.~~ Decided: one small passive each, plus a starting boon type lean (see Meta progression).
 8. ~~Board build scope.~~ Decided: a light version at launch (3 slots, ~6 triggers, ~8 effects), expanded later.
-9. ~~Name.~~ Decided: **Gnar Run**.
+9. ~~Name.~~ Decided: **Skate Escape** (zack, Nov 2, 2026; was Gnar Run). The repo and the skate-rogue.vercel.app address keep their old names.

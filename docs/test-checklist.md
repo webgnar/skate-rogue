@@ -1,4 +1,4 @@
-# Gnar Run test checklist
+# Skate Escape test checklist
 
 Everything merged since the last good Vercel deploy (around PR #48, early on Oct 24, 2026), so zack can play it
 through once deploys work again. The gameplay thread keeps this file organised; every thread adds its own items
