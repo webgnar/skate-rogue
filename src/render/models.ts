@@ -14,7 +14,7 @@ export function missingModels(): { files: string[]; parts: string[] } {
   return { files: [...FILES.filter((f) => !loaded.includes(f)), ...failed.filter((f) => LATER.includes(f))], parts: [...missing] };
 }
 
-const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb', 'airliner.glb', 'skateshop.glb'];
+const FILES = ['cars.glb', 'drone.glb', 'chopper.glb', 'props.glb', 'landmarks.glb', 'chasers.glb', 'peds.glb', 'street.glb', 'pickups.glb', 'airliner.glb', 'skateshop.glb', 'storefronts.glb'];
 // materials that glow instead of taking light
 const LIT = new Set(['lamp', 'tail', 'accent', 'badge', 'eye', 'navRed', 'navBlue', 'sign', 'holo', 'neon', 'amber', 'sigRed', 'sigGreen', 'elCarSign', 'elCarLamp', 'taxiSign']); // the sheriff gold is reflective livery
 
@@ -138,6 +138,42 @@ export function flatGeometry(name: string): THREE.BufferGeometry | null {
   geo.clearGroups();
   flat.set(name, geo);
   return geo;
+}
+
+// a model's flat (vertex-coloured) geometry split in two: the faces whose material is in `glow` (lit windows, bulbs:
+// drawn unlit) and the rest; glow is null when it has none. Each half is built once and cached, like flatGeometry
+const split = new Map<string, { lit: THREE.BufferGeometry; glow: THREE.BufferGeometry | null }>();
+export function flatSplit(name: string, glow: Set<string>): { lit: THREE.BufferGeometry; glow: THREE.BufferGeometry | null } | null {
+  const cached = split.get(name);
+  if (cached) return cached;
+  const src = parts.get(name);
+  const flatGeo = flatGeometry(name);
+  if (!src || !flatGeo) return null;
+  const mats = [src.material].flat() as THREE.MeshStandardMaterial[];
+  const n = flatGeo.getAttribute('position').count;
+  const groups = src.geometry.groups.length ? src.geometry.groups : [{ start: 0, count: n, materialIndex: 0 }];
+  //(flatGeometry is never indexed, and keeps the source's vertex order, so the groups' ranges still hold if the
+  //source wasn't indexed; an indexed source's groups count indices, which toNonIndexed laid out in the same order)
+  const pick = (want: boolean) => {
+    const ranges = groups.filter((g) => glow.has(mats[g.materialIndex ?? 0].name) === want);
+    const total = ranges.reduce((a, g) => a + g.count, 0);
+    if (!total) return null;
+    const out = new THREE.BufferGeometry();
+    for (const [key, attr] of Object.entries(flatGeo.attributes)) {
+      const a = attr as THREE.BufferAttribute;
+      const arr = new Float32Array(total * a.itemSize);
+      let at = 0;
+      for (const g of ranges) {
+        arr.set((a.array as Float32Array).subarray(g.start * a.itemSize, (g.start + g.count) * a.itemSize), at);
+        at += g.count * a.itemSize;
+      }
+      out.setAttribute(key, new THREE.BufferAttribute(arr, a.itemSize));
+    }
+    return out;
+  };
+  const out = { lit: pick(false) ?? flatGeo, glow: pick(true) };
+  split.set(name, out);
+  return out;
 }
 
 // a prop's break pieces ('<name>_piece0'..N in props.glb): vertex-coloured geometry centred on the piece, and where

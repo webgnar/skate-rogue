@@ -288,6 +288,7 @@ export class NightCity {
     //the street lights themselves (street-lights.ts): a kind per block of the street, wall packs on the building
     //fronts between them, and cobra arms on the hills' power poles
     const lit: LampSpot[] = [];
+    const fronts = (kit.userData.storefronts ?? []) as [number, number][];
     let kind: LampKind = 'post';
     let led = false;
     lamps.forEach((l, i) => {
@@ -298,7 +299,11 @@ export class NightCity {
         led = kind === 'cobra' && r() < 0.35;
       }
       lit.push({ kind, led, ...l });
-      if (r() < NIGHT.wallPacks) lit.push({ kind: 'wall', x: l.x + NIGHT.lampEvery * (0.35 + r() * 0.3), y: 0, z: NIGHT.wallZ });
+      if (r() < NIGHT.wallPacks) {
+        const x = l.x + NIGHT.lampEvery * (0.35 + r() * 0.3);
+        //not on a storefront (storefronts.ts): it has its own lights
+        if (!fronts.some(([a, b]) => x > a - 0.5 && x < b + 0.5)) lit.push({ kind: 'wall', x, y: 0, z: NIGHT.wallZ });
+      }
     });
     const poles = (kit.userData.poleLamps ?? []) as LampSpot[];
     poles.forEach((p, i) => {

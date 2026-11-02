@@ -1,6 +1,7 @@
 // The title scene's sky and Webster's own spot (src/title/title-scene.ts): a dusk sky dome with the sun going down,
-// the canvas textures the city uses (clouds, brick, neon), and Webster's piece of sidewalk: the curb, a brick corner
-// store with a buzzing neon sign, street lamps (one on the blink) and street props. The city around it, the street
+// the canvas textures the city uses (clouds, brick), and Webster's piece of sidewalk: the curb, a brick corner
+// building with the game's storefronts along its ground floor (the liquor store's neon buzzing), street lamps (one on
+// the blink) and street props. The city around it, the street
 // grid and the towers, is grid.ts.
 //
 // Units are the game's tiles (the skater is about 2.5 tall). The street runs along x, the towers stand back along -z.
@@ -8,6 +9,7 @@ import * as THREE from 'three';
 import { makeRng, type Rng } from '../gen/rng';
 import { inkify, toon } from '../render/toon';
 import { model } from '../render/models';
+import { makeStorefront, storefrontMats, STOREFRONTS, type StorefrontKind } from '../render/storefronts';
 
 export const DUSK = {
   top: 0x1c0f3a, // the sky overhead
@@ -116,35 +118,27 @@ function brickTexture(rng: Rng): THREE.Texture {
   return t;
 }
 
-// a neon sign's word on a canvas, glowing
-function neonTexture(word: string, color: string): THREE.Texture {
-  const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 128;
-  const g = c.getContext('2d')!;
-  g.font = 'bold 88px "Bangers", "Arial Black", sans-serif';
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.shadowColor = color;
-  g.shadowBlur = 26;
-  g.fillStyle = color;
-  g.fillText(word, 256, 68);
-  g.shadowBlur = 0;
-  g.fillStyle = '#fff';
-  g.globalAlpha = 0.65;
-  g.fillText(word, 256, 68);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
 export interface Street {
   group: THREE.Group;
   update(t: number, dt: number): void;
 }
 
+// the corner building's ground floor: the game's storefronts in a row, a bit bigger than in the game (Webster stands
+// taller on the title than Lou in a run). Their faces stand out from the building's wall (z -4) by their depth.
+export const STORE_ROW: StorefrontKind[] = ['pizza', 'tattoo', 'liquor'];
+export const STORE = {
+  scale: 1.15,
+  rowX: -12.075, // the row's left end: the tattoo shop's door just behind Webster
+  face: -4 + 0.95 * 1.15 + 0.02, // the shops' faces (the model's depth, scaled, in front of the wall)
+  returnH: 7.3, // the brick returns at the ends of the row, up to the top of the liquor store's sign
+  wallH: 12.4,
+  windowY: 8.3, // the first row of upstairs windows' middle, over the shops' signs
+  bandTop: [6.21, 6.33], // the tops of the pizza place's and the tattoo shop's sign bands, where the cat walks
+};
+
 // the street at the bottom: the road in front, the sidewalk Webster stands on, the corner store behind him with its
-// neon sign, lamps along the curb (one on the blink), a hydrant, a trash can, a news box
+// pizza place, tattoo shop and liquor store along its ground floor, lamps along the curb (one on the blink), a
+// hydrant, a trash can, a news box
 export function buildStreet(seed = 3): Street {
   const rng = makeRng(seed);
   const group = new THREE.Group();
@@ -154,43 +148,51 @@ export function buildStreet(seed = 3): Street {
   lip.position.set(0, -0.12, 3.05);
   group.add(lip);
 
-  //the corner store: brick, four storeys, a shop window and door at the bottom, an awning
+  //the corner building: brick, four storeys, with the game's storefronts along its ground floor (STORE_ROW)
   const brick = brickTexture(rng);
-  brick.repeat.set(6, 3);
+  brick.repeat.set(6, 3.4);
   const store = new THREE.Group();
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(40, 11, 10), toon({ color: 0xffffff, map: brick }));
-  wall.position.set(0, 5.5, -9);
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(9, 3.4), new THREE.MeshBasicMaterial({ color: 0xffd9a0 }));
-  glass.position.set(-6, 2.3, -3.98);
-  const glass2 = glass.clone();
-  glass2.position.x = 8;
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(2, 3.6), toon({ color: 0x1a1824 }));
-  door.position.set(2, 1.8, -3.97);
-  const awning = new THREE.Mesh(new THREE.BoxGeometry(24, 0.3, 2.4), toon({ color: 0x2a8a6a }));
-  awning.position.set(1, 4.6, -2.9);
-  awning.rotation.x = 0.25;
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(40, STORE.wallH, 10), toon({ color: 0xffffff, map: brick }));
+  wall.position.set(0, STORE.wallH / 2, -9);
   //upstairs windows: dark, a couple lit, one with a TV flickering blue and one with a tube light on the blink
   const tv: THREE.MeshBasicMaterial[] = [];
   for (let f = 0; f < 2; f++) {
     for (let i = 0; i < 6; i++) {
       const lit = rng() < 0.3;
       const w = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2), new THREE.MeshBasicMaterial({ color: lit ? 0xffc878 : 0x24203a }));
-      w.position.set(-15 + i * 6, 7.2 + f * 2.6, -3.97);
+      w.position.set(-15 + i * 6, STORE.windowY + f * 2.6, -3.97);
       if ((f === 0 && i === 2) || (f === 1 && i === 3)) tv.push(w.material);
       store.add(w);
     }
   }
-  store.add(wall, glass, glass2, door, awning);
+  store.add(wall);
   inkify(wall);
-  inkify(awning);
+  //the shops along the ground floor (render/storefronts.ts, the street's own): their shop floors only, standing out
+  //from the wall by their depth, with brick returns at the ends of the row
+  const mats = storefrontMats();
+  let sign: THREE.MeshBasicMaterial | null = null; // the liquor store's neon, which buzzes
+  const row = new THREE.Group();
+  let x = STORE.rowX;
+  for (const kind of STORE_ROW) {
+    const w = STOREFRONTS[kind].w * STORE.scale;
+    const shop = makeStorefront(kind, mats, false);
+    if (shop) {
+      shop.scale.setScalar(STORE.scale);
+      shop.position.set(x + w / 2, 0, STORE.face);
+      row.add(shop);
+      if (kind === 'liquor') sign = ((shop.getObjectByName('sign') as THREE.Mesh | undefined)?.material as THREE.MeshBasicMaterial) ?? null;
+    }
+    x += w;
+  }
+  const returnMat = toon({ color: 0x9a4a3a });
+  for (const rx of [STORE.rowX, x]) {
+    const ret = new THREE.Mesh(new THREE.BoxGeometry(0.4, STORE.returnH, STORE.face + 4), returnMat);
+    ret.position.set(rx + (rx === STORE.rowX ? -0.2 : 0.2), STORE.returnH / 2, (STORE.face - 4) / 2);
+    row.add(ret);
+  }
+  inkify(row, { outline: (m) => !m.userData.noInk });
+  store.add(row);
   group.add(store);
-
-  //the neon over the window: buzzing, now and then dropping out
-  const neon = new THREE.Mesh(new THREE.PlaneGeometry(9, 2.25), new THREE.MeshBasicMaterial({ map: neonTexture('LIQUOR', '#ff3fb4'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  neon.position.set(-6, 5.6, -3.9);
-  const neon2 = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.75), new THREE.MeshBasicMaterial({ map: neonTexture('OPEN 24', '#3ff0ff'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  neon2.position.set(8, 5.5, -3.9);
-  group.add(neon, neon2);
 
   //street lamps along the curb: a pole, an arm, a glowing head and a soft pool of light on the sidewalk
   const pole = toon({ color: 0x2a2836 });
@@ -214,7 +216,7 @@ export function buildStreet(seed = 3): Street {
   }
 
   //street furniture from the game's props
-  for (const [name, x, z, ry] of [['Hydrant', -16.5, 2, 0.4], ['TrashCan', 3.6, -2.4, 0], ['NewsBoxRed', 10.5, -2.4, 0], ['NewsBoxBlue', 11.6, -2.4, 0], ['Meter', -19, 2.2, 0]] as const) {
+  for (const [name, x, z, ry] of [['Hydrant', -16.5, 2, 0.4], ['TrashCan', 3.6, -1.9, 0], ['NewsBoxRed', 10.5, -2.1, 0], ['NewsBoxBlue', 11.6, -2.1, 0], ['Meter', -19, 2.2, 0]] as const) {
     const m = model(name);
     if (!m) continue;
     m.position.set(x, 0, z);
@@ -228,12 +230,11 @@ export function buildStreet(seed = 3): Street {
   return {
     group,
     update(t: number, dt: number): void {
-      //the sign buzzes (a shimmer) and drops out for a blink every few seconds
+      //the liquor store's neon buzzes (a shimmer) and drops out for a blink every few seconds
       buzz += dt;
       const p = buzz % 4.3;
       const out = (p > 3.6 && p < 3.7) || (p > 3.82 && p < 3.9);
-      (neon.material as THREE.MeshBasicMaterial).opacity = out ? 0.08 : 0.9 + Math.sin(t * 90) * 0.1;
-      (neon2.material as THREE.MeshBasicMaterial).opacity = 0.85 + Math.sin(t * 70 + 1) * 0.1;
+      sign?.color.setScalar(out ? 0.25 : 0.93 + Math.sin(t * 90) * 0.07);
       //the TV: a cold blue that jumps about with the cuts; the tube light: on, then a stutter every few seconds
       const cut = Math.floor(t * 2.3);
       const v = 0.45 + 0.35 * Math.abs(Math.sin(cut * 12.9898)) + 0.08 * Math.sin(t * 31);

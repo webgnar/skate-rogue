@@ -1,7 +1,7 @@
 // What lives in the title scene's city (src/title/title-scene.ts): up top, pigeons wheeling past and trash riding the
 // wind (plastic bags, newspaper, a soda cup); lower down, the AI's drones patrolling the towers with their red eyes
 // and scan beams, the police chopper sweeping its spotlight and a cop cruiser hanging on its jump jets with its
-// lights going; and down on the street, a stray dog trotting by, a cat on the awning, pigeons pecking at the curb,
+// lights going; and down on the street, a stray dog trotting by, a cat on the shop signs, pigeons pecking at the curb,
 // trash rolling along the gutter, a flag and a street tree in the wind, a homeless man sat against the store wall, a
 // hitchhiker waving you down and a twitchy guy dancing on the sidewalk. The people dance to the title music's beat
 // (GROOVE), like Webster.
@@ -12,7 +12,8 @@ import { makeParkedCruiser } from '../render/kit';
 import { model } from '../render/models';
 import { makePerson } from '../render/peds';
 import { inkify, toon } from '../render/toon';
-import { glowTexture } from './city';
+import { glowTexture, STORE } from './city';
+import { STOREFRONTS } from '../render/storefronts';
 
 export interface Life {
   group: THREE.Group;
@@ -344,14 +345,14 @@ function people(rng: Rng): Life {
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), toon({ map: signTexture(['ANYTHING', 'HELPS']) }));
   if (sit) {
     sit.mesh.scale.setScalar(PED);
-    sit.mesh.position.set(-10.5, 0, -3.3);
+    sit.mesh.position.set(-10.5, 0, -2.0); // against the pizza place's front (city.ts STORE)
     group.add(sit.mesh);
-    sign.position.set(-10.1, 0.6, -2.1);
+    sign.position.set(-10.1, 0.6, -0.8);
     sign.rotation.x = -0.25;
     group.add(sign);
     const box = model('CardboardBox');
     if (box) {
-      box.position.set(-12.4, 0, -3);
+      box.position.set(-13.1, 0, -3);
       box.scale.setScalar(1.3);
       inkify(box);
       group.add(box);
@@ -421,7 +422,7 @@ function people(rng: Rng): Life {
   };
 }
 
-// a cat walking along the top of the awning, stopping to sit and look round, tail up
+// a cat walking along the tops of the shop signs, stopping to sit and look round, tail up
 function cat(): Life {
   const group = new THREE.Group();
   const fur = toon({ color: 0x2a2630 });
@@ -453,9 +454,9 @@ function cat(): Life {
   inkify(c);
   c.scale.setScalar(1.3);
   group.add(c);
-  //the awning's top edge, sloping down to the street (city.ts: 24 long at x 1, its front edge about here)
-  const Y = 4.95;
-  const Z = -2.3;
+  //along the tops of the shops' sign bands (city.ts STORE): the pizza place's, then the tattoo shop's a step higher
+  const Y = (x: number) => (x < STORE.rowX + STOREFRONTS.pizza.w * STORE.scale ? STORE.bandTop[0] : STORE.bandTop[1]);
+  const Z = STORE.face - 0.05;
   return {
     group,
     update(t: number): void {
@@ -468,7 +469,7 @@ function cat(): Life {
       else if (p < 13) [x, dir, walking] = [3.8, 1, false];
       else if (p < 21) [x, dir] = [3.8 - (p - 13) * 1.6, -1];
       else [x, dir, walking] = [-9, -1, false];
-      c.position.set(x, Y, Z);
+      c.position.set(x, Y(x), Z);
       c.rotation.y = dir > 0 ? 0 : Math.PI;
       legs.forEach((l, i) => (l.rotation.z = walking ? Math.sin(t * 10 + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.45 : 0));
       //sat: the back end down, looking out at the street, the tail curling
@@ -589,7 +590,7 @@ function streetTrash(rng: Rng): Life {
 // a flag on a pole off the store front, and a street tree in a sidewalk pit, both moving in the wind
 function wind(rng: Rng): Life {
   const group = new THREE.Group();
-  //the flag: a pole out from the wall over the awning and a cloth rippling off it
+  //the flag: a pole out from the wall over the shops and a cloth rippling off it
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.2, 6), toon({ color: 0xd0c8b8 }));
   pole.rotation.z = -0.9;
   pole.position.set(-1.6, 7.6, -3.4);

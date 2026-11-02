@@ -28,7 +28,7 @@ export const PATH: { at: [number, number, number]; look: [number, number, number
   // the sky over the roofs; he's left of the middle so SKATE can sit off to his right (zack: not on top of him)
 ];
 // the last stop on an upright phone: in closer, so Webster's big in the narrow frame, looking up past the cat on the
-// awning and the flag to the sky over the roofs
+// shop signs and the flag to the sky over the roofs
 const TALL_END = { at: [1.4, 1.2, 12] as [number, number, number], look: [0.5, 5.2, 0] as [number, number, number] };
 export const DESCENT = 11; // seconds from the sky to Webster
 

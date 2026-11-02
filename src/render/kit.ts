@@ -25,6 +25,7 @@ import { buildElTrack, elCuts, setColumn } from './el-view';
 import { quarters, type Quarter } from './quarters';
 import { projectSurfaces, surface } from './surfaces';
 import { SHOP_FRONT, shopSpot } from './shop-front';
+import { makeStorefront, storefrontMats, storefrontSpan, storefrontSpots } from './storefronts';
 
 export const toX = (px: number) => px / TILE;
 export const toY = (level: Level, py: number) => (level.streetY - py) / TILE;
@@ -201,16 +202,36 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   //where the shop's front may stand (shop-front.ts): that piece of wall is its own mesh, hidden when it does
   const shopAt = shopSpot(level);
   const shopWall = shopAt === null ? null : [Math.floor(shopAt - SHOP_FRONT.wall), Math.ceil(shopAt + SHOP_FRONT.wall)];
+  //the world's landmarks (placed with the buildings further down): where they'll stand, so the storefronts keep clear
+  //(in the one city, each quarter's own landmark, in the middle of it)
+  //(the city's own Chicago quarters get its plaza sculptures in turn: Calder's Flamingo, the Picasso; zack)
+  const mid = (q: { x0: number; x1: number }) => Math.max(q.x0, (q.x0 + q.x1) / 2 - LANDMARK_W / 2);
+  const plazas = worlds.size ? quarters(level).filter((q) => q.world === 'chicago').slice(1) : []; // not under the L at the start
+  const marks = [
+    ...fused.filter((q) => q.skin.landmark).map((q) => ({ x: mid(q), name: q.skin.landmark! })),
+    ...plazas.map((q, i) => ({ x: mid(q), name: PLAZA[i % PLAZA.length] })),
+  ].sort((a, b) => a.x - b.x);
+  //the storefronts (storefronts.ts) stand in for the wall along a few plain stretches of the city's street; the
+  //wall's left out where they stand
+  const fronts = city
+    ? storefrontSpots(level, first, [
+        ...cuts.map(([a, b]) => [a, b] as [number, number]),
+        ...(shopWall ? [shopWall as [number, number]] : []),
+        ...marks.map((m) => [m.x, m.x + LANDMARK_W] as [number, number]),
+      ])
+    : [];
+  const frontSpans = fronts.map(storefrontSpan);
   let w0 = first;
   for (const [g0, g1] of [...cuts, [cols, cols]].sort((a, b) => a[0] - b[0])) {
     const a0 = Math.round(w0);
     const a1 = Math.min(cols, Math.round(g0));
     //split where a quarter's own wall takes over (its block tiles)
     if (sliceDone()) yield;
-    const cutsAt = [a0, ...[...fused.flatMap((q) => [q.x0, q.x1]), ...(shopWall ?? [])].filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
+    const cutsAt = [a0, ...[...fused.flatMap((q) => [q.x0, q.x1]), ...(shopWall ?? []), ...frontSpans.flat()].filter((x) => x > a0 && x < a1), a1].sort((a, b) => a - b);
     for (let k = 0; k + 1 < cutsAt.length; k++) {
       const [b0, b1] = [cutsAt[k], cutsAt[k + 1]];
       if (b1 <= b0) continue;
+      if (frontSpans.some(([f0, f1]) => b0 >= f0 && b1 <= f1)) continue; // a storefront stands here
       const q = fusedAt(b0);
       const rows = q ? [0, 1].map((r) => Array.from({ length: b1 - b0 }, (_, i) => q.skin.block.fill[((b0 + i) * (r ? 5 : 7) + r * 3) % q.skin.block.fill.length])) : wallRows.map((row) => row.slice(b0, b1));
       const wall = slab(b1 - b0, 2, 0.5, lambert(q ? tileTexture(rows, q.sheet) : tileTexture(rows)), surface('pavers', q ? q.skin.side : city ? 0x6b5a55 : skin.side), sideMat);
@@ -221,6 +242,16 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     w0 = g1;
   }
   for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
+  if (fronts.length) {
+    const mats = storefrontMats();
+    for (const f of fronts) {
+      const shop = makeStorefront(f.kind, mats);
+      if (!shop) continue;
+      shop.position.set(f.x, 0, STREET_BACK);
+      kit.add(shop);
+    }
+  }
+  kit.userData.storefronts = frontSpans; // the night city keeps its wall lights off them (night.ts)
   if (sliceDone()) yield;
   const props = buildProps(level, biome); // hydrants, benches, newspaper boxes... along the back of the sidewalk
   if (props) kit.add(props);
@@ -228,15 +259,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   if (cards) kit.add(cards);
   if (sliceDone()) yield;
 
-  //the world's landmark stands in for a building every few screens, the first one soon after the start
-  //(in the one city, each quarter's own landmark, in the middle of it)
-  //(the city's own Chicago quarters get its plaza sculptures in turn: Calder's Flamingo, the Picasso; zack)
-  const mid = (q: { x0: number; x1: number }) => Math.max(q.x0, (q.x0 + q.x1) / 2 - LANDMARK_W / 2);
-  const plazas = worlds.size ? quarters(level).filter((q) => q.world === 'chicago').slice(1) : []; // not under the L at the start
-  const marks = [
-    ...fused.filter((q) => q.skin.landmark).map((q) => ({ x: mid(q), name: q.skin.landmark! })),
-    ...plazas.map((q, i) => ({ x: mid(q), name: PLAZA[i % PLAZA.length] })),
-  ].sort((a, b) => a.x - b.x);
+  //the world's landmark stands in for a building every few screens, the first one soon after the start (marks, above)
   let mark = marks.length ? marks[0].x : skin.landmark && !worlds.size ? first + 6 + randInt(rng, 8) : Infinity;
   for (let bx = level.hills ? first - 2 : -8; bx < cols + 20; ) {
     if (bx >= mark) {
