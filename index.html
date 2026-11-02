@@ -156,6 +156,18 @@
         <div class="branches"></div>
         <div class="row"><span class="note"></span><button class="done" data-close-meta>BACK &#9654;</button></div>
       </div>
+      <!-- the title screen (src/ui/title.ts): the first tap starts the title music, SKATE starts the run -->
+      <div id="title" hidden>
+        <div class="head">
+          <div class="mark"><b class="gnar">GNAR</b><b class="run">RUN</b></div>
+          <div class="tagline">ESCAPE THE CITY</div>
+        </div>
+        <div class="foot">
+          <button class="start">TAP TO START</button>
+          <button class="go" hidden>SKATE &#9654;</button>
+          <span class="best"></span>
+        </div>
+      </div>
       <!-- the loading screen (src/ui/loading.ts): everything a run needs is loaded and compiled here, so the run
            never stops to load. Styled inline so it shows before the game's script and styles arrive -->
       <div id="loading">

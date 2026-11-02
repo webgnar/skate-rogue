@@ -13,6 +13,7 @@ export interface SoundFrame {
   skating: boolean; // on a floor (not a menu, not busted)
   over: boolean; // the run summary: the title music
   paused: boolean;
+  title?: boolean; // the title screen: the title music, nothing else
 }
 
 export class Sound {
@@ -81,7 +82,7 @@ export class Sound {
   private loadMusic(): void {
     if (this.musicLoading || SETTINGS.music <= 0) return;
     this.musicLoading = true;
-    for (const id of new Set(Object.values(MUSIC).flat())) {
+    for (const id of new Set([...MUSIC.title, ...MUSIC.gameplay])) {
       void this.load(`music/${id}.mp3`);
       void this.loadBeats(id);
     }
@@ -130,11 +131,28 @@ export class Sound {
     this.loadMusic();
   }
 
+  // the title music's bytes, fetched before the first tap (prefetch) so it starts on that tap, not seconds later
+  private early = new Map<string, Promise<ArrayBuffer>>();
+
+  // fetch a slot's tracks now, before there's a context to decode them in (the title screen's music)
+  prefetch(id: MusicId): void {
+    if (SETTINGS.music <= 0) return;
+    for (const track of MUSIC[id]) {
+      const file = `music/${track}.mp3`;
+      if (this.early.has(file)) continue;
+      const bytes = fetch(`${this.base}${file}`).then((r) => r.arrayBuffer());
+      bytes.catch(() => {});
+      this.early.set(file, bytes);
+    }
+  }
+
   // file: a path under the base, e.g. sounds/ollie.mp3; the buffer is kept by its bare name (ollie)
   private async load(file: string): Promise<void> {
     try {
-      const res = await fetch(`${this.base}${file}`);
-      const buf = await this.ctx!.decodeAudioData(await res.arrayBuffer());
+      const early = this.early.get(file);
+      this.early.delete(file);
+      const bytes = early ? await early : await (await fetch(`${this.base}${file}`)).arrayBuffer();
+      const buf = await this.ctx!.decodeAudioData(bytes);
       this.buffers.set(file.slice(file.indexOf('/') + 1, file.lastIndexOf('.')), buf);
       if (this.want && !this.music) this.playMusic(this.want);
     } catch {
@@ -235,7 +253,8 @@ export class Sound {
     const t = this.ctx.currentTime;
     //paused: the street sounds fade out and the music dips under the pause card
     this.musicDuck.gain.setTargetAtTime(f.paused ? LOOPS.pauseDuck : 1, t, 0.25);
-    if (f.paused) {
+    if (f.paused || f.title) {
+      if (f.title) this.setMusic('title');
       this.setGrind(false);
       this.roll?.gain.gain.setTargetAtTime(0, t, 0.05);
       this.siren?.gain.gain.setTargetAtTime(0, t, 0.1);

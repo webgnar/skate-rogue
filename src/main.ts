@@ -43,11 +43,13 @@ import { DEV, loadDev, meshyModels, saveDev, slower, stepFrame } from './ui/dev'
 import { DevPanel } from './ui/dev-panel';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
+import { MUSIC } from './audio/cues';
 import { SETTINGS, buzz, loadSettings, saveSettings } from './ui/settings';
 import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
 import { bindMissions } from './ui/missions-panel';
 import { SlotsPanel } from './ui/slots-panel';
+import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 
 const base = import.meta.env.BASE_URL;
 
@@ -503,6 +505,7 @@ async function start() {
   tapOnly('pausebtn', () => game.setPaused(true));
   //between runs: the unlock tree, and the daily run once it's unlocked. A change reloads into the new setup.
   const reloadWith = (key: string, on: boolean) => {
+    skipTitleOnce();
     const q = new URLSearchParams(location.search);
     if (on) q.set(key, '');
     else q.delete(key);
@@ -543,6 +546,9 @@ async function start() {
   const unlock = () => sound.unlock();
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
+  //the title screen (src/ui/title.ts), on a plain visit: its music is fetched now so it starts on the first tap
+  const titled = wantTitle(params, testing || bot !== null);
+  if (titled) sound.prefetch('title');
   const settings = new SettingsPanel(document.querySelector<HTMLElement>('#paused .settings')!, {
     volumes: () => sound.applyVolumes(),
     tier: (tier) => view.setTier(tier),
@@ -670,6 +676,17 @@ async function start() {
   await view.warm();
   view.render();
   built();
+  if (titled) {
+    game.titled = true;
+    new TitleScreen(document.getElementById('title')!, {
+      music: () => SETTINGS.music > 0 && MUSIC.title.length > 0,
+      wake: unlock,
+      go: () => {
+        game.titled = false;
+        input.clear();
+      },
+    }, save.best).show();
+  }
   loading.finish();
 
   const tick = (now: number) => {
