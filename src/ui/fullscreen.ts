@@ -12,12 +12,14 @@ const doc = document as WebkitDoc;
 // the page can go full screen itself
 export const canFullscreen = (): boolean => !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
 
-// opened from the home screen icon, already without browser bars
-export const isApp = (): boolean =>
-  matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches ||
-  (navigator as Navigator & { standalone?: boolean }).standalone === true;
-
 export const isFull = (): boolean => !!(doc.fullscreenElement || doc.webkitFullscreenElement);
+
+// opened from the home screen icon, already without browser bars. A page put in full screen by the switch also
+// matches display-mode: fullscreen, so that case doesn't count, or the switch would hide itself and strand the player.
+export const isApp = (): boolean =>
+  !isFull() &&
+  (matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true);
 
 // an iPhone or iPod (iPads report themselves as Macs with touch, and have the API)
 export const isIPhone = (): boolean => /iPhone|iPod/.test(navigator.userAgent);
@@ -53,6 +55,15 @@ export function watchFullscreen(changed: () => void): void {
     },
     { capture: true },
   );
-  document.addEventListener('fullscreenchange', changed);
-  document.addEventListener('webkitfullscreenchange', changed);
+  // on a computer, leaving full screen with Esc turns the switch off too, so the next click doesn't pull the game back
+  // in. Phones keep it on: there leaving is usually the back gesture, and going back in on the next tap is the point.
+  const left = () => {
+    if (!isFull() && SETTINGS.fullscreen && !matchMedia('(pointer: coarse)').matches) {
+      SETTINGS.fullscreen = false;
+      saveSettings();
+    }
+    changed();
+  };
+  document.addEventListener('fullscreenchange', left);
+  document.addEventListener('webkitfullscreenchange', left);
 }
