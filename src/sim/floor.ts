@@ -183,7 +183,12 @@ export class FloorSim {
   }
 
   step(input: StepInput): void {
-    if (this.state !== 'skate' && !(this.state === 'exit' && this.skater.rollOn)) return;
+    //a step that doesn't run makes no events: the game keeps stepping through the canal sink (game.ts SINK.wait),
+    //and the bail's events left standing replayed its sound every frame
+    if (this.state !== 'skate' && !(this.state === 'exit' && this.skater.rollOn)) {
+      this.events = [];
+      return;
+    }
     this.frames++;
     this.traffic.step(this.skater.x);
     for (const t of this.trains) t.step(this.skater.x);
