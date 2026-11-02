@@ -73,6 +73,11 @@ function glowDisc(): THREE.CanvasTexture {
   return glowTex;
 }
 
+// a glow that adds light (pools, cones, sheens): no depth write, so it never hides what's behind it
+function additive(map: THREE.Texture | null, color: number, opacity: number, side: THREE.Side = THREE.FrontSide): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({ map, color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, side });
+}
+
 let beamTex: THREE.CanvasTexture | null = null;
 // a shaft of light falling in from the street: bright at the top, soft at the sides, fading out toward the floor
 function beam(): THREE.CanvasTexture {
@@ -206,6 +211,20 @@ export function buildSewers(level: Level): THREE.Group {
   const ceilLight = new THREE.MeshBasicMaterial({ color: 0xfff4d0 });
   const stone = surface('concrete', 0x5a6a70);
   const mainMat = new THREE.MeshLambertMaterial({ color: 0x2a4a8a });
+  //(zack, 2026-11-02: "make it darker", lit by spotlights: the tunnel's own surfaces sit well down in the dark, so
+  //the spots' pools, the grates' light and the rails stand out)
+  for (const [m, k] of [[brick, 0.4], [archBrick, 0.32], [floor, 0.45], [ground, 0.45], [tile, 0.45], [stone, 0.45], [pillar, 0.45], [sheet, 0.3], [iron, 0.6], [oldPipe, 0.55]] as const) m.color.multiplyScalar(k);
+  //the rails and pipes you grind keep a little of their own light (and spot() lights them from above)
+  pipeMat.emissive.setHex(0x0e2a24);
+  steel.emissive.setHex(0x1a2026);
+  const spotLens = new THREE.MeshBasicMaterial({ color: 0xfff6dc });
+  const spotWarm = additive(glowDisc(), 0xffc070, 0.55);
+  const spotCool = additive(glowDisc(), 0x8ad8ff, 0.5);
+  const washWarm = additive(glowDisc(), 0xffb060, 0.22);
+  const washCool = additive(glowDisc(), 0x7ac8ff, 0.2);
+  const coneWarm = additive(beam(), 0xffc070, 0.22, THREE.DoubleSide);
+  const coneCool = additive(beam(), 0x8ad8ff, 0.2, THREE.DoubleSide);
+  const sheen = additive(null, 0xc8fff0, 0.55);
   const box = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, m: THREE.Material) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m);
     b.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
@@ -231,6 +250,29 @@ export function buildSewers(level: Level): THREE.Group {
       if (rot) m.scale.x = w / (b - a);
       g.add(m);
     }
+  };
+  // a spotlight hung from the roof (y top) at x, aimed straight down at y `at` (a rail, the floor): the lamp, its cone,
+  // a pool of light where it lands, and a glow on the back wall behind what it lights, so a rail stands out against it
+  const spot = (x: number, top: number, at: number, floorY: number, cool = false, w = 1.6) => {
+    if (top - floorY < 1.2) return;
+    box(x - 0.22, x + 0.22, top - 0.28, top, -0.65, -0.15, dark);
+    box(x - 0.16, x + 0.16, top - 0.3, top - 0.28, -0.6, -0.2, spotLens);
+    for (const rot of [0, Math.PI / 2]) {
+      const h = top - 0.3 - floorY;
+      const geo = new THREE.PlaneGeometry(1, h);
+      const pos = geo.attributes.position;
+      for (let k = 0; k < pos.count; k++) pos.setX(k, pos.getX(k) * (pos.getY(k) > 0 ? 0.35 : w));
+      const m = new THREE.Mesh(geo, cool ? coneCool : coneWarm);
+      m.position.set(x, floorY + h / 2, -0.4);
+      m.rotation.y = rot;
+      g.add(m);
+    }
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.6, w * 1.6).rotateX(-Math.PI / 2), cool ? spotCool : spotWarm);
+    pool.position.set(x, floorY + 0.07, 0);
+    pool.scale.z = 1.4;
+    const wash = new THREE.Mesh(new THREE.PlaneGeometry(w * 2.2, Math.min(w * 2.2, top - floorY)), cool ? washCool : washWarm);
+    wash.position.set(x, Math.max(at, floorY + w * 0.8), BACK + 0.07);
+    g.add(pool, wash);
   };
   // a solid wedge under a slope from (a, ya) to (b, yb), down to `base`, across z0..z1
   const wedge = (a: number, ya: number, b: number, yb: number, base: number, z0: number, z1: number, m: THREE.Material) => {
@@ -427,6 +469,15 @@ export function buildSewers(level: Level): THREE.Group {
         const run = new THREE.Mesh(new THREE.CylinderGeometry(r, r, b - a, 6).rotateZ(Math.PI / 2), oldPipe);
         run.position.set((a + b) / 2, top - dy, BACK + 0.2);
         g.add(run);
+      }
+    }
+    //spotlights down the tunnel, warm and cool by turns, pools of light on the dark floor (the rails get their own)
+    {
+      let k = 0;
+      for (let x = x0 + 4; x < ramp - 2; x += 11) {
+        if (lower(x) || (s.stairs ?? []).some((t) => x > X(t.x0) - 1 && x < X(t.x1) + 1)) continue;
+        if (level.rails.some((r) => r.sewer && x > X(r.x0) - 3 && x < X(r.x1) + 3)) continue;
+        spot(x, roofAt(x), fy, fy, k++ % 2 === 1);
       }
     }
     //caged work lamps along the back wall, and graffiti between them
@@ -731,8 +782,25 @@ export function buildSewers(level: Level): THREE.Group {
   }
 
   //pipes on brackets off the back wall (a concrete one's a cement ledge out of the wall, from zack's ledge ref)
+  //(the room a sewer x is in, and its roof there)
+  const roofOver = (x: number): [number, number] | null => {
+    const s = all.find((o) => x >= X(o.x0) && x < X(o.x1));
+    if (!s) return null;
+    const top = s.top !== undefined && x >= X(s.topAt ?? s.x0) ? Y(s.top) : s.top0 !== undefined ? Y(s.top0) : roof;
+    return [top, Y(s.y)];
+  };
   for (const r of level.rails) {
     if (!r.sewer) continue;
+    //spotlights on every rail, ledge and pipe: one over each few tiles of it, cool blue
+    const span = X(r.x1) - X(r.x0);
+    for (let k = 0, n = Math.max(1, Math.round(span / 6)); k < n; k++) {
+      const x = X(r.x0) + (span * (k + 0.5)) / n;
+      const over = roofOver(x);
+      const i = Math.min(r.xs.length - 1, Math.max(1, r.xs.findIndex((px) => X(px) >= x)));
+      const t = (x - X(r.xs[i - 1])) / Math.max(1e-6, X(r.xs[i]) - X(r.xs[i - 1]));
+      const ry = Y(r.ys[i - 1] + (r.ys[i] - r.ys[i - 1]) * Math.min(1, Math.max(0, t)));
+      if (over && over[0] - ry > 0.8) spot(x, over[0], ry, over[1], true, 1.8);
+    }
     if (r.material === 'concrete') {
       for (let k = 1; k < r.xs.length; k++) {
         const [a, b] = [X(r.xs[k - 1]), X(r.xs[k])];
@@ -745,7 +813,9 @@ export function buildSewers(level: Level): THREE.Group {
     const pts = r.xs.map((px, i) => new THREE.Vector3(X(px), Y(r.ys[i]) - 0.12, 0));
     const curve = new THREE.CatmullRomCurve3(pts);
     const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.13, 8), pipeMat);
-    g.add(tube);
+    //a line of light along its top where the spots catch it
+    const shine = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => p.clone().add(new THREE.Vector3(0, 0.1, 0.05)))), 16, 0.035, 5), sheen);
+    g.add(tube, shine);
     const y = Y(r.ys[0]) - 0.12;
     for (let x = X(r.x0) + 0.3; x < X(r.x1); x += 2) box(x - 0.06, x + 0.06, y - 0.05, y + 0.05, BACK, 0, bracket);
     //a rusty flange at each joint along it, bolted round
