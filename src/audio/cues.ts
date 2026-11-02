@@ -65,6 +65,11 @@ export interface Cue {
 
 const cue = (sample: SampleId, scale = 1, rate = 1): Cue => ({ sample, vol: VOL[sample] * scale, rate });
 
+// The music and zack's pitched sounds are in C major (the musician, 2026-11-02). A pitched sound is only ever
+// moved by an interval that keeps it on the scale (an octave, a fifth...), never by an odd rate, or it clashes.
+export const KEY = 'C major';
+export const semitones = (n: number): number => 2 ** (n / 12);
+
 // The coins ring out in a reverb (src/audio/sound.ts: a convolver on a freshly made, random impulse, so no two
 // tails ring alike). A lone coin is mostly dry; when they pile up (a line taken at speed) each one is ducked and
 // more of it goes up into the reverb, with a ghost an octave up feeding only the reverb: the shimmer.
@@ -118,8 +123,8 @@ export function cueFor(e: FloorEvent): Cue | null {
     case 'kicker':
       return cue('kicker');
     case 'pickup':
-      //a spin token has no file of its own yet: the Stoken's, a little higher
-      return e.kind === 'cash' ? cue('coin') : cue('stoken', 1, e.kind === 'spin' ? 1.2 : 1);
+      //a spin token has no file of its own yet: the Stoken's, a fifth up (C to G, still in key)
+      return e.kind === 'cash' ? cue('coin') : cue('stoken', 1, e.kind === 'spin' ? semitones(7) : 1);
     case 'smash':
       //each prop pitched a little differently so a bunch doesn't sound like one sound repeating
       return cue('smash', e.how === 'roll' ? 0.7 : 1, 0.92 + ((e.index * 7) % 5) * 0.04);
