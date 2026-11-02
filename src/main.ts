@@ -8,7 +8,7 @@ import type { UnderView } from './run/spot';
 import { GEAR, wornness } from './run/gear';
 import { chainText, modDef, type ModId, type Slots } from './board/mods';
 import { dropBoard, type ShopState } from './board/shop';
-import { gripDef } from './board/grips';
+import { gripCardColor, gripDef } from './board/grips';
 import { drawWires } from './ui/board-wires';
 import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
@@ -154,8 +154,10 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
   if (shop.grip) {
     //the one grip colour this shop sells (src/board/grips.ts)
     const g = gripDef(shop.grip);
-    const color = `#${g.color.toString(16).padStart(6, '0')}`;
-    cards.push(`<button class="card-shop gripcard ${shop.cash < v.gripPrice ? 'poor' : ''}" data-grip style="--c:${color}">
+    const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+    const color = hex(g.color);
+    // dark grips (classic black) get a lighter frame and name so the card reads; the tape keeps its true colour
+    cards.push(`<button class="card-shop gripcard ${shop.cash < v.gripPrice ? 'poor' : ''}" data-grip style="--c:${hex(gripCardColor(g.color))}">
       <span class="kind">GRIP</span><b>${esc(g.name.toUpperCase())}</b>${gripArt(color)}
       <span class="text">New grip tape, yours for good</span><span class="price">$${v.gripPrice}</span>
     </button>`);
