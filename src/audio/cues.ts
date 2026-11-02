@@ -52,7 +52,7 @@ const VOL: Record<SampleId, number> = {
   busted: 0.9,
   grind: 0.5,
   roll: 0.3,
-  siren: 0.25,
+  siren: 1, // zack (2026-11-02): couldn't hear it with the cops on him at 0.25
 };
 
 export const SAMPLES = Object.keys(VOL) as SampleId[];
@@ -155,8 +155,9 @@ export const MOMENT: Record<'start' | 'gate' | 'busted' | 'pick', Cue> = {
 export const LOOPS = {
   grind: VOL.grind, // the grind loop, while on a rail or ledge
   rollMax: VOL.roll, // the wheels loop on the street, by speed
-  sirenFrom: 25, // the siren loop comes in at this Heat
+  sirenFrom: 3, // the siren loop comes in at this Heat: where the cruiser stops giving up (traffic-view's CRUISER_AWAY)
   sirenMax: VOL.siren,
+  sirenStart: 0.6, // the share of sirenMax it comes in at, so a chase is always heard
   music: 0.35,
   pauseDuck: 0.35, // the music's level under the pause card, of its own
 };
@@ -170,7 +171,9 @@ export function rollGain(mode: string, speed: number): number {
 // how loud the siren is at a Heat
 export function sirenGain(heat: number): number {
   if (heat < LOOPS.sirenFrom) return 0;
-  return LOOPS.sirenMax * Math.min(1, (heat - LOOPS.sirenFrom) / (100 - LOOPS.sirenFrom));
+  //clear from the moment the cruiser gives chase, then up to full as it closes in at Heat 100
+  const k = Math.min(1, (heat - LOOPS.sirenFrom) / (100 - LOOPS.sirenFrom));
+  return LOOPS.sirenMax * (LOOPS.sirenStart + (1 - LOOPS.sirenStart) * k);
 }
 
 // haptics (GDD: a short buzz on landing, a longer one on a slam): ms, or a pattern

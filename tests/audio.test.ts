@@ -34,7 +34,8 @@ describe('sound cues', () => {
   it('the wheels roll louder with speed and go quiet in the air; the siren comes in with Heat', () => {
     expect(rollGain('roll', 6)).toBeGreaterThan(rollGain('roll', 2));
     expect(rollGain('air', 6)).toBe(0);
-    expect(sirenGain(10)).toBe(0);
+    expect(sirenGain(1)).toBe(0); // no chase yet
+    expect(sirenGain(10)).toBeGreaterThan(0.5); // a chase is always heard
     expect(sirenGain(90)).toBeGreaterThan(sirenGain(40));
   });
 
