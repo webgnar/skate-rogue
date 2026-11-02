@@ -52,7 +52,7 @@ const VOL: Record<SampleId, number> = {
   busted: 0.9,
   grind: 0.5,
   roll: 0.3,
-  siren: 1, // zack (2026-11-02): couldn't hear it with the cops on him at 0.25
+  siren: 1, // zack (2026-11-02): couldn't hear it with the cops chasing at 0.25
 };
 
 export const SAMPLES = Object.keys(VOL) as SampleId[];
