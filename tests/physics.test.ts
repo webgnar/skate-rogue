@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { PHYS, TILE } from '../src/physics/constants';
 import { Skater } from '../src/physics/skater';
 import { FixedStep } from '../src/game/loop';
-import { FLAT, idle, levelOf, pressAt, run } from './helpers';
+import { FLAT, idle, levelOf, pressAt, run, withExtras } from './helpers';
+
+const FLAT_STREET = levelOf(FLAT).streetY;
 
 function peak(sk: Skater, frames: number, script: (f: number) => { pressed: boolean; held: boolean }): number {
   let top = sk.y;
@@ -112,6 +114,30 @@ describe('dead flips (zack, 2026-11-01: flip with no jumps left, land mid-flip a
     sk.step({ pressed: true, held: true });
     for (let i = 0; i < 6; i++) sk.step({ pressed: false, held: true });
     expect(sk.events.filter((e) => e.type === 'trick').length).toBe(n);
+  });
+
+  //(zack, 2026-11-02: "if they are in the middle of a flip trick and land on a grindable they should fall")
+  it('mid-flip, you fall past a bar instead of grinding it', () => {
+    const level = withExtras([{ kind: 'rail', x0: 0, x1: 4000, y: FLAT_STREET - 90, row: 0 }]);
+    const sk = new Skater(level);
+    sk.step({ pressed: true, held: true }); // ollie
+    sk.step({ pressed: true, held: true }); // flip
+    //falling, about 8 frames over the bar: too late to catch it before the bar, too soon to be the landing buffer
+    while (sk.vsp <= 0 || sk.boardY < level.streetY - 140) sk.step({ pressed: false, held: true });
+    sk.step({ pressed: true, held: true }); // a dead flip on the way to the bar
+    expect(sk.events.at(-1)).toMatchObject({ type: 'trick', dead: true });
+    for (let i = 0; i < 120 && sk.mode === 'air'; i++) sk.step({ pressed: false, held: true });
+    expect(sk.events.some((e) => e.type === 'grind')).toBe(false);
+    expect(sk.y).toBe(level.streetY);
+  });
+
+  it('with the flip caught, the same bar is a grind', () => {
+    const level = withExtras([{ kind: 'rail', x0: 0, x1: 4000, y: FLAT_STREET - 90, row: 0 }]);
+    const sk = new Skater(level);
+    sk.step({ pressed: true, held: true });
+    sk.step({ pressed: true, held: true });
+    for (let i = 0; i < 120 && sk.mode === 'air'; i++) sk.step({ pressed: false, held: true });
+    expect(sk.mode).toBe('grind');
   });
 
   it('landing before a dead flip is caught is a slam', () => {

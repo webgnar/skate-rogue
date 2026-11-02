@@ -82,6 +82,7 @@ export class FloorChecks {
     if (air) {
       for (const s of level.surfaces) {
         if (sk.gone.has(s)) continue; // Greece's ruins fall away
+        if (sk.looseStep && s.kind === 'rail') continue; // mid-flip you fall past bars and ledges, by design
         const cx = crossAt(this.px, this.py, sk.x, sk.boardY, s.x0, s.y, surfaceSlope(s));
         if (cx !== null && cx >= s.x0 && cx <= s.x1) this.add('fell-through', `fell through a ${s.kind} (${s.kind === 'bank' || s.kind === 'stairs' ? 'sloped' : 'flat'})`, s.kind);
       }
@@ -99,7 +100,7 @@ export class FloorChecks {
         if (cx !== null && cx >= c.x0 && cx <= c.x1) this.add('fell-through', `fell through the top of a moving ${c.model ?? 'car or drone'}`, 'mover');
       }
       for (const rail of level.rails) {
-        if (rail === this.ignore || rail === sk.railIgnore) continue;
+        if (rail === this.ignore || rail === sk.railIgnore || sk.looseStep) continue;
         const a = rail.yAt(this.px);
         const b = rail.yAt(sk.x);
         if (a !== undefined && b !== undefined && this.py <= a + 0.01 && sk.boardY > b + 0.5) this.add('fell-through', 'fell through a curved rail', 'rail');

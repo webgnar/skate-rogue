@@ -100,6 +100,7 @@ export class Skater {
   private roofs = new WeakMap<Car, number>(); // each vehicle's roof as of the last step
   trickT = 0; // frames since the last flip trick
   trickCatch = 0; // frames that flip takes to catch (0: no flip going)
+  looseStep = false; // this step's fall was mid-flip, so it went past bars, ledges and curved rails (the checks know)
   readonly crumbling = new Map<Surface, number>(); // Greece's ruins: frames until each ledge you've stood on falls
   readonly gone = new Set<Surface>(); // ruins that have fallen
   readonly wrecked = new Set<Car>(); // cars hopped to scrap (src/traffic/damage.ts): no roof, no sides, out of the way
@@ -160,6 +161,7 @@ export class Skater {
 
   step(input: StepInput): void {
     if (this.mode === 'bail' || this.mode === 'exit') return;
+    this.looseStep = false;
     this.tuck.step(this.mode === 'air');
     const from = this.events.length;
     this.advance(input);
@@ -785,7 +787,10 @@ export class Skater {
     const sx = crossAt(0, this.level.streetY, 0);
     if (sx !== null && (this.streetUnder(sx) || this.streetUnder(x))) consider(this.level.streetY, () => this.touchDown(null));
     const magnet = this.mods.railMagnet;
+    //mid-flip, the board isn't under your feet to lock onto a bar or a ledge: you fall past it (zack, 2026-11-02)
+    const loose = (this.looseStep = this.caught < 1);
     for (const s of this.surfaces()) {
+      if (loose && s.kind === 'rail') continue;
       //Rail Magnet: rails reach out for you before their start
       //flat ground catches a truck: you land with the other one hanging over the edge
       const r = truckReach(s);
@@ -807,7 +812,7 @@ export class Skater {
       consider(car.roof, ledge ? () => this.touchDown(ledge) : () => this.carHop(car));
     }
     for (const rail of this.level.rails) {
-      if (rail === this.railIgnore) continue;
+      if (rail === this.railIgnore || loose) continue;
       const start = rail.at(0);
       const near = magnet > 0 && x < start.x && x >= start.x - magnet;
       const ry = near ? start.y : rail.yAt(x);
