@@ -27,7 +27,7 @@ export class SettingsPanel {
       <label class="row"><span>MUSIC</span><input type="range" min="0" max="100" step="5" data-vol="music"></label>
       <button class="row" data-toggle="haptics"><span>VIBRATION</span><b></b></button>
       <button class="row" data-fullscreen hidden><span>FULL SCREEN</span><b></b></button>
-      <div class="fshelp" hidden>On iPhone: tap Share <b>&#x2191;</b> then <b>Add to Home Screen</b>, and play from the Gnar Run icon. It opens with no browser bars.</div>
+      <div class="fshelp" hidden>On iPhone: tap Share <b>&#x2191;</b> then <b>Add to Home Screen</b>, and play from the Skate Escape icon. It opens with no browser bars.</div>
       <button class="row" data-tilt hidden><span>GYRO TILT</span><b></b></button>
       <button class="row" data-closeup><span>DYNAMIC ZOOM</span><b></b></button>
       <label class="row"><span>CAMERA</span><input type="range" min="${USER_ZOOM.min * 100}" max="${USER_ZOOM.max * 100}" step="5" data-zoom><b></b></label>

@@ -95,7 +95,7 @@ function html({ sim, browser, items }) {
         .join('')}</table>`
     : '<p>No browser runs in this report.</p>';
   const gallery = browser ? browser.scenarios.flatMap((s) => s.shots.map((g) => `<figure><a href="${esc(g.file)}"><img src="${esc(g.file)}" loading="lazy"></a><figcaption>${esc(s.id)}: ${esc(g.label)}</figcaption></figure>`)).join('') : '';
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gnar Run playtest</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Skate Escape playtest</title>
 <style>
 :root{--bg:#14121c;--fg:#eee;--dim:#9a96a8;--bug:#ff5a6a;--warn:#ffc34a;--card:#1f1c2b}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;max-width:1100px}
@@ -106,7 +106,7 @@ ul{padding-left:18px;margin:0}li{margin:6px 0}a{color:#7cc8ff}code{font-size:12p
 table{border-collapse:collapse;width:100%;font-size:13px}td,th{border-bottom:1px solid #333;padding:4px 6px;text-align:left;vertical-align:top}
 .gallery{display:flex;flex-wrap:wrap;gap:8px}figure{margin:0;width:240px}figure img{max-width:240px}figcaption{font-size:12px;color:var(--dim)}
 </style></head><body>
-<h1>Gnar Run playtest</h1>
+<h1>Skate Escape playtest</h1>
 <p class="from">${esc(sim?.at ?? browser?.at ?? '')} · ${bugs} bug findings, ${items.length - bugs} warnings. Links open the floor with <code>?bot</code> so the bot replays it; take <code>&amp;bot</code> off to skate it yourself.</p>
 ${order.map(section).join('') || '<section class="warn"><h2>Nothing found</h2></section>'}
 <h2>Sim runs</h2>${simBlock}
@@ -118,7 +118,7 @@ ${order.map(section).join('') || '<section class="warn"><h2>Nothing found</h2></
 function summary({ sim, items }) {
   const groups = {};
   for (const it of items) (groups[it.kind] ??= []).push(it);
-  const lines = ['## Gnar Run playtest', ''];
+  const lines = ['## Skate Escape playtest', ''];
   if (!items.length) lines.push('Nothing found.');
   for (const [k, list] of Object.entries(groups)) {
     const [sev, owner, title] = KINDS[k] ?? ['bug', 'game', k];

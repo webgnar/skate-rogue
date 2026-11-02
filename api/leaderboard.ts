@@ -1,4 +1,4 @@
-// Gnar Run's leaderboards (GDD: Scoring and stoke), a Vercel function over a Redis store's REST API (Upstash, or
+// Skate Escape's leaderboards (GDD: Scoring and stoke), a Vercel function over a Redis store's REST API (Upstash, or
 // Vercel's KV, which is Upstash). Ported from excaliburSkate's api/leaderboard.ts, without @vercel/kv.
 // GET  /api/leaderboard?board=score|floor|daily[&day=YYYY-MM-DD]  -> the top 10 rows
 // POST /api/leaderboard {tag, score, floor, day?}                  -> {ranks: {score, floor, daily?}}

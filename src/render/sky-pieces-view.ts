@@ -168,9 +168,9 @@ function blimpTexture(): THREE.Texture {
   g.textBaseline = 'middle';
   g.lineWidth = 6;
   g.strokeStyle = '#ffd21a';
-  g.strokeText('GNAR RUN', 256, 56);
+  g.strokeText('SKATE ESCAPE', 256, 56);
   g.fillStyle = '#1b2a6a';
-  g.fillText('GNAR RUN', 256, 56);
+  g.fillText('SKATE ESCAPE', 256, 56);
   blimpSkin = new THREE.CanvasTexture(c);
   blimpSkin.colorSpace = THREE.SRGBColorSpace;
   blimpSkin.anisotropy = 4;

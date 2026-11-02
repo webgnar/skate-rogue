@@ -172,7 +172,7 @@ const same = (a: Clip | undefined, b: Clip | undefined) => JSON.stringify(a) ===
 
 export async function startEditor(base: string): Promise<void> {
   document.getElementById('app')?.remove();
-  document.title = 'Gnar Run · animation editor';
+  document.title = 'Skate Escape · animation editor';
   const params = new URLSearchParams(location.search);
   const skater = params.get('skater');
 

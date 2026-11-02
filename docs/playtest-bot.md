@@ -1,6 +1,6 @@
 # The playtest bot
 
-A bot that plays Gnar Run and reports what breaks, so the bugs found by hand (falling through banks, feet sinking
+A bot that plays Skate Escape and reports what breaks, so the bugs found by hand (falling through banks, feet sinking
 into the deck, models that didn't load, floors nobody can clear) turn up before you play.
 
 ## Running it
