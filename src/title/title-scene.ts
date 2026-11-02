@@ -8,10 +8,11 @@
 // It draws with the game's renderer onto the game's canvas, in its own THREE.Scene and camera; the run's street is
 // built behind it and takes over on SKATE.
 import * as THREE from 'three';
-import { BASE, type Pose } from '../render/poses';
+import { BASE, BOARD, type Pose } from '../render/poses';
 import { SCALE, type SkaterRig } from '../render/skater-rig';
 import { setInkLens, setInkResolution } from '../render/toon';
-import { buildCity, buildStreet, DUSK, skyDome } from './city';
+import { buildStreet, DUSK, skyDome } from './city';
+import { buildCity } from './grid';
 import { buildLife } from './life';
 
 // the camera's way down: where it is and what it looks at, at each stop (tiles; Webster stands at the origin)
@@ -19,20 +20,22 @@ export const PATH: { at: [number, number, number]; look: [number, number, number
   { at: [0, 260, 95], look: [12, 215, -420] }, // high over the towers, the sun going down behind them
   { at: [-8, 196, 72], look: [6, 150, -200] }, // into the clouds, the birds wheeling past
   { at: [6, 130, 56], look: [-4, 92, -120] }, // the trash on the wind, the chopper's light below
-  { at: [-3, 72, 46], look: [2, 50, -40] }, // the drones on patrol in front of the glass
-  { at: [6, 26, 36], look: [0, 14, -30] }, // the cruiser hanging on its jets over the street
+  { at: [22, 78, 48], look: [26, 6, -150] }, // over an avenue, looking down the canyon: the traffic, the crossings, the drones
+  { at: [10, 28, 34], look: [0, 6, -20] }, // swinging round onto Webster's street, the cruiser on its jets over it
   { at: [3, 7, 24], look: [0, 6, -6] }, // dropping to the street
-  { at: [1.4, 1.5, 14], look: [0, 4.2, 0] }, // down at Webster, looking up at him and the towers over him
+  { at: [3.6, 1.5, 14], look: [3.2, 4.2, 0] }, // down at Webster, looking up at him and the towers over him; he's left of
+  // the middle so SKATE can sit off to his right (zack: not on top of him)
 ];
 // the last stop on an upright phone: in closer, so Webster's big in the narrow frame
-const TALL_END = { at: [1.0, 1.7, 9.5] as [number, number, number], look: [0, 3.1, 0] as [number, number, number] };
+const TALL_END = { at: [1.0, 1.7, 9.5] as [number, number, number], look: [0, 2.5, 0] as [number, number, number] };
 export const DESCENT = 11; // seconds from the sky to Webster
 
 // a smooth step that eases in and out but doesn't stall in the middle
 const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
-const HAND_ARM = 1; // the trailing (right) arm holds the board up
-const SPIN = 7; // the board's turns, radians a second
+const HAND_ARM = 0; // the lead (left, +x) arm twirls the board
+const SPIN = 8; // the board's twirl, radians a second (zack's sprite: a turn in 0.75 s)
+const BOARD_AT = { x: 0.5, z: 0.08 }; // where the board stands, rig space: at his lead side
 
 export class TitleScene {
   readonly scene = new THREE.Scene();
@@ -67,40 +70,45 @@ export class TitleScene {
     this.place();
   }
 
-  // Webster stood on the sidewalk off his board, the board up on the fingertips of his raised hand: a few poses
-  // breathing, the hand bobbing a little to keep it going, each with the arm solved (SkaterRig.reach) to the board
+  // Webster stood on the sidewalk off his board, from zack's boardspin sprite (2026-11-02): the board stood on its
+  // tail at his side, his lead hand resting on the nose, twirling it about its long axis (bottom, edge, grip, edge).
+  // A few poses breathing, each with the arm solved (SkaterRig.reach) to the top of the nose
   private standPoses(rig: SkaterRig): Pose[] {
     const stand: Pose = {
       ...BASE,
-      yaw: 0.15,
+      yaw: 0.1,
       hipY: 0.84,
-      bend: 0.02,
-      lean: 0.03,
-      head: 0.15,
-      nod: -0.12,
+      bend: 0.04,
+      lean: -0.04,
+      head: -0.1,
+      nod: 0.05,
+      headTilt: -0.06,
       footFOn: 0,
       footBOn: 0,
-      footFX: 0.16,
+      footFX: 0.15,
       footFY: 0,
       footFZ: 0.02,
-      footBX: -0.16,
+      footBX: -0.15,
       footBY: 0,
       footBZ: -0.02,
       footFTurn: 0.25,
       footBTurn: -0.25,
-      armLRaise: 0.25,
-      armLFwd: 0.1,
-      armLElbow: 0.35,
+      //the free (trailing) arm hangs loose, a little out from the side
+      armRRaise: 0.35,
+      armRFwd: 0.05,
+      armRElbow: 0.3,
     };
     return [0, 1, 2, 3].map((i) => {
       const bob = Math.sin((i / 4) * Math.PI * 2);
-      const p: Pose = { ...stand, hipY: stand.hipY + bob * 0.006, nod: stand.nod + bob * 0.03 };
-      const hand = new THREE.Vector3(-0.32, 2.0 + bob * 0.03, 0.12);
+      const p: Pose = { ...stand, hipY: stand.hipY + bob * 0.006, armRRaise: stand.armRRaise + bob * 0.03 };
+      //the board on its tail beside him, nose up: it pitches a quarter turn up about the tail, the tail on the ground
+      p.boardPivot = -BOARD.tail;
+      p.boardPitch = Math.PI / 2;
+      p.boardX = BOARD_AT.x + BOARD.tail;
+      p.boardY = -BOARD.deckTop + 0.02;
+      p.boardZ = BOARD_AT.z;
+      const hand = new THREE.Vector3(BOARD_AT.x - 0.02, BOARD.length + 0.05 + bob * 0.004, BOARD_AT.z);
       Object.assign(p, rig.reach(p, HAND_ARM, hand));
-      //the board flat on the fingertips: its middle just over the hand
-      p.boardX = hand.x;
-      p.boardY = hand.y + 0.06 - 0.12; // applyPose lifts the board by the deck's height
-      p.boardZ = hand.z;
       return p;
     });
   }
@@ -159,7 +167,7 @@ export class TitleScene {
       for (const key of Object.keys(a) as (keyof Pose)[]) p[key] = a[key] + (b[key] - a[key]) * f;
       this.rig.preview(p);
       this.spin += dt * SPIN;
-      this.rig.boardGroup.rotation.y = this.spin;
+      this.rig.boardGroup.rotation.x = this.spin; // about the board's long axis, standing up
       this.rig.mesh.scale.setScalar(SCALE);
     }
     this.place();

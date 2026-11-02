@@ -1050,13 +1050,15 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
 
 ## UI
 
-- **Title screen:** its own scene (zack, Nov 2, 2026: "should introduce the world"; src/title/). A city at dusk:
-  skyscrapers with lit windows (some flickering), clouds drifting past the tops of the towers, the sun going down. It
+- **Title screen:** its own scene (zack, Nov 2, 2026: "should introduce the world"; src/title/). A city at dusk on a
+  real street grid: towers in four facade styles (office grid, glass curtain, old brick, concrete ribbons) rising to a
+  downtown, with setbacks, water tanks and roof clutter, older and lower near Webster; streets with lane lines,
+  crosswalks, street lights and traffic, sidewalks, a parking lot across the street; lit windows (some flickering), clouds drifting past the tops of the towers, the sun going down. It
   opens high over the towers under the SKATE ESCAPE logo; the first tap starts the title music (zack's PRESS START)
-  and the camera comes down through the clouds past pigeons, trash riding the wind, the AI's drones scanning the
-  glass, the police chopper's spotlight and a cop cruiser hanging on its jump jets, to the street: a brick corner
+  and the camera comes down through the clouds past pigeons, trash riding the wind, down an avenue's canyon where
+  the AI's drones scan the glass, the police chopper's spotlight and a cop cruiser hanging on its jump jets, to the street: a brick corner
   store with buzzing neon, a lamp on the blink, a stray dog, a homeless man with a sign, a hitchhiker waving you
-  down, and Webster on the sidewalk spinning his board on one finger. A tap on the way skips to him; SKATE starts
+  down, and Webster on the sidewalk twirling his board stood on its tail at his side. A tap on the way skips to him; SKATE starts
   the run. Test links skip it. Still open: the hitchhiker as a real NPC moment in a run (zack's idea, not built).
 - **HUD:** decided Oct 24, 2026 from zack's comic ink mockup (openspec change ui1-hud): the SKATE ESCAPE logo with act
   and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the

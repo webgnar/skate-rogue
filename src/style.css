@@ -1977,3 +1977,7 @@ html, body {
 #title.flying .head { opacity: 0; transform: translateY(-40%) scale(0.8); }
 #title.landed { background: linear-gradient(180deg, rgba(18, 12, 30, 0.6) 0%, rgba(18, 12, 30, 0) 28%, rgba(18, 12, 30, 0) 70%, rgba(18, 12, 30, 0.55) 100%); }
 #title.landed .head { transform: scale(0.62); transform-origin: 50% 0; }
+/* sideways, SKATE sits in the bottom right, clear of Webster (who stands left of the middle) */
+@media (orientation: landscape) {
+  #title .foot { align-self: flex-end; margin-right: max(5vw, env(safe-area-inset-right)); }
+}

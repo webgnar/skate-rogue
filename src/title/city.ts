@@ -1,11 +1,10 @@
-// The title scene's city (src/title/title-scene.ts): a dusk sky dome with the sun going down, skyscrapers standing in
-// rows back from the street, their windows lit (a few flickering), clouds drifting past the tops of the towers, and
-// down at the bottom the street Webster stands on: asphalt, a sidewalk, a brick corner store with a buzzing neon sign
-// and street lamps, one of them on the blink. All built in code: one draw for every tower, one for every window glow.
+// The title scene's sky and Webster's own spot (src/title/title-scene.ts): a dusk sky dome with the sun going down,
+// the canvas textures the city uses (clouds, brick, neon), and Webster's piece of sidewalk: the curb, a brick corner
+// store with a buzzing neon sign, street lamps (one on the blink) and street props. The city around it, the street
+// grid and the towers, is grid.ts.
 //
 // Units are the game's tiles (the skater is about 2.5 tall). The street runs along x, the towers stand back along -z.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeRng, type Rng } from '../gen/rng';
 import { inkify, toon } from '../render/toon';
 import { model } from '../render/models';
@@ -20,8 +19,6 @@ export const DUSK = {
   fogFar: 1100,
 };
 
-const STOREY = 3.6; // a floor's height, tiles
-const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
 // the sky: a dome shaded by height (world up, so it stays right as the camera tips down), the sun low over -z with a
 // soft glow round it
@@ -66,181 +63,7 @@ export function skyDome(): THREE.Mesh {
   return mesh;
 }
 
-// a sheet of windows: dark glass in a frame, some lit warm or cold, as the colour map; the lit ones again in the
-// emissive map so they glow through the dusk
-function windowSheet(rng: Rng): { map: THREE.Texture; glow: THREE.Texture } {
-  const cols = 16;
-  const rows = 32;
-  const cell = 16;
-  const make = () => {
-    const c = document.createElement('canvas');
-    c.width = cols * cell;
-    c.height = rows * cell;
-    return c;
-  };
-  const a = make();
-  const b = make();
-  const ca = a.getContext('2d')!;
-  const cb = b.getContext('2d')!;
-  ca.fillStyle = '#5a5470';
-  ca.fillRect(0, 0, a.width, a.height);
-  cb.fillStyle = '#000';
-  cb.fillRect(0, 0, b.width, b.height);
-  const lit = ['#ffd890', '#ffe7b0', '#ffc070', '#bfe8ff', '#ff9ad8'];
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const px = x * cell + 3;
-      const py = y * cell + 3;
-      const on = rng() < 0.3;
-      ca.fillStyle = on ? lit[Math.floor(rng() * lit.length)] : rng() < 0.5 ? '#232036' : '#2e2a44';
-      ca.fillRect(px, py, cell - 6, cell - 5);
-      if (on) {
-        cb.fillStyle = ca.fillStyle;
-        cb.fillRect(px, py, cell - 6, cell - 5);
-      }
-    }
-  }
-  const tex = (c: HTMLCanvasElement) => {
-    const t = new THREE.CanvasTexture(c);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.magFilter = THREE.NearestFilter;
-    t.anisotropy = 4;
-    return t;
-  };
-  return { map: tex(a), glow: tex(b) };
-}
-
-// a tower as a box whose UVs count windows (4 tiles a window across, a storey up), so one sheet tiles every tower
-function towerBox(w: number, h: number, d: number, x: number, z: number, off: number): THREE.BufferGeometry {
-  const g = new THREE.BoxGeometry(w, h, d);
-  const pos = g.getAttribute('position');
-  const nor = g.getAttribute('normal');
-  const uv = g.getAttribute('uv');
-  for (let i = 0; i < pos.count; i++) {
-    const px = pos.getX(i) + w / 2;
-    const pz = pos.getZ(i) + d / 2;
-    const py = pos.getY(i) + h / 2;
-    const across = Math.abs(nor.getX(i)) > 0.5 ? pz : px;
-    //the roof and underside read the corner of the sheet that's plain wall
-    if (Math.abs(nor.getY(i)) > 0.5) uv.setXY(i, 0.01, 0.01);
-    else uv.setXY(i, off + across / 4 / 16, off * 3 + py / STOREY / 32);
-  }
-  g.translate(x, h / 2, z);
-  return g;
-}
-
-export interface City {
-  group: THREE.Group;
-  update(t: number, dt: number): void;
-}
-
-// The towers: rows standing back from the street, getting taller toward the middle, and a far wall of them out to
-// the haze. The street's own block is a four-storey brick corner store, built separately (street()).
-export function buildCity(seed = 7): City {
-  const rng = makeRng(seed);
-  const group = new THREE.Group();
-  const sheet = windowSheet(rng);
-  const geos: THREE.BufferGeometry[] = [];
-  const tops: { x: number; y: number; z: number; w: number; d: number }[] = [];
-  const add = (x: number, z: number, w: number, d: number, h: number) => {
-    geos.push(towerBox(w, h, d, x, z, Math.floor(rng() * 16) / 16));
-    tops.push({ x, y: h, z, w, d });
-    //a setback crown on the tall ones: a narrower box on top, and a spire on the tallest
-    if (h > 120 && rng() < 0.7) {
-      const ch = 10 + rng() * 20;
-      geos.push(towerBox(w * 0.65, ch, d * 0.65, x, z, 0.5).translate(0, h, 0));
-      tops.push({ x, y: h + ch, z, w: w * 0.65, d: d * 0.65 });
-    }
-  };
-  //the near rows either side of the street canyon, then the rows behind the store, then the far wall
-  for (const side of [-1, 1]) {
-    for (let z = 4; z > -260; z -= 26 + rng() * 8) {
-      const x = side * (26 + rng() * 6);
-      const h = lerp(70, 210, rng()) * (z < -60 ? 1.15 : 0.9);
-      add(x, z, 18 + rng() * 6, 20 + rng() * 4, h);
-    }
-  }
-  for (let i = 0; i < 6; i++) add(-30 + i * 12 + rng() * 4, -70 - rng() * 30, 12 + rng() * 6, 14, 80 + rng() * 170);
-  for (let i = 0; i < 26; i++) {
-    const x = -380 + i * 30 + rng() * 10;
-    add(x, -320 - rng() * 220, 22 + rng() * 14, 22 + rng() * 10, 90 + rng() * 260);
-  }
-  const towers = new THREE.Mesh(
-    mergeGeometries(geos)!,
-    toon({ color: 0xffffff, map: sheet.map, emissive: 0xffffff, emissiveMap: sheet.glow, emissiveIntensity: 0.85 }),
-  );
-  group.add(towers);
-
-  //antennas and red aircraft lights on some roofs: the lights blink slowly, out of step
-  const beacons: THREE.Mesh[] = [];
-  const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff3030, fog: false });
-  const mast = new THREE.MeshLambertMaterial({ color: 0x3a3448 });
-  for (const t of tops) {
-    if (t.y < 140 || rng() < 0.4) continue;
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 14, 5), mast);
-    m.position.set(t.x, t.y + 7, t.z);
-    group.add(m);
-    const b = new THREE.Mesh(new THREE.SphereGeometry(1.1, 6, 4), beaconMat);
-    b.position.set(t.x, t.y + 14.5, t.z);
-    b.userData.phase = rng() * 3;
-    group.add(b);
-    beacons.push(b);
-  }
-
-  //windows that flicker: a lit window's glow, put back on the face of a near tower, going out and coming back on
-  const flick = new THREE.InstancedMesh(new THREE.PlaneGeometry(2.4, 2.2), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), 48);
-  const flickers: { k: number; rate: number; color: THREE.Color }[] = [];
-  const m4 = new THREE.Matrix4();
-  const near = tops.filter((t) => t.z > -120 && Math.abs(t.x) < 60);
-  for (let i = 0; i < flick.count; i++) {
-    const t = near[Math.floor(rng() * near.length)];
-    const x = t.x + (rng() - 0.5) * (t.w - 4);
-    const y = 6 + Math.floor(rng() * (t.y / STOREY - 3)) * STOREY + 1.6;
-    m4.makeTranslation(x, y, t.z + t.d / 2 + 0.08);
-    flick.setMatrixAt(i, m4);
-    const color = new THREE.Color([0xffd890, 0xbfe8ff, 0xff9ad8, 0xffc070][i % 4]);
-    flickers.push({ k: rng() * 10, rate: 0.6 + rng() * 2.5, color });
-    flick.setColorAt(i, color);
-  }
-  group.add(flick);
-
-  //clouds drifting past the tops of the towers: soft puffs on camera-facing cards, a pink underside from the sun
-  const cloudTex = cloudTexture(rng);
-  const clouds: THREE.Sprite[] = [];
-  for (let i = 0; i < 16; i++) {
-    const mat = new THREE.SpriteMaterial({ map: cloudTex, color: new THREE.Color().setHSL(0.92 + rng() * 0.06, 0.45, 0.82 + rng() * 0.1), transparent: true, opacity: 0.7, depthWrite: false, fog: true });
-    const s = new THREE.Sprite(mat);
-    const w = 70 + rng() * 120;
-    s.scale.set(w, w * 0.42, 1);
-    s.position.set(-300 + rng() * 600, 130 + rng() * 120, -280 + rng() * 330);
-    s.userData.speed = 2 + rng() * 5;
-    clouds.push(s);
-    group.add(s);
-  }
-
-  return {
-    group,
-    update(t: number, dt: number): void {
-      for (const b of beacons) b.visible = (t + b.userData.phase) % 2.4 < 1.2;
-      const c = new THREE.Color();
-      flickers.forEach((f, i) => {
-        f.k += dt * f.rate;
-        //mostly on, now and then a stutter: off, on, off
-        const p = f.k % 6;
-        const on = p > 0.5 || (p > 0.12 && p < 0.22) || (p > 0.32 && p < 0.38);
-        flick.setColorAt(i, on ? f.color : c.setHex(0x1a1828));
-      });
-      if (flick.instanceColor) flick.instanceColor.needsUpdate = true;
-      for (const s of clouds) {
-        s.position.x += s.userData.speed * dt;
-        if (s.position.x > 340) s.position.x = -340;
-      }
-    },
-  };
-}
-
-function cloudTexture(rng: Rng): THREE.Texture {
+export function cloudTexture(rng: Rng): THREE.Texture {
   const c = document.createElement('canvas');
   c.width = 256;
   c.height = 112;
@@ -325,23 +148,11 @@ export interface Street {
 export function buildStreet(seed = 3): Street {
   const rng = makeRng(seed);
   const group = new THREE.Group();
-  const asphalt = toon({ color: 0x2a2734 });
-  const walk = toon({ color: 0x6a6478 });
   const curb = toon({ color: 0x8a8498 });
-  const road = new THREE.Mesh(new THREE.BoxGeometry(400, 0.2, 40), asphalt);
-  road.position.set(0, -0.35, 22);
-  const side = new THREE.Mesh(new THREE.BoxGeometry(400, 0.3, 7), walk);
-  side.position.set(0, -0.15, -0.5);
-  const lip = new THREE.Mesh(new THREE.BoxGeometry(400, 0.34, 0.4), curb);
-  lip.position.set(0, -0.12, 3);
-  //the dashes down the middle of the road
-  const dashes: THREE.BufferGeometry[] = [];
-  for (let x = -200; x < 200; x += 6) dashes.push(new THREE.PlaneGeometry(3, 0.25).rotateX(-Math.PI / 2).translate(x, -0.24, 12));
-  const lines = new THREE.Mesh(mergeGeometries(dashes)!, new THREE.MeshBasicMaterial({ color: 0xd8b84a }));
-  //the far sidewalk, across the road, with the people on it
-  const far = new THREE.Mesh(new THREE.BoxGeometry(400, 0.3, 6), walk);
-  far.position.set(0, -0.15, 30);
-  group.add(road, side, lip, lines);
+  //the road, sidewalks and dashes are the city grid's (grid.ts); the street keeps its curb
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(46, 0.34, 0.4), curb);
+  lip.position.set(0, -0.12, 3.05);
+  group.add(lip);
 
   //the corner store: brick, four storeys, a shop window and door at the bottom, an awning
   const brick = brickTexture(rng);
@@ -383,7 +194,7 @@ export function buildStreet(seed = 3): Street {
   const pole = toon({ color: 0x2a2836 });
   const lamps: { head: THREE.Mesh; pool: THREE.Mesh; glow: THREE.Sprite; broken: boolean; k: number }[] = [];
   const glowTex = glowTexture();
-  for (const [x, broken] of [[-9.5, false], [5.5, true], [24, false], [-28, false]] as const) {
+  for (const [x, broken] of [[-14, false], [5.5, true], [24, false], [-28, false]] as const) {
     const p = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 7.5, 6), pole);
     p.position.set(x, 3.6, 2.5);
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 1.6), pole);
@@ -401,7 +212,7 @@ export function buildStreet(seed = 3): Street {
   }
 
   //street furniture from the game's props
-  for (const [name, x, z, ry] of [['Hydrant', -3.4, 2, 0.4], ['TrashCan', 3.6, -2.4, 0], ['NewsBoxRed', 10.5, -2.4, 0], ['NewsBoxBlue', 11.6, -2.4, 0], ['Meter', -11, 2.2, 0]] as const) {
+  for (const [name, x, z, ry] of [['Hydrant', -16.5, 2, 0.4], ['TrashCan', 3.6, -2.4, 0], ['NewsBoxRed', 10.5, -2.4, 0], ['NewsBoxBlue', 11.6, -2.4, 0], ['Meter', -19, 2.2, 0]] as const) {
     const m = model(name);
     if (!m) continue;
     m.position.set(x, 0, z);
@@ -410,7 +221,6 @@ export function buildStreet(seed = 3): Street {
     inkify(m);
     group.add(m);
   }
-  group.add(far);
 
   let buzz = 0;
   return {

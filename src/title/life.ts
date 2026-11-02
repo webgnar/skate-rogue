@@ -326,14 +326,14 @@ function people(rng: Rng): Life {
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), toon({ map: signTexture(['ANYTHING', 'HELPS']) }));
   if (sit) {
     sit.mesh.scale.setScalar(PED);
-    sit.mesh.position.set(-6.5, 0, -3.3);
+    sit.mesh.position.set(-10.5, 0, -3.3);
     group.add(sit.mesh);
-    sign.position.set(-6.1, 0.6, -2.1);
+    sign.position.set(-10.1, 0.6, -2.1);
     sign.rotation.x = -0.25;
     group.add(sign);
     const box = model('CardboardBox');
     if (box) {
-      box.position.set(-8.4, 0, -3);
+      box.position.set(-12.4, 0, -3);
       box.scale.setScalar(1.3);
       inkify(box);
       group.add(box);
@@ -341,8 +341,8 @@ function people(rng: Rng): Life {
   }
   if (hitch) {
     hitch.mesh.scale.setScalar(PED);
-    hitch.mesh.position.set(7, 0, 2.4);
-    hitch.mesh.rotation.y = -0.3; // on the curb up the street, turned to the camera
+    hitch.mesh.position.set(-3.6, 0, 2.5);
+    hitch.mesh.rotation.y = 0.3; // on the curb down the street, turned to the camera
     group.add(hitch.mesh);
   }
   return {
