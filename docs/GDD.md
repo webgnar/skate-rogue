@@ -1058,7 +1058,11 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
   and the camera comes down through the clouds past pigeons, trash riding the wind, down an avenue's canyon where
   the AI's drones scan the glass, the police chopper's spotlight and a cop cruiser hanging on its jump jets, to the street: a brick corner
   store with buzzing neon, a lamp on the blink, a stray dog, a homeless man with a sign, a hitchhiker waving you
-  down, and Webster on the sidewalk twirling his board stood on its tail at his side. A tap on the way skips to him; SKATE starts
+  down, and Webster on the sidewalk twirling his board stood on its tail at his side. While SKATE waits it all keeps
+  moving (zack: "more animations"): Webster dances to the title music's beat (knee bounce, sway, head nod, step-touch),
+  the hitchhiker grooves between waves, the homeless man nods along, a twitchy guy dances on the sidewalk, a cat walks
+  the awning, pigeons peck at the curb and take off over the roofs, a can and pages roll down the street in the gusts,
+  a flag and a street tree blow in the wind, an upstairs TV flickers and a tube light stutters. A tap on the way skips to him; SKATE starts
   the run. Test links skip it. Still open: the hitchhiker as a real NPC moment in a run (zack's idea, not built).
 - **HUD:** decided Oct 24, 2026 from zack's comic ink mockup (openspec change ui1-hud): the SKATE ESCAPE logo with act
   and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the

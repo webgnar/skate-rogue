@@ -14,7 +14,7 @@ import { SKATER_HALO, SKATER_INK, PAPER } from '../game/game';
 import { glowMaterial, INK, inkify, outlineMaterial, setInkLens, setInkResolution, silhouetteInk } from '../render/toon';
 import { buildStreet, DUSK, skyDome } from './city';
 import { buildCity } from './grid';
-import { buildLife } from './life';
+import { BEAT, buildLife, GROOVE } from './life';
 
 // the camera's way down: where it is and what it looks at, at each stop (tiles; Webster stands at the origin)
 export const PATH: { at: [number, number, number]; look: [number, number, number] }[] = [
@@ -24,11 +24,12 @@ export const PATH: { at: [number, number, number]; look: [number, number, number
   { at: [22, 78, 48], look: [26, 6, -150] }, // over an avenue, looking down the canyon: the traffic, the crossings, the drones
   { at: [10, 28, 34], look: [0, 6, -20] }, // swinging round onto Webster's street, the cruiser on its jets over it
   { at: [3, 7, 24], look: [0, 6, -6] }, // dropping to the street
-  { at: [3.6, 1.5, 14], look: [3.2, 4.2, 0] }, // down at Webster, looking up at him and the towers over him; he's left of
-  // the middle so SKATE can sit off to his right (zack: not on top of him)
+  { at: [3.6, 1.5, 17], look: [3.2, 5.5, 0] }, // down at Webster from across the street, looking up at him, the store and
+  // the sky over the roofs; he's left of the middle so SKATE can sit off to his right (zack: not on top of him)
 ];
-// the last stop on an upright phone: in closer, so Webster's big in the narrow frame
-const TALL_END = { at: [1.0, 1.7, 9.5] as [number, number, number], look: [0, 2.5, 0] as [number, number, number] };
+// the last stop on an upright phone: in closer, so Webster's big in the narrow frame, looking up past the cat on the
+// awning and the flag to the sky over the roofs
+const TALL_END = { at: [1.4, 1.2, 12] as [number, number, number], look: [0.5, 5.2, 0] as [number, number, number] };
 export const DESCENT = 11; // seconds from the sky to Webster
 
 // a smooth step that eases in and out but doesn't stall in the middle
@@ -37,6 +38,7 @@ const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 
 const HAND_ARM = 0; // the lead (left, +x) arm twirls the board
 const SPIN = 8; // the board's twirl, radians a second (zack's sprite: a turn in 0.75 s)
 const BOARD_AT = { x: 0.5, z: 0.08 }; // where the board stands, rig space: at his lead side
+const DANCE_KEYS = 16; // poses in his bar of dancing, a quarter beat apart
 
 export class TitleScene {
   readonly scene = new THREE.Scene();
@@ -53,6 +55,7 @@ export class TitleScene {
   private going = false;
   private keys: Pose[] = []; // Webster's standing poses, his arm solved to hold the board up
   private spin = 0;
+  private musicAt = 0;
   onArrive: (() => void) | null = null;
   //his ink as in the game (game.ts): black round the outside of him and of his board, a paper-white halo outside it
   private readonly ink = [glowMaterial(SKATER_INK, INK.color, 0), glowMaterial(SKATER_INK, INK.color, 0)];
@@ -78,7 +81,9 @@ export class TitleScene {
 
   // Webster stood on the sidewalk off his board, from zack's boardspin sprite (2026-11-02): the board stood on its
   // tail at his side, his lead hand resting on the nose, twirling it about its long axis (bottom, edge, grip, edge).
-  // A few poses breathing, each with the arm solved (SkaterRig.reach) to the top of the nose
+  // And dancing to the title music while he waits (zack: "the skater doing a dance motion before you start"): a knee
+  // bounce on every beat, hips and shoulders swaying over two, head nodding, a step-touch, the free arm pumping. A
+  // bar of poses at quarter beats, each with the hand solved (SkaterRig.reach) to the top of the nose
   private standPoses(rig: SkaterRig): Pose[] {
     const stand: Pose = {
       ...BASE,
@@ -104,16 +109,33 @@ export class TitleScene {
       armRFwd: 0.05,
       armRElbow: 0.3,
     };
-    return [0, 1, 2, 3].map((i) => {
-      const bob = Math.sin((i / 4) * Math.PI * 2);
-      const p: Pose = { ...stand, hipY: stand.hipY + bob * 0.006, armRRaise: stand.armRRaise + bob * 0.03 };
+    return Array.from({ length: DANCE_KEYS }, (_, i) => {
+      const b = (i / DANCE_KEYS) * 4; // beats into the bar
+      const hit = (1 + Math.cos(b * Math.PI * 2)) / 2; // 1 on the beat, 0 between
+      const sway = Math.sin(b * Math.PI); // side to side over two beats
+      const p: Pose = {
+        ...stand,
+        hipY: stand.hipY - hit * 0.05,
+        hipX: sway * 0.035,
+        yaw: stand.yaw + sway * 0.12,
+        lean: stand.lean + hit * 0.03,
+        bend: stand.bend + hit * 0.07,
+        nod: stand.nod + hit * 0.2,
+        headTilt: stand.headTilt + sway * 0.12,
+        head: stand.head + Math.sin((b * Math.PI) / 2) * 0.12,
+        footFY: Math.pow(Math.max(0, sway), 2) * 0.07,
+        footBY: Math.pow(Math.max(0, -sway), 2) * 0.07,
+        armRRaise: stand.armRRaise + hit * 0.25,
+        armRFwd: 0.2 + sway * 0.35,
+        armRElbow: 0.6 + hit * 0.6,
+      };
       //the board on its tail beside him, nose up: it pitches a quarter turn up about the tail, the tail on the ground
       p.boardPivot = -BOARD.tail;
       p.boardPitch = Math.PI / 2;
       p.boardX = BOARD_AT.x + BOARD.tail;
       p.boardY = -BOARD.deckTop + 0.02;
       p.boardZ = BOARD_AT.z;
-      const hand = new THREE.Vector3(BOARD_AT.x - 0.02, BOARD.length + 0.05 + bob * 0.004, BOARD_AT.z);
+      const hand = new THREE.Vector3(BOARD_AT.x - 0.02, BOARD.length + 0.05, BOARD_AT.z);
       Object.assign(p, rig.reach(p, HAND_ARM, hand));
       return p;
     });
@@ -121,7 +143,10 @@ export class TitleScene {
 
   // tap: start down (or, on the way, skip to the bottom)
   go(): void {
-    if (!this.going) this.going = true;
+    if (!this.going) {
+      this.going = true;
+      this.musicAt = this.t; // the title music starts on this tap: the dancers count their beats from here
+    }
     else if (this.k < 1) this.k = 1;
   }
 
@@ -159,12 +184,13 @@ export class TitleScene {
       this.onArrive = null;
       arrive();
     }
+    GROOVE.t = this.t - this.musicAt;
     this.city.update(this.t, dt);
     this.street.update(this.t, dt);
     this.life.update(this.t, dt);
     if (this.rig && this.keys.length) {
       const n = this.keys.length;
-      const u = (this.t / 0.6) % n;
+      const u = ((GROOVE.t / BEAT) * (n / 4)) % n;
       const i = Math.floor(u);
       const f = u - i;
       const a = this.keys[i];
