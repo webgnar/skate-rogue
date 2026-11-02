@@ -54,6 +54,7 @@ describe('no falling through things', () => {
             const at = `seed ${seed * 7919} floor ${floor} build ${bi} frame ${f}`;
             for (const s of level.surfaces) {
               if (sk.gone.has(s)) continue; // Greece's ruins fall away
+              if (sk.looseStep && s.kind === 'rail') continue; // mid-flip you fall past bars and ledges (zack, 2026-11-02)
               const cx = crossAt(px, py, sk.x, sk.boardY, s.x0, s.y, surfaceSlope(s));
               if (cx !== null && cx >= s.x0 && cx <= s.x1) holes.push(`${at}: through a ${s.kind} at ${Math.round(cx)}`);
             }
@@ -62,7 +63,7 @@ describe('no falling through things', () => {
               if (cx !== null && cx + PHYS.width / 2 >= c.x0 && cx - PHYS.width / 2 <= c.x1) holes.push(`${at}: through a car roof`);
             }
             for (const rail of level.rails) {
-              if (rail === ignore || rail === sk.railIgnore) continue;
+              if (rail === ignore || rail === sk.railIgnore || sk.looseStep) continue;
               const a = rail.yAt(px);
               const b = rail.yAt(sk.x);
               if (a !== undefined && b !== undefined && py <= a + 0.01 && sk.boardY > b + 0.5) holes.push(`${at}: through a curved rail`);
