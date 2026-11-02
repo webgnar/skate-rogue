@@ -422,62 +422,149 @@ function people(rng: Rng): Life {
   };
 }
 
-// a cat walking along the tops of the shop signs, stopping to sit and look round, tail up
+// a cat walking along the tops of the shop signs, stopping to sit and look round: a tuxedo cat (zack: "detail to the
+// cat"), black with a white bib, muzzle and socks, green eyes that catch the light and blink, ears that flick,
+// whiskers, and a tail of jointed pieces that sways as it walks and curls round its feet when it sits
 function cat(): Life {
   const group = new THREE.Group();
-  const fur = toon({ color: 0x2a2630 });
-  const pale = toon({ color: 0xd8c8b0 });
-  const c = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.3, 0.26), fur);
-  body.position.y = 0.42;
+  const fur = toon({ color: 0x23202a });
+  const white = toon({ color: 0xf2f0f6 });
+  const pink = toon({ color: 0xe89aa8 });
+  const blob = (r: number, sx: number, sy: number, sz: number, m: THREE.Material) => new THREE.Mesh(new THREE.SphereGeometry(r, 12, 9).scale(sx, sy, sz), m);
+  const c = new THREE.Group(); // stands on the band, faces +x
+  const body = new THREE.Group(); // pivots at the hips, so sitting tips it up
+  body.position.set(-0.24, 0.36, 0);
+  c.add(body);
+  const torso = blob(0.2, 1.75, 0.82, 0.72, fur);
+  torso.position.set(0.24, 0.02, 0);
+  const haunch = blob(0.16, 1.2, 1.05, 1.0, fur);
+  haunch.position.set(0.02, 0, 0);
+  const bib = blob(0.12, 1.0, 1.2, 0.8, white);
+  bib.position.set(0.5, -0.04, 0);
+  const belly = blob(0.12, 2.0, 0.5, 0.7, white);
+  belly.position.set(0.28, -0.1, 0);
+  body.add(torso, haunch, bib, belly);
+  //the head, on the front of the body
   const head = new THREE.Group();
-  head.position.set(0.45, 0.62, 0);
-  const skull = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.24, 0.26), fur);
-  const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.14), pale);
-  muzzle.position.set(0.15, -0.05, 0);
-  const earGeo = new THREE.ConeGeometry(0.06, 0.14, 4);
-  const earL = new THREE.Mesh(earGeo, fur);
-  earL.position.set(0.02, 0.17, 0.08);
-  const earR = earL.clone();
-  earR.position.z = -0.08;
-  head.add(skull, muzzle, earL, earR);
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.6, 0.07).translate(0, 0.3, 0), fur);
-  tail.position.set(-0.36, 0.5, 0);
-  const legs: THREE.Mesh[] = [];
-  for (const [x, z] of [[0.28, 0.08], [0.28, -0.08], [-0.28, 0.08], [-0.28, -0.08]]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.3, 0.07).translate(0, -0.15, 0), fur);
-    leg.position.set(x, 0.3, z);
-    legs.push(leg);
-    c.add(leg);
+  head.position.set(0.6, 0.14, 0);
+  body.add(head);
+  const skull = blob(0.14, 1.0, 0.9, 1.1, fur);
+  const cheeks = blob(0.1, 0.9, 0.7, 1.55, fur);
+  cheeks.position.set(0.03, -0.04, 0);
+  const muzzle = blob(0.07, 0.9, 0.7, 1.2, white);
+  muzzle.position.set(0.11, -0.05, 0);
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.025, 0.04), pink);
+  nose.position.set(0.165, -0.015, 0);
+  head.add(skull, cheeks, muzzle, nose);
+  const ears: THREE.Group[] = [];
+  for (const side of [1, -1]) {
+    const ear = new THREE.Group();
+    ear.position.set(-0.01, 0.1, side * 0.075);
+    ear.rotation.set(side * -0.3, 0, -0.15);
+    const outer = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.13, 4).translate(0, 0.065, 0), fur);
+    const inner = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 4).translate(0.012, 0.045, 0), pink);
+    ear.add(outer, inner);
+    head.add(ear);
+    ears.push(ear);
   }
-  c.add(body, head, tail);
+  //green eyes that glow in the dusk, slit pupils; they blink now and then
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xb8ff6a });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
+  const eyes: THREE.Group[] = [];
+  for (const side of [1, -1]) {
+    const eye = new THREE.Group();
+    eye.position.set(0.115, 0.035, side * 0.06);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6).scale(0.6, 1, 1), eyeMat);
+    const slit = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.045, 0.01), pupilMat);
+    slit.position.x = 0.016;
+    eye.add(ball, slit);
+    head.add(eye);
+    eyes.push(eye);
+  }
+  //whiskers: fine pale lines fanning out of the muzzle
+  const wpts: number[] = [];
+  for (const side of [1, -1]) for (let k = 0; k < 3; k++) wpts.push(0.13, -0.05, side * 0.05, 0.16, -0.03 + (k - 1) * 0.035, side * 0.2);
+  const whisk = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(wpts, 3)), new THREE.LineBasicMaterial({ color: 0xf4f0e8 }));
+  whisk.userData.inked = true;
+  head.add(whisk);
+  //legs: the front ones thin with white socks, the back ones a thigh and a shin
+  const legs: THREE.Group[] = [];
+  for (const [x, zz, front] of [[0.48, 0.07, true], [0.48, -0.07, true], [0.0, 0.08, false], [0.0, -0.08, false]] as const) {
+    const leg = new THREE.Group();
+    leg.position.set(x, -0.02, zz);
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(front ? 0.035 : 0.06, 0.03, 0.26, 7).translate(0, -0.13, 0), fur);
+    const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.034, 0.1, 7).translate(0, -0.29, 0), white);
+    const paw = blob(0.04, 1.4, 0.6, 1.0, white);
+    paw.position.set(0.02, -0.34, 0);
+    leg.add(upper, sock, paw);
+    body.add(leg);
+    legs.push(leg);
+  }
+  //the tail: jointed pieces off the haunch, each turned a little on its parent's turn, so the tail bends in a curve
+  const tail: THREE.Group[] = [];
+  let parent: THREE.Object3D = body;
+  for (let k = 0; k < 7; k++) {
+    const seg = new THREE.Group();
+    if (k === 0) seg.position.set(-0.16, 0.06, 0);
+    else seg.position.set(0, 0.11, 0);
+    seg.add(new THREE.Mesh(new THREE.CylinderGeometry(0.03 - k * 0.002, 0.034 - k * 0.002, 0.12, 6).translate(0, 0.055, 0), k === 6 ? white : fur));
+    parent.add(seg);
+    parent = seg;
+    tail.push(seg);
+  }
   inkify(c);
-  c.scale.setScalar(1.3);
+  c.scale.setScalar(1.35);
   group.add(c);
   //along the tops of the shops' sign bands (city.ts STORE): the pizza place's, then the tattoo shop's a step higher
   const Y = (x: number) => (x < STORE.rowX + STOREFRONTS.pizza.w * STORE.scale ? STORE.bandTop[0] : STORE.bandTop[1]);
   const Z = STORE.face - 0.05;
+  //where it sits: near the end of the tattoo shop's band, short of the liquor store's taller sign
+  const SIT = STORE.rowX + (STOREFRONTS.pizza.w + STOREFRONTS.tattoo.w) * STORE.scale - 1.1;
+  let sit = 0; // eases 0 (walking) to 1 (sat)
   return {
     group,
-    update(t: number): void {
+    update(t: number, dt: number): void {
       //walk one way, sit a while, walk back: a 26 s loop
       const p = t % 26;
       let x: number;
       let dir: number;
       let walking = true;
-      if (p < 8) [x, dir] = [-9 + p * 1.6, 1];
-      else if (p < 13) [x, dir, walking] = [3.8, 1, false];
-      else if (p < 21) [x, dir] = [3.8 - (p - 13) * 1.6, -1];
+      if (p < 8) [x, dir] = [-9 + (p / 8) * (SIT - -9), 1];
+      else if (p < 13) [x, dir, walking] = [SIT, 1, false];
+      else if (p < 21) [x, dir] = [SIT - ((p - 13) / 8) * (SIT - -9), -1];
       else [x, dir, walking] = [-9, -1, false];
-      c.position.set(x, Y(x), Z);
+      sit += ((walking ? 0 : 1) - sit) * Math.min(1, dt * 5);
+      const step = t * 10;
+      c.position.set(x, Y(x) + (walking ? Math.abs(Math.sin(step)) * 0.015 : 0), Z);
       c.rotation.y = dir > 0 ? 0 : Math.PI;
-      legs.forEach((l, i) => (l.rotation.z = walking ? Math.sin(t * 10 + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.45 : 0));
-      //sat: the back end down, looking out at the street, the tail curling
-      body.rotation.z = walking ? 0 : 0.45;
-      body.position.y = walking ? 0.42 : 0.36;
-      legs[2].visible = legs[3].visible = walking;
-      head.rotation.y = walking ? 0 : (dir > 0 ? -1 : 1) * (1.2 + Math.sin(t * 0.8) * 0.4);
-      tail.rotation.z = walking ? -0.3 + Math.sin(t * 3) * 0.15 : 1.2 + Math.sin(t * 1.5) * 0.3;
+      //the walk: diagonal pairs together; sat: the body tipped up on its haunches, front legs straight
+      legs.forEach((l, i) => {
+        const swing = Math.sin(step + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.5 * (1 - sit);
+        //sat: the front legs straight down to the band, the back ones tucked forward under the haunch
+        l.rotation.z = swing + (i < 2 ? -0.75 : -0.25) * sit;
+        l.scale.y = 1 + (i < 2 ? 0.45 : -0.3) * sit;
+      });
+      body.rotation.z = sit * 0.75;
+      body.position.y = 0.36 - sit * 0.14;
+      //the head: level while walking, bobbing with the steps; sat, it turns to the street and looks about
+      const look = (dir > 0 ? -1 : 1) * sit * (1.1 + Math.sin(t * 0.7) * 0.5);
+      head.rotation.set(0, look, -sit * 0.7 + (1 - sit) * Math.sin(step * 2) * 0.04);
+      //an ear flick every few seconds, and a blink
+      const flick = (t * 0.37) % 1 < 0.04 ? 0.5 : 0;
+      ears[0].rotation.x = -0.3 - flick;
+      ears[1].rotation.x = 0.3;
+      const blink = (t * 0.29 + 0.4) % 1 < 0.03 ? 0.1 : 1;
+      for (const e of eyes) e.scale.y = blink;
+      //the tail: up and swaying in a slow S as it walks; sat, wrapped forward round its feet with the tip twitching
+      tail.forEach((seg, k) => {
+        const wave = Math.sin(t * 2.4 - k * 0.7);
+        const walkZ = k === 0 ? 0.5 : -0.18 + wave * 0.15;
+        const walkX = wave * 0.2;
+        const sitZ = k === 0 ? 1.0 : 0.08;
+        const sitX = k === 0 ? 0 : 0.45 + (k === 6 ? Math.sin(t * 9) * 0.4 : 0);
+        seg.rotation.z = walkZ + (sitZ - walkZ) * sit;
+        seg.rotation.x = walkX + (sitX - walkX) * sit;
+      });
     },
   };
 }

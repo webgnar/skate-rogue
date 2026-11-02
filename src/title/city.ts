@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { makeRng, type Rng } from '../gen/rng';
 import { inkify, toon } from '../render/toon';
 import { model } from '../render/models';
+import { buildFacade, FACADE } from './facade';
 import { makeStorefront, storefrontMats, STOREFRONTS, type StorefrontKind } from '../render/storefronts';
 
 export const DUSK = {
@@ -131,8 +132,7 @@ export const STORE = {
   rowX: -12.075, // the row's left end: the tattoo shop's door just behind Webster
   face: -4 + 0.95 * 1.15 + 0.02, // the shops' faces (the model's depth, scaled, in front of the wall)
   returnH: 7.3, // the brick returns at the ends of the row, up to the top of the liquor store's sign
-  wallH: 12.4,
-  windowY: 8.3, // the first row of upstairs windows' middle, over the shops' signs
+  wallH: FACADE.top, // the brick's top; the cornice and parapet stand on it (facade.ts)
   bandTop: [6.21, 6.33], // the tops of the pizza place's and the tattoo shop's sign bands, where the cat walks
 };
 
@@ -154,17 +154,11 @@ export function buildStreet(seed = 3): Street {
   const store = new THREE.Group();
   const wall = new THREE.Mesh(new THREE.BoxGeometry(40, STORE.wallH, 10), toon({ color: 0xffffff, map: brick }));
   wall.position.set(0, STORE.wallH / 2, -9);
-  //upstairs windows: dark, a couple lit, one with a TV flickering blue and one with a tube light on the blink
-  const tv: THREE.MeshBasicMaterial[] = [];
-  for (let f = 0; f < 2; f++) {
-    for (let i = 0; i < 6; i++) {
-      const lit = rng() < 0.3;
-      const w = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2), new THREE.MeshBasicMaterial({ color: lit ? 0xffc878 : 0x24203a }));
-      w.position.set(-15 + i * 6, STORE.windowY + f * 2.6, -3.97);
-      if ((f === 0 && i === 2) || (f === 1 && i === 3)) tv.push(w.material);
-      store.add(w);
-    }
-  }
+  //the storeys over the shops: piers, stone trim, teal-framed windows (one with a TV flickering blue, one with a tube
+  //light on the blink), deco tile, a fire escape and the cornice (facade.ts)
+  const facade = buildFacade(rng, brick);
+  store.add(facade.group);
+  const tv = [facade.tv, facade.tube];
   store.add(wall);
   inkify(wall);
   //the shops along the ground floor (render/storefronts.ts, the street's own): their shop floors only, standing out
