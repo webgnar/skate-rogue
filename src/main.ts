@@ -1,6 +1,7 @@
 import { applyWeatherParams } from './render/atmosphere';
 import { MOMENTUM, MOMENTUM_MODES, type MomentumMode } from './physics/feel';
 import '@fontsource/bangers/latin-400.css';
+import '@fontsource/pacifico/latin-400.css'; // the storefronts' script signs (render/storefronts.ts)
 import './style.css';
 import { boonById, boonColor, CURSE_COLOR, stacksOf, type Boon, type BoonId, type Held } from './boons/defs';
 import { Game, type Hud, type ShopView } from './game/game';

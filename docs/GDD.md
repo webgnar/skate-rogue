@@ -952,6 +952,12 @@ x and y and the z axis is only for looks.
   three-quarter view for drama, then swings back.
 - **World:** each ASCII piece becomes a strip of 3D kit pieces: street, curb, kiosk, rooftop, ledge, rail, stairs,
   kicker. Depth comes from real background buildings, props and skyline instead of parallax layers.
+- **Storefronts (zack, Nov 2, 2026, from his photos of New York fronts):** a pizza place (Mama Lou's), a tattoo
+  shop (Iron Halo) and a liquor store (Night Owl Liquors) stand in for the wall at the back of the sidewalk, 1-4 a
+  floor on plain stretches of street (never at a cross street, a landmark, a building or ledge out on the street, a canal,
+  the hill or near the gate), the same kind of prop as the skate shop's GNAR SUPPLY. Our own names; the signs are
+  painted in the game, so a name is one line to change (src/render/storefronts.ts). The title's corner building has
+  the three along its ground floor.
 - **Art style:** low-poly geometry wearing Quest For Stoken's own pixel textures (see Art pipeline below), so the
   3D world looks like the Stoken world. Decided Oct 24, 2026: a **comic ink** look, toon shading in flat bands
   plus thick black outlines drawn per mesh (no full-screen pass), matching the comic slam burst and cheap on phones.

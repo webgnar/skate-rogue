@@ -532,6 +532,7 @@ Test on the iPhone in landscape, both ways round (notch on the left, then on the
 Quickest way in for most of these: `?debug&seed=7` and play floor 1 (it starts up on the roofs, so stairs, rails,
 banks and drops come fast). Add `?skater=roxy` to see any item on another skater.
 
+- [ ] Storefronts (2026-11-02): skate a city floor (`?debug&seed=1201&floor=2`): a pizza place, a tattoo shop and a liquor store stand at the back of the sidewalk now and then, their signs lettered (green script MAMA LOU'S, gold TATTOO, neon NIGHT OWL LIQUORS), never cut by a cross street or sitting behind a landmark, a building or a ledge out on the street. On the title, the three line the ground floor of Webster's building, the cat walks along their signs and the liquor store's neon buzzes.
 - [ ] Play as Roxy, Webster or Goldie (`?skater=roxy`): the hair streams back while you roll, flicks up as you fall and settles down your back when you stop. Keanu's hoodie strings swing.
 - [ ] Pop out of a crooked grind or a nosegrind: Lou does a nollie (riding switch, a fakie ollie). Manual pads alternate MANUAL and NOSE MANUAL; pop out of the nose manual with a nollie.
 - [ ] Roll onto a cable car climb: Lou crouches and holds the pole at the back of the car all the way up. Same riding switch (he reaches forward with the other hand).
