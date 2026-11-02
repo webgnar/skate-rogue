@@ -728,15 +728,16 @@ function* houseRowSteps(...[m, rng, x0, x1, z0, z1, street, foot, cut, extras]: 
 // whether x (tiles) is on a stretch of hill
 const onHill = (level: Level) => (x: number) => inHill(level, x * TILE);
 
-// each stretch of hill, tiles: the opening descent (from off the left of the screen) and the later ones
-function hillStretches(level: Level): [number, number][] {
-  return [[-8, tx(level.finaleX)], ...(level.hillSpans ?? []).slice(1).map(([a, b]): [number, number] => [tx(a), tx(b)])];
+// each stretch of hill, tiles: the opening descent (from off the left of the screen, or from `lead` tiles back on a
+// run's first floor: see LEAD in kit.ts) and the later ones
+function hillStretches(level: Level, lead = 0): [number, number][] {
+  return [[-Math.max(8, lead), tx(level.finaleX)], ...(level.hillSpans ?? []).slice(1).map(([a, b]): [number, number] => [tx(a), tx(b)])];
 }
 
 // the descent as solid hill: road, sidewalks and stairways on ground that goes all the way down, row houses behind,
 // cross streets back into the city at the crests and under the crest jumps, power lines and trees along the back
-export function buildHill(level: Level, group: THREE.Group): void {
-  run(buildHillSteps(level, group));
+export function buildHill(level: Level, group: THREE.Group, lead = 0): void {
+  run(buildHillSteps(level, group, lead));
 }
 
 // the deep (src/gen/sewer.ts) in cutaway under the hill: the hill's ground that goes all the way down (to
@@ -767,7 +768,8 @@ function deepCutaway(level: Level, m: Mesher): void {
 }
 
 // buildHill a piece at a time, yielding when the frame's slice is spent (slice.ts)
-export function* buildHillSteps(level: Level, group: THREE.Group): Generator<void, void> {
+// (`lead`: tiles of street to build back past the start, on the floor a run begins on: kit.ts LEAD)
+export function* buildHillSteps(level: Level, group: THREE.Group, lead = 0): Generator<void, void> {
   const m = new Mesher();
   const ground = descentGround(level);
   const hill = onHill(level);
@@ -800,6 +802,8 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
     } else m.box(x0, x1, B, t0 + c, t1 + c, back, rz0, walkFaces);
     m.box(x0, x1, B, t0 + c, t1 + c, rz1, near, walkFaces);
   };
+  //the street the run starts on runs on back past the left of the screen, level with the start
+  if (lead && ground.length && ground[0].x0 > -lead) section(-lead, ground[0].x0, ground[0].t0, ground[0].t0);
   const crossings: [number, number, number][] = []; // x0, x1, height: cross streets at the crests
   ground.forEach((g, i) => {
     if (g.kind === 'stairs') {
@@ -911,7 +915,7 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   group.add(treeWarm());
   const lane = (x: number) => laneHeight(ground, hill, x);
   //each stretch of hill, tiles: the opening descent from off the left of the screen
-  const stretches = hillStretches(level);
+  const stretches = hillStretches(level, lead);
   const [bz0, bz1] = HILLSIDE.backRow;
   const [uz1, uz0, up] = HILLSIDE.upRow;
   const china = chinatownSpans(level);
@@ -948,9 +952,9 @@ export function* buildHillSteps(level: Level, group: THREE.Group): Generator<voi
   //power poles along the back sidewalk with their wires sagging between them (photo 3), street trees between poles
   const P = HILLSIDE.pole;
   const poles: [number, number][] = [];
-  const along = stretches.flatMap(([s0, s1]) => {
+  const along = stretches.flatMap(([s0, s1], i) => {
     const xs: number[] = [];
-    for (let x = Math.max(s0, ground.length ? ground[0].x0 : 0) + 2; x < s1 - 2; x += P.every[0] + rng() * (P.every[1] - P.every[0])) xs.push(x);
+    for (let x = (i === 0 && lead ? s0 : Math.max(s0, ground.length ? ground[0].x0 : 0)) + 2; x < s1 - 2; x += P.every[0] + rng() * (P.every[1] - P.every[0])) xs.push(x);
     return xs;
   });
   const topLine = level.rails.filter((r) => r.top).map((r) => [tx(r.x0), tx(r.x1)]);
@@ -1061,12 +1065,13 @@ function portal(m: Mesher, x0: number, x1: number, base: number): void {
 
 // the near side for a whole floor (descent and street): the near sidewalk and its low wall, then two rows of houses
 // below the lane stepping down toward the camera
-export function buildForeground(level: Level, group: THREE.Group): void {
-  run(buildForegroundSteps(level, group));
+export function buildForeground(level: Level, group: THREE.Group, lead = 0): void {
+  run(buildForegroundSteps(level, group, lead));
 }
 
 // buildForeground a piece at a time, yielding when the frame's slice is spent (slice.ts)
-export function* buildForegroundSteps(level: Level, group: THREE.Group): Generator<void, void> {
+// (`lead`: tiles of street to build back past the start, on the floor a run begins on: kit.ts LEAD)
+export function* buildForegroundSteps(level: Level, group: THREE.Group, lead = 0): Generator<void, void> {
   const m = new Mesher();
   const ground = level.hills ? descentGround(level) : [];
   const finale = tx(level.finaleX);
@@ -1101,7 +1106,8 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
     let e = x;
     while (e + 1 < cols && level.street[e + 1]) e++;
     //(split round the sewers, where it's only as thick as the street over the tunnel)
-    let a = x;
+    //(a street floor's first stretch runs on back past the start on a run's first floor: kit.ts LEAD)
+    let a = lead && !level.hills && x === Math.max(0, Math.floor(finale)) ? x - lead : x;
     for (const [w0, w1] of sewers.filter(([w0, w1]) => w1 > x && w0 < e + 1)) {
       if (w0 > a) m.box(a, w0, B, c, c, HILLSIDE.road[1], near, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
       const [b0, b1] = [Math.max(a, w0), Math.min(e + 1, w1)];
@@ -1132,6 +1138,9 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
       if (a < g.x1) wall(a, g.x1, g.t0 + ((g.t1 - g.t0) * (a - g.x0)) / (g.x1 - g.x0), g.t1);
     }
   }
+  //back past the start on a run's first floor: the hill's wall (its sidewalk is buildHill's; a street floor's first
+  //stretch of sidewalk and wall just start further back)
+  if (lead && ground.length) wall(-lead, ground[0].x0, ground[0].t0, ground[0].t0);
   for (let s = Math.max(0, Math.floor(finale)); s < cols; ) {
     if (!level.street[s]) {
       s++;
@@ -1139,7 +1148,7 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
     }
     let e = s;
     while (e + 1 < cols && level.street[e + 1]) e++;
-    wall(s, e + 1, 0, 0);
+    wall(lead && !level.hills && s === Math.max(0, Math.floor(finale)) ? s - lead : s, e + 1, 0, 0);
     s = e + 1;
   }
   //two rows of houses below the lane, each roofline stepping down with the lowest lane over it
@@ -1151,8 +1160,9 @@ export function* buildForegroundSteps(level: Level, group: THREE.Group): Generat
   const storeys = 3 * HILLSIDE.storey;
   const china = chinatownSpans(level);
   const notChina = (a: number, b: number) => open(a, b) || overlaps(china, a, b);
-  yield* houseRowSteps(m, rng, -10, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, notChina, { bay: 0.7, chimney: 0.35, hip: false, shrub: 0.25 });
-  yield* houseRowSteps(m, rng, -10, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, notChina, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
+  const from = -10 - lead;
+  yield* houseRowSteps(m, rng, from, cols + 24, az0, az1, (a, b) => low(a, b) - adrop - storeys, () => B, notChina, { bay: 0.7, chimney: 0.35, hip: false, shrub: 0.25 });
+  yield* houseRowSteps(m, rng, from, cols + 24, bz0, bz1, (a, b) => low(a, b) - bdrop - storeys, () => B, notChina, { bay: 0.6, chimney: 0.3, hip: false, shrub: 0.2 });
   //Chinatown's rooftops below the lane, their water tanks and shacks
   const crng = chinatownRng(level.layout.seed + 1, level.layout.floor);
   for (const [a, b] of china) {

@@ -6,7 +6,7 @@ import { SETTINGS } from '../ui/settings';
 import { LENS, Lens, lensSource, lensWiden } from './lens';
 import { updateShown } from './shown';
 import { tilt } from './tilt';
-import { buildKitSteps, toX, toY } from './kit';
+import { buildKitSteps, LEAD, toX, toY } from './kit';
 import { NightCity } from './night';
 import { chinatownGlow } from './chinatown-art';
 import { FX } from './fx-settings';
@@ -336,7 +336,8 @@ export class StreetView {
     this.dropAheads([]);
     this.dropBehind();
     this.cut = cutPlanes();
-    this.kit = run(this.kitSteps(level, this.cut));
+    //a fresh start: the city runs on back past the start (kit.ts LEAD), as no floor is behind this one
+    this.kit = run(this.kitSteps(level, this.cut, LEAD));
     this.scene.add(this.kit);
     this.night.build(level, this.kit, seed, floor);
     this.gates.build(this.kit);
@@ -344,8 +345,8 @@ export class StreetView {
   }
 
   // a floor's kit, a step at a time: the generator yields between the slow parts
-  private *kitSteps(level: Level, cut: THREE.Plane[]): Generator<void, THREE.Group> {
-    const kit = yield* buildKitSteps(level, this.biome, this.sheet, this.worlds);
+  private *kitSteps(level: Level, cut: THREE.Plane[], lead = 0): Generator<void, THREE.Group> {
+    const kit = yield* buildKitSteps(level, this.biome, this.sheet, this.worlds, lead);
     const slabs = yield* splitSteps(kit);
     yield* batchSteps(kit);
     yield* inkSteps(kit, { outline: (m) => !m.userData.noInk && solid(m) });
