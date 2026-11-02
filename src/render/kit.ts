@@ -36,6 +36,10 @@ export const WATER_TOP = -0.6; // the canals' water, this far under the street (
 const WALK = STREET_Z.curb - STREET_BACK; // the back sidewalk's depth, wall to curb
 const LANDMARK_W = 8; // art/landmarks.py's are up to 8 wide
 const PLAZA = ['Flamingo', 'Picasso'];
+// the floor a run begins on has this many tiles of street, sidewalks, walls and buildings back past its start, so the
+// opening frame (and the camera zoomed out) never shows the city ending left of the skater. A floor joined onto the
+// last needs none: the last floor is still drawn behind it (scene.ts BEHIND_TILES)
+export const LEAD = 48;
 // buildings, stairs and banks under the descent run from BLOCK_BACK to BLOCK_FRONT: the front face sits well in
 // front of the skater (z = 0.25), so they ride on the roof, not along its front edge
 const BLOCK_BACK = -3.1;
@@ -56,16 +60,17 @@ function slab(w: number, h: number, d: number, front: THREE.Material, top: THREE
 
 // a floor's kit in a biome (skins.ts): Chicago's street by default; another biome's tiles come from its sheet. The
 // one city (Chicago) mixes in the other worlds' quarters (quarters.ts) once their sheets are loaded (`worlds`).
-export function buildKit(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null, worlds: Map<BiomeId, HTMLImageElement> = new Map()): THREE.Group {
-  return run(buildKitSteps(level, biome, sheet, worlds));
+export function buildKit(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null, worlds: Map<BiomeId, HTMLImageElement> = new Map(), lead = 0): THREE.Group {
+  return run(buildKitSteps(level, biome, sheet, worlds, lead));
 }
 
 // buildKit a piece at a time, yielding when the frame's slice is spent (slice.ts). The biome's tile sheet is only
 // in use while a piece builds, so nothing else drawing tiles between frames picks it up
-export function* buildKitSteps(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null, worlds: Map<BiomeId, HTMLImageElement> = new Map()): Generator<void, THREE.Group> {
+// (`lead`: tiles of city to build back past the start: LEAD on the floor a run begins on, else 0)
+export function* buildKitSteps(level: Level, biome: BiomeId = 'chicago', sheet: HTMLImageElement | null = null, worlds: Map<BiomeId, HTMLImageElement> = new Map(), lead = 0): Generator<void, THREE.Group> {
   const skin = SKINS[biome];
   const city = skin.sheet === 'chicago' || !sheet;
-  const job = build(level, city ? SKINS.chicago : skin, city, city ? 'chicago' : biome, biome === 'chicago' ? worlds : new Map());
+  const job = build(level, city ? SKINS.chicago : skin, city, city ? 'chicago' : biome, biome === 'chicago' ? worlds : new Map(), lead);
   for (;;) {
     useSheet(city ? null : sheet);
     let step: IteratorResult<void, THREE.Group>;
@@ -79,7 +84,7 @@ export function* buildKitSteps(level: Level, biome: BiomeId = 'chicago', sheet: 
   }
 }
 
-function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: Map<BiomeId, HTMLImageElement>): Generator<void, THREE.Group> {
+function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds: Map<BiomeId, HTMLImageElement>, lead: number): Generator<void, THREE.Group> {
   const kit = new THREE.Group();
   //the city's quarters that lean on another world, with that world's tiles to hand
   const quarter = (q: Quarter) => (q.world !== 'chicago' && worlds.has(q.world) ? { ...q, skin: SKINS[q.world], sheet: worlds.get(q.world)! } : null);
@@ -93,9 +98,9 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   //--- the alley far below the descent: you only see it if you fall ---------------------------
   const first = Math.round(toX(level.finaleX));
   //act 1's hillside and the near side of the street (hillside.ts)
-  if (level.hills) yield* buildHillSteps(level, kit);
+  if (level.hills) yield* buildHillSteps(level, kit, lead);
   if (sliceDone()) yield;
-  if (city) yield* buildForegroundSteps(level, kit);
+  if (city) yield* buildForegroundSteps(level, kit, lead);
   if (sliceDone()) yield;
   if (first > 0 && !level.hills) {
     const alley = slab(first, 3, STREET_DEPTH, surface('concrete', 0x18121f), surface('asphalt', 0x221a2c), sideMat);
@@ -104,6 +109,24 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   }
 
   //--- street slabs and canals -------------------------------------------------------------
+  //the street's top: asphalt, the sidewalk at the back with its curb, the centre line (n tiles from column c)
+  const streetTop = (n: number, c: number) =>
+    paintTexture(n, STREET_DEPTH, (ctx, W, H) => {
+      const look = skin.top;
+      const lane = H * 0.55;
+      ctx.fillStyle = look.road; // asphalt (a park path, sand, the sea floor...)
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = look.back; // sidewalk at the back
+      ctx.fillRect(0, 0, W, (H * WALK) / STREET_DEPTH);
+      ctx.fillStyle = look.seam;
+      for (let px = 0; px < W; px += 16) ctx.fillRect(px, 0, 1, (H * WALK) / STREET_DEPTH);
+      ctx.fillStyle = look.edge; // curb
+      ctx.fillRect(0, (H * WALK) / STREET_DEPTH, W, 2);
+      if (look.line) {
+        ctx.fillStyle = look.line; // centre line
+        for (let px = (((c * 8) % 24) + 24) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
+      }
+    });
   let c = first;
   while (c < cols) {
     if (sliceDone()) yield;
@@ -121,18 +144,21 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     const sewer = kind !== 0;
     let end = c;
     while (end + 1 < cols && level.street[end + 1] === isStreet && under(end + 1) === kind) end++;
-    const n = end - c + 1;
-    const x = c + n / 2;
+    //on a run's first floor a street floor's street runs on back past the start (LEAD; a hill's is buildHill's)
+    const s0 = c === first && lead && !level.hills && isStreet && kind === 0 ? c - lead : c;
+    const n = end - s0 + 1;
+    const x = s0 + n / 2;
     if (isStreet && kind === 2) {
       //a sewer grate: sewer-kit.ts
     } else if (isStreet) {
       //front face: QFS's 3-row city street with crumbled corners next to canals
       const front: number[][] = [[], [], []];
       const ground = skin.ground;
+      const wrap = (i: number, len: number) => ((i % len) + len) % len;
       for (let i = 0; i < n; i++) {
-        const col = c + i;
+        const col = s0 + i;
         if (ground === 'city') {
-          let t = CITY.road(col);
+          let t = CITY.road(wrap(col, 11));
           if (c > 0 && i < 3 && n > 4) t = CITY.cornerLeft[i];
           if (end < cols - 1 && n - 1 - i < 3 && n > 4) t = CITY.cornerRight[2 - (n - 1 - i)];
           front[0].push(t);
@@ -140,30 +166,15 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
           front[2].push(t + 30);
         } else {
           //the biome's ground: its top row (with end pieces next to canals) over its fill
-          let t = ground.top[col % ground.top.length];
+          let t = ground.top[wrap(col, ground.top.length)];
           if (i === 0 && c > 0 && ground.left >= 0) t = ground.left;
           if (i === n - 1 && end < cols - 1 && ground.right >= 0) t = ground.right;
           front[0].push(t);
-          front[1].push(ground.fill[col % ground.fill.length]);
-          front[2].push(ground.fill[(col + 1) % ground.fill.length]);
+          front[1].push(ground.fill[wrap(col, ground.fill.length)]);
+          front[2].push(ground.fill[wrap(col + 1, ground.fill.length)]);
         }
       }
-      const look = skin.top;
-      const top = paintTexture(n, STREET_DEPTH, (ctx, W, H) => {
-        const lane = H * 0.55;
-        ctx.fillStyle = look.road; // asphalt (a park path, sand, the sea floor...)
-        ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = look.back; // sidewalk at the back
-        ctx.fillRect(0, 0, W, (H * WALK) / STREET_DEPTH);
-        ctx.fillStyle = look.seam;
-        for (let px = 0; px < W; px += 16) ctx.fillRect(px, 0, 1, (H * WALK) / STREET_DEPTH);
-        ctx.fillStyle = look.edge; // curb
-        ctx.fillRect(0, (H * WALK) / STREET_DEPTH, W, 2);
-        if (look.line) {
-          ctx.fillStyle = look.line; // centre line
-          for (let px = (c * 8) % 24; px < W; px += 24) ctx.fillRect(px, lane, 12, 2);
-        }
-      });
+      const top = streetTop(n, s0);
       const roof = SEWER_ROOF / TILE;
       const mesh = sewer
         ? slab(n, roof, STREET_DEPTH, lambert(tileTexture([front[0]])), lambert(top), sideMat)
@@ -241,6 +252,13 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     }
     w0 = g1;
   }
+  //back past the start on a run's first floor (LEAD): the wall runs on along the sidewalk
+  if (lead && !level.hills) {
+    const rows = [0, 1].map((r) => Array.from({ length: lead }, (_, i) => wallTiles[(((i - lead) * (r ? 5 : 7) + r * 3) % wallTiles.length + wallTiles.length) % wallTiles.length]));
+    const wall = slab(lead, 2, 0.5, lambert(tileTexture(rows)), surface('pavers', city ? 0x6b5a55 : skin.side), sideMat);
+    wall.position.set(-lead / 2, 1, STREET_BACK - 0.25);
+    kit.add(wall);
+  }
   for (const [g0, g1] of gaps) kit.add(crossStreet(g0, g1, sideMat));
   if (fronts.length) {
     const mats = storefrontMats();
@@ -261,6 +279,19 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
 
   //the world's landmark stands in for a building every few screens, the first one soon after the start (marks, above)
   let mark = marks.length ? marks[0].x : skin.landmark && !worlds.size ? first + 6 + randInt(rng, 8) : Infinity;
+  //(the buildings behind start off the left of the screen, or LEAD tiles further back on a run's first floor; the ones
+  //back there come off their own rng, so the rest of the floor's buildings stand where they always have)
+  const leadRng = makeRng(level.layout.seed * 37 + level.layout.floor * 11);
+  for (let bx = -8 - lead; !level.hills && bx < -8; ) {
+    const w = 4 + randInt(leadRng, 5);
+    const h = 5 + randInt(leadRng, 9);
+    const back = randInt(leadRng, 3);
+    const t = CITY.facade[randInt(leadRng, CITY.facade.length)];
+    const b = slab(Math.min(w, -8 - bx + 0.5), h, 4, city ? facadeMat(w, h, t, 0xd8c8e8) : blockMat(w, h, skin, 0xd8c8e8), surface('roof', 0x2b2638), brickMat);
+    b.position.set(bx + Math.min(w, -8 - bx + 0.5) / 2, h / 2 - 0.5, STREET_BACK - 3 - back);
+    kit.add(b);
+    bx += w + randInt(leadRng, 2);
+  }
   for (let bx = level.hills ? first - 2 : -8; bx < cols + 20; ) {
     if (bx >= mark) {
       const lm = model(marks.length ? marks.shift()!.name : skin.landmark!);
