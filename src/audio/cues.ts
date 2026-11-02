@@ -1,10 +1,14 @@
 // What the game sounds like (GDD: Immersion, sound first). Pure: which sound each sim event makes, and how the
-// loops sit under the skating. src/audio/sound.ts plays them. The samples are Lou Gnar's (excaliburSkate's
-// public/sounds, as mp3 so every phone decodes them); a few are pitched to make more than one sound, and the
-// roll and the siren are synthesized. Logged overnight (2026-10-24).
+// loops sit under the skating. src/audio/sound.ts plays them. zack's own set (2026-11-02, the list in the project
+// files' audio/sound-effects-list.md): one sound per moment, mp3 for the one-shots, WAV for the three loops so
+// they loop without the gap an mp3 adds. Lou Gnar's old 'impact' still covers a clean landing (no land.wav yet)
+// and rolling over glass.
 import type { FloorEvent } from '../sim/floor';
 
-export type SampleId = 'ollie' | 'trick' | 'impact' | 'grind' | 'coin' | 'game_over' | 'game_start' | 'ufo_explode';
+export type SampleId =
+  | 'ollie' | 'trick' | 'kicker' | 'impact' | 'land_sketchy' | 'slam' | 'pad' | 'tuck' | 'car_hop' | 'door_slam'
+  | 'clack' | 'bail' | 'coin' | 'stoken' | 'mod' | 'smash' | 'drone_down' | 'car_wreck' | 'birds' | 'gun_aim'
+  | 'gun_shot' | 'start' | 'gate' | 'pick' | 'busted' | 'grind' | 'roll' | 'siren';
 export type MusicId = 'gameplay' | 'title';
 
 // The soundtrack: drop mp3s in public/music/ and list their names (no .mp3) here. Each slot plays its list in
@@ -15,25 +19,49 @@ export const MUSIC: Record<MusicId, string[]> = {
   title: [],
 };
 
-export const SAMPLES: SampleId[] = ['ollie', 'trick', 'impact', 'grind', 'coin', 'game_over', 'game_start', 'ufo_explode'];
+// the loops: WAV files (public/sounds/<id>.wav); every other sample is an mp3
+export const LOOP_SAMPLES: SampleId[] = ['grind', 'roll', 'siren'];
+export const sampleFile = (id: SampleId): string => `sounds/${id}.${LOOP_SAMPLES.includes(id) ? 'wav' : 'mp3'}`;
+
+// each sample's level, before the master volume (zack's files are all mastered near 0 dB, so these sit close)
+const VOL: Record<SampleId, number> = {
+  ollie: 0.8,
+  trick: 0.6,
+  kicker: 0.8,
+  impact: 0.9,
+  land_sketchy: 0.8,
+  slam: 0.9,
+  pad: 0.8,
+  tuck: 0.6,
+  car_hop: 0.7,
+  door_slam: 0.9,
+  clack: 0.5,
+  bail: 0.9,
+  coin: 0.7,
+  stoken: 0.9,
+  mod: 0.5,
+  smash: 0.6,
+  drone_down: 0.9,
+  car_wreck: 0.9,
+  birds: 0.9,
+  gun_aim: 0.7,
+  gun_shot: 0.9,
+  start: 0.9,
+  gate: 0.9,
+  pick: 0.9,
+  busted: 0.9,
+  grind: 0.5,
+  roll: 0.3,
+  siren: 0.25,
+};
+
+export const SAMPLES = Object.keys(VOL) as SampleId[];
 
 export interface Cue {
   sample: SampleId;
   vol: number; // 0-1, before the master volume
   rate?: number; // playback rate: above 1 is higher and shorter
 }
-
-// the volumes Lou Gnar used, as the starting point
-const VOL: Record<SampleId, number> = {
-  ollie: 0.8,
-  trick: 0.4,
-  impact: 0.9,
-  grind: 0.5,
-  coin: 0.6,
-  game_over: 0.8,
-  game_start: 1,
-  ufo_explode: 1,
-};
 
 const cue = (sample: SampleId, scale = 1, rate = 1): Cue => ({ sample, vol: VOL[sample] * scale, rate });
 
@@ -65,44 +93,47 @@ export function cueFor(e: FloorEvent): Cue | null {
     case 'trick':
       return cue('trick');
     case 'land': {
-      //harder landings are louder, like Lou Gnar's 0.3-1.0 by fall speed; a sketchy one rattles higher
+      //harder landings are louder, like Lou Gnar's 0.3-1.0 by fall speed; a sketchy one has its own rattle
       const hit = Math.min(1, Math.max(0.3, (e.impact ?? 3) / 10));
-      return cue('impact', hit, e.quality === 'sketchy' ? 1.25 : 1);
+      return e.quality === 'sketchy' ? cue('land_sketchy', Math.max(0.7, hit)) : cue('impact', hit);
     }
     case 'slam':
-      return cue('impact', 1.1, 0.7);
+      return cue('slam');
     case 'pad':
+      return cue('pad');
     case 'tuck':
-      return cue('impact', 0.5, 1.4);
+      return cue('tuck');
     case 'doorSlam':
-      return cue('impact', 1, 0.85); // a car door slammed shut: big and low
+      return cue('door_slam');
     case 'shot':
-      return cue('impact', 1, 2.6); // a guard's gun: a sharp crack
+      return cue('gun_shot');
     case 'aim':
-      return cue('trick', 0.35, 1.8); // the gun comes up: a click
+      return cue('gun_aim');
     case 'clack':
-      return cue('impact', 0.45, 2.2); // a firecracker's tail on the next step: a quick high clack
+      return cue('clack');
     case 'glass':
       return cue('impact', 0.5, 2.8); // rolling over broken glass: a high crunch
     case 'hop':
-      return cue('impact', 0.7, 1.6); // the hollow bonk of a car roof
+      return cue('car_hop');
     case 'kicker':
-      return cue('ollie', 1, 0.8);
+      return cue('kicker');
     case 'pickup':
-      return e.kind === 'cash' ? cue('coin', 0.8) : cue('coin', 1, e.kind === 'spin' ? 1.8 : 1.5);
+      //a spin token has no file of its own yet: the Stoken's, a little higher
+      return e.kind === 'cash' ? cue('coin') : cue('stoken', 1, e.kind === 'spin' ? 1.2 : 1);
     case 'smash':
-      return cue('ufo_explode', e.how === 'roll' ? 0.4 : 0.6, 1.3 + ((e.index * 7) % 5) * 0.08);
+      //each prop pitched a little differently so a bunch doesn't sound like one sound repeating
+      return cue('smash', e.how === 'roll' ? 0.7 : 1, 0.92 + ((e.index * 7) % 5) * 0.04);
     case 'drone':
-      return cue('ufo_explode');
+      return cue('drone_down');
     case 'birds':
-      return cue('impact', 0.5, 1.8); // a flurry of wings
+      return cue('birds');
     case 'dent':
-      //the hop's bonk is the hop's own; a wreck goes off like a drone
-      return e.stage === 3 ? cue('ufo_explode', 0.9, 0.8) : null;
+      //the hop's bonk is the hop's own; the final hit wrecks it
+      return e.stage === 3 ? cue('car_wreck') : null;
     case 'mod':
-      return cue('coin', 0.3, 2);
+      return cue('mod');
     case 'bail':
-      return cue('game_over');
+      return cue('bail');
     default:
       return null;
   }
@@ -110,17 +141,17 @@ export function cueFor(e: FloorEvent): Cue | null {
 
 // moments that aren't sim events
 export const MOMENT: Record<'start' | 'gate' | 'busted' | 'pick', Cue> = {
-  start: cue('game_start', 0.8),
-  gate: cue('coin', 1, 0.75),
-  busted: cue('game_over'),
-  pick: cue('trick', 1.2, 0.8),
+  start: cue('start'),
+  gate: cue('gate'),
+  busted: cue('busted'),
+  pick: cue('pick'),
 };
 
 export const LOOPS = {
-  grind: VOL.grind, // the grind sample, while on a rail or ledge
-  rollMax: 0.22, // wheels on the street, by speed
-  sirenFrom: 25, // the siren comes in at this Heat
-  sirenMax: 0.12,
+  grind: VOL.grind, // the grind loop, while on a rail or ledge
+  rollMax: VOL.roll, // the wheels loop on the street, by speed
+  sirenFrom: 25, // the siren loop comes in at this Heat
+  sirenMax: VOL.siren,
   music: 0.35,
   pauseDuck: 0.35, // the music's level under the pause card, of its own
 };
