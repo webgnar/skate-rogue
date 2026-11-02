@@ -10,7 +10,8 @@
 import * as THREE from 'three';
 import { BASE, BOARD, type Pose } from '../render/poses';
 import { SCALE, type SkaterRig } from '../render/skater-rig';
-import { setInkLens, setInkResolution } from '../render/toon';
+import { SKATER_HALO, SKATER_INK, PAPER } from '../game/game';
+import { glowMaterial, INK, inkify, outlineMaterial, setInkLens, setInkResolution, silhouetteInk } from '../render/toon';
 import { buildStreet, DUSK, skyDome } from './city';
 import { buildCity } from './grid';
 import { buildLife } from './life';
@@ -53,6 +54,9 @@ export class TitleScene {
   private keys: Pose[] = []; // Webster's standing poses, his arm solved to hold the board up
   private spin = 0;
   onArrive: (() => void) | null = null;
+  //his ink as in the game (game.ts): black round the outside of him and of his board, a paper-white halo outside it
+  private readonly ink = [glowMaterial(SKATER_INK, INK.color, 0), glowMaterial(SKATER_INK, INK.color, 0)];
+  private readonly halo = [glowMaterial(SKATER_INK, PAPER, 0), glowMaterial(SKATER_INK, PAPER, 0)] as [THREE.ShaderMaterial, THREE.ShaderMaterial];
 
   constructor(private readonly renderer: THREE.WebGLRenderer, private readonly rig: SkaterRig | null) {
     const s = this.scene;
@@ -65,6 +69,8 @@ export class TitleScene {
     if (rig) {
       rig.mesh.position.set(0, 0, 0);
       s.add(rig.mesh);
+      inkify(rig.mesh, { toon: false });
+      silhouetteInk(rig.mesh, rig.boardGroup, outlineMaterial(), this.ink[0], this.ink[1], this.halo);
       this.keys = this.standPoses(rig);
     }
     this.place();
@@ -180,6 +186,9 @@ export class TitleScene {
     this.camera.updateProjectionMatrix();
     setInkLens(0, 1, 1);
     setInkResolution(size.x, size.y, r.getPixelRatio());
+    const px = r.getPixelRatio();
+    for (const m of this.ink) m.uniforms.uWidth.value = Math.max(1, SKATER_INK * px);
+    for (const m of this.halo) m.uniforms.uWidth.value = Math.max(1.5, SKATER_INK * (1 + SKATER_HALO) * px);
     r.setRenderTarget(null);
     r.clear();
     r.render(this.scene, this.camera);
