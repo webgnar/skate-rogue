@@ -349,6 +349,8 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
 
 - Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
   by skating. They use the same traffic and Heat rules.
+- The five-act escape is **Chapter 1**, the free story; later chapters are sold as story packs (see
+  Monetization).
 - Beating Act 5 wins the run. It unlocks **Endless** (QFS Survivor style: floors forever, mixed worlds, its own
   leaderboard) and harder **Gnar levels** (like Hades' Heat or Slay the Spire's Ascension: each level adds one
   rule, such as faster traffic or Heat that never fully resets).
@@ -896,6 +898,42 @@ three $ a $40 head start, three ⚡ a free boon at the next run's start, three �
 three ★ a grip colour. A tap stops the reels, the next goes on to the summary. Tokens found on a floor you continue
 from are lost with the rest of that floor.
 
+## Monetization: grind or pay
+
+Decided Nov 2, 2026 (zack picked "free + skip the grind + chapters"). The game is **free to play**, and everything
+the unlocks screen sells can be earned by playing. Money buys time and style, never power. **(Not in the build
+yet:** none of the store exists; this is the plan.)
+
+What's sold:
+
+1. **Stoken bundles.** Skip the grind: buy Stoken and spend it on the unlocks screen (skaters, decks, boon packs,
+   the daily run), the same things missions, spin tokens and runs already pay for.
+2. **The Supporter pack** (one purchase, about $4.99): no ads ever, 2x Stoken from every source, and a supporter
+   grip. The "I like this game" buy from Alto's Odyssey and Jetpack Joyride.
+3. **Cosmetics:** outfits, board graphics, grip colours, trails. Bought with Stoken, or some only with money. Pure
+   style, no stats.
+4. **Story chapters** (see Chapters below): new narratives sold as packs (about $2.99 each), and also unlockable
+   with a large pile of Stoken so a player who grinds gets them too.
+
+Rules:
+
+- **Never sell power.** No boons, stat buffs, continues or head starts for money; that would break the roguelike.
+  Rank grips and other earned-only rewards stay earned-only.
+- **Never sell luck.** Spin tokens and slot pulls can't be bought with real money (app stores and some countries
+  treat paid random rewards as gambling). The slot machine only ever runs on tokens found in runs.
+- **Grinding stays fair.** A player who never pays can earn every skater, deck and boon pack, and every chapter,
+  at a pace that feels like progress (target: tune with the playtest bot once prices exist).
+- **Ads stay paused** (zack, Oct 31, 2026). When they come back they're the optional kind only (watch one for a
+  reward), and the Supporter pack turns them off.
+
+### Chapters (story packs)
+
+The five-act escape (see How a run ends) is **Chapter 1**, free, with its ending. Each later chapter is a new
+narrative: a new escape with its own acts, set pieces, a city mix, and a new skater or two. It plugs into the same
+skating, boons, gear and meta, so Stoken and unlocks carry across chapters. Endless and the Gnar levels stay free.
+The story and Chapter 1's ending are being settled with the Skate Escape fantasy (escape a mind-controlled AI city
+toward nature); later chapters continue from there.
+
 ## Scoring and stoke
 
 - **Score** = tricks × combo × speed multiplier + floor clear (`250 × floor`, QFS) + Stoken grabbed.
@@ -1108,6 +1146,9 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 - **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
   to each, and how each is designed for them.
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
+- **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
+  chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until
+  decided: the prices in that section, and chapters earnable for about the Stoken of all of Chapter 1's unlocks.
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
