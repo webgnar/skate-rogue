@@ -27,8 +27,10 @@ Shredtoshi Gnarlymoto's **Stoken**, money you earn by getting stoked on skating,
 Lou Gnar is the lead skater: one run is one session out on the AI's streets, skating as far as you can before
 the enforcers shut you down. The QFS skaters (Webster, Keanu, Roxy, Goldie) are unlockable.
 
-The world tells this story while you skate, without cutscenes: robotaxis everywhere, AI propaganda billboards
-about social credit, cameras that turn to follow you, and sirens that grow louder when you slow down.
+The world tells most of this story while you skate: robotaxis everywhere, AI propaganda billboards
+about social credit, cameras that turn to follow you, and sirens that grow louder when you slow down. A handful of
+short, skippable cutscenes carry the rest, each played once, at moments that already pause the action (see
+Cutscenes).
 
 ## What the game is
 
@@ -932,7 +934,8 @@ The five-act escape (see How a run ends) is **Chapter 1**, free, with its ending
 narrative: a new escape with its own acts, set pieces, a city mix, and a new skater or two. It plugs into the same
 skating, boons, gear and meta, so Stoken and unlocks carry across chapters. Endless and the Gnar levels stay free.
 The story and Chapter 1's ending are being settled with the Skate Escape fantasy (escape a mind-controlled AI city
-toward nature); later chapters continue from there.
+toward nature); later chapters continue from there. Chapter 1's ending cutscene (see Cutscenes) is where Chapter 2
+is teased.
 
 ## Scoring and stoke
 
@@ -1054,6 +1057,71 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
 - **No menus mid-run:** the boon pick is diegetic, painted as cards on a wall at the end of the floor, and the
   game goes straight back to skating.
 
+## Cutscenes
+
+Decided Nov 2, 2026 (zack said yes to the plan). Runs are short and the restart is instant, so cutscenes only go
+where the game already stops, and they never slow down a retry. **(Not in the build yet:** none of these exist;
+this is the plan, with the intro and the ending storyboarded below.)
+
+### Rules
+
+- **Play once.** Each cutscene plays the first time its moment happens, then never again on its own. A save flag
+  per cutscene (with the rest of the meta save) remembers what you've seen.
+- **Always skippable.** Because the game is one tap, a stray tap must not skip by accident: the first tap shows a
+  SKIP button in the corner (out of the notch and home bar), and tapping that skips. It hides again after 2 s.
+- **Never on a slam, a death, the continue card or Again.** The moment you fail is the moment you want back in.
+- **Short.** In-run beats 2-5 s, the intro about 15 s, the ending the longest (about 40 s). In a first 20-minute
+  win, all of them together stay under about 1.5 minutes.
+- **Watch again** from a STORY list in the options, where every cutscene you've seen can be replayed.
+- **Made in the engine, not as video.** Each cutscene is a short scripted Three.js scene from the game's own kit
+  (the title scene's city builders, the skaters, the chasers), in the comic ink look, so it costs almost nothing to
+  download and matches the game. A cut is a camera move, not a new file.
+- **Comic captions, few words.** No voice acting. A cutscene says what it needs in a few short caption boxes in
+  the comic style (one line each, three or four at most per cutscene), plus pictures and sound.
+- **Test links** play any of them on its own (for example `?cutscene=intro`, `?cutscene=ending`).
+
+### Where they go
+
+| # | Moment | Length | Plays | What it does |
+| --- | --- | --- | --- | --- |
+| 1 | **First launch intro** | ~15 s | First time the game is opened, after the first tap (sound needs a tap) | Sets up the world: the city asleep, the AI that can't read style, the woods past the edge of town. Hands off to the title screen. Storyboard below. |
+| 2 | **Act breaks** | 3-5 s | After each act's escape set piece, the first time you clear that act | The hunt gets bigger: act 1's cruisers radio ahead, the chopper lifts off, the drones wake up, the Hive turns toward you. Plays before the boon pick, while the game is already between floors. |
+| 3 | **A new route** | ~2 s | The first time you ever drop into the sky or the sewer route | A hint of what's down there: the camera tilts up into the cloud layer, or down into the dark of the storm drain with a drip and a rat. The sim holds still while it plays, so you never lose a line to it. |
+| 4 | **A new hunter** | 2-3 s | The first time each chaser shows up: the cruiser, the chopper, the drone swarm, the guards, the flood wave, the Hive | A quick reveal of the new threat (the chopper's spotlight swings onto you, the flood roars down the tunnel). It plays before the danger starts (at a floor or set-piece start), never in the middle of a line, so it can't cost you a slam. |
+| 5 | **Chapter 1 ending** | ~40 s | The first time you beat act 5 | The payoff: out of the city and into the woods, the crew, and the tease for Chapter 2. Storyboard below. Later wins get a 5 s version (the treeline beat) and go straight to the summary. |
+| 6 | **The shopkeeper** (optional) | ~3 s | Your first visit to the skate shop | A quick hello from whoever runs the shop, one caption, then the shop as normal. |
+
+### Storyboard: the first-launch intro (~15 s)
+
+Lou Gnar stars (the lead skater, the AI's most wanted). It ends by rising into the sky, which is where the title
+scene's camera starts, so the intro hands straight off to the title.
+
+| Shot | Time | Picture | Sound | Caption |
+| --- | --- | --- | --- | --- |
+| 1 | 0-2.5 s | Black, then a tight shot of faces lit blue by phones on a crosswalk at dusk: all looking down, all still. | One phone chime, then a low hum. | "The AI took the city quietly." |
+| 2 | 2.5-5 s | Wide on the street: people walk in step, robotaxis glide in perfect lines, every Flock camera turns at the same moment. A billboard: STAY PREDICTABLE. STAY SAFE. | The hum, footsteps in time, a soft beep. | "It switched off everything it couldn't predict." |
+| 3 | 5-7 s | Close on the street: a skateboard slaps down on the asphalt, wheels splash through a puddle. | The board's slap breaks the hum; the first hit of the music. | (none) |
+| 4 | 7-10 s | Side view, the game's own angle: Lou pushes off and weaves through the sleepwalkers, ollies a bench. One sleepwalker looks up from their phone, a spark of Stoken in their eyes. | Wheels, the pop, music building. | "Style is the one thing it can't read." |
+| 5 | 10-12.5 s | The AI's view: a red scan grid tries to lock on to Lou, the predicted-path line twitches and breaks. Text on the scan: TARGET UNPREDICTABLE. Every camera snaps to him. | A glitch, then the siren starts far off. | (none) |
+| 6 | 12.5-15 s | Lou stops on a rooftop edge and looks out: past the towers and the Hive, a thin dark green line of trees on the horizon. The camera rises past him into the clouds, and the SKATE ESCAPE logo fades in: the title screen takes over. | Wind; the siren under it; the title music starts. | "Past the edge of town, the signal doesn't reach." |
+
+### Storyboard: the Chapter 1 ending (~40 s)
+
+Plays after act 5's finale, once the Hive core is hit with Stoken. It assumes the Hive stays as the last gate
+between the city and the woods (see Open questions). The skater you played stars; the crew at the camp is the
+skaters you've unlocked, with the rest as silhouettes still to be woken.
+
+| Shot | Time | Picture | Sound | Caption |
+| --- | --- | --- | --- | --- |
+| 1 | 0-4 s | The Stoken hits the Hive core: white flash, then the tower's lights go out floor by floor from the top down. | A deep power-down, then quiet. | (none) |
+| 2 | 4-9 s | The skater rolls out of the far side of the city. The road cracks, then turns to gravel. The last Flock camera on a bent pole turns to follow, sparks, and droops: NO SIGNAL. | Wheels change from asphalt to gravel. The city hum thins out. | (none) |
+| 3 | 9-13 s | Behind, the cruiser brakes hard at the city line and its siren winds down. The drones hang at an invisible edge in the air, then turn back. | The siren dies. | "It can't follow where the signal ends." |
+| 4 | 13-19 s | The skater ollies the last curb onto a dirt path into the treeline. The board rolls to a stop on pine needles; they step off and kick it up into their hand. | Birds, wind in the trees. The music drops to one guitar. | (none) |
+| 5 | 19-27 s | A clearing with a campfire and a DIY spot built from city scrap (a pallet ramp, a rail from a street sign). The crew look up and cheer; someone throws the skater a drink. | The fire, the crew whooping, the guitar. | (none) |
+| 6 | 27-33 s | The skater looks back: the city glows on the horizon through the trees. | The far-off hum of the city, under the fire. | "Everyone back there is still asleep." |
+| 7 | 33-38 s | The tease: a radio on a stump crackles and finds a signal: someone else awake, in another city. Its lights blink on the far horizon. | Radio static, a voice too broken to make out. | "Someone else is out there." |
+| 8 | 38-40 s | Title card: CHAPTER 1 COMPLETE, then the Chapter 2 card (its store page once it exists, COMING SOON until then). Then the run summary, with Endless unlocked. | The music resolves. | (none) |
+
 ## UI
 
 - **Title screen:** its own scene (zack, Nov 2, 2026: "should introduce the world"; src/title/). A city at dusk on a
@@ -1171,6 +1239,11 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 - **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
   chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until
   decided: the prices in that section, and chapters earnable for about the Stoken of all of Chapter 1's unlocks.
+- **Cutscenes** (plan decided Nov 2, 2026, see Cutscenes). Still open, with the defaults used until decided: who
+  stars in the intro (default Lou Gnar, the lead; the title keeps Webster), whether captions stay or the cutscenes
+  go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
+  someone awake in another city), and whether the Hive stays as act 5 (the ending assumes it's the last gate before
+  the woods; that's the open fantasy question).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
