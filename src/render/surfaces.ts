@@ -148,6 +148,59 @@ const KINDS = {
       fill(g, '#e6e0d6', 0, H / 2, W, 1); // block joint
     }) as Paint,
   },
+  //rusted corrugated sheet (zack's sewer ref, 2026-11-02): grey ridges, rust running down them, eaten through in spots
+  corrugated: {
+    size: 2,
+    paint: ((g, W, H, rnd) => {
+      fill(g, '#9aa2ac', 0, 0, W, H);
+      for (let x = 0; x < W; x += 4) {
+        fill(g, '#c2c8d0', x, 0, 1, H); // ridge catching the light
+        fill(g, '#7c848e', x + 2, 0, 1, H); // trough
+      }
+      for (let i = 0; i < 9; i++) {
+        let x = Math.floor(rnd() * W);
+        const y0 = Math.floor(rnd() * H);
+        const len = 4 + Math.floor(rnd() * 14);
+        for (let y = y0; y < y0 + len; y++) {
+          const w = 1 + Math.floor(rnd() * 3);
+          fill(g, rnd() < 0.6 ? '#c87a2c' : '#e0a040', ((x % W) + W) % W, y % H, w, 1);
+          if (rnd() < 0.3) x += rnd() < 0.5 ? -1 : 1;
+        }
+        if (rnd() < 0.35) fill(g, '#1c1410', ((x % W) + W) % W, (y0 + len / 2) % H, 2, 2); // a hole rusted through
+      }
+      speckle(g, W, H, rnd, 30, ['#b86a24', '#5c3a1c', '#d8dce2']);
+    }) as Paint,
+  },
+  //cartoon sewer flagstones (zack's ref): blue-grey slabs with dark joints, chipped corners, moss growing in the joints
+  flagstone: {
+    size: 2,
+    paint: ((g, W, H, rnd) => {
+      fill(g, '#2c3436', 0, 0, W, H); // joints
+      const n = 2;
+      const c = W / n;
+      for (let r = 0; r < n; r++) {
+        const off = r % 2 ? c / 2 : 0;
+        for (let k = -1; k < n; k++) {
+          const x = k * c + off;
+          const tone = ['#7c9aa0', '#6e8c94', '#86a2a4', '#749296'][Math.floor(rnd() * 4)];
+          fill(g, tone, x + 1, r * c + 1, c - 2, c - 2);
+          fill(g, '#9cb8ba', x + 1, r * c + 1, c - 2, 1); // a lit top edge
+          fill(g, '#56707a', x + 1, r * c + c - 2, c - 2, 1);
+          fill(g, '#2c3436', x + 1 + Math.floor(rnd() * (c - 4)), r * c + 1 + Math.floor(rnd() * (c - 4)), 3, 1); // a crack
+          if (rnd() < 0.5) fill(g, '#c08a6a', x + 3 + Math.floor(rnd() * (c - 8)), r * c + 3 + Math.floor(rnd() * (c - 8)), 2, 1); // a rust stain
+        }
+      }
+      //moss in the joints and spreading onto a slab's edge
+      for (let i = 0; i < 10; i++) {
+        const x = Math.floor(rnd() * W);
+        const y = Math.floor(rnd() * 2) * c + (rnd() < 0.5 ? 0 : c - 1);
+        const w = 2 + Math.floor(rnd() * 6);
+        fill(g, '#6cb030', x, y % H, w, 2);
+        fill(g, '#9ad048', x + 1, y % H, Math.max(1, w - 2), 1);
+      }
+      speckle(g, W, H, rnd, 18, ['#5a9a2a', '#a8c0c0']);
+    }) as Paint,
+  },
 } satisfies Record<string, { size: number; paint: Paint }>;
 
 export type SurfaceKind = keyof typeof KINDS;

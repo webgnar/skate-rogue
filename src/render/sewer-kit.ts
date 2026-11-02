@@ -1,6 +1,6 @@
 // The sewer route (src/gen/sewer.ts), drawn as a cutaway under the street: the street is a thin roof (kit.ts), and
 // under it a brick storm tunnel with a concrete floor, a trickle of runoff along the back and streams of it on the
-// floor (pale chevrons show the current running your way), rusty pipes on brackets off the back wall, caged work
+// floor (swirled slime, drifting your way: slime.ts), rusty pipes on brackets off the back wall, caged work
 // lamps, graffiti, and the outlet ramp up to the street. Each way in is a construction spot on the street: hazard paint,
 // cones and a striped barricade, the steel trench plate dragged aside, a dirt pile and a little excavator, and at the
 // foot of a hill a plank ramp down into the dig. A kick-out is a concrete quarterpipe against the wall under a grate in
@@ -16,6 +16,7 @@ import { EL } from '../traffic/el';
 import { makeRng } from '../gen/rng';
 import { surface } from './surfaces';
 import { DEPTH, depthStep } from './depth';
+import { slimeBox, slimeMaterial } from './slime';
 
 const BACK = -2.6; // the tunnel's back wall (the skater rolls at z 0)
 const FRONT = 4; // the near sidewalk's front (hillside.ts HILLSIDE.nearWalk)
@@ -161,12 +162,16 @@ export function buildSewers(level: Level): THREE.Group {
   const Y = (py: number) => (level.streetY - py) / TILE;
   const roof = -SEWER_ROOF / TILE;
   const brick = surface('brick', 0x4a4038);
-  const floor = surface('concrete', 0x6a665c);
+  const floor = surface('flagstone', 0xd4dcdc); // (zack's cartoon sewer ref: mossy blue-grey flagstones)
   const ground = depthStep(surface('concrete', 0x2a2420), DEPTH.rock); // (it meets the walls and the hill flush: depth.ts)
-  const pipeMat = new THREE.MeshLambertMaterial({ color: 0x6f7a5a });
-  const bracket = new THREE.MeshLambertMaterial({ color: 0x3a3430 });
-  const water = new THREE.MeshLambertMaterial({ color: 0x3f6e52, emissive: 0x0c2a16, transparent: true, opacity: 0.88 });
-  const chevron = depthStep(new THREE.MeshBasicMaterial({ color: 0xbff5e6, transparent: true, opacity: 0.55, depthWrite: false }), DEPTH.mark);
+  //(zack's pipe ref, 2026-11-02: weathered teal pipes, rusty flanges bolted round the joints)
+  const pipeMat = new THREE.MeshLambertMaterial({ color: 0x5a9a8a });
+  const rust = new THREE.MeshLambertMaterial({ color: 0x8a4a24 });
+  const bolt = new THREE.MeshLambertMaterial({ color: 0x5a3a26 });
+  const bracket = new THREE.MeshLambertMaterial({ color: 0x4a3024 });
+  const sheet = surface('corrugated', 0xc4c4c4); // (and his rusted corrugated sheet)
+  const oldPipe = new THREE.MeshLambertMaterial({ color: 0x6a4a34 });
+  const water = slimeMaterial();
   const lamp = new THREE.MeshBasicMaterial({ color: 0xffd27a });
   const cage = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
   const hazard = new THREE.MeshBasicMaterial({ color: 0xf2c230 });
@@ -203,6 +208,13 @@ export function buildSewers(level: Level): THREE.Group {
   const mainMat = new THREE.MeshLambertMaterial({ color: 0x2a4a8a });
   const box = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, m: THREE.Material) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), m);
+    b.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    g.add(b);
+    return b;
+  };
+  // runoff (slime.ts): a box like box(), its faces measured so the slime knows where its edges are
+  const runoff = (x0: number, x1: number, y0: number, y1: number, z0: number, z1: number) => {
+    const b = new THREE.Mesh(slimeBox(x1 - x0, y1 - y0, z1 - z0), water);
     b.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
     g.add(b);
     return b;
@@ -311,7 +323,7 @@ export function buildSewers(level: Level): THREE.Group {
       if (up) {
         const uy = Y(up.y);
         box(x0 - 0.3, x0, fy, uy - 0.3, STREET_BACK, FRONT, archBrick); // (the drop's face, brick)
-        box(x0, x0 + 0.18, fy, uy, BACK, FRONT - 0.8, water);
+        runoff(x0, x0 + 0.18, fy, uy, BACK, FRONT - 0.8);
         for (let k = 0; k < 5; k++) {
           const foam = new THREE.Mesh(new THREE.SphereGeometry(0.35 + rng() * 0.25, 8, 6), white);
           foam.position.set(x0 + 0.2 + rng() * 0.8, fy + 0.1, BACK + 0.4 + k * ((FRONT - BACK - 1.4) / 4));
@@ -360,23 +372,9 @@ export function buildSewers(level: Level): THREE.Group {
         for (let x = a + 0.6; x < b - 0.3; x += 1.6) wedge(x - 0.2, ya - 0.3, x + 0.2, ya - 0.3, ya - 1, BACK, 0.3, stone);
       } else box(a, b, ya - 0.3, ya, BACK, FRONT, bowl && f.y > s.y ? tile : floor);
     }
-    //runoff: a trickle along the back, and streams of it across the floor with chevrons running your way
-    box(x0 + 0.01, ramp - 0.01, fy - 0.02, fy + 0.03, BACK + 0.01, BACK + 0.5, water); // (inside the floor's ends and the wall)
-    for (const [w0, w1] of s.wet) {
-      box(X(w0) + 0.01, X(w1) - 0.01, fy - 0.02, fy + 0.04, BACK + 0.01, FRONT - 0.6, water);
-      for (let x = X(w0) + 0.4; x < X(w1) - 0.4; x += 0.9) {
-        for (const z of [-1.4, 0.4, 2.0]) {
-          const v = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.08), chevron);
-          v.rotation.x = -Math.PI / 2;
-          const w = v.clone();
-          v.rotation.z = 0.6;
-          w.rotation.z = -0.6;
-          v.position.set(x, fy + 0.05, z - 0.1);
-          w.position.set(x, fy + 0.05, z + 0.1);
-          g.add(v, w);
-        }
-      }
-    }
+    //runoff: a trickle along the back, and streams of slime across the floor, running your way (slime.ts)
+    runoff(x0 + 0.01, ramp - 0.01, fy - 0.02, fy + 0.03, BACK + 0.01, BACK + 0.5); // (inside the floor's ends and the wall)
+    for (const [w0, w1] of s.wet) runoff(X(w0) + 0.01, X(w1) - 0.01, fy - 0.02, fy + 0.04, BACK + 0.01, FRONT - 0.6);
     //brick arches down the back wall, the tunnel running off into the dark through each, and iron ribs between them
     //(zack's brick sewer refs); a toxic green pipe mouth now and then, oozing into the runoff
     const lower = bowl || sub ? (x: number) => (bowl && x > X(bowl.x0) - 1.6 && x < X(bowl.x1) + 1.6) || (sub && x > X(sub.x0) - 1.6 && x < X(sub.x1) + 1.6) : () => false;
@@ -415,6 +413,21 @@ export function buildSewers(level: Level): THREE.Group {
       const glow = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), oozeGlow);
       glow.position.set(x, py - 0.2, BACK + 0.06);
       g.add(puddle, glow);
+    }
+    //rusted corrugated sheets patched over the brick between the ribs now and then (zack's ref), and an old pipe
+    //run along the top of the wall, out of reach
+    for (let x = x0 + 1; x < ramp - 4; x += 9) {
+      if (lower(x + 1.5) || lower(x + 3) || rng() < 0.4) continue;
+      const top = Math.min(fy + 1.6 + rng() * 0.8, roofAt(x + 1.5) - 0.6);
+      box(x + 0.2, x + 2.6, fy + 0.1, top, BACK + 0.02, BACK + 0.06, sheet);
+    }
+    for (const [a, b, top] of [[x0, Math.min(at, ramp), high], [Math.max(at, x0), ramp, low]]) {
+      if (b - a < 1 || top - fy < 3) continue;
+      for (const [dy, r] of [[0.55, 0.09], [0.85, 0.06]]) {
+        const run = new THREE.Mesh(new THREE.CylinderGeometry(r, r, b - a, 6).rotateZ(Math.PI / 2), oldPipe);
+        run.position.set((a + b) / 2, top - dy, BACK + 0.2);
+        g.add(run);
+      }
     }
     //caged work lamps along the back wall, and graffiti between them
     for (let x = x0 + 2.5; x < ramp - 1; x += 6) {
@@ -730,12 +743,28 @@ export function buildSewers(level: Level): THREE.Group {
       continue;
     }
     const pts = r.xs.map((px, i) => new THREE.Vector3(X(px), Y(r.ys[i]) - 0.12, 0));
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.13, 8), pipeMat);
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.13, 8), pipeMat);
     g.add(tube);
     const y = Y(r.ys[0]) - 0.12;
     for (let x = X(r.x0) + 0.3; x < X(r.x1); x += 2) box(x - 0.06, x + 0.06, y - 0.05, y + 0.05, BACK, 0, bracket);
-    //and its ends bend back into the wall
-    for (const x of [X(r.x0), X(r.x1)]) box(x - 0.13, x + 0.13, y - 0.13, y + 0.13, BACK, 0, pipeMat);
+    //a rusty flange at each joint along it, bolted round
+    const len = X(r.x1) - X(r.x0);
+    for (let k = 1, n = Math.max(1, Math.round(len / 2.2)); k < n; k++) {
+      const at = curve.getPointAt(k / n);
+      const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 10).rotateZ(Math.PI / 2), rust);
+      flange.position.copy(at);
+      g.add(flange);
+      for (let b = 0; b < 4; b++) {
+        const a = (b / 4) * Math.PI * 2 + Math.PI / 4;
+        box(at.x - 0.07, at.x + 0.07, at.y + Math.sin(a) * 0.16 - 0.025, at.y + Math.sin(a) * 0.16 + 0.025, Math.cos(a) * 0.16 - 0.025, Math.cos(a) * 0.16 + 0.025, bolt);
+      }
+    }
+    //and its ends bend back into the wall, a flange where they meet it
+    for (const x of [X(r.x0), X(r.x1)]) {
+      box(x - 0.13, x + 0.13, y - 0.13, y + 0.13, BACK, 0, pipeMat);
+      box(x - 0.2, x + 0.2, y - 0.2, y + 0.2, BACK, BACK + 0.08, rust);
+    }
   }
   return g;
 }

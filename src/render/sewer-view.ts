@@ -13,6 +13,7 @@ import { inkify } from './toon';
 import { CAR, trainCar } from './el-view';
 import { EL } from '../traffic/el';
 import { warmMesh } from './shader-keep';
+import { slimeClock, slimeMaterial } from './slime';
 
 const TRAIN_LEN = (2 * EL.carLen + EL.coupling) / TILE; // tiles of train, along the line: two of the L's cars
 const TRAIN_FAR = -40; // where the line comes out of the city (z)
@@ -93,6 +94,7 @@ export class SewerView {
   onCrash: (x: number, y: number, h: number) => void = () => {};
   //(the water's shader compiled with the loading screen's, not on the frame the gate bursts: shader-keep.ts)
   private readonly warm = warmMesh(this.waterMaterial(1, 1));
+  private readonly warmSlime = warmMesh(slimeMaterial()); // (the floor's runoff: sewer-kit.ts)
   private trains: { mesh: THREE.Group; light: THREE.Mesh; t: SewerSim['tunnels'][number] }[] = [];
   private gators: { mesh: THREE.Group; jaw: THREE.Object3D; t: SewerSim['tunnels'][number] }[] = [];
   private time = 0;
@@ -113,7 +115,7 @@ export class SewerView {
   // build the pieces for a floor
   reset(level: Level, sim: SewerSim): void {
     this.group.clear();
-    this.group.add(this.warm);
+    this.group.add(this.warm, this.warmSlime);
     this.rats = [];
     this.surges = [];
     this.trains = [];
@@ -360,6 +362,7 @@ export class SewerView {
   // x: the skater's (world units), so the wave rises where you can see it
   update(dt: number, x = Infinity): void {
     this.time += dt;
+    slimeClock.value = this.time;
     for (const r of this.rats) {
       r.mesh.visible = r.rat.alive;
       if (!r.rat.alive) continue;

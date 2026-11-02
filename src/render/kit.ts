@@ -625,11 +625,12 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
     }
   }
 
+  //(the sewer's surfaces get world-tile UVs too)
+  kit.add(buildSewers(level));
   if (sliceDone()) yield;
   projectSurfaces(kit);
   if (sliceDone()) yield;
   kit.add(buildSkyBeats(level));
-  kit.add(buildSewers(level));
   return kit;
 }
 
