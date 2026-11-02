@@ -1908,7 +1908,7 @@ html, body {
 }
 #title[hidden] { display: none; }
 #title .mark {
-  font-size: clamp(56px, calc(var(--u) * 19), 150px);
+  font-size: clamp(52px, calc(var(--u) * 17), 130px);
   line-height: 0.9;
   white-space: nowrap;
   transform: skewX(-8deg) rotate(-3deg);
@@ -1918,7 +1918,11 @@ html, body {
   animation: title-in 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
 #title .gnar { color: #ffe23a; }
-#title .run { color: #ff2fb4; margin-left: 0.15em; }
+#title .run { color: #ff2fb4; }
+/* the name stacked, SKATE over ESCAPE, so it fits an upright phone big */
+#title .mark b { display: block; }
+#title .mark .gnar { margin-left: -0.5em; }
+#title .mark .run { margin-left: 0.5em; margin-top: -0.08em; }
 #title .tagline {
   margin-top: calc(var(--u) * -2);
   font-size: clamp(16px, calc(var(--u) * 4.2), 30px);
@@ -1960,3 +1964,8 @@ html, body {
 @keyframes title-bob { to { transform: skewX(-8deg) rotate(-1.5deg) scale(1.03); } }
 @keyframes title-blink { 50% { opacity: 0.35; } }
 @keyframes title-go { from { opacity: 0; transform: skewX(-8deg) scale(0.5); } }
+/* sideways the street is short: a smaller name, higher up, so it stays off the skater */
+@media (orientation: landscape) {
+  #title { padding-top: max(calc(var(--u) * 4), env(safe-area-inset-top)); }
+  #title .mark { font-size: clamp(40px, calc(var(--u) * 12.5), 110px); }
+}
