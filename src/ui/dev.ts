@@ -25,12 +25,6 @@ export function meshyModels(params: URLSearchParams): boolean {
   return m === 'new' ? true : m === 'old' ? false : DEV.meshy;
 }
 
-// the skater models to load: the URL's ?models=new / ?models=old, else the DEV TOOLS switch
-export function meshyModels(params: URLSearchParams): boolean {
-  const m = params.get('models');
-  return m === 'new' ? true : m === 'old' ? false : DEV.meshy;
-}
-
 let stepAsk = false;
 
 export function devSpeed(): number {
