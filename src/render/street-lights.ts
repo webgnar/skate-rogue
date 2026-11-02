@@ -5,6 +5,7 @@
 // the skater rolls up to them. All the light is fake (additive pools, cones and halos); the whole set is six draw
 // calls a floor whatever the count. lightAt() tells the skater's light (skater-light.ts) how lit they are.
 import * as THREE from 'three';
+import { DEPTH, depthStep } from './depth';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FX } from './fx-settings';
 import { inkify, toon } from './toon';
@@ -111,7 +112,7 @@ function lightMaterial(shape: 'pool' | 'cone' | 'halo'): THREE.ShaderMaterial {
   });
 }
 
-const poolMat = lightMaterial('pool');
+const poolMat = depthStep(lightMaterial('pool'), DEPTH.mark); // (it lies on grass, roofs and paint at their height: depth.ts)
 const coneMat = lightMaterial('cone');
 const haloMat = lightMaterial('halo');
 const poolGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);

@@ -5,6 +5,7 @@
 // Each is one vertex-coloured mesh plus a glowing one (the lit windows, the oven, the bulbs), so a floor's
 // storefronts batch into a couple of draws; the signs are painted on canvases here (our own names, no real shop's).
 import * as THREE from 'three';
+import { DEPTH, depthStep } from './depth';
 import { flatSplit, hasModel } from './models';
 import { TILE } from '../physics/constants';
 import { inHill, type Level } from '../physics/level';
@@ -354,7 +355,7 @@ export interface StorefrontMats {
   glow: THREE.MeshBasicMaterial;
 }
 export function storefrontMats(): StorefrontMats {
-  return { body: new THREE.MeshLambertMaterial({ vertexColors: true }), glow: new THREE.MeshBasicMaterial({ vertexColors: true }) };
+  return { body: new THREE.MeshLambertMaterial({ vertexColors: true }), glow: depthStep(new THREE.MeshBasicMaterial({ vertexColors: true }), DEPTH.mark) }; // (lit trim, flush with the body: depth.ts)
 }
 
 // one storefront, its origin on the ground at the middle of its face; null if the model isn't loaded. `upstairs`

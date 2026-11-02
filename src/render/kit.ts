@@ -19,6 +19,7 @@ import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, u
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
 import { buildSkyBeats } from './sky-kit';
+import { DEPTH, depthStep } from './depth';
 import { buildSewers } from './sewer-kit';
 import { buildForegroundSteps, buildHillSteps } from './hillside';
 import { buildElTrack, elCuts, setColumn } from './el-view';
@@ -653,11 +654,11 @@ function crossStreet(x0: number, x1: number, sideMat: THREE.Material): THREE.Gro
   const walk = surface('pavers', 0x7d7a86);
   for (const sx of [x0 - 0.35, x1 + 0.35]) {
     const kerb = slab(0.7, 0.12, far, walk, walk, sideMat);
-    kerb.position.set(sx, 0.06, STREET_BACK - far / 2);
+    kerb.position.set(sx, 0.06, STREET_BACK - far / 2 - 0.01); // (its end a hair behind the main street's back edge)
     g.add(kerb);
   }
   //the main street's sidewalk is road here, with a crosswalk across the mouth of the side street
-  const cut = new THREE.Mesh(new THREE.PlaneGeometry(w, WALK).rotateX(-Math.PI / 2), surface('asphalt', 0x2a2830));
+  const cut = new THREE.Mesh(new THREE.PlaneGeometry(w, WALK).rotateX(-Math.PI / 2), depthStep(surface('asphalt', 0x2a2830), DEPTH.mark));
   cut.position.set(cx, 0.004, STREET_BACK + WALK / 2);
   const zebra = new THREE.MeshBasicMaterial({ color: 0xd8d8de, transparent: true, opacity: 0.6, depthWrite: false });
   for (let bx = x0 + 0.25; bx < x1 - 0.1; bx += 0.45) {
