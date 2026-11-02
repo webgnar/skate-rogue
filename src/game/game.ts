@@ -318,6 +318,7 @@ export class Game {
   private sewerStart = ''; // ?sewer: each new floor starts at the way into a sewer
   private cloudStart = false; // ?clouds: each new floor starts up on its cloud layer (src/gen/clouds.ts)
   paused = false; // frozen by the pause button, Esc / P, or the page going hidden
+  titled = false; // held still under the title screen (src/ui/title.ts) until SKATE: the street drawn, the title music on
   sound: Sound | null = null; // set by main once the page is up
   private menuAt = 0;
   private offer: Boon[] = [];
@@ -1262,7 +1263,7 @@ export class Game {
 
   // pause only while skating; the menus are already a pause
   setPaused(on: boolean): void {
-    if (on && this.state !== 'skate') return;
+    if (on && (this.state !== 'skate' || this.titled)) return;
     if (on === this.paused) return;
     this.paused = on;
     this.input.clear();
@@ -1318,6 +1319,14 @@ export class Game {
     //poison the time warp (and through it the camera and the physics clock) with NaN
     const realDt = Math.max(0, Math.min(0.1, (now - this.last) / 1000));
     this.last = now;
+    //under the title screen: the street stands still (drawn every frame, so a rotation never leaves it blank) and the
+    //title music plays
+    if (this.titled) {
+      this.input.clear();
+      this.sound?.update({ mode: 'roll', speed: 0, heat: 0, skating: false, over: false, paused: false, title: true });
+      this.view.render();
+      return;
+    }
     //paused: the street holds its last frame and presses are dropped
     if (this.paused) {
       this.input.clear();

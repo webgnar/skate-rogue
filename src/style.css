@@ -1882,3 +1882,90 @@ html, body {
 #app.calm #mission.done.in, #app.calm #mission .n.bump { animation: none; }
 #paused .settings.dev .reset b { color: #ff8a8a; }
 #paused .settings.dev .reset.on { background: #b02a3a; }
+
+/* the title screen (src/ui/title.ts): over the first floor, standing still behind it. Sized off the short side so
+   it fits an iPhone SE upright or sideways */
+#app.titled #hud { display: none; }
+#title {
+  --u: min(1vw, 1vh);
+  --u: min(1dvw, 1dvh);
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(calc(var(--u) * 9), env(safe-area-inset-top)) 16px max(calc(var(--u) * 7), env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle, rgba(255, 47, 180, 0.14) 1px, transparent 1.4px) 0 0 / 6px 6px,
+    linear-gradient(180deg, rgba(18, 12, 30, 0.88) 0%, rgba(18, 12, 30, 0.35) 38%, rgba(18, 12, 30, 0.1) 55%, rgba(18, 12, 30, 0.8) 100%);
+  font-family: 'Bangers', 'Arial Black', Impact, sans-serif;
+  letter-spacing: 0.06em;
+  color: #fff;
+  touch-action: none;
+  cursor: pointer;
+}
+#title[hidden] { display: none; }
+#title .mark {
+  font-size: clamp(52px, calc(var(--u) * 17), 130px);
+  line-height: 0.9;
+  white-space: nowrap;
+  transform: skewX(-8deg) rotate(-3deg);
+  -webkit-text-stroke: 3px #000;
+  paint-order: stroke fill;
+  text-shadow: 6px 6px 0 #000;
+  animation: title-in 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+#title .gnar { color: #ffe23a; }
+#title .run { color: #ff2fb4; }
+/* the name stacked, SKATE over ESCAPE, so it fits an upright phone big */
+#title .mark b { display: block; }
+#title .mark .gnar { margin-left: -0.5em; }
+#title .mark .run { margin-left: 0.5em; margin-top: -0.08em; }
+#title .tagline {
+  margin-top: calc(var(--u) * -2);
+  font-size: clamp(16px, calc(var(--u) * 4.2), 30px);
+  color: #3ff0ff;
+  -webkit-text-stroke: 1px #000;
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 #000;
+  transform: skewX(-8deg) rotate(-3deg);
+}
+#title .head { display: flex; flex-direction: column; align-items: center; }
+#title .foot { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 2.4); }
+#title button { all: unset; box-sizing: border-box; cursor: pointer; font-family: inherit; letter-spacing: 0.08em; }
+#title button[hidden] { display: none; }
+#title .start {
+  font-size: clamp(26px, calc(var(--u) * 7), 48px);
+  color: #fff;
+  -webkit-text-stroke: 2px #000;
+  paint-order: stroke fill;
+  text-shadow: 3px 3px 0 #000;
+  animation: title-blink 1.1s ease-in-out infinite;
+}
+#title .go {
+  padding: 0.12em 1.1em;
+  font-size: clamp(36px, calc(var(--u) * 10), 72px);
+  background: #ffe23a;
+  color: #000;
+  border: 3px solid #000;
+  box-shadow: 0 0 0 3px #ff2fb4, 6px 7px 0 3px #000;
+  transform: skewX(-8deg);
+  animation: title-go 0.35s cubic-bezier(0.2, 1.8, 0.4, 1) both;
+}
+#title .go:active { transform: skewX(-8deg) translate(3px, 3px); box-shadow: 0 0 0 3px #ff2fb4, 2px 2px 0 3px #000; }
+#title .best { font-size: clamp(15px, calc(var(--u) * 3.6), 24px); color: #ffe23a; text-shadow: 2px 2px 0 #000; min-height: 1em; }
+/* the music's in: the logo kicks on and then bobs */
+#title.live .mark { animation: title-hit 0.4s cubic-bezier(0.2, 1.8, 0.4, 1), title-bob 1.6s ease-in-out 0.4s infinite alternate; }
+#title.leaving { animation: fadeout 0.3s ease-in forwards; pointer-events: none; }
+@keyframes title-in { from { opacity: 0; transform: skewX(-8deg) rotate(-3deg) translateY(-40%) scale(1.3); } }
+@keyframes title-hit { 40% { transform: skewX(-8deg) rotate(-5deg) scale(1.14); } }
+@keyframes title-bob { to { transform: skewX(-8deg) rotate(-1.5deg) scale(1.03); } }
+@keyframes title-blink { 50% { opacity: 0.35; } }
+@keyframes title-go { from { opacity: 0; transform: skewX(-8deg) scale(0.5); } }
+/* sideways the street is short: a smaller name, higher up, so it stays off the skater */
+@media (orientation: landscape) {
+  #title { padding-top: max(calc(var(--u) * 4), env(safe-area-inset-top)); }
+  #title .mark { font-size: clamp(40px, calc(var(--u) * 12.5), 110px); }
+}

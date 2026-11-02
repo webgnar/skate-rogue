@@ -12,11 +12,11 @@ export type SampleId =
 export type MusicId = 'gameplay' | 'title';
 
 // The soundtrack: drop mp3s in public/music/ and list their names (no .mp3) here. Each slot plays its list in
-// order and loops back to the first; a slot with one track loops it; an empty slot is silence. 'title' plays on
+// order and loops back to the first; a slot with one track loops it; an empty slot is silence. 'title' plays on the title screen and
 // the run summary, 'gameplay' while skating.
 export const MUSIC: Record<MusicId, string[]> = {
   gameplay: ['funkadelic_miester'],
-  title: [],
+  title: ['press_start'],
 };
 
 // the loops: WAV files (public/sounds/<id>.wav); every other sample is an mp3
