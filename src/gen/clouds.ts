@@ -12,7 +12,7 @@ import { PICKUPS } from './descent';
 import { makeRng, type Rng } from './rng';
 import { busy, clearAt, groundAt } from './top-route';
 
-export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap';
+export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb';
 
 export const CLOUDS = {
   from: 5, // first floor with a cloud layer
@@ -24,15 +24,30 @@ export const CLOUDS = {
   stairGap: 2, // tiles between steps
   stairRise: 1.5, // tiles each step stands over the last: an ollie and a flip make it, at any speed
   stairHeight: 4.5, // tiles over the ground where the staircase starts, with no sky beat before it (SKY.height)
-  puff: [6, 9], // tiles: a cloud
-  thin: [4, 5],
+  // (longer platforms, zack 2026-11-02: "there need to be longer platforms")
+  puff: [10, 14], // tiles: a cloud
+  thin: [5, 7],
   thinFrames: 40, // a thin cloud puffs away this long after you land (time to take the knock and pop off it)
-  drift: [5, 6],
+  drift: [6, 8],
   driftBy: 1.5, // tiles a drifting cloud wanders either way
   rainbow: [14, 18], // tiles across
   rainbowRise: 2.4, // tiles its middle stands over its feet
   balloon: 2.5, // tiles: a basket
   balloonUp: 1, // tiles higher than the layer
+  fork: [18, 24], // tiles: a fork's long low cloud (zack, 2026-11-02: "mini upper and lower paths")
+  forkUp: 1.5, // tiles the wisp up to the high way stands over where you leave the last cloud (a flip makes it)
+  forkLow: 1, // tiles the low way stands under it
+  forkHigh: 3, // tiles the high way stands over the low way: past an ollie and a flip from it
+  forkWisp: 5, // tiles: the wisp up to it
+  forkPiece: [5, 7], // tiles: each cloud of the high way
+  hops: 4, // wisps in a run of hops: short, evenly spaced, each a little lower, a rhythm to pop along
+  hop: 5, // tiles: each (room past the landing lockout to pop again, src/sim/floor.ts)
+  hopGap: 2,
+  hopDrop: 0.5,
+  climbs: 3, // wisps in a climb: a staircase up within the layer, each a tile over the last, an ollie apart
+  climb1: 5, // tiles: each
+  climbUp: 1,
+  climbMax: 6, // tiles over the lowest the layer may stand, at most, to start a climb (it falls back gently after)
   between: [2, 3], // tiles of open sky between beats, to ollie
   gap: [4, 6],
   step: 0.6, // tiles each beat drops under the last, the layer falling gently with the hill
@@ -95,8 +110,8 @@ export function stairStart(level: Level, a: number, b: number): number {
   return c + CLOUDS.stairAt * (b - c);
 }
 
-// beats by weight: mostly clouds, a rainbow or two, a balloon now and then
-const BEATS: [CloudBeat, number][] = [['puff', 5], ['thin', 2], ['drift', 2], ['rainbow', 2], ['balloon', 1.5], ['gap', 1.5]];
+// beats by weight: mostly clouds, a rainbow or two, a balloon now and then, forks into a high and a low way, runs of hops
+const BEATS: [CloudBeat, number][] = [['puff', 5], ['thin', 2], ['drift', 2], ['rainbow', 2], ['balloon', 1.5], ['gap', 1.5], ['fork', 2.5], ['hops', 1.5], ['climb', 1.5]];
 
 const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo + 1));
 
@@ -227,6 +242,66 @@ export function addClouds(level: Level, seed: number): void {
           movers.push({ kind: 'cloud', x0: x + room, x1: x + room + w, y, phase: Math.floor(rng() * 360) });
           coins(x + room, x + room + w, () => y);
           x += w + 2 * room;
+        } else beat = 'puff';
+      }
+      if (beat === 'fork') {
+        //mini upper and lower paths (zack, 2026-11-02): the low way a long cloud a little under; the high way thin
+        //clouds and puffs over it, reached only off a wisp a flip up from where you leave the last cloud (from the low
+        //way they're past an ollie and a flip). The high way pays a Stoken; both join on what's next
+        const w = range(rng, CLOUDS.fork) * TILE;
+        //(only where the layer's free to dip a tile: where the ground ahead climbs, the layer climbs too)
+        const low = y + CLOUDS.forkLow * TILE;
+        const wy = y - CLOUDS.forkUp * TILE;
+        const high = low - CLOUDS.forkHigh * TILE;
+        const ww = CLOUDS.forkWisp * TILE;
+        if (low <= lowest(x) && fits(w) && !busy(level, x + 2 * TILE, x + w, low) && !busy(level, x, x + w, high) && !busy(level, x, x + ww, wy)) {
+          surfaces.push({ kind: 'ledge', x0: x + 2 * TILE, x1: x + w, y: low, row: -1, sky: 'cloud' });
+          coins(x + 2 * TILE, x + w, () => low);
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + ww, y: wy, row: -1, sky: 'wisp' });
+          let hx = x + ww + 2 * TILE;
+          level.pickups.push({ kind: 'stoken', x: hx - TILE, y: high - PICKUPS.arc });
+          //(the high way runs right to the fork's end, so what's next is a drop off it, never a long way off; its last
+          //cloud solid, the one you jump from)
+          for (let k = 0; hx + 5 * TILE <= x + w; k++) {
+            let hw = Math.min(range(rng, CLOUDS.forkPiece) * TILE, x + w - hx);
+            if (x + w - (hx + hw + 2 * TILE) < 5 * TILE) hw = x + w - hx;
+            const thin = k % 2 === 1 && hx + hw < x + w;
+            surfaces.push({ kind: 'ledge', x0: hx, x1: hx + hw, y: high, row: -1, sky: thin ? 'thin' : 'cloud', ...(thin ? { crumble: true, crumbleFrames: CLOUDS.thinFrames } : {}) });
+            coins(hx, hx + hw, () => high);
+            hx += hw + 2 * TILE;
+          }
+          x += w;
+          y = low;
+        } else beat = 'puff';
+      }
+      if (beat === 'hops') {
+        //a run of hops: short wisps, evenly spaced, each a little lower: pop, pop, pop
+        let hy = y;
+        for (let k = 0; k < CLOUDS.hops && fits(CLOUDS.hop * TILE); k++) {
+          if (!busy(level, x, x + CLOUDS.hop * TILE, hy)) {
+            surfaces.push({ kind: 'ledge', x0: x, x1: x + CLOUDS.hop * TILE, y: hy, row: -1, sky: 'wisp' });
+            const cy = hy;
+            level.pickups.push({ kind: 'cash', x: x + (CLOUDS.hop * TILE) / 2, y: cy - PICKUPS.ride });
+          }
+          x += (CLOUDS.hop + CLOUDS.hopGap) * TILE;
+          //(where the ground ahead climbs, up instead: never more than a tile, an ollie makes it)
+          hy = Math.max(hy - CLOUDS.climbUp * TILE, Math.min(hy + CLOUDS.hopDrop * TILE, lowest(x)));
+        }
+        x -= CLOUDS.hopGap * TILE;
+        y = hy;
+      }
+      if (beat === 'climb') {
+        //a climb: a few wisps, each a tile over the last, then the layer falls gently back again: a wave to ride
+        if (y > lowest(x) - CLOUDS.climbMax * TILE && fits(CLOUDS.climbs * (CLOUDS.climb1 + 2) * TILE)) {
+          for (let k = 0; k < CLOUDS.climbs; k++) {
+            const cy = y - CLOUDS.climbUp * TILE;
+            if (busy(level, x, x + CLOUDS.climb1 * TILE, cy)) break;
+            y = cy;
+            surfaces.push({ kind: 'ledge', x0: x, x1: x + CLOUDS.climb1 * TILE, y, row: -1, sky: 'wisp' });
+            coins(x, x + CLOUDS.climb1 * TILE, () => cy);
+            x += (CLOUDS.climb1 + 2) * TILE;
+          }
+          x -= 2 * TILE;
         } else beat = 'puff';
       }
       if (beat === 'puff' || beat === 'thin') {

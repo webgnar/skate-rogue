@@ -61,6 +61,7 @@ const SKY_HELP: Record<SkyBeat, string> = {
   scaffold: 'three scaffold decks stepping down',
   gap: 'open sky, with a Stoken in it now and then',
   beam: 'a steel I-beam hoisted on a crane cable, a short grind falling a little',
+  split: 'a long rooftop below, girders to grind over it: a high way off a first girder, a low way on the roof',
   blimp: "set piece: an ad blimp's long back, bobbing (one set piece a floor)",
   rig: 'set piece: a window washer rig that drops under you; pop off onto the roof ahead',
   swing: "set piece: a tower crane's jib that swings out of the lane and back",
@@ -70,7 +71,7 @@ const SKY_HELP: Record<SkyBeat, string> = {
 
 // the cloud layer's beats (src/gen/clouds.ts), and the route layers' dials: keys of CLOUDS and SEWER, overlaid per
 // floor while it's built (withDials in level-edits.ts). `unit` is px per shown unit (TILE for a height kept in px)
-const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap'];
+const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap', 'fork', 'hops', 'climb'];
 const CLOUD_HELP: Record<CloudBeat, string> = {
   puff: 'a cloud to land on',
   thin: 'a thin cloud that puffs away a moment after you land',
@@ -78,6 +79,9 @@ const CLOUD_HELP: Record<CloudBeat, string> = {
   rainbow: 'a rainbow to grind up and over',
   balloon: "a hot air balloon's basket, bobbing",
   gap: 'open sky to fly over, a Stoken in it now and then',
+  fork: 'a high way and a low way: a long low cloud, clouds over it off a wisp a flip up',
+  hops: 'a run of short wisps, evenly spaced, each a little lower: pop along',
+  climb: 'a few wisps, each a tile higher: a climb within the layer, then it falls gently back',
 };
 interface LayerDial {
   key: string;

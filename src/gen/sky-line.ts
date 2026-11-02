@@ -62,7 +62,7 @@ export function piecesOf(level: Level, a: number, b: number): Piece[] {
 
 // nothing else up near y over [x0, x1] right there (a rail only where it runs over [x0, x1]: unlike busy(), a long
 // power line's sag further along doesn't count)
-function openAt(level: Level, x0: number, x1: number, y: number): boolean {
+export function openAt(level: Level, x0: number, x1: number, y: number): boolean {
   const near = (sy: number) => Math.abs(sy - y) < TOP.clear;
   if (level.surfaces.some((s) => s.x1 > x0 && s.x0 < x1 && s.kind !== 'overpass' && near(Math.min(s.y, s.y1 ?? s.y)))) return false;
   return !level.rails.some((r) => r.xs.some((rx, k) => rx > x0 - TILE && rx < x1 + TILE && near(r.ys[k])));

@@ -10,6 +10,8 @@
 // - scaffold: three scaffold decks stepping down
 // - gap: open sky, with a Stoken in it now and then
 // - beam: a steel I-beam hung on a crane's cable, slowly swinging along the lane, its top a grind (zack, 2026-10-31)
+// - split: a long rooftop below, and over it a high way of hoisted girders to grind, reached only off a first girder a
+//   flip up from the last piece: mini upper and lower paths that join again after (zack, 2026-11-02)
 // Set pieces (zack, 2026-10-31, "build out the sky route"), at most one a floor:
 // - blimp: an ad blimp moored over the hill, its long back bobbing on the air, a calm cruise
 // - rig: a window washer's rig on a tower's face that drops under you once you land: pop off it quick onto the roof
@@ -31,21 +33,23 @@ import { makeRng, randInt, type Rng } from './rng';
 import { busy, clearAt, groundAt, TOP } from './top-route';
 import { SKY_SWAY } from '../sim/sky';
 import { cloudy, crestOf, lipOf, stairStart } from './clouds';
+import { openAt } from './sky-line';
 
-export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | 'beam' | SkyPiece | 'lines';
+export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | 'beam' | 'split' | SkyPiece | 'lines';
 export type SkyPiece = 'blimp' | 'rig' | 'swing' | 'bust';
 export const SKY_PIECES: SkyPiece[] = ['blimp', 'rig', 'swing', 'bust'];
-export const SKY_BEATS: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap', 'beam', ...SKY_PIECES, 'lines'];
+export const SKY_BEATS: SkyBeat[] = ['roofs', 'billboard', 'tower', 'crane', 'scaffold', 'gap', 'beam', 'split', ...SKY_PIECES, 'lines'];
 
 export const SKY = {
   height: 4.5, // tiles over the highest ground behind: where a big ollie and a flip off a lip carries you at speed
   start: 0.1, // how far down each stretch of hill (0-1) the first beat stands
   behind: 8, // tiles of ground behind that counts, as for the power line
   between: [2, 3], // tiles of open sky between beats, to ollie
-  roof: [6, 8], // a rooftop deck's tiles
+  // (longer platforms, zack 2026-11-02: "there need to be longer platforms": room to land, roll, line up the next)
+  roof: [9, 13], // a rooftop deck's tiles
   roofGap: [2, 3],
-  billboard: [6, 8],
-  tower: 4, // the water tower's lid (room to land, take the impact and pop again)
+  billboard: [8, 11],
+  tower: 5, // the water tower's lid (room to land, take the impact and pop again)
   towerUp: 1.5, // tiles higher than the rest
   crane: [12, 16],
   beam: [5, 7], // tiles: a steel I-beam hoisted on a crane's cable, to grind (zack, 2026-10-31: "we need some Grindable I-beams")
@@ -65,15 +69,21 @@ export const SKY = {
   blimpUp: 0.5, // tiles higher than the rest
   rig: 4, // tiles: the rig's deck
   rigGap: 2, // tiles of open air between it and the roof you pop up onto
-  rigRoof: [6, 8],
+  rigRoof: [8, 11],
   swing: 12, // tiles: the jib
-  bustRoof: [5, 6], // tiles: each deck either side of the billboard
+  bustRoof: [7, 9], // tiles: each deck either side of the billboard
   bustGap: 3, // tiles between them, the billboard in the middle
   bustUp: 3, // tiles the billboard stands over the decks
   bustDown: 1.5, // and under them
   stash: 0.7, // chance a floor's first water tower has a stash crate on its lid
   stashGear: 0.5, // chance the stash is a fresh gear part, not a spin token
   gold: 0.3, // chance a floor has a golden pigeon on one of its decks
+  split: [18, 24], // tiles: the split's long rooftop, the low way
+  splitIn: 4, // tiles: the first girder, over the gap before the roof and its first tiles
+  splitUp: 2, // tiles the first girder stands over the low way, at least (a flip up from where you leave the last piece)
+  splitHigh: 3.25, // tiles the high way's girders stand over the low way: past an ollie and a flip from the roof
+  splitGirder: [6, 8], // tiles: each girder of the high way after the first
+  splitGap: 2, // tiles of air between the girders
   lines: [4, 6], // Chinatown's clotheslines: tiles each
   lineGap: [1, 2],
   lineCount: 4,
@@ -88,18 +98,18 @@ const SKY_RECIPES: SkyBeat[][][] = [
   [],
   [],
   [],
-  R('roofs gap billboard gap roofs'),
-  R('roofs/billboard beam gap tower bust/rig gap billboard roofs'),
-  R('beam scaffold gap swing roofs gap tower crane'),
-  R('roofs beam tower gap blimp gap billboard scaffold gap roofs'),
-  R('beam crane gap roofs bust/rig scaffold gap tower roofs'),
-  R('tower beam gap crane roofs swing/blimp gap billboard/scaffold crane'),
-  R('roofs beam gap crane rig/bust scaffold tower gap roofs crane'),
-  R('beam tower gap blimp/swing scaffold crane gap roofs billboard'),
-  R('scaffold beam crane gap tower bust/rig roofs gap crane scaffold'),
-  R('crane/roofs beam tower scaffold gap swing/blimp beam crane gap tower roofs'),
-  R('tower beam crane gap scaffold rig/bust/swing roofs beam gap billboard tower'),
-  R('crane beam scaffold tower gap blimp/swing/rig/bust roofs beam billboard gap scaffold crane'),
+  R('roofs gap split billboard gap roofs'),
+  R('split roofs/billboard beam gap tower bust/rig gap billboard roofs'),
+  R('beam scaffold split gap swing roofs gap tower crane'),
+  R('split roofs beam tower gap blimp gap billboard scaffold gap roofs'),
+  R('beam crane split gap roofs bust/rig scaffold gap tower roofs'),
+  R('split tower beam gap crane roofs swing/blimp gap billboard/scaffold crane'),
+  R('roofs beam split gap crane rig/bust scaffold tower gap roofs crane'),
+  R('split beam tower gap blimp/swing scaffold crane gap roofs billboard'),
+  R('scaffold beam crane split gap tower bust/rig roofs gap crane scaffold'),
+  R('split crane/roofs beam tower scaffold gap swing/blimp beam crane gap tower roofs'),
+  R('tower beam crane split gap scaffold rig/bust/swing roofs beam gap billboard tower'),
+  R('split crane beam scaffold tower gap blimp/swing/rig/bust roofs beam billboard gap scaffold crane'),
 ];
 
 export function skyRecipe(floor: number): SkyBeat[][] {
@@ -323,6 +333,50 @@ export function addSkyBeats(level: Level, seed: number): void {
           coins(x, x + w, () => yy);
         }
         x += w;
+      } else if (beat === 'split') {
+        //mini upper and lower paths (zack, 2026-11-02: "there can be mini upper and lower paths within the sky route"):
+        //the low way a long rooftop; the high way hoisted girders to grind over it, reached only off a first girder a
+        //flip up from where you leave the last piece (from the roof they're past an ollie and a flip). The high way
+        //pays more; both drop onto whatever's next
+        const w = t(range(rng, SKY.split));
+        //(the roof as the hill puts it, up or down a little where it's crowded; never so high its first girder'd be out
+        //of reach)
+        const low = clearAt(level, x + 2 * TILE, x + w, top(base, x, x + w), ceiling + SKY.splitUp * TILE);
+        if (low !== null) {
+          const roof: Surface = { kind: 'ledge', x0: x + 2 * TILE, x1: x + w, y: low, row: -1, sky: 'roofs' };
+          surfaces.push(roof);
+          decks.push(roof);
+          coins(roof.x0, roof.x1, () => low);
+          const gy = low - SKY.splitUp * TILE;
+          const high = low - SKY.splitHigh * TILE;
+          const inW = SKY.splitIn * TILE;
+          //(a rail counts only where it runs right there: a power line's height further along doesn't, as busy()'s would)
+          if (gy >= ceiling - 0.5 && openAt(level, x, x + inW, gy)) {
+            const girder = (x0: number, x1: number, y: number) => {
+              surfaces.push({ kind: 'rail', x0, x1, y, row: -1, sky: 'girder', material: 'metal' });
+              coins(x0, x1, () => y);
+            };
+            girder(x, x + inW, gy);
+            let gx = x + inW + SKY.splitGap * TILE;
+            level.pickups.push({ kind: 'stoken', x: gx - (SKY.splitGap * TILE) / 2, y: high - PICKUPS.arc });
+            //(the high way runs right to the roof's end, so what's next is a drop off it, never a long way off)
+            while (gx + 5 * TILE <= x + w) {
+              let gw = Math.min(range(rng, SKY.splitGirder) * TILE, x + w - gx);
+              if (x + w - (gx + gw + SKY.splitGap * TILE) < 5 * TILE) gw = x + w - gx;
+              if (openAt(level, gx, gx + gw, high)) girder(gx, gx + gw, high);
+              gx += gw + SKY.splitGap * TILE;
+            }
+          }
+        } else flat(base, x, x + w, 'roofs');
+        x += w;
+        settle();
+        //(what's next is in reach from the low way: from the high way it's a drop)
+        if (low !== null) {
+          leave = low;
+          grind = false;
+        }
+        x += range(rng, SKY.between) * TILE;
+        continue;
       } else if (beat === 'lines') {
         //clotheslines between the tenements: short sagging wires, each a little under the last, to chain
         let y = top(base, x, Math.min(end, x + 24 * TILE));
