@@ -1056,6 +1056,8 @@ export class Game {
       this.leaveShop();
       return;
     }
+    //zack: a card that does something (bought, picked up, swapped) makes the card sound, like picking a boon
+    if (next !== s || this.shopPick !== pick) this.sound?.play(MOMENT.pick);
     this.shop = next;
     this.showShop();
   }
