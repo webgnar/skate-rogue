@@ -171,8 +171,9 @@ export function buildSkyBeats(level: Level): THREE.Group {
       box(w, 0.18, 1.6, cx, y - 0.09, -0.3, wood);
       for (const lx of [x0 + 0.15, x1 - 0.15]) for (const z of [-0.25, -0.95]) leg(lx, y - 0.18, z, 0.05);
       box(w, 0.05, 0.05, cx, y + 0.6, -0.9, steel); // the guard rail at the back
-    } else if (s.sky === 'step') {
-      //the staircase up into the clouds: steel girders hoisted on crane cables, nothing under them down to the city
+    } else if (s.sky === 'step' || s.sky === 'girder') {
+      //the staircase up into the clouds (and a split's high way, girders to grind): steel girders hoisted on crane
+      //cables, nothing under them down to the city
       //(zack, 2026-10-31: "in all those screen shots its stuff connected to the ground, i want sky route to go really
       //tall"), a hook block over each and its two slings up out of sight
       box(w, 0.32, 1.1, cx, y - 0.16, -0.25, girder);
