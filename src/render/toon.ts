@@ -46,6 +46,10 @@ function toToon(m: THREE.Material): THREE.Material {
   });
   t.name = m.name;
   t.userData = { ...m.userData };
+  //(a depth nudge that settles which of two surfaces in one plane shows: depth.ts)
+  t.polygonOffset = m.polygonOffset;
+  t.polygonOffsetFactor = m.polygonOffsetFactor;
+  t.polygonOffsetUnits = m.polygonOffsetUnits;
   return t;
 }
 

@@ -131,7 +131,7 @@ export class TwistView {
     const g = new THREE.Group();
     const marble = surface('marble', 0xe6dccb);
     const crack = new THREE.MeshBasicMaterial({ color: 0x5a4a3a });
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(w, 0.35, 3), marble);
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.35, 3), marble); // (a hair past a sewer shelf's ends under it)
     slab.position.set(0, -0.175, 0);
     g.add(slab);
     //a broken column stub hanging under it, and cracks across the top

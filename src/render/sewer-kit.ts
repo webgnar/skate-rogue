@@ -15,6 +15,7 @@ import { SEWER } from '../gen/sewer';
 import { EL } from '../traffic/el';
 import { makeRng } from '../gen/rng';
 import { surface } from './surfaces';
+import { DEPTH, depthStep } from './depth';
 
 const BACK = -2.6; // the tunnel's back wall (the skater rolls at z 0)
 const FRONT = 4; // the near sidewalk's front (hillside.ts HILLSIDE.nearWalk)
@@ -161,11 +162,11 @@ export function buildSewers(level: Level): THREE.Group {
   const roof = -SEWER_ROOF / TILE;
   const brick = surface('brick', 0x4a4038);
   const floor = surface('concrete', 0x6a665c);
-  const ground = surface('concrete', 0x2a2420);
+  const ground = depthStep(surface('concrete', 0x2a2420), DEPTH.rock); // (it meets the walls and the hill flush: depth.ts)
   const pipeMat = new THREE.MeshLambertMaterial({ color: 0x6f7a5a });
   const bracket = new THREE.MeshLambertMaterial({ color: 0x3a3430 });
   const water = new THREE.MeshLambertMaterial({ color: 0x3f6e52, emissive: 0x0c2a16, transparent: true, opacity: 0.88 });
-  const chevron = new THREE.MeshBasicMaterial({ color: 0xbff5e6, transparent: true, opacity: 0.55, depthWrite: false });
+  const chevron = depthStep(new THREE.MeshBasicMaterial({ color: 0xbff5e6, transparent: true, opacity: 0.55, depthWrite: false }), DEPTH.mark);
   const lamp = new THREE.MeshBasicMaterial({ color: 0xffd27a });
   const cage = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
   const hazard = new THREE.MeshBasicMaterial({ color: 0xf2c230 });
@@ -281,8 +282,9 @@ export function buildSewers(level: Level): THREE.Group {
     if (!before) box(x0 - 6, x0 - 0.5, ROCK, -3, STREET_BACK, FRONT, ground);
     if (!after) box(x1 + 0.5, x1 + 6, ROCK, -3, STREET_BACK, FRONT, ground);
     //the tunnel's ends and back wall
-    if (!before) box(x0 - 0.5, x0, deep - 0.3, roof, STREET_BACK, FRONT, brick);
-    if (!after) box(x1, x1 + 0.5, fy - 0.3, roof, STREET_BACK, FRONT, brick);
+    //(a hair past the street's slab and the hill's ground where they end in the same plane: no flicker between them)
+    if (!before) box(x0 - 0.51, x0 + 0.01, deep - 0.3, roof, STREET_BACK, FRONT + 0.01, brick);
+    if (!after) box(x1 - 0.01, x1 + 0.51, fy - 0.3, roof, STREET_BACK, FRONT + 0.01, brick);
     const wallFoot = s.climbFrom !== undefined ? Math.min(deep, Y(s.climbFrom)) : deep; // (down the climb's foot too)
     if (at > x0) box(x0, Math.min(at, x1), wallFoot, high, STREET_BACK, BACK, wall);
     if (at < x1) {
@@ -334,7 +336,7 @@ export function buildSewers(level: Level): THREE.Group {
         const qp = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: FRONT - BACK - 0.6, bevelEnabled: false }), tile);
         qp.position.z = BACK;
         g.add(qp);
-        const lip = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, FRONT - BACK - 0.6, 8).rotateX(Math.PI / 2), steel);
+        const lip = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, FRONT - BACK - 0.58, 8).rotateX(Math.PI / 2), steel);
         lip.position.set(b + 0.05, yb, (BACK + FRONT - 0.6) / 2);
         g.add(lip);
         for (let k = 0; k < 3; k++) {
@@ -354,14 +356,14 @@ export function buildSewers(level: Level): THREE.Group {
       } else if (f.kind === 'ledge') {
         //a walkway along the deep's back wall, over its channel: a stone shelf on corbels, a kerb along its edge
         box(a, b, ya - 0.3, ya, BACK, 0.7, stone);
-        box(a, b, ya - 0.05, ya + 0.04, 0.6, 0.72, pillar);
+        box(a - 0.01, b + 0.01, ya - 0.05, ya + 0.04, 0.6, 0.72, pillar); // (a hair past the shelf's ends)
         for (let x = a + 0.6; x < b - 0.3; x += 1.6) wedge(x - 0.2, ya - 0.3, x + 0.2, ya - 0.3, ya - 1, BACK, 0.3, stone);
       } else box(a, b, ya - 0.3, ya, BACK, FRONT, bowl && f.y > s.y ? tile : floor);
     }
     //runoff: a trickle along the back, and streams of it across the floor with chevrons running your way
-    box(x0, ramp, fy - 0.02, fy + 0.03, BACK, BACK + 0.5, water);
+    box(x0 + 0.01, ramp - 0.01, fy - 0.02, fy + 0.03, BACK + 0.01, BACK + 0.5, water); // (inside the floor's ends and the wall)
     for (const [w0, w1] of s.wet) {
-      box(X(w0), X(w1), fy - 0.02, fy + 0.04, BACK, FRONT - 0.6, water);
+      box(X(w0) + 0.01, X(w1) - 0.01, fy - 0.02, fy + 0.04, BACK + 0.01, FRONT - 0.6, water);
       for (let x = X(w0) + 0.4; x < X(w1) - 0.4; x += 0.9) {
         for (const z of [-1.4, 0.4, 2.0]) {
           const v = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.08), chevron);
@@ -392,7 +394,7 @@ export function buildSewers(level: Level): THREE.Group {
     for (let x = x0 + 1; x < ramp; x += 3) {
       if (lower(x)) continue;
       box(x - 0.08, x + 0.08, fy, roofAt(x), BACK, BACK + 0.1, iron);
-      box(x - 0.14, x + 0.14, roofAt(x) - 0.18, roofAt(x), BACK, 0.6, iron);
+      box(x - 0.14, x + 0.14, roofAt(x) - 0.18, roofAt(x) - 0.01, BACK, 0.6, iron); // (just under the roof's top, not in its plane)
     }
     for (let x = x0 + 9.5; x < ramp - 2; x += 13) {
       if (lower(x) || rng() < 0.35) continue;
@@ -451,7 +453,7 @@ export function buildSewers(level: Level): THREE.Group {
       if (!busy) {
         const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.5, 10), pipeMat);
         pipe.position.set(x, roofAt(x) - 0.2, BACK + 0.4);
-        box(x - 0.13, x + 0.13, fy, roofAt(x) - 0.4, BACK + 0.3, BACK + 0.5, ooze);
+        box(x - 0.13, x + 0.13, fy, roofAt(x) - 0.4, BACK + 0.3, BACK + 0.51, ooze); // (a hair in front of the runoff)
         const pool = new THREE.Mesh(new THREE.CircleGeometry(0.9, 14), ooze);
         pool.rotation.x = -Math.PI / 2;
         pool.scale.y = 0.6;
@@ -568,12 +570,12 @@ export function buildSewers(level: Level): THREE.Group {
         const xb = from + ((to - from) * (k + 1)) / n;
         const y = y0 + ((y1 - y0) * (y1 > y0 ? k + 1 : k)) / n;
         box(Math.min(xa, xb), Math.max(xa, xb), fy - 0.3, y, z0, FRONT - 0.4, stone);
-        box(Math.min(xa, xb), Math.max(xa, xb), y - 0.06, y + 0.02, z0, FRONT - 0.4, archBrick);
+        box(Math.min(xa, xb) - 0.01, Math.max(xa, xb) + 0.01, y - 0.06, y + 0.02, z0, FRONT - 0.39, archBrick); // (a hair proud of the step)
       }
     };
     if (u > a) flight(a, u, fy, fy + h);
     box(u, tp, fy - 0.3, fy + h, z0, FRONT - 0.4, stone);
-    box(u, tp, fy + h - 0.06, fy + h + 0.02, z0, FRONT - 0.4, archBrick);
+    box(u - 0.01, tp + 0.01, fy + h - 0.06, fy + h + 0.02, z0, FRONT - 0.39, archBrick);
     flight(b, tp, fy, fy + h);
     //the hubba wall along the back: up the steps, flat over the landing, down the far steps, its lights in a row
     const wall = 0.55;
@@ -723,7 +725,7 @@ export function buildSewers(level: Level): THREE.Group {
         const [a, b] = [X(r.xs[k - 1]), X(r.xs[k])];
         const [ya, yb] = [Y(r.ys[k - 1]), Y(r.ys[k])];
         wedge(a, ya, b, yb, Math.min(ya, yb) - 0.35, BACK, 0.45, pillar);
-        wedge(a, ya + 0.02, b, yb + 0.02, Math.min(ya, yb) - 0.05, 0.35, 0.5, steel); // (a steel nose along its edge)
+        wedge(a - 0.01, ya + 0.02, b + 0.01, yb + 0.02, Math.min(ya, yb) - 0.05, 0.35, 0.5, steel); // (a steel nose along its edge, a hair past the ends)
       }
       continue;
     }

@@ -4,3 +4,4 @@ dist
 *.blend1
 __pycache__/
 playtest-report/
+zfight-report/

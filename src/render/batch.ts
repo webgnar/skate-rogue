@@ -10,7 +10,7 @@ function key(mesh: THREE.Mesh): string | null {
   if (Array.isArray(m) || m.userData.facade || mesh.userData.gate || mesh.userData.keep || mesh.userData.forkSign) return null;
   const g = mesh.geometry;
   const c = (m as THREE.MeshLambertMaterial).color;
-  const flags = [m.type, (m as THREE.MeshLambertMaterial).map?.uuid ?? '-', c ? c.getHexString() : '-', (m as THREE.MeshLambertMaterial).emissive?.getHexString() ?? '-', m.transparent, m.alphaTest, m.side, m.vertexColors, m.opacity];
+  const flags = [m.type, (m as THREE.MeshLambertMaterial).map?.uuid ?? '-', c ? c.getHexString() : '-', (m as THREE.MeshLambertMaterial).emissive?.getHexString() ?? '-', m.transparent, m.alphaTest, m.side, m.vertexColors, m.opacity, m.polygonOffset ? `${m.polygonOffsetFactor},${m.polygonOffsetUnits}` : '-'];
   const attrs = Object.keys(g.attributes).sort().join(',');
   return `${flags.join('|')}|${attrs}|${g.index ? 'i' : 'n'}`;
 }

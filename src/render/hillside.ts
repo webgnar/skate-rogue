@@ -21,6 +21,7 @@ import { surfaceTexture } from './surfaces';
 import { TUNNEL, mouths } from '../traffic/tunnel';
 import { plantBush, plantTree, treeWarm } from './trees';
 import { cables, chinatownAtlas, chinatownGlowMap, chinatownRng, tenement } from './chinatown-art';
+import { DEPTH, depthStep } from './depth';
 
 const CABLE_Z = -1.15; // the cable car's lane (cable-view.ts CABLE.z)
 
@@ -386,14 +387,15 @@ function materials(): NonNullable<typeof mats> {
     //sidewalk slabs, 1 x 1 tile, and board-formed concrete (retaining walls, stairways, foundations), 2 x 2 tiles:
     //the kit's shared surface textures (surfaces.ts), so the street's stairs and the hill's look the same
     walk: new THREE.MeshLambertMaterial({ map: surfaceTexture('pavers'), color: 0xa9a4b2 }),
-    concrete: new THREE.MeshLambertMaterial({ map: surfaceTexture('concrete'), color: 0x8c8794 }),
+    //(the hill's mass: it steps back where a wall, a sewer's end or a garden meets it flush, depth.ts)
+    concrete: depthStep(new THREE.MeshLambertMaterial({ map: surfaceTexture('concrete'), color: 0x8c8794 }), DEPTH.fill),
     house: new THREE.MeshLambertMaterial({ map: houseAtlas() }),
     //Chinatown's tenements (chinatown-art.ts): their signs, lanterns and lit windows glow at night (chinatownGlow)
     ct: new THREE.MeshLambertMaterial({ map: chinatownAtlas(), emissiveMap: chinatownGlowMap(), emissive: 0xffffff, emissiveIntensity: 0 }),
     wetRoad: new THREE.MeshLambertMaterial({ map: road, color: 0x7c84a0 }),
     wetWalk: new THREE.MeshLambertMaterial({ map: surfaceTexture('pavers'), color: 0x7e7a90 }),
     //the power lines: flat ink, no outline of their own
-    wire: new THREE.MeshBasicMaterial({ color: 0x1a1424 }),
+    wire: depthStep(new THREE.MeshBasicMaterial({ color: 0x1a1424 }), DEPTH.mark), // (in front of a facade it crosses)
   };
   return mats;
 }
@@ -922,7 +924,8 @@ export function* buildHillSteps(level: Level, group: THREE.Group, lead = 0): Gen
   const inChina = (a: number, b: number) => overlaps(china, a, b);
   for (const [s0, s1] of stretches) {
     yield* houseRowSteps(m, rng, s0, s1 + 1, bz1, bz0, (a, b) => lane((a + b) / 2) + c, (a, b) => lowest(ground, hill, a, b) - 0.5, (a, b) => cut(a, b) || atPortal(a, b) || inChina(a, b), { bay: 0.75, chimney: 0, hip: true, shrub: 0.3 });
-    yield* houseRowSteps(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, (a, b) => cut(a, b) || inChina(a, b), { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
+    //(Chinatown's taller row up the hill runs 2 tiles past its street's ends: no houses standing in it)
+    yield* houseRowSteps(m, rng, s0, s1 + 1, uz0, uz1, (a, b) => lane((a + b) / 2) + up, () => B, (a, b) => cut(a, b) || inChina(a - 2, b + 2), { bay: 0.6, chimney: 0.3, hip: true, shrub: 0 });
     //tall palms and big shade trees between the rows, standing over the back row's roofs now and then (trees.ts)
     for (let x = s0 + 4 + rng() * 10; x < s1 - 2; x += 14 + rng() * 16) {
       if (inChina(x - 1, x + 1)) continue;
