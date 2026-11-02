@@ -1,8 +1,8 @@
-// Plays the game's sound (cues in src/audio/cues.ts) through Web Audio: one-shot samples, the grind loop, rolling
-// wheels and a siren synthesized from noise and an oscillator, and the soundtrack (MUSIC in cues.ts). Browsers only start audio after a
+// Plays the game's sound (cues in src/audio/cues.ts) through Web Audio: one-shot samples, the grind, rolling
+// wheels and siren loops, and the soundtrack (MUSIC in cues.ts). Browsers only start audio after a
 // tap, so the context is made on the first press. Any failure (no Web Audio, a sample that won't load) is silent:
 // the game never waits on sound.
-import { COIN_VERB, coinMix, LOOPS, MUSIC, SAMPLES, rollGain, sirenGain, type Cue, type MusicId } from './cues';
+import { COIN_VERB, coinMix, LOOPS, MUSIC, SAMPLES, rollGain, sampleFile, sirenGain, type Cue, type MusicId } from './cues';
 import { SETTINGS } from '../ui/settings';
 import { BandMeter, type Bands } from './bands';
 
@@ -22,8 +22,8 @@ export class Sound {
   private musicDuck!: GainNode; // after the bus: dips the music while paused
   private buffers = new Map<string, AudioBuffer>();
   private grind: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
-  private roll: { gain: GainNode; filter: BiquadFilterNode } | null = null;
-  private siren: { gain: GainNode; osc: OscillatorNode; lfo: OscillatorNode } | null = null;
+  private roll: { gain: GainNode; src: AudioBufferSourceNode } | null = null;
+  private siren: { gain: GainNode } | null = null;
   private music: { id: MusicId; src: AudioBufferSourceNode; track: string; at: number } | null = null;
   private analyser: AnalyserNode | null = null; // listens to the music for the gnar glow (bands)
   private bins = new Uint8Array(0);
@@ -71,10 +71,8 @@ export class Sound {
       else void ctx.resume().catch(() => {});
     });
     this.applyVolumes();
-    this.makeRoll();
-    this.makeSiren();
     this.makeVerb();
-    for (const id of SAMPLES) void this.load(`sounds/${id}`);
+    for (const id of SAMPLES) void this.load(sampleFile(id));
     this.loadMusic();
   }
 
@@ -84,7 +82,7 @@ export class Sound {
     if (this.musicLoading || SETTINGS.music <= 0) return;
     this.musicLoading = true;
     for (const id of new Set(Object.values(MUSIC).flat())) {
-      void this.load(`music/${id}`);
+      void this.load(`music/${id}.mp3`);
       void this.loadBeats(id);
     }
   }
@@ -132,11 +130,12 @@ export class Sound {
     this.loadMusic();
   }
 
-  private async load(id: string): Promise<void> {
+  // file: a path under the base, e.g. sounds/ollie.mp3; the buffer is kept by its bare name (ollie)
+  private async load(file: string): Promise<void> {
     try {
-      const res = await fetch(`${this.base}${id}.mp3`);
+      const res = await fetch(`${this.base}${file}`);
       const buf = await this.ctx!.decodeAudioData(await res.arrayBuffer());
-      this.buffers.set(id.slice(id.indexOf('/') + 1), buf);
+      this.buffers.set(file.slice(file.indexOf('/') + 1, file.lastIndexOf('.')), buf);
       if (this.want && !this.music) this.playMusic(this.want);
     } catch {
       //no sound for this one
@@ -244,14 +243,14 @@ export class Sound {
     }
     const grinding = f.skating && (f.mode === 'grind' || f.mode === 'rail');
     this.setGrind(grinding);
+    this.roll ??= this.makeLoop('roll');
+    this.siren ??= this.makeLoop('siren');
     if (this.roll) {
       this.roll.gain.gain.setTargetAtTime(f.skating ? rollGain(f.mode, f.speed) : 0, t, 0.05);
-      this.roll.filter.frequency.setTargetAtTime(300 + f.speed * 120, t, 0.1);
+      //the wheels spin up a little with speed
+      this.roll.src.playbackRate.setTargetAtTime(0.85 + 0.25 * Math.min(1, Math.max(0, f.speed) / 6), t, 0.1);
     }
-    if (this.siren) {
-      this.siren.gain.gain.setTargetAtTime(f.skating ? sirenGain(f.heat) : 0, t, 0.3);
-      this.siren.lfo.frequency.setTargetAtTime(0.5 + f.heat / 50, t, 0.3); // the wail quickens with Heat
-    }
+    if (this.siren) this.siren.gain.gain.setTargetAtTime(f.skating ? sirenGain(f.heat) : 0, t, 0.3);
     this.setMusic(f.over ? 'title' : 'gameplay');
   }
 
@@ -310,49 +309,17 @@ export class Sound {
     }
   }
 
-  // wheels on the street: looped brown-ish noise through a low-pass, opened up with speed
-  private makeRoll(): void {
-    const ctx = this.ctx!;
-    const len = ctx.sampleRate * 2;
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < len; i++) {
-      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
-      d[i] = last * 3.5;
-    }
-    const src = ctx.createBufferSource();
+  // a loop that's always running, silent until update() raises it (the wheels, the siren); null until it loads
+  private makeLoop(id: 'roll' | 'siren'): { gain: GainNode; src: AudioBufferSourceNode } | null {
+    const buf = this.buffers.get(id);
+    if (!this.ctx || !buf) return null;
+    const src = this.ctx.createBufferSource();
     src.buffer = buf;
     src.loop = true;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 600;
-    const gain = ctx.createGain();
+    const gain = this.ctx.createGain();
     gain.gain.value = 0;
-    src.connect(filter).connect(gain).connect(this.sfx);
+    src.connect(gain).connect(this.sfx);
     src.start();
-    this.roll = { gain, filter };
-  }
-
-  // a two-tone police wail, far off: a triangle wave swept by a slow oscillator
-  private makeSiren(): void {
-    const ctx = this.ctx!;
-    const osc = ctx.createOscillator();
-    osc.type = 'triangle';
-    osc.frequency.value = 760;
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.6;
-    const depth = ctx.createGain();
-    depth.gain.value = 180;
-    lfo.connect(depth).connect(osc.frequency);
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 1400;
-    const gain = ctx.createGain();
-    gain.gain.value = 0;
-    osc.connect(filter).connect(gain).connect(this.sfx);
-    osc.start();
-    lfo.start();
-    this.siren = { gain, osc, lfo };
+    return { gain, src };
   }
 }

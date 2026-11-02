@@ -995,7 +995,11 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
 
 - **Sound first:** city ambience per biome, cars passing with Doppler and stereo panning, horns, wheels sounding
   different on asphalt, concrete, metal rails and car roofs, and sirens that rise with Heat. Headphones are the
-  intended way to play.
+  intended way to play. Built Nov 2, 2026: zack's own sound set, one sound per moment (the list in the project
+  files' `audio/sound-effects-list.md`, wired in `src/audio/cues.ts`), with recorded loops for the grind, the
+  wheels (pitch up a little with speed) and the siren (louder with Heat). Still Lou Gnar's: a clean landing (no
+  `land.wav` yet) and rolling over glass; a spin token plays the Stoken a little higher. Ambience, passing cars and
+  surface-specific wheels **(not in the build yet)**.
 - **A living street:** back-lane traffic, pedestrians who react (duck, cheer, film you on their phone), and Flock
   cameras and AI billboards that turn to track you.
 - **Time and weather:** each floor rolls a time of day and weather (dusk, night with neon, rain that leaves
