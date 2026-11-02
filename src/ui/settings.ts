@@ -6,7 +6,7 @@ import { clampUserZoom } from '../render/camera';
 
 const KEY = 'gnar-run-settings';
 // bumped when the default mix changes: volumes saved under an older mix are dropped once for the new defaults
-const MIX = 2;
+const MIX = 3;
 
 export interface Settings {
   sound: number; // effects volume, 0-1
@@ -19,7 +19,7 @@ export interface Settings {
 }
 
 // full screen starts on for touch screens, where the browser bars eat the most of the view
-export const SETTINGS: Settings = { sound: 0.25, music: 0.75, haptics: true, fullscreen: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, tilt: false, closeUp: true, zoom: 1 };
+export const SETTINGS: Settings = { sound: 0.45, music: 0.65, haptics: true, fullscreen: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches, tilt: false, closeUp: true, zoom: 1 };
 
 const unit = (v: unknown, d: number) => (typeof v === 'number' && v >= 0 && v <= 1 ? v : d);
 
