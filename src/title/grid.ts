@@ -289,11 +289,14 @@ export function buildCity(seed = 7): City {
       //how tall: highest downtown, low and old near Webster's street
       const d = Math.hypot(cx - GRID.downtown.x, cz - GRID.downtown.z);
       const near = Math.abs(cz - GRID.heroZ) < 70 && Math.abs(cx) < 120;
-      const peak = near ? 30 + rng() * 40 : 40 + 300 * Math.exp(-d / 260) * (0.45 + rng() * 0.75);
-      const kind = (near ? (rng() < 0.6 ? 2 : 0) : peak > 150 ? (rng() < 0.5 ? 1 : rng() < 0.5 ? 3 : 0) : ([0, 1, 2, 3] as const)[Math.floor(rng() * 4)]) as 0 | 1 | 2 | 3;
+      //the two block rows behind Webster's stay low (old walk-ups), so from the street the skyline and the clouds
+      //drifting past it show over the store's roof (zack: clouds moving by up top of the buildings)
+      const behind = cz < GRID.heroZ && cz > GRID.heroZ - 140 && Math.abs(cx) < 110;
+      const peak = behind ? 12 + rng() * 16 : near ? 30 + rng() * 40 : 40 + 300 * Math.exp(-d / 260) * (0.45 + rng() * 0.75);
+      const kind = (behind ? 2 : near ? (rng() < 0.6 ? 2 : 0) : peak > 150 ? (rng() < 0.5 ? 1 : rng() < 0.5 ? 3 : 0) : ([0, 1, 2, 3] as const)[Math.floor(rng() * 4)]) as 0 | 1 | 2 | 3;
       if (hero && Math.abs(cx) < 30) {
-        //Webster's block: the corner store (city.ts) along the front, a tower right behind it
-        building({ x: cx, z: z0 + GRID.walk + 7, w: lot.w, d: 14 }, 70 + rng() * 40, 0);
+        //Webster's block: the corner store (city.ts) along the front, an old walk-up behind it
+        building({ x: cx, z: z0 + GRID.walk + 7, w: lot.w, d: 14 }, 15, 2);
         continue;
       }
       //one to four buildings on the block
@@ -400,13 +403,21 @@ export function buildCity(seed = 7): City {
   // clouds drifting past the tops of the towers: soft puffs on camera-facing cards, pink underneath from the sun
   const cloudTex = cloudTexture(rng);
   const clouds: THREE.Sprite[] = [];
-  for (let i = 0; i < 16; i++) {
+  //three layers: over the towers, where the camera starts; low past the skyline, seen over the store's roof from
+  //the street; and a few close by the camera at the top, sliding past quicker
+  const layers = [
+    { n: 16, w: [70, 120], y: [150, 120], z: [-320, 360], speed: [2, 5] },
+    { n: 10, w: [50, 70], y: [70, 70], z: [-300, 130], speed: [5, 6] },
+    { n: 5, w: [40, 40], y: [225, 50], z: [-60, 110], speed: [8, 8] },
+    { n: 7, w: [24, 24], y: [26, 34], z: [-160, 90], speed: [3, 4] }, // wisps low over the walk-ups behind the store
+  ];
+  for (const L of layers) for (let i = 0; i < L.n; i++) {
     const mat = new THREE.SpriteMaterial({ map: cloudTex, color: new THREE.Color().setHSL(0.92 + rng() * 0.06, 0.45, 0.82 + rng() * 0.1), transparent: true, opacity: 0.7, depthWrite: false, fog: true });
     const s = new THREE.Sprite(mat);
-    const w = 70 + rng() * 120;
+    const w = L.w[0] + rng() * L.w[1];
     s.scale.set(w, w * 0.42, 1);
-    s.position.set(-300 + rng() * 600, 150 + rng() * 120, -320 + rng() * 360);
-    s.userData.speed = 2 + rng() * 5;
+    s.position.set(-300 + rng() * 600, L.y[0] + rng() * L.y[1], L.z[0] + rng() * L.z[1]);
+    s.userData.speed = L.speed[0] + rng() * L.speed[1];
     clouds.push(s);
     group.add(s);
   }

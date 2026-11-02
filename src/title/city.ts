@@ -169,12 +169,14 @@ export function buildStreet(seed = 3): Street {
   const awning = new THREE.Mesh(new THREE.BoxGeometry(24, 0.3, 2.4), toon({ color: 0x2a8a6a }));
   awning.position.set(1, 4.6, -2.9);
   awning.rotation.x = 0.25;
-  //upstairs windows: dark, a couple lit
+  //upstairs windows: dark, a couple lit, one with a TV flickering blue and one with a tube light on the blink
+  const tv: THREE.MeshBasicMaterial[] = [];
   for (let f = 0; f < 2; f++) {
     for (let i = 0; i < 6; i++) {
       const lit = rng() < 0.3;
       const w = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2), new THREE.MeshBasicMaterial({ color: lit ? 0xffc878 : 0x24203a }));
       w.position.set(-15 + i * 6, 7.2 + f * 2.6, -3.97);
+      if ((f === 0 && i === 2) || (f === 1 && i === 3)) tv.push(w.material);
       store.add(w);
     }
   }
@@ -232,6 +234,13 @@ export function buildStreet(seed = 3): Street {
       const out = (p > 3.6 && p < 3.7) || (p > 3.82 && p < 3.9);
       (neon.material as THREE.MeshBasicMaterial).opacity = out ? 0.08 : 0.9 + Math.sin(t * 90) * 0.1;
       (neon2.material as THREE.MeshBasicMaterial).opacity = 0.85 + Math.sin(t * 70 + 1) * 0.1;
+      //the TV: a cold blue that jumps about with the cuts; the tube light: on, then a stutter every few seconds
+      const cut = Math.floor(t * 2.3);
+      const v = 0.45 + 0.35 * Math.abs(Math.sin(cut * 12.9898)) + 0.08 * Math.sin(t * 31);
+      tv[0]?.color.setRGB(0.35 * v, 0.55 * v, 1.0 * v);
+      const q = (t + 1.3) % 3.7;
+      const tube = q < 2.9 || (q > 3.05 && q < 3.15) || q > 3.5;
+      tv[1]?.color.setHex(tube ? 0xe8f0ff : 0x24203a);
       for (const l of lamps) {
         let on = 1;
         if (l.broken) {
