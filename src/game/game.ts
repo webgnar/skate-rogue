@@ -318,6 +318,7 @@ export class Game {
   private sewerStart = ''; // ?sewer: each new floor starts at the way into a sewer
   private cloudStart = false; // ?clouds: each new floor starts up on its cloud layer (src/gen/clouds.ts)
   paused = false; // frozen by the pause button, Esc / P, or the page going hidden
+  titleDraw: ((dt: number) => void) | null = null; // draws the title's own scene in place of the street (src/title)
   titled = false; // held still under the title screen (src/ui/title.ts) until SKATE: the street drawn, the title music on
   sound: Sound | null = null; // set by main once the page is up
   private menuAt = 0;
@@ -1324,7 +1325,8 @@ export class Game {
     if (this.titled) {
       this.input.clear();
       this.sound?.update({ mode: 'roll', speed: 0, heat: 0, skating: false, over: false, paused: false, title: true });
-      this.view.render();
+      if (this.titleDraw) this.titleDraw(realDt);
+      else this.view.render();
       return;
     }
     //paused: the street holds its last frame and presses are dropped

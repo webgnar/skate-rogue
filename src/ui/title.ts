@@ -1,7 +1,8 @@
 // The title screen (zack 2026-11-02: "i also got title screen music. we should probably build a title screen").
-// It sits over the first floor, drawn and standing still, once the loading screen is done. Phones only let a page
-// make sound after a tap, so it's a press-start: the first tap anywhere starts the title music (MUSIC.title in
-// src/audio/cues.ts) and brings up SKATE, and SKATE starts the run. With the music off the first step is skipped.
+// Over its own scene (src/title/title-scene.ts), once the loading screen is done. Phones only let a page make sound
+// after a tap, so it's a press-start: high over the city, the first tap anywhere starts the title music (MUSIC.title
+// in src/audio/cues.ts) and sends the camera down through the city to Webster; a tap on the way skips to him; then
+// SKATE starts the run. With the music off it starts down by itself.
 // Test links (?floor, ?bot ...) skip the screen, and so does a reload the game asks for itself (skipTitleOnce).
 
 const SKIP = 'gnarrun.skipTitle';
@@ -9,6 +10,7 @@ const SKIP = 'gnarrun.skipTitle';
 export interface TitleHooks {
   music: () => boolean; // is the music on (the title music would play)
   wake: () => void; // the first tap: make the sound
+  down: () => void; // send the title scene's camera down (src/title/title-scene.ts), or skip to the bottom
   go: () => void; // SKATE: the run starts
 }
 
@@ -35,7 +37,8 @@ export function wantTitle(params: URLSearchParams, testing: boolean): boolean {
 }
 
 export class TitleScreen {
-  private step: 'start' | 'go' | 'gone' = 'start';
+  // start: high over the city under the logo; down: the camera on its way to Webster; go: SKATE is up
+  private step: 'start' | 'down' | 'go' | 'gone' = 'start';
   private readonly startBtn: HTMLElement;
   private readonly goBtn: HTMLElement;
 
@@ -62,10 +65,11 @@ export class TitleScreen {
   show(): void {
     document.getElementById('app')!.classList.add('titled');
     this.el.hidden = false;
-    if (!this.hooks.music()) this.ready();
+    //no music to start: straight down to Webster
+    if (!this.hooks.music()) this.descend();
   }
 
-  // Space, Enter or Up: the same as a tap (start, then SKATE)
+  // Space, Enter or Up: the same as a tap
   private key = (e: KeyboardEvent): void => {
     if (this.step === 'gone' || !['Space', 'Enter', 'ArrowUp'].includes(e.code)) return;
     e.preventDefault();
@@ -76,16 +80,26 @@ export class TitleScreen {
   private press(onGo: boolean): void {
     if (this.step === 'start') {
       this.hooks.wake();
-      this.ready();
-    } else if (this.step === 'go' && onGo) this.leave();
+      this.descend();
+    } else if (this.step === 'down') this.hooks.down(); // skip to Webster
+    else if (this.step === 'go' && onGo) this.leave();
   }
 
-  // SKATE comes up (the music has started)
-  private ready(): void {
-    this.step = 'go';
+  // the music's in: the logo kicks and lifts away, the camera starts down
+  private descend(): void {
+    this.step = 'down';
     this.startBtn.hidden = true;
+    this.el.classList.add('live', 'flying');
+    this.hooks.down();
+  }
+
+  // the camera's down at Webster (the title scene says): the logo comes back and SKATE comes up
+  arrived(): void {
+    if (this.step !== 'down') return;
+    this.step = 'go';
     this.goBtn.hidden = false;
-    this.el.classList.add('live');
+    this.el.classList.remove('flying');
+    this.el.classList.add('landed');
   }
 
   private leave(): void {
