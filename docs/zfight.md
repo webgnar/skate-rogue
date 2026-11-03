@@ -4,14 +4,15 @@ Two surfaces in the same plane (a sewer's end wall flush with the hill's concret
 a power line across a facade) flicker through each other as the camera moves. `npm run zfight` finds them.
 
 ```
-npm run zfight -- [--url http://localhost:5173/] [--floors 1,2,3] [--seed 1201] [--shots 8] [--join]
+npm run zfight -- [--url http://localhost:5173/] [--floors 1,2,3] [--seed 1201] [--shots 8] [--join] [--eps 0.004]
 node scripts/zfight/look.mjs --url http://localhost:5173/ --floor 2 --at 56,-5.2,3.7 [--from 5,1,6] --out spot.png
 ```
 
 - `scripts/zfight/detect.js` runs in the game page. It takes every triangle in the built scene (after batching and
   merging, clipped by the floors' join planes), finds pairs that face the same way, lie within 4 mm of one plane
   and overlap, and groups them into clusters by material pair and place. Pairs of one material are left out (they
-  look the same whichever wins), and so are pairs where either side has a polygon offset (that settles it).
+  look the same whichever wins) unless it's an atlas, not laid in world space (the hill's houses: each piece shows
+  its own part of the texture), and so are pairs where either side has a polygon offset (that settles it).
 - A cluster counts when the game's camera would see it: following a skater on the street over the spot, or on
   the spot's own level, with nothing in between (a ray against every triangle) and the face turned toward it.
 - `run.mjs` opens each floor in headless Chromium, prints the clusters by material pair (biggest area first),

@@ -58,7 +58,7 @@ for (const floor of FLOORS) {
   });
   // the cameras that might see a spot: the game's, following a skater on the street over it, and one on the spot's
   // own level (down in a sewer, up on a roof); null when the spot is off that camera's screen
-  const r = await page.evaluate(`(${DETECT})({ scene: window.game.view.scene, cams: (p) => {
+  const r = await page.evaluate(`(${DETECT})({ scene: window.game.view.scene, epsD: ${Number(opt('eps', 0.004))}, cams: (p) => {
     const v = window.game.view, L = window.game.level, out = [];
     for (const y of [0, p[1] + 0.3]) {
       v.follow(p[0] * 32, L.streetY - y * 32);

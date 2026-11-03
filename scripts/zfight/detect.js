@@ -140,6 +140,9 @@
     }
     return out;
   };
+  // one material over itself looks the same either way, unless its texture isn't laid in world space (an atlas:
+  // each piece shows its own part of it, and two pieces in one plane flicker between them)
+  const atlas = (i) => !!mats[i].map && !mats[i].surface;
   const hits = [];
   const CELL = 1.5;
   for (const [key, list] of groups) {
@@ -187,7 +190,7 @@
               cu /= I.length; cv /= I.length;
               const n = A.n, dd = A.d;
               const w = [cu * u[0] + cv * v[0] + dd * n[0], cu * u[1] + cv * v[1] + dd * n[1], cu * u[2] + cv * v[2] + dd * n[2]];
-              hits.push({ at: w, area: ar, n, gap: Math.abs(A.d - B.d), mats: [A.mat, B.mat].sort((a, b) => a - b), same: A.mat === B.mat, meshes: [A.mesh, B.mesh] });
+              hits.push({ at: w, area: ar, n, gap: Math.abs(A.d - B.d), mats: [A.mat, B.mat].sort((a, b) => a - b), same: A.mat === B.mat && !atlas(A.mat), meshes: [A.mesh, B.mesh] });
             }
         }
       }
