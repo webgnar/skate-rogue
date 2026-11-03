@@ -100,9 +100,16 @@ const outlineVertex = /* glsl */ `
   #include <skinning_pars_vertex>
   #include <fog_pars_vertex>
   #include <clipping_planes_pars_vertex>
+  #ifdef SHARD_GROW
+    attribute vec3 shardMid; // the gnar glow's shards grow about their own middles (shard-aura.ts)
+    uniform float uGrow;
+  #endif
   ${inkLensGlsl}
   void main() {
     vec3 transformed = position;
+    #ifdef SHARD_GROW
+      transformed = shardMid + (position - shardMid) * uGrow;
+    #endif
     vec3 objectNormal = inkNormal;
     #include <skinbase_vertex>
     #include <skinnormal_vertex>
@@ -164,8 +171,8 @@ export function outlineMaterial(): THREE.ShaderMaterial {
 }
 
 // an outline of its own colour and width (the gnar glow's shards, shard-aura.ts): the shared resolution and lens,
-// pushed back in depth by `depth` so it sits behind the ink
-export function glowMaterial(width: number, color: THREE.ColorRepresentation, depth: number): THREE.ShaderMaterial {
+// pushed back in depth by `depth` so it sits behind the ink. `grow`: its uGrow scales each shard about its shardMid
+export function glowMaterial(width: number, color: THREE.ColorRepresentation, depth: number, grow = false): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: outlineVertex,
     fragmentShader: outlineFragment,
@@ -175,7 +182,9 @@ export function glowMaterial(width: number, color: THREE.ColorRepresentation, de
       uLens: inkUniforms.uLens,
       uColor: { value: new THREE.Color(color) },
       uDepth: { value: depth },
+      ...(grow ? { uGrow: { value: 1 } } : {}),
     },
+    defines: grow ? { SHARD_GROW: '' } : {},
     side: THREE.BackSide,
   });
 }

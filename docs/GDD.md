@@ -1166,7 +1166,9 @@ skaters you've unlocked, with the rest as silhouettes still to be woken.
 - **Boon pick:** three large cards, tap to pick, long-press to read. Reuse QFS's card layout and deal animation.
 - **Shop:** board slots across the top, mods below, drag to place. Must work with one thumb.
 - **Pause:** resume, settings, run summary (boons, mods), abandon run. Built Oct 24, 2026: sound and music sliders,
-  vibration, effects quality, reduce motion, reduce flashing, Heat stripes, and QUIT RUN.
+  vibration, effects quality, reduce motion, reduce flashing, Heat stripes, and QUIT RUN. FRAME RATE (Nov 3, 2026,
+  zack): 60 FPS by default, or a steady 30 FPS, which runs smoother on phones that can't hold 60 (what iPhone Low
+  Power Mode does to the page).
 - Every touch target is at least 48 × 48 px. Nothing important near the notch or the home bar.
 
 ## Technical design

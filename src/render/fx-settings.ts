@@ -6,6 +6,7 @@
 //   ?heatcue             a striped edge that shows Heat without relying on red and blue
 //   ?pixel=4             the chunky low-res look: each rendered pixel covers 4 x 4 screen pixels (1: sharp)
 //   ?ghost=yellow        the colour of Lou's dithered shape where the foreground hides him (pink by default)
+//   ?fps=30              hold the game to a steady 30 frames a second (60: as fast as the screen goes)
 //   ?fliplines=swoosh    the comic lines round a flipping board: ink (default), swoosh, or pixels (the old trail)
 // Add =0 to turn one back off (?calm=0). The device's "reduce motion" setting turns reduce motion on.
 import { FLIP_LINE_STYLES, type FlipLineStyle } from './flip-lines';
@@ -22,7 +23,10 @@ export interface FxSettings {
   pixel: number; // the low-res look: screen pixels per rendered pixel, 1 (sharp) to PIXEL_MAX
   ghost: Ghost; // Lou's dithered shape through the foreground (ghost.ts)
   flipLines: FlipLineStyle; // the comic lines round a flipping board (flip-lines.ts)
+  fps: Fps; // 60: every frame the screen gives; 30: a steady 30, as iPhones hold a page to in Low Power Mode
 }
+
+export type Fps = 30 | 60;
 
 export type Ghost = 'pink' | 'yellow';
 export const GHOSTS: Ghost[] = ['pink', 'yellow'];
@@ -37,6 +41,7 @@ export const FX: FxSettings & { tier: Tier } = {
   pixel: 1,
   ghost: 'pink',
   flipLines: 'ink',
+  fps: 60,
   tier: 'high',
 };
 
@@ -50,21 +55,21 @@ export function initFx(params: URLSearchParams, prefersReducedMotion = false): v
   }
   Object.assign(FX, applyParams({ ...defaults(prefersReducedMotion), ...saved }, params));
   FX.tier = FX.quality === 'low' ? 'low' : 'high';
-  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue', 'pixel', 'ghost', 'fliplines'].some((k) => params.has(k))) saveFx();
+  if (['fx', 'calm', 'nomotion', 'noflash', 'heatcue', 'pixel', 'ghost', 'fliplines', 'fps'].some((k) => params.has(k))) saveFx();
 }
 
 // remember the settings (the URL flags, or the pause card)
 export function saveFx(): void {
   try {
-    const { quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost, flipLines } = FX;
-    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost, flipLines }));
+    const { quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost, flipLines, fps } = FX;
+    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost, flipLines, fps }));
   } catch {
     //not remembered in a private window
   }
 }
 
 function defaults(prefersReducedMotion: boolean): FxSettings {
-  return { quality: 'auto', reduceMotion: prefersReducedMotion, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink' };
+  return { quality: 'auto', reduceMotion: prefersReducedMotion, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink', fps: 60 };
 }
 
 export function applyParams(s: FxSettings, params: URLSearchParams): FxSettings {
@@ -84,6 +89,8 @@ export function applyParams(s: FxSettings, params: URLSearchParams): FxSettings 
   const fl = params.get('fliplines');
   if (fl && (FLIP_LINE_STYLES as string[]).includes(fl)) out.flipLines = fl as FlipLineStyle;
   if (!FLIP_LINE_STYLES.includes(out.flipLines)) out.flipLines = 'ink';
+  if (params.has('fps')) out.fps = Number(params.get('fps')) as Fps;
+  if (out.fps !== 30) out.fps = 60;
   return out;
 }
 

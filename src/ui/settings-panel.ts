@@ -1,5 +1,5 @@
 // The settings on the pause card (GDD: UI, Pause): sound and music volume, vibration, the camera's close-ups and
-// zoom (pinching the street sets it too), the effects quality, the chunky pixel look and the three accessibility switches. Each change applies at once and is saved.
+// zoom (pinching the street sets it too), the effects quality, the frame rate (60, or a steady 30), the chunky pixel look and the three accessibility switches. Each change applies at once and is saved.
 import { FX, PIXEL_MAX, saveFx, type FxSettings } from '../render/fx-settings';
 import { SETTINGS, saveSettings, buzz } from './settings';
 import { tilt } from '../render/tilt';
@@ -32,6 +32,7 @@ export class SettingsPanel {
       <button class="row" data-closeup><span>DYNAMIC ZOOM</span><b></b></button>
       <label class="row"><span>CAMERA</span><input type="range" min="${USER_ZOOM.min * 100}" max="${USER_ZOOM.max * 100}" step="5" data-zoom><b></b></label>
       <button class="row" data-quality><span>EFFECTS</span><b></b></button>
+      <button class="row" data-fps><span>FRAME RATE</span><b></b></button>
       <label class="row"><span>PIXELS</span><input type="range" min="1" max="${PIXEL_MAX}" step="1" data-pixel><b></b></label>
       <button class="row" data-toggle="reduceMotion"><span>REDUCE MOTION</span><b></b></button>
       <button class="row" data-toggle="reduceFlashing"><span>REDUCE FLASHING</span><b></b></button>
@@ -79,6 +80,9 @@ export class SettingsPanel {
         FX[key] = !FX[key];
         saveFx();
         this.hooks.look();
+      } else if (b.dataset.fps !== undefined) {
+        FX.fps = FX.fps === 30 ? 60 : 30;
+        saveFx();
       } else if (b.dataset.quality !== undefined) {
         FX.quality = QUALITY[(QUALITY.indexOf(FX.quality) + 1) % QUALITY.length];
         saveFx();
@@ -117,6 +121,7 @@ export class SettingsPanel {
     zm.value = String(Math.round(SETTINGS.zoom * 100));
     zm.parentElement!.querySelector('b')!.textContent = `${Math.round(SETTINGS.zoom * 100)}%`;
     this.el.querySelector('[data-quality] b')!.textContent = FX.quality.toUpperCase();
+    this.el.querySelector('[data-fps] b')!.textContent = FX.fps === 30 ? '30 FPS' : '60 FPS';
     const px = this.el.querySelector<HTMLInputElement>('[data-pixel]')!;
     px.value = String(FX.pixel);
     px.parentElement!.querySelector('b')!.textContent = FX.pixel === 1 ? 'SHARP' : `${FX.pixel}X`;

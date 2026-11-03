@@ -75,8 +75,8 @@ export function shardOf(points: THREE.Vector3[], level = LEVELS[0]): THREE.Buffe
 }
 
 export class ShardAura {
-  private readonly glow = glowMaterial(INK.width, 0xffd23f, 0.002);
-  private readonly edge = glowMaterial(INK.width, INK.color, 0.004);
+  private readonly glow = glowMaterial(INK.width, 0xffd23f, 0.002, true);
+  private readonly edge = glowMaterial(INK.width, INK.color, 0.004, true);
   // every hull's black edge goes down first and every glow over it, ignoring each other's depth, so the edges only
   // show round the outside of the union: one shard's edge used to win against a farther shard's glow (the board's far
   // edge drew a stray black line across the glow between the legs, zack 2026-10-31). They still write depth, so the
@@ -99,15 +99,34 @@ export class ShardAura {
       const { bones } = parts[0].skeleton;
       const per: THREE.Vector3[][] = bones.map(() => []);
       for (const m of parts) if (m.skeleton.bones === bones || m.skeleton.bones.every((b, i) => b === bones[i])) this.points(m, per);
-      per.forEach((pts, b) => {
-        if (pts.length < SHARDS.minVerts) return;
-        LEVELS.forEach((level, l) => {
+      //each level's shards in one skinned mesh, a shard's every vertex on its own bone: two draws a level (the edge and
+      //the glow), not two a bone (perf thread, zack 2026-11-03: 62 draws while the glow was on)
+      const host = parts[0];
+      LEVELS.forEach((level, l) => {
+        const shards: { geo: THREE.BufferGeometry; bone: number }[] = [];
+        per.forEach((pts, b) => {
+          if (pts.length < SHARDS.minVerts) return;
           const geo = shardOf(pts, level);
-          if (geo) this.add(bones[b], geo, l);
+          if (geo) shards.push({ geo, bone: b });
         });
+        if (shards.length) this.addSkinned(host, mergeShards(shards, host), l);
       });
     }
     this.board(board);
+  }
+
+  // a level's merged shards, riding the body's skeleton (attached beside the body, so it hides and moves with it)
+  private addSkinned(host: THREE.SkinnedMesh, geo: THREE.BufferGeometry, level: number): void {
+    for (const mat of [this.edge, this.glow]) {
+      const hull = new THREE.SkinnedMesh(geo, mat);
+      hull.bind(host.skeleton, host.bindMatrix);
+      hull.userData.ink = true; // not a body part: the ink, rims and wear leave it alone
+      hull.frustumCulled = false;
+      hull.visible = false;
+      hull.renderOrder = this.order.get(mat)!;
+      host.parent!.add(hull);
+      this.hulls[level].push(hull);
+    }
   }
 
   // each vertex of a skinned part, in the space of the bone that moves it most
@@ -155,6 +174,8 @@ export class ShardAura {
     geo.computeBoundingBox();
     const mid = geo.boundingBox!.getCenter(new THREE.Vector3());
     geo.translate(-mid.x, -mid.y, -mid.z);
+    //(grown about its origin, its middle: the materials grow every shard about its shardMid)
+    geo.setAttribute('shardMid', new THREE.Float32BufferAttribute(new Float32Array(geo.getAttribute('position').count * 3), 3));
     for (const mat of [this.edge, this.glow]) {
       const hull = new THREE.Mesh(geo, mat);
       hull.position.copy(mid);
@@ -186,8 +207,49 @@ export class ShardAura {
     const glow = SHARDS.glow * amount * pulse;
     this.glow.uniforms.uWidth.value = glow * pixelRatio;
     this.edge.uniforms.uWidth.value = (glow + SHARDS.edge * amount) * pixelRatio;
-    const grow = 1 + SHARDS.mid * (bands?.mid ?? 0) * amount;
-    for (const h of this.hulls[level]) h.scale.setScalar(grow);
+    this.glow.uniforms.uGrow.value = this.edge.uniforms.uGrow.value = 1 + SHARDS.mid * (bands?.mid ?? 0) * amount;
     (this.glow.uniforms.uColor.value as THREE.Color).setHSL((0.13 + t * 0.35) % 1, 1, 0.6 + SHARDS.high * (bands?.high ?? 0));
   }
+}
+
+// shards in their bones' spaces as one skinned geometry for `host`'s skeleton: each vertex placed so the skinning
+// (attached bind) carries it exactly as the bone would, weighted wholly to its bone, with its shard's middle beside it
+export function mergeShards(shards: { geo: THREE.BufferGeometry; bone: number }[], host: THREE.SkinnedMesh): THREE.BufferGeometry {
+  const unbind = host.bindMatrix.clone().invert();
+  let n = 0;
+  for (const s of shards) n += s.geo.getAttribute('position').count;
+  const pos = new Float32Array(n * 3);
+  const nor = new Float32Array(n * 3);
+  const mid = new Float32Array(n * 3);
+  const idx = new Uint16Array(n * 4);
+  const wt = new Float32Array(n * 4);
+  const m = new THREE.Matrix4();
+  const nm = new THREE.Matrix3();
+  const v = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  let at = 0;
+  for (const { geo, bone } of shards) {
+    //bone space to the host's bind space: (bindMatrix)^-1 (boneInverse)^-1
+    m.copy(host.skeleton.boneInverses[bone]).invert().premultiply(unbind);
+    nm.getNormalMatrix(m);
+    geo.computeBoundingBox();
+    geo.boundingBox!.getCenter(c).applyMatrix4(m);
+    const p = geo.getAttribute('position');
+    const q = geo.getAttribute('inkNormal');
+    for (let i = 0; i < p.count; i++, at++) {
+      v.fromBufferAttribute(p, i).applyMatrix4(m).toArray(pos, at * 3);
+      v.fromBufferAttribute(q, i).applyMatrix3(nm).normalize().toArray(nor, at * 3);
+      c.toArray(mid, at * 3);
+      idx[at * 4] = bone;
+      wt[at * 4] = 1;
+    }
+    geo.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('inkNormal', new THREE.BufferAttribute(nor, 3));
+  out.setAttribute('shardMid', new THREE.BufferAttribute(mid, 3));
+  out.setAttribute('skinIndex', new THREE.BufferAttribute(idx, 4));
+  out.setAttribute('skinWeight', new THREE.BufferAttribute(wt, 4));
+  return out;
 }

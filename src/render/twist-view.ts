@@ -9,6 +9,7 @@ import type { Skater } from '../physics/skater';
 import { FX } from './fx-settings';
 import { toX, toY } from './kit';
 import { inkify } from './toon';
+import { disposeGeometries } from './dispose';
 
 const STREAKS = 28; // per current
 const CHEVRON_GAP = 0.8; // world units between conveyor chevrons
@@ -70,6 +71,7 @@ export class TwistView {
   }
 
   set(level: Level): void {
+    disposeGeometries(this.group, [this.warm]); // the last floor's pieces (dispose.ts)
     this.group.clear();
     this.group.add(this.warm);
     this.movers = [];

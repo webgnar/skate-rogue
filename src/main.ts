@@ -19,6 +19,7 @@ import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
+import { frameDue } from './game/frame-cap';
 import { makeCallouts } from './ui/callouts';
 import { makeMissionToast } from './ui/mission-toast';
 import { clampUserZoom, initCam } from './render/camera';
@@ -709,9 +710,13 @@ async function start() {
   }
   loading.finish();
 
+  //(held to 30 a second with the 30 fps setting: frame-cap.ts)
+  let ran = -Infinity;
   const tick = (now: number) => {
-    game.frame(now);
     requestAnimationFrame(tick);
+    if (!frameDue(now, ran, FX.fps)) return;
+    ran = now;
+    game.frame(now);
   };
   requestAnimationFrame(tick);
 }

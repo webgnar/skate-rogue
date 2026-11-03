@@ -61,10 +61,7 @@ export class GateFx {
 
   // find the gates in a fresh kit (meshes tagged userData.gate) and fill each arch with a portal
   build(kit: THREE.Object3D): void {
-    for (const g of this.gates) {
-      g.portal.geometry.dispose();
-      g.mat.dispose();
-    }
+    this.dispose();
     this.group.clear();
     this.gates = [];
     this.signs = [];
@@ -98,6 +95,15 @@ export class GateFx {
       this.group.add(portal);
       this.gates.push({ arch: o, portal, mat, x: o.position.x, base: o.scale.x });
     });
+  }
+
+  // free the portals (a floor's gates go with the floor: StreetView.dropBehind)
+  dispose(): void {
+    for (const g of this.gates) {
+      g.portal.geometry.dispose();
+      g.mat.dispose();
+    }
+    this.gates = [];
   }
 
   // the road the skater is on past the fork (FloorSim.roadAhead): its sign swells, the other dims

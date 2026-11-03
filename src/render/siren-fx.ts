@@ -38,9 +38,7 @@ export class SirenFx {
   // the cruisers in a fresh kit carry their light bars in userData.sirens
   build(kit: THREE.Object3D): void {
     this.group.clear();
-    this.red?.dispose();
-    this.blue?.dispose();
-    this.red = this.blue = null;
+    this.dispose();
     const all: Siren[] = [];
     kit.traverse((o) => {
       if (o.userData.sirens) all.push(...(o.userData.sirens as Siren[]));
@@ -57,6 +55,13 @@ export class SirenFx {
     };
     this.red = make(all.filter((s) => s.color === 'red'), this.redMat);
     this.blue = make(all.filter((s) => s.color === 'blue'), this.blueMat);
+  }
+
+  // free the light bars' instance buffers (a floor's sirens go with the floor: StreetView.dropBehind)
+  dispose(): void {
+    this.red?.dispose();
+    this.blue?.dispose();
+    this.red = this.blue = null;
   }
 
   setNight(amount: number): void {
