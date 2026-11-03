@@ -98,6 +98,22 @@ function paintSign(canvas: HTMLCanvasElement): void {
   g.stroke();
 }
 
+// the shop's front and its sign, inked: one group with its origin at the middle of its face (the title's corner
+// building stands one in its row of shops, city.ts)
+export function makeSkateShop(): THREE.Group | null {
+  if (!hasModel('SkateShop')) return null;
+  const geo = flatGeometry('SkateShop');
+  if (!geo) return null;
+  const group = new THREE.Group();
+  const front = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const { x, y, w, h, z } = SHOP_FRONT.sign;
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: signTexture() }));
+  sign.position.set(x, y, z);
+  group.add(front, sign);
+  inkify(group, { outline: (m) => m === front });
+  return group;
+}
+
 export class ShopFront {
   readonly group = new THREE.Group();
   private built = false;
@@ -109,16 +125,10 @@ export class ShopFront {
 
   private build(): boolean {
     if (this.built) return true;
-    if (!hasModel('SkateShop')) return false;
-    const geo = flatGeometry('SkateShop');
-    if (!geo) return false;
+    const shop = makeSkateShop();
+    if (!shop) return false;
     this.built = true;
-    const front = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
-    const { x, y, w, h, z } = SHOP_FRONT.sign;
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: signTexture() }));
-    sign.position.set(x, y, z);
-    this.group.add(front, sign);
-    inkify(this.group, { outline: (m) => m === front });
+    this.group.add(...shop.children);
     return true;
   }
 

@@ -13,7 +13,7 @@ import { model } from '../render/models';
 import { makePerson } from '../render/peds';
 import { inkify, toon } from '../render/toon';
 import { glowTexture, STORE } from './city';
-import { STOREFRONTS } from '../render/storefronts';
+import { FACADE } from './facade';
 
 export interface Life {
   group: THREE.Group;
@@ -32,6 +32,30 @@ const beats = () => GROOVE.t / BEAT;
 // the wind down the street: a steady breeze that gusts every few seconds
 export function gust(t: number): number {
   return 0.35 + 0.65 * Math.pow(Math.max(0, Math.sin(t * 0.45)), 2) + 0.12 * Math.sin(t * 2.3);
+}
+
+// the street's loop: everyone down there runs one minute-long routine, so it plays out like a scene (zack: "make
+// the whole scene a longer loop") rather than everyone on their own short cycle
+export const SCENE = 60;
+
+// a value along a timeline: [time, value] keys, eased between (smoothstep), held before the first and after the last
+function track(p: number, keys: [number, number][]): number {
+  if (p <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, v1] = keys[i];
+    if (p <= t1) {
+      const [t0, v0] = keys[i - 1];
+      const u = (p - t0) / Math.max(1e-6, t1 - t0);
+      return v0 + (v1 - v0) * u;
+    }
+  }
+  return keys[keys.length - 1][1];
+}
+// which of a list of [start, name] steps a moment falls in
+function step<T extends string>(p: number, steps: [number, T][]): T {
+  let cur = steps[0][1];
+  for (const [t0, name] of steps) if (p >= t0) cur = name;
+  return cur;
 }
 
 // a flock of pigeons on a loop round the sky: each bird a body and two flapping wings
@@ -273,44 +297,145 @@ function cruiser(at: THREE.Vector3): Life {
   };
 }
 
-// a stray dog trotting along the sidewalk behind Webster, out one side and back in the other
-function dog(z: number): Life {
+// A stray dog (zack: a second pass): a scruffy tan mutt with a white chest and muzzle, floppy ears, a red collar with
+// a tag, jointed legs and a wagging tail. Its minute: it trots in from the left to the homeless man and sits by him
+// to be petted, trots along behind Webster to the trash can and sniffs it over, sits to scratch an ear with a back
+// leg, trots off right, and later comes running back the other way along the curb
+export const DOG_PET = { x: -9.4, z: -0.9 }; // where it sits by the homeless man (people() reaches out to it)
+function dog(): Life {
   const group = new THREE.Group();
-  const fur = toon({ color: 0x8a6440 });
-  const dark = toon({ color: 0x3a2a20 });
-  const d = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.45), fur);
-  body.position.y = 0.85;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.42, 0.38), fur);
-  head.position.set(0.78, 1.15, 0);
-  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.24), dark);
-  snout.position.set(1.08, 1.06, 0);
-  const ear = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.08), dark);
-  ear.position.set(0.7, 1.42, 0.14);
-  const ear2 = ear.clone();
-  ear2.position.z = -0.14;
-  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.1).translate(-0.25, 0, 0), fur);
-  tail.position.set(-0.62, 1.0, 0);
-  const legs: THREE.Mesh[] = [];
-  for (const [x, zz] of [[0.48, 0.15], [0.48, -0.15], [-0.48, 0.15], [-0.48, -0.15]]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.62, 0.14).translate(0, -0.31, 0), dark);
-    leg.position.set(x, 0.66, zz);
-    legs.push(leg);
-    d.add(leg);
+  const fur = toon({ color: 0xa87a48 });
+  const dark = toon({ color: 0x5a3a24 });
+  const white = toon({ color: 0xf0e8dc });
+  const black = toon({ color: 0x141218 });
+  const red = toon({ color: 0xc8303a });
+  const gold = toon({ color: 0xe8c050 });
+  const blob = (r: number, sx: number, sy: number, sz: number, m: THREE.Material) => new THREE.Mesh(new THREE.SphereGeometry(r, 12, 9).scale(sx, sy, sz), m);
+  const d = new THREE.Group(); // stands on the ground, faces +x
+  const body = new THREE.Group(); // at the hips: sitting tips it up
+  body.position.set(-0.42, 0.86, 0);
+  d.add(body);
+  const chest = blob(0.32, 1.1, 1.0, 0.85, fur);
+  chest.position.set(0.72, 0.04, 0);
+  const belly = blob(0.3, 1.5, 0.85, 0.78, fur);
+  belly.position.set(0.36, 0, 0);
+  const rump = blob(0.29, 1.05, 0.95, 0.85, fur);
+  const patch = blob(0.2, 1.4, 0.5, 0.9, dark); // the dark saddle over its back
+  patch.position.set(0.3, 0.17, 0);
+  const bib = blob(0.2, 0.8, 1.1, 0.8, white);
+  bib.position.set(0.95, -0.05, 0);
+  body.add(chest, belly, rump, patch, bib);
+  //the head on its neck, with the collar round it
+  const neck = new THREE.Group();
+  neck.position.set(0.95, 0.2, 0);
+  body.add(neck);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.035, 6, 14).rotateY(Math.PI / 2), red);
+  collar.position.set(0.04, 0.06, 0);
+  const tag = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.015, 8).rotateX(Math.PI / 2), gold);
+  tag.position.set(0.12, -0.12, 0);
+  neck.add(collar, tag);
+  const head = new THREE.Group();
+  head.position.set(0.16, 0.28, 0);
+  neck.add(head);
+  const skull = blob(0.22, 1.05, 0.95, 0.95, fur);
+  const snout = blob(0.13, 1.5, 0.8, 0.9, white);
+  snout.position.set(0.25, -0.07, 0);
+  const nose = blob(0.05, 1, 0.8, 1, black);
+  nose.position.set(0.44, -0.03, 0);
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.14), dark);
+  jaw.position.set(0.25, -0.17, 0);
+  head.add(skull, snout, nose, jaw);
+  for (const side of [1, -1]) {
+    const eye = blob(0.035, 1, 1, 1, black);
+    eye.position.set(0.17, 0.07, side * 0.12);
+    head.add(eye);
   }
-  d.add(body, head, snout, ear, ear2, tail);
+  //floppy ears, hinged at the top of the head, swinging with its steps
+  const ears: THREE.Group[] = [];
+  for (const side of [1, -1]) {
+    const ear = new THREE.Group();
+    ear.position.set(-0.03, 0.15, side * 0.17);
+    ear.add(new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.3, 0.05).translate(0, -0.14, 0), dark));
+    ear.rotation.x = side * 0.25;
+    head.add(ear);
+    ears.push(ear);
+  }
+  //the tail: three pieces off the rump, up and wagging
+  const tail: THREE.Group[] = [];
+  let parent: THREE.Object3D = body;
+  for (let k = 0; k < 3; k++) {
+    const seg = new THREE.Group();
+    seg.position.set(k === 0 ? -0.26 : 0, k === 0 ? 0.12 : 0.2, 0);
+    seg.add(new THREE.Mesh(new THREE.CylinderGeometry(0.04 - k * 0.008, 0.055 - k * 0.008, 0.22, 6).translate(0, 0.1, 0), k === 2 ? white : fur));
+    parent.add(seg);
+    parent = seg;
+    tail.push(seg);
+  }
+  //the legs: a thigh and a shin with a white paw, hinged at the hip and the knee
+  const legs: { hip: THREE.Group; knee: THREE.Group }[] = [];
+  for (const [x, z] of [[0.78, 0.16], [0.78, -0.16], [0.02, 0.17], [0.02, -0.17]]) {
+    const hip = new THREE.Group();
+    hip.position.set(x, -0.1, z);
+    hip.add(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.06, 0.4, 7).translate(0, -0.2, 0), fur));
+    const knee = new THREE.Group();
+    knee.position.y = -0.38;
+    knee.add(new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.36, 7).translate(0, -0.18, 0), fur));
+    const paw = blob(0.07, 1.4, 0.6, 1, white);
+    paw.position.set(0.04, -0.37, 0);
+    knee.add(paw);
+    hip.add(knee);
+    body.add(hip);
+    legs.push({ hip, knee });
+  }
   inkify(d);
-  d.scale.setScalar(1.1);
+  d.scale.setScalar(1.05);
   group.add(d);
+  let sit = 0;
+  let face = 0; // the way it faces, eased: 0 right (+x), PI left
   return {
     group,
-    update(t: number): void {
-      const x = ((t * 2.2) % 70) - 35;
+    update(t: number, dt: number): void {
+      const p = t % SCENE;
+      //where it is: in from the left to the homeless man, along behind Webster to the trash can, off to the right,
+      //and later running back the other way along the curb
+      const x = track(p, [[0, -24], [7, DOG_PET.x], [15, DOG_PET.x], [21, 2.6], [30, 2.6], [37, 24], [44, 24], [52, -24]]);
+      const z = track(p, [[0, 0.4], [7, DOG_PET.z], [15, DOG_PET.z], [17, -1.2], [21, -1.0], [30, -1.0], [33, -0.6], [44, 1.4]]);
+      const what = step(p, [[0, 'trot'], [7, 'sit'], [15, 'trot'], [21, 'sniff'], [26, 'scratch'], [30, 'trot'], [37, 'gone'], [44, 'run'], [52, 'gone']] as const);
+      d.visible = what !== 'gone';
       d.position.set(x, 0, z);
-      legs.forEach((l, i) => (l.rotation.z = Math.sin(t * 9 + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.5)); // diagonal pairs together, a trot
-      tail.rotation.y = Math.sin(t * 12) * 0.6;
-      tail.rotation.z = 0.6;
-      head.rotation.z = Math.sin(t * 9) * 0.05;
+      const want = what === 'run' ? Math.PI : what === 'sit' ? -0.6 : 0;
+      face += (want - face) * Math.min(1, dt * 6);
+      d.rotation.y = face;
+      const moving = what === 'trot' || what === 'run';
+      const pace = what === 'run' ? 16 : 10;
+      const sitting = what === 'sit' || what === 'scratch';
+      sit += ((sitting ? 1 : 0) - sit) * Math.min(1, dt * 5);
+      //sat: the back end down on its haunches, front legs straight
+      body.rotation.z = sit * 0.55;
+      body.position.y = 0.86 - sit * 0.38;
+      legs.forEach((l, i) => {
+        const front = i < 2;
+        const swing = moving ? Math.sin(t * pace + (i === 0 || i === 3 ? 0 : Math.PI)) * (what === 'run' ? 0.8 : 0.5) : 0;
+        l.hip.rotation.z = swing - (front ? 0.55 : -0.9) * sit;
+        l.knee.rotation.z = (moving ? Math.max(0, -swing) * (front ? -0.6 : 0.9) : 0) + (front ? 0 : -1.6 * sit);
+      });
+      //the scratch: one back leg up at the ear, quick
+      if (what === 'scratch') {
+        legs[2].hip.rotation.z = -1.3 + Math.sin(t * 28) * 0.25;
+        legs[2].knee.rotation.z = -1.2;
+      }
+      //the head: up while it trots, nose down sniffing the can, tipped to the scratch, looking up at the man
+      const sniff = what === 'sniff';
+      neck.rotation.z = sniff ? -0.9 + Math.sin(t * 14) * 0.05 : what === 'scratch' ? -0.1 : what === 'sit' ? 0.25 : moving ? Math.sin(t * pace * 2) * 0.05 : 0;
+      head.rotation.set(what === 'scratch' ? 0.45 : 0, 0, sniff ? 0.25 : what === 'sit' ? -0.55 : 0);
+      jaw.position.y = -0.17 - (what === 'run' || what === 'sit' ? 0.04 + Math.abs(Math.sin(t * 8)) * 0.03 : 0); // panting
+      for (const e of ears) e.rotation.z = moving ? Math.sin(t * pace + 1) * 0.35 : sniff ? 0.4 : 0;
+      //the tail: up and wagging, fastest when it's being petted
+      const wag = what === 'sit' ? 22 : 12;
+      tail.forEach((seg, k) => {
+        seg.rotation.z = k === 0 ? 0.6 - sit * 0.9 : -0.3;
+        seg.rotation.x = Math.sin(t * wag - k * 0.6) * (0.5 + k * 0.1);
+      });
     },
   };
 }
@@ -335,18 +460,62 @@ function signTexture(text: string[]): THREE.Texture {
 const PED = 1.35; // the people's model to the skater's size
 let HIP_Y0 = 0; // a person's hips' rest height (peds.ts), read off the first one made
 
-// The people on the street: a homeless man sat against the store wall with his sign, and across the road a
-// hitchhiker on the curb, thumb out, waving you down
+type Ped = { mesh: THREE.SkinnedMesh; bones: THREE.Bone[] };
+const SPIN = (p: number, at: number) => (p > at && p < at + 0.9 ? ((p - at) / 0.9) * Math.PI * 2 : 0); // a quick turn on the spot
+
+// a boombox on the sidewalk: a body, two speakers that thump on the beat, a handle and a tape deck's glow
+function boombox(): { group: THREE.Group; update(): void } {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.55, 0.32).translate(0, 0.275, 0), toon({ color: 0x2a2a34 }));
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.08, 0.34).translate(0, 0.5, 0), toon({ color: 0xc8c8d0 }));
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.035, 5, 12, Math.PI), toon({ color: 0xc8c8d0 }));
+  handle.position.y = 0.55;
+  const deck = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.14), new THREE.MeshBasicMaterial({ color: 0x6af0ff }));
+  deck.position.set(0, 0.33, 0.165);
+  deck.userData.inked = true;
+  const cones: THREE.Mesh[] = [];
+  for (const x of [-0.33, 0.33]) {
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.04, 14).rotateX(Math.PI / 2), toon({ color: 0x6a6a78 }));
+    cone.position.set(x, 0.27, 0.17);
+    const dust = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 10).rotateX(Math.PI / 2), toon({ color: 0x1a1a20 }));
+    dust.position.z = 0.02;
+    cone.add(dust);
+    cones.push(cone);
+  }
+  group.add(body, trim, handle, deck, ...cones);
+  inkify(group);
+  return {
+    group,
+    update(): void {
+      const b = bounce();
+      for (const c of cones) c.scale.set(1 + b * 0.18, 1 + b * 0.18, 1 + b * 0.6);
+      group.scale.y = 1 + b * 0.04;
+    },
+  };
+}
+
+// The people on the street (zack's second pass, 2026-11-03), all on the street's minute (SCENE):
+// - a homeless man sat against the pizza place with his sign, nodding along; he pets the dog when it sits by him
+// - the hitchhiker on the curb: thumb out at the traffic, big waves, a look at his phone, a shrug, a wave to you,
+//   and dancing along with Webster in between
+// - the crazy guy: starts dancing on the right, dances his way along to the left behind Webster, cuts loose by the
+//   homeless man (points at the drones, spins), then moonwalks all the way back
+// - and a dancer on the right by the boombox: a two-step, the running man, a body roll, arms up on the drop
 function people(rng: Rng): Life {
   const group = new THREE.Group();
+  const add = (p: Ped | null, x: number, z: number, ry = 0) => {
+    if (!p) return null;
+    p.mesh.scale.setScalar(PED);
+    p.mesh.position.set(x, 0, z);
+    p.mesh.rotation.y = ry;
+    group.add(p.mesh);
+    return p;
+  };
   const sit = makePerson(rng, 'chicago');
-  const hitch = makePerson(makeRng(11), 'chicago');
   if (sit) HIP_Y0 = sit.bones[1].position.y;
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), toon({ map: signTexture(['ANYTHING', 'HELPS']) }));
+  add(sit, -10.5, -2.0); // against the pizza place's front (city.ts STORE)
   if (sit) {
-    sit.mesh.scale.setScalar(PED);
-    sit.mesh.position.set(-10.5, 0, -2.0); // against the pizza place's front (city.ts STORE)
-    group.add(sit.mesh);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), toon({ map: signTexture(['ANYTHING', 'HELPS']) }));
     sign.position.set(-10.1, 0.6, -0.8);
     sign.rotation.x = -0.25;
     group.add(sign);
@@ -358,66 +527,175 @@ function people(rng: Rng): Life {
       group.add(box);
     }
   }
+  const hitch = add(makePerson(makeRng(11), 'chicago'), -3.6, 2.5, 0.3);
+  //his phone, in his left hand: shown when he checks it
+  const phone = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.15, 0.02), new THREE.MeshBasicMaterial({ color: 0x9ad8ff }));
   if (hitch) {
-    hitch.mesh.scale.setScalar(PED);
-    hitch.mesh.position.set(-3.6, 0, 2.5);
-    hitch.mesh.rotation.y = 0.3; // on the curb down the street, turned to the camera
-    group.add(hitch.mesh);
+    phone.position.set(-0.02, -0.66, 0.08);
+    hitch.bones[4].add(phone);
   }
-  //a twitchy guy across the frame on the sidewalk, dancing to something only he hears (zack: a crazy crack head)
-  const wild = makePerson(makeRng(23), 'chicago');
-  if (wild) {
-    wild.mesh.scale.setScalar(PED);
-    group.add(wild.mesh);
-  }
+  const wild = add(makePerson(makeRng(23), 'chicago'), 9.5, 0.6);
+  const dancer = add(makePerson(makeRng(31), 'chicago'), 13.2, 0.4, -0.35);
+  const box = boombox();
+  box.group.position.set(11.9, 0, 1.3);
+  box.group.rotation.y = 0.5;
+  group.add(box.group);
   return {
     group,
     update(t: number): void {
       const b = bounce();
       const n = beats();
+      const sway = Math.sin(n * Math.PI);
+      const p = t % SCENE;
       if (sit) {
         const [, hips, legL, legR, armL, armR, head] = sit.bones;
-        //sat down on the sidewalk, back to the wall, legs out, nodding along to the beat and tapping a hand
+        //sat down on the sidewalk, back to the wall, legs out, nodding along; when the dog sits by him he reaches
+        //over and pets it, looking down at it
         hips.position.y = 0.32;
         legL.position.y = legR.position.y = 0.32;
         legL.rotation.set(-1.45, 0, 0.12);
         legR.rotation.set(-1.4, 0, -0.08);
         hips.rotation.x = -0.12;
         armL.rotation.set(-0.7, 0, -0.1);
-        armR.rotation.set(-0.8 - b * 0.25, 0, 0.1);
-        head.rotation.x = 0.25 + b * 0.25;
-        head.rotation.z = Math.sin(n * Math.PI * 0.5) * 0.12;
+        const petting = p > 7.6 && p < 14.6;
+        armR.rotation.set(petting ? -0.9 : -0.8 - b * 0.25, 0, petting ? 0.75 + Math.sin(t * 5) * 0.18 : 0.1);
+        head.rotation.x = petting ? 0.35 : 0.25 + b * 0.25;
+        head.rotation.y = petting ? 0.7 : 0;
+        head.rotation.z = petting ? 0 : Math.sin(n * Math.PI * 0.5) * 0.12;
       }
       if (hitch) {
         const [, hips, legL, legR, armL, armR, head] = hitch.bones;
-        //waving you down, then grooving while he waits: a bounce on every beat, hips swaying, the arms pumping
-        const waving = t % 8 < 3.2;
-        hips.position.y = 0.0 + HIP_Y0 - b * 0.06;
-        hips.rotation.y = waving ? 0 : Math.sin(n * Math.PI) * 0.25;
-        hips.rotation.z = waving ? 0 : Math.sin(n * Math.PI) * 0.08;
-        legL.rotation.x = waving ? 0 : Math.max(0, Math.sin(n * Math.PI)) * -0.35;
-        legR.rotation.x = waving ? 0 : Math.max(0, -Math.sin(n * Math.PI)) * -0.35;
-        armR.rotation.set(waving ? 0 : -0.6 - b * 0.5, 0, waving ? 2.6 + Math.sin(t * 9) * 0.35 : 0.5);
-        armL.rotation.set(waving ? 0 : -0.6 - (1 - b) * 0.5, 0, waving ? -0.1 : -0.5);
-        head.rotation.x = waving ? 0 : b * 0.2;
-        head.rotation.y = waving ? 0 : Math.sin(n * Math.PI * 0.5) * 0.3;
+        //his minute: thumb out, big waves, the phone, a shrug, dancing, thumb out again, a wave to you, dancing
+        const what = step(p, [[0, 'thumb'], [6, 'wave'], [10, 'phone'], [16, 'shrug'], [19, 'dance'], [30, 'thumb'], [36, 'hey'], [40, 'dance'], [50, 'phone'], [55, 'thumb']] as const);
+        const dancing = what === 'dance';
+        phone.visible = what === 'phone';
+        hips.position.y = HIP_Y0 - b * (dancing ? 0.07 : 0.02);
+        hips.rotation.set(0, dancing ? sway * 0.3 : 0, dancing ? sway * 0.08 : 0);
+        legL.rotation.set(dancing ? Math.max(0, sway) * -0.4 : 0, 0, 0);
+        legR.rotation.set(dancing ? Math.max(0, -sway) * -0.4 : 0, 0, 0);
+        head.rotation.set(0, 0, 0);
+        if (what === 'thumb') {
+          //the right arm out at the road, thumb up, his head following the cars down the street
+          armR.rotation.set(-0.2, 0, 1.45 + Math.sin(t * 2) * 0.05);
+          armL.rotation.set(0, 0, -0.12);
+          head.rotation.y = -0.6 + Math.sin(t * 0.9) * 0.5;
+        } else if (what === 'wave') {
+          //both arms going over his head: hey! stop!
+          armR.rotation.set(0, 0, 2.5 + Math.sin(t * 10) * 0.45);
+          armL.rotation.set(0, 0, -2.5 - Math.sin(t * 10 + 1) * 0.45);
+          hips.position.y = HIP_Y0 + Math.abs(Math.sin(t * 5)) * 0.06; // up on his toes
+        } else if (what === 'phone') {
+          //checking his phone, head down, the other hand on his hip
+          armL.rotation.set(-1.25, 0, 0.25);
+          armR.rotation.set(0, 0, 0.5);
+          head.rotation.x = 0.45;
+        } else if (what === 'shrug') {
+          //nobody stops: arms out, palms up, head tipped
+          const k = Math.min(1, (p - 16) * 3);
+          armR.rotation.set(-0.5 * k, 0, 0.9 * k);
+          armL.rotation.set(-0.5 * k, 0, -0.9 * k);
+          head.rotation.z = 0.3 * k;
+          hips.position.y = HIP_Y0 + 0.03 * k;
+        } else if (what === 'hey') {
+          //a wave at you, the player, one hand high
+          armR.rotation.set(0, 0, 2.7 + Math.sin(t * 8) * 0.3);
+          armL.rotation.set(0, 0, -0.1);
+          head.rotation.x = -0.1;
+        } else {
+          armR.rotation.set(-0.6 - b * 0.5, 0, 0.5);
+          armL.rotation.set(-0.6 - (1 - b) * 0.5, 0, -0.5);
+          head.rotation.set(b * 0.2, Math.sin(n * Math.PI * 0.5) * 0.3, 0);
+        }
       }
       if (wild) {
         const [, hips, legL, legR, armL, armR, head] = wild.bones;
-        //shuffling back and forth along the sidewalk, arms flailing, head jerking, on the beat and off it
-        const along = Math.sin(t * 0.23) * 4;
-        wild.mesh.position.set(9.5 + along * 0.6, 0, 0.6);
-        wild.mesh.rotation.y = Math.sin(t * 0.7) * 0.8 + (Math.cos(t * 0.23) > 0 ? 0.6 : -0.6);
+        //his minute: dancing on the right, dancing his way left behind Webster, cutting loose by the homeless man,
+        //then moonwalking all the way back
+        const x = track(p, [[0, 9.5], [8, 9.5], [20, -7.2], [36, -7.2], [50, 9.5]]);
+        const z = track(p, [[0, 0.6], [8, 0.6], [12, -1.3], [17, -1.3], [20, -0.3], [36, -0.3], [40, -1.3], [46, -1.3], [50, 0.6]]);
+        const what = step(p, [[0, 'dance'], [8, 'travel'], [20, 'loose'], [28, 'point'], [31, 'loose'], [36, 'moon'], [50, 'dance']] as const);
+        wild.mesh.position.set(x, 0, z);
         const jerk = Math.sin(t * 17) * Math.max(0, Math.sin(t * 1.3));
         hips.position.y = HIP_Y0 - b * 0.1;
-        hips.rotation.z = Math.sin(n * Math.PI) * 0.2 + jerk * 0.1;
-        hips.rotation.x = 0.15 + b * 0.15;
-        legL.rotation.x = Math.sin(n * Math.PI) * 0.5;
-        legR.rotation.x = -Math.sin(n * Math.PI) * 0.5;
+        hips.rotation.set(0.15 + b * 0.15, 0, sway * 0.2 + jerk * 0.1);
+        legL.rotation.set(Math.sin(n * Math.PI) * 0.5, 0, 0);
+        legR.rotation.set(-Math.sin(n * Math.PI) * 0.5, 0, 0);
         armL.rotation.set(Math.sin(t * 5.3) * 1.2, 0, -1.2 - Math.sin(n * Math.PI * 2) * 0.9);
         armR.rotation.set(Math.cos(t * 4.1) * 1.2, 0, 1.2 + Math.cos(n * Math.PI * 2) * 0.9);
         head.rotation.set(b * 0.4 + jerk * 0.3, Math.sin(t * 3.1) * 0.5, jerk * 0.4);
+        if (what === 'dance') wild.mesh.rotation.y = Math.sin(t * 0.7) * 0.8 + SPIN(p, 4) + SPIN(p, 54);
+        else if (what === 'travel') {
+          //heading left, a stomp on every beat, arms swinging wide
+          wild.mesh.rotation.y = -Math.PI / 2 + 0.4 + Math.sin(n * Math.PI) * 0.3;
+          legL.rotation.x = Math.sin(t * 7) * 0.7;
+          legR.rotation.x = -Math.sin(t * 7) * 0.7;
+        } else if (what === 'loose') wild.mesh.rotation.y = 0.2 + Math.sin(t * 1.1) * 1.0 + SPIN(p, 23) + SPIN(p, 33);
+        else if (what === 'point') {
+          //stock still, pointing up at the drones, shouting about it
+          wild.mesh.rotation.y = 0.4;
+          hips.rotation.set(-0.1, 0, 0);
+          legL.rotation.x = legR.rotation.x = 0;
+          armR.rotation.set(0, 0, 2.6 + jerk * 0.2);
+          armL.rotation.set(-0.3, 0, -0.5);
+          head.rotation.set(-0.5, 0.2, 0);
+        } else {
+          //the moonwalk: facing left, gliding right, the feet sliding back by turns
+          wild.mesh.rotation.y = -Math.PI / 2 + 0.3;
+          const slide = Math.sin(t * 6);
+          legL.rotation.x = Math.max(0, slide) * -0.45;
+          legR.rotation.x = Math.max(0, -slide) * -0.45;
+          hips.rotation.set(0.05, 0, 0);
+          armL.rotation.set(-0.3 + slide * 0.2, 0, -0.25);
+          armR.rotation.set(-0.3 - slide * 0.2, 0, 0.25);
+          head.rotation.set(b * 0.15, 0.3, 0);
+        }
       }
+      if (dancer) {
+        const [, hips, legL, legR, armL, armR, head] = dancer.bones;
+        //by the boombox: a two-step, the running man, a body roll, arms up on the drop; on the beat, eight-count
+        //moves round the minute
+        const move = step(p, [[0, 'two'], [12, 'run'], [20, 'roll'], [28, 'up'], [32, 'two'], [44, 'run'], [52, 'roll']] as const);
+        const half = Math.sin(n * Math.PI);
+        dancer.mesh.rotation.y = -0.35 + (move === 'two' ? half * 0.35 : 0) + SPIN(p, 31) + SPIN(p, 59);
+        hips.position.y = HIP_Y0 - b * 0.08;
+        hips.rotation.set(0, 0, 0);
+        head.rotation.set(b * 0.25, 0, 0);
+        if (move === 'two') {
+          //side to side, the arms swinging across
+          dancer.mesh.position.x = 13.2 + half * 0.3;
+          legL.rotation.set(Math.max(0, half) * -0.3, 0, -0.1);
+          legR.rotation.set(Math.max(0, -half) * -0.3, 0, 0.1);
+          armL.rotation.set(-0.4 + half * 0.5, 0, -0.4);
+          armR.rotation.set(-0.4 - half * 0.5, 0, 0.4);
+          hips.rotation.z = half * 0.12;
+        } else if (move === 'run') {
+          //the running man: a knee up and the other foot sliding back, arms pumping
+          const k = Math.sin(n * Math.PI);
+          legL.rotation.set(k > 0 ? -1.0 * k : 0.3 * -k, 0, 0);
+          legR.rotation.set(k < 0 ? 1.0 * k : -0.3 * k, 0, 0);
+          armL.rotation.set(-0.9 * Math.max(0, k), 0, -0.3);
+          armR.rotation.set(-0.9 * Math.max(0, -k), 0, 0.3);
+          hips.position.y = HIP_Y0 - 0.06 + Math.abs(k) * 0.05;
+        } else if (move === 'roll') {
+          //a body roll: the hips and the head rolling through, the arms out in a wave
+          const r = Math.sin(t * 4.2);
+          hips.rotation.set(r * 0.25, 0, Math.cos(t * 4.2) * 0.12);
+          head.rotation.set(-r * 0.3, 0, 0);
+          legL.rotation.set(0, 0, -0.12);
+          legR.rotation.set(0, 0, 0.12);
+          armL.rotation.set(0, 0, -1.4 - Math.sin(t * 4.2) * 0.4);
+          armR.rotation.set(0, 0, 1.4 + Math.sin(t * 4.2 + 1.2) * 0.4);
+        } else {
+          //arms up on the drop, jumping on the beat
+          armL.rotation.set(0, 0, -2.7 - b * 0.2);
+          armR.rotation.set(0, 0, 2.7 + b * 0.2);
+          hips.position.y = HIP_Y0 + b * 0.18;
+          legL.rotation.set(-b * 0.3, 0, 0);
+          legR.rotation.set(-b * 0.3, 0, 0);
+          head.rotation.set(-0.3, 0, 0);
+        }
+      }
+      box.update();
     },
   };
 }
@@ -515,40 +793,91 @@ function cat(): Life {
   inkify(c);
   c.scale.setScalar(1.35);
   group.add(c);
-  //along the tops of the shops' sign bands (city.ts STORE): the pizza place's, then the tattoo shop's a step higher
-  const Y = (x: number) => (x < STORE.rowX + STOREFRONTS.pizza.w * STORE.scale ? STORE.bandTop[0] : STORE.bandTop[1]);
-  const Z = STORE.face - 0.05;
-  //where it sits: near the end of the tattoo shop's band, short of the liquor store's taller sign
-  const SIT = STORE.rowX + (STOREFRONTS.pizza.w + STOREFRONTS.tattoo.w) * STORE.scale - 1.1;
+  //its minute (zack 2026-11-03: off to the right after its first sit, then back in from the right on the fire
+  //escape): along the pizza place's sign band (city.ts STORE) to sit a while, down to the sidewalk and away right
+  //as the dog comes along, then in from the right on the fire escape's lower landing (facade.ts), up the stair, along
+  //the top landing to sit by a window, and in through it
+  const band = STORE.bandTop[0];
+  const bandZ = STORE.face - 0.05;
+  const F = FACADE;
+  const lo = F.floors[0] - F.winH / 2 - 0.36 + 0.08; // the landings' tops
+  const hi = F.floors[1] - F.winH / 2 - 0.36 + 0.08;
+  const fcx = (F.bays[4] + F.bays[5]) / 2;
+  const landZ = F.face + 0.85;
+  const stairZ = F.face + 1.05;
+  const winX = F.bays[4];
   let sit = 0; // eases 0 (walking) to 1 (sat)
+  let face = 0;
   return {
     group,
     update(t: number, dt: number): void {
-      //walk one way, sit a while, walk back: a 26 s loop
-      const p = t % 26;
-      let x: number;
-      let dir: number;
-      let walking = true;
-      if (p < 8) [x, dir] = [-9 + (p / 8) * (SIT - -9), 1];
-      else if (p < 13) [x, dir, walking] = [SIT, 1, false];
-      else if (p < 21) [x, dir] = [SIT - ((p - 13) / 8) * (SIT - -9), -1];
-      else [x, dir, walking] = [-9, -1, false];
-      sit += ((walking ? 0 : 1) - sit) * Math.min(1, dt * 5);
-      const step = t * 10;
-      c.position.set(x, Y(x) + (walking ? Math.abs(Math.sin(step)) * 0.015 : 0), Z);
-      c.rotation.y = dir > 0 ? 0 : Math.PI;
+      const p = t % SCENE;
+      const what = step(p, [[0, 'walk'], [6, 'sit'], [14, 'walk'], [15.5, 'hop'], [16.3, 'run'], [22, 'gone'], [32, 'walk'], [39.5, 'sit'], [47, 'in'], [48.5, 'gone']] as const);
+      c.visible = what !== 'gone';
+      let x = 0;
+      let y = band;
+      let z = bandZ;
+      let dir = 0; // the way it faces: 0 right, PI left, -PI/2 out at the street, PI/2 in at the wall
+      if (p < 15.5) {
+        x = track(p, [[0, -12.4], [6, -6.2], [14, -6.2], [15.5, -4.6]]);
+        dir = p >= 6 && p < 14 ? -0.4 : 0;
+      } else if (p < 16.3) {
+        //the hop down: an arc out from the band to the sidewalk
+        const u = (p - 15.5) / 0.8;
+        x = -4.6 + u * 1.2;
+        y = band * (1 - u * u) + Math.sin(u * Math.PI) * 0.4;
+        z = bandZ + (-0.9 - bandZ) * u;
+      } else if (p < 22) {
+        x = -3.4 + (p - 16.3) * 4.4; // bolting, with the dog coming
+        y = 0;
+        z = -0.9;
+      } else if (p < 35) {
+        x = track(p, [[32, 17.4], [35, fcx - 1.1]]);
+        y = lo;
+        z = landZ;
+        dir = Math.PI;
+      } else if (p < 37) {
+        //up the stair, which climbs to the right
+        const u = (p - 35) / 2;
+        x = fcx - 1.1 + u * 3;
+        y = lo + (hi - lo) * u;
+        z = stairZ;
+        dir = 0;
+      } else if (p < 47) {
+        x = track(p, [[37, fcx + 1.9], [39.5, winX + 0.3]]);
+        y = hi;
+        z = landZ;
+        dir = p < 39.5 ? Math.PI : -Math.PI / 2;
+      } else {
+        //in through the window: up onto the sill and back into the room, out of sight behind the glass
+        const u = Math.min(1, (p - 47) / 1.5);
+        x = winX + 0.3;
+        y = hi + Math.min(1, u * 2) * 0.36;
+        z = landZ + (F.face - 0.8 - landZ) * u;
+        dir = Math.PI / 2;
+      }
+      const walking = what === 'walk' || what === 'run' || what === 'in';
+      sit += ((what === 'sit' ? 1 : 0) - sit) * Math.min(1, dt * 5);
+      //turns ease round (the short way)
+      let dd = dir - face;
+      while (dd > Math.PI) dd -= Math.PI * 2;
+      while (dd < -Math.PI) dd += Math.PI * 2;
+      face += dd * Math.min(1, dt * 8);
+      const stride = t * (what === 'run' ? 18 : 10);
+      c.position.set(x, y + (walking ? Math.abs(Math.sin(stride)) * 0.015 : 0), z);
+      c.rotation.y = face;
+      const look = sit * (Math.sin(t * 0.7) * 0.7 - (dir === -0.4 ? 0.9 : 0));
       //the walk: diagonal pairs together; sat: the body tipped up on its haunches, front legs straight
       legs.forEach((l, i) => {
-        const swing = Math.sin(step + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.5 * (1 - sit);
+        const swing = Math.sin(stride + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.5 * (1 - sit);
         //sat: the front legs straight down to the band, the back ones tucked forward under the haunch
         l.rotation.z = swing + (i < 2 ? -0.75 : -0.25) * sit;
         l.scale.y = 1 + (i < 2 ? 0.45 : -0.3) * sit;
       });
       body.rotation.z = sit * 0.75;
       body.position.y = 0.36 - sit * 0.14;
-      //the head: level while walking, bobbing with the steps; sat, it turns to the street and looks about
-      const look = (dir > 0 ? -1 : 1) * sit * (1.1 + Math.sin(t * 0.7) * 0.5);
-      head.rotation.set(0, look, -sit * 0.7 + (1 - sit) * Math.sin(step * 2) * 0.04);
+      //the head: level while walking, bobbing with the steps; sat, it looks about at the street
+      head.rotation.set(0, look, -sit * 0.7 + (1 - sit) * Math.sin(stride * 2) * 0.04);
       //an ear flick every few seconds, and a blink
       const flick = (t * 0.37) % 1 < 0.04 ? 0.5 : 0;
       ears[0].rotation.x = -0.3 - flick;
@@ -682,25 +1011,24 @@ function wind(rng: Rng): Life {
   pole.rotation.z = -0.9;
   pole.position.set(-1.6, 7.6, -3.4);
   pole.rotation.x = 0.5;
+  //black with the Gnar Games mark in white (zack 2026-11-03: public/title/gnar-games-flag.png), drawn in once it loads
   const c = document.createElement('canvas');
-  c.width = 96;
-  c.height = 64;
+  c.width = 384;
+  c.height = 256;
   const g = c.getContext('2d')!;
-  //a city flag of our own: three stripes and a star
-  ['#e04848', '#f4ece0', '#3a58b8'].forEach((col, i) => {
-    g.fillStyle = col;
-    g.fillRect(0, (i * 64) / 3, 96, 64 / 3 + 1);
-  });
-  g.fillStyle = '#ffd25a';
-  g.beginPath();
-  for (let k = 0; k < 10; k++) {
-    const r = k % 2 ? 6 : 14;
-    const a = (k / 10) * Math.PI * 2 - Math.PI / 2;
-    g.lineTo(28 + Math.cos(a) * r, 32 + Math.sin(a) * r);
-  }
-  g.fill();
+  g.fillStyle = '#0c0c10';
+  g.fillRect(0, 0, 384, 256);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  const logo = new Image();
+  logo.onload = () => {
+    //the mark is white on black: lighten it in, square in the middle of the cloth
+    g.globalCompositeOperation = 'lighten';
+    g.drawImage(logo, 192 - 104, 128 - 104, 208, 208);
+    tex.needsUpdate = true;
+  };
+  logo.src = `${import.meta.env.BASE_URL}title/gnar-games-flag.png`;
   const clothGeo = new THREE.PlaneGeometry(2.4, 1.6, 12, 4).translate(1.2, -0.8, 0);
   const rest = Float32Array.from(clothGeo.getAttribute('position').array);
   const cloth = new THREE.Mesh(clothGeo, toon({ map: tex, side: THREE.DoubleSide }));
@@ -764,7 +1092,7 @@ export function buildLife(seed = 5): Life {
     chopper(new THREE.Vector3(0, 98, -40)),
     cruiser(new THREE.Vector3(3, 13, 2)),
     flock(rng, new THREE.Vector3(0, 30, -50), 22, 6, 0.28), // over the roofs, seen from the street
-    dog(0.8),
+    dog(),
     cat(),
     pigeons(rng, new THREE.Vector3(3.6, 0, 2.2), 5),
     streetTrash(rng),
