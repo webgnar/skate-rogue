@@ -7,6 +7,7 @@
 //   Popping right at the lip of the ground is a little style of its own.
 // - A long combo also pays cash when you land it (the stoke cash-out): greedy combos pay, slams pay nothing.
 // - Banked points fill the stoke meter. Full stoke is the gnar state: faster cruising, and slams cost no Heat.
+//   A slam empties the meter and ends the gnar state.
 // - Clearing a floor pays 250 x floor (QFS). Stoken pickups add to the score too.
 import { PHYS } from '../physics/constants';
 import type { Mode } from '../physics/skater';
@@ -40,7 +41,7 @@ export const SCORE = {
   stokeIdle: 3, // seconds after a bank before it drains
   gnarSecs: 8,
   gnarBoost: 1.2, // cruising speed in the gnar state
-  slamStoke: 0.25, // a slam knocks this much off the meter
+  slamStoke: 0.25, // Slam Stoke: a slam adds this much to the meter (without it, a slam empties the meter)
   sketchy: 0.5, // share of the combo a sketchy landing banks
   bigDrop: 100, // a heavy landing: a big drop, landed
   lip: 30, // an ollie popped right at the edge
@@ -145,9 +146,11 @@ export class RunScore {
           this.fill(SCORE.slamStoke);
           break;
         }
+        //a slam kills the stoke meter (zack, Nov 3): the meter empties and the gnar state ends
         this.combo = 0;
         this.comboPoints = 0;
-        if (!this.gnar) this.stoke = Math.max(0, this.stoke - SCORE.slamStoke);
+        this.stoke = 0;
+        this.gnarT = 0;
         break;
       case 'pickup':
         //(NO GROUND's multiplier up in the sky: coins by it, Stoken by its whole part)
