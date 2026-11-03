@@ -4,7 +4,7 @@ import type { SkaterId } from '../render/skater-rig';
 import { isGrip, type GripId } from '../board/grips';
 import { isDeck, isSkaterId, isUnlockId, type DeckId, type UnlockId } from './meta';
 import { cleanMissions, EMPTY_MISSIONS, type MissionSave } from './missions';
-import { cleanHeadStart, NO_HEAD_START, type HeadStart } from './slots';
+import { cleanHeadStart, NO_HEAD_START, type HeadStart } from './dice';
 
 const KEY = 'gnar-run-save';
 
@@ -22,7 +22,7 @@ export interface Save {
   gnarPick: number; // the level the next run is at
   tutorialDone?: boolean; // the tutorial floor was cleared (or skipped by an old save)
   missions: MissionSave; // the three missions showing and Skater Rank (src/run/missions.ts)
-  headStart: HeadStart; // what the slot machine won for the next run (src/run/slots.ts)
+  headStart: HeadStart; // what the street dice won for the next run (src/run/dice.ts)
 }
 
 // Stoken as a whole number: a Gnar level pays 1.2 a pickup, so the run's count carries fractions (and float sums
