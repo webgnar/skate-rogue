@@ -10,6 +10,7 @@ import { makeRng, type Rng } from '../gen/rng';
 import { inkify, toon } from '../render/toon';
 import { model } from '../render/models';
 import { buildFacade, FACADE } from './facade';
+import { makeSkateShop } from '../render/shop-front';
 import { makeStorefront, storefrontMats, STOREFRONTS, type StorefrontKind } from '../render/storefronts';
 
 export const DUSK = {
@@ -126,14 +127,22 @@ export interface Street {
 
 // the corner building's ground floor: the game's storefronts in a row, a bit bigger than in the game (Webster stands
 // taller on the title than Lou in a run). Their faces stand out from the building's wall (z -4) by their depth.
-export const STORE_ROW: StorefrontKind[] = ['pizza', 'tattoo', 'liquor'];
+// The skate shop (GNAR SUPPLY, shop-front.ts) stands in the middle, behind Webster (zack 2026-11-03: in place of the
+// tattoo parlor)
+export type StoreKind = StorefrontKind | 'skate';
+export const STORE_ROW: StoreKind[] = ['pizza', 'skate', 'liquor'];
+// a shop's width in the row, tiles
+export const storeW = (kind: StoreKind): number => (kind === 'skate' ? SKATE_W : STOREFRONTS[kind].w) * STORE_SCALE;
+const STORE_SCALE = 1.15;
+const SKATE_W = 9.5; // the skate shop model's width (art/skateshop.py), a little over SHOP_FRONT.w
 export const STORE = {
-  scale: 1.15,
+  scale: STORE_SCALE,
   rowX: -12.075, // the row's left end: the tattoo shop's door just behind Webster
   face: -4 + 0.95 * 1.15 + 0.02, // the shops' faces (the model's depth, scaled, in front of the wall)
+  skateFace: -4 + 0.95 * 1.15 + 0.02, // the skate shop's
   returnH: 7.3, // the brick returns at the ends of the row, up to the top of the liquor store's sign
   wallH: FACADE.top, // the brick's top; the cornice and parapet stand on it (facade.ts)
-  bandTop: [6.21, 6.33], // the tops of the pizza place's and the tattoo shop's sign bands, where the cat walks
+  bandTop: [6.21], // the top of the pizza place's sign band, where the cat walks
 };
 
 // the street at the bottom: the road in front, the sidewalk Webster stands on, the corner store behind him with its
@@ -168,11 +177,11 @@ export function buildStreet(seed = 3): Street {
   const row = new THREE.Group();
   let x = STORE.rowX;
   for (const kind of STORE_ROW) {
-    const w = STOREFRONTS[kind].w * STORE.scale;
-    const shop = makeStorefront(kind, mats, false);
+    const w = storeW(kind);
+    const shop = kind === 'skate' ? makeSkateShop() : makeStorefront(kind, mats, false);
     if (shop) {
       shop.scale.setScalar(STORE.scale);
-      shop.position.set(x + w / 2, 0, STORE.face);
+      shop.position.set(x + w / 2, 0, kind === 'skate' ? STORE.skateFace : STORE.face);
       row.add(shop);
       if (kind === 'liquor') sign = ((shop.getObjectByName('sign') as THREE.Mesh | undefined)?.material as THREE.MeshBasicMaterial) ?? null;
     }

@@ -1138,7 +1138,13 @@ skaters you've unlocked, with the rest as silhouettes still to be woken.
   jointed tail) walks the shop signs and sits, pigeons peck at the curb and take off over the roofs, a can and pages roll down the street in the gusts,
   a flag and a street tree blow in the wind, an upstairs TV flickers and a tube light stutters. The corner building's upper floors follow zack's Chicago
   photos: brick piers with stone caps, a stone belt course, teal-framed windows with stone lintels and arches, green
-  deco tile panels, a fire escape, a cornice on brackets and a 1924 date stone. A tap on the way skips to him; SKATE starts
+  deco tile panels, a fire escape, a cornice on brackets and a 1924 date stone. Down on the street it all runs as one
+  minute-long scene (zack, Nov 3): the dog trots in and sits to be petted by the homeless man, sniffs the trash can,
+  scratches and trots off, then runs back later; the cat sits on the pizza sign, bolts as the dog comes, and comes
+  back on the fire escape, climbs it and slips in a window; the hitchhiker thumbs, waves, checks his phone, shrugs and
+  dances; the crazy guy dances his way over to the left, points at the drones and moonwalks back; a dancer by a
+  boombox on the right. The skate shop (GNAR SUPPLY) stands behind Webster between the pizza place and the liquor
+  store, and the flag is black with the Gnar Games mark. A tap on the way skips to him; SKATE starts
   the run. Test links skip it. Still open: the hitchhiker as a real NPC moment in a run (zack's idea, not built).
 - **HUD:** decided Oct 24, 2026 from zack's comic ink mockup (openspec change ui1-hud): the SKATE ESCAPE logo with act
   and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the
