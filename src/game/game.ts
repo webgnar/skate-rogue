@@ -16,7 +16,7 @@ import { SKY, skyMult } from '../sim/sky';
 import { firstCloud } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
-import { NO_HEAD_START, prizeText, pullAll, type Pull } from '../run/slots';
+import { NO_HEAD_START, prizeText, rollAll, rollName, rollsFor, type Roll } from '../run/dice';
 import { boonsOfType, Missions, PX_PER_M, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
@@ -195,18 +195,19 @@ export interface Hud {
   missions(view: MissionsView): void; // the three missions and Skater Rank (pause card and run summary)
   missionTick?(t: MissionTick): void; // a mission moved on mid-run: the popup above the gear wear
   missionDone?(t: MissionTick): void; // a mission finished mid-run: the popup goes gold
-  slots(view: SlotsView | null): void; // the end-of-run slot machine, before the summary; null hides it
-  slotsSkip(): void; // stop every reel where it lands
+  dice(view: DiceView | null): void; // the end-of-run street dice, before the summary; null hides them
+  diceThrow(): void; // throw the dice (the first tap)
+  diceSkip(): void; // land every die where it stops
 }
 
-// the slot machine: one machine per spin token, all pulled at once
-export interface SlotsView {
-  pulls: { reels: Pull['reels']; text: string; big: boolean }[];
+// the street dice: a pair per roll (one free, one per chip found), all thrown at once
+export interface DiceView {
+  rolls: { dice: Roll['dice']; name: string; text: string; big: boolean; match: boolean }[];
 }
 
-export const SLOT_MS = 1500; // the reels spin this long before the last one stops (src/ui/slots-panel.ts)
+export const DICE_MS = 1300; // the dice tumble this long before the last pair lands (src/ui/dice-panel.ts)
 
-type State = 'skate' | 'caught' | 'cont' | 'pick' | 'shop' | 'under' | 'slots' | 'over';
+type State = 'skate' | 'caught' | 'cont' | 'pick' | 'shop' | 'under' | 'dice' | 'over';
 
 // continues a run: each puts you back at the start of the floor you fell on, as you were when you started it (score,
 // cash, gear, Heat), so a continue can't farm a floor's cash; after the last, a fall ends the run
@@ -419,8 +420,8 @@ export class Game {
   private travelPx = 0; // px skated and ground towards the next whole metre, for the distance missions
   private grindPx = 0;
   private floorBusted = false; // a part busted this floor
-  private overResult: RunResult | null = null; // the summary, shown once the slot machine's done
-  private slotsEnd = 0; // when the slot machine's last reel stops
+  private overResult: RunResult | null = null; // the summary, shown once the dice are done
+  private diceEnd = 0; // when the last pair of dice lands; 0: not thrown yet
   // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
   // next one is already there, built in the background while you skated this one
   private readonly prefetch = new FloorPrefetch();
@@ -1154,8 +1155,8 @@ export class Game {
       daily: daily ? { day: today, best: daily.best } : save.daily,
       missions: this.missionsKept(save),
     };
-    //the spin tokens pull the slot machine: everything it pays is banked now, and shown before the summary
-    const pulls = this.autopilot ? [] : this.spinSlots(next);
+    //the street dice: one free roll and one per chip; everything they pay is banked now, and shown before the summary
+    const rolls = this.autopilot ? [] : this.rollDice(next);
     writeSave(next);
     this.hud.missions(this.missions.view(next.stoken));
     const result: RunResult = {
@@ -1173,17 +1174,25 @@ export class Game {
       daily,
       continues: CONTINUES - this.continuesLeft,
     };
-    if (!pulls.length) return this.hud.over(result);
+    if (!rolls.length) return this.hud.over(result);
     this.overResult = result;
-    this.openMenu('slots', now);
-    this.slotsEnd = now + SLOT_MS;
-    this.hud.slots({ pulls: pulls.map((p) => ({ reels: p.reels, text: prizeText(p.prize, (id) => gripDef(id).name), big: p.reels[0] === p.reels[1] && p.reels[1] === p.reels[2] })) });
+    this.openMenu('dice', now);
+    this.diceEnd = 0;
+    this.hud.dice({
+      rolls: rolls.map((r) => ({
+        dice: r.dice,
+        name: rollName(r),
+        text: prizeText(r.prize, (id) => gripDef(id).name, r.match),
+        big: r.dice[0] === r.dice[1],
+        match: r.match,
+      })),
+    });
   }
 
-  // pull the slot machine once per spin token; its winnings go into the save (Stoken, the next run's head start, a grip)
-  private spinSlots(save: ReturnType<typeof loadSave>): Pull[] {
-    if (!this.run.spins) return [];
-    const won = pullAll(Math.random, this.run.spins, save.headStart, this.grip);
+  // roll the street dice once, and once more per chip found; the winnings go into the save (Stoken, the next run's
+  // head start, a grip)
+  private rollDice(save: ReturnType<typeof loadSave>): Roll[] {
+    const won = rollAll(Math.random, rollsFor(this.run.spins), save.headStart, this.grip);
     save.stoken += won.stoken;
     save.headStart = won.head;
     if (won.grip !== this.grip) {
@@ -1191,24 +1200,30 @@ export class Game {
       this.grip = won.grip;
       this.sprite.setGrip(gripDef(won.grip).color);
     }
-    return won.pulls;
+    return won.rolls;
   }
 
-  // the slot machine's tap: the first stops the reels, the next goes on to the summary
-  private slotsTap(now: number): void {
-    if (now < this.slotsEnd) {
-      this.hud.slotsSkip();
-      this.slotsEnd = now;
+  // the dice's taps: the first throws them, one while they tumble lands them, the next goes on to the summary
+  private diceTap(now: number): void {
+    if (!this.diceEnd) {
+      this.hud.diceThrow();
+      this.diceEnd = now + DICE_MS;
       this.menuAt = now;
       return;
     }
-    this.hud.slots(null);
+    if (now < this.diceEnd) {
+      this.hud.diceSkip();
+      this.diceEnd = now;
+      this.menuAt = now;
+      return;
+    }
+    this.hud.dice(null);
     this.openMenu('over', now);
     if (this.overResult) this.hud.over(this.overResult);
     this.overResult = null;
   }
 
-  // what the slot machine won last run: cash, free boons and a continue to start this one with
+  // what the street dice won last run: cash, free boons and a continue to start this one with
   private headStart(): void {
     if (this.autopilot) return;
     const save = loadSave();
@@ -1356,8 +1371,8 @@ export class Game {
       if (this.input.takePress() && this.input.lastTarget && now - this.menuAt >= MENU_LOCK_MS) this.underTap(this.input.lastTarget);
     } else if (this.state === 'shop') {
       if (this.input.takePress() && this.input.lastTarget && now - this.menuAt >= MENU_LOCK_MS) this.shopTap(this.input.lastTarget);
-    } else if (this.state === 'slots') {
-      if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.slotsTap(now);
+    } else if (this.state === 'dice') {
+      if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.diceTap(now);
     } else if (this.state === 'over') {
       if (this.input.takePress() && now - this.menuAt >= MENU_LOCK_MS) this.newRun();
     } else if (this.state === 'cont') {
@@ -1403,7 +1418,7 @@ export class Game {
       } else this.loop.advance(dt, step, 5 * this.timeScale);
     }
     INTERP.alpha = this.loop.alpha;
-    if (this.state !== 'over' && this.state !== 'slots') {
+    if (this.state !== 'over' && this.state !== 'dice') {
       this.showAhead();
       this.view.tick();
     }
@@ -1440,7 +1455,7 @@ export class Game {
     this.trafficView.syncCross(this.level, this.sim.traffic.cross);
     this.chinatownView.sync(this.level, this.sim.traffic);
     this.trafficView.syncStreet(this.level, this.sim.traffic);
-    const heat = this.state === 'pick' || this.state === 'over' || this.state === 'slots' ? 0 : this.sim.heat.value;
+    const heat = this.state === 'pick' || this.state === 'over' || this.state === 'dice' ? 0 : this.sim.heat.value;
     this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y, this.view.camera);
     if (this.trafficView.cruiserShown) this.trafficView.jets.exhaust(this.particles, toY(this.level, this.level.streetY), dt);
     this.hud.heat(heat);
@@ -1449,7 +1464,7 @@ export class Game {
       speed: Math.max(Math.abs(this.skater.hsp), this.skater.railV),
       heat,
       skating: this.state === 'skate',
-      over: this.state === 'over' || this.state === 'slots',
+      over: this.state === 'over' || this.state === 'dice',
       paused: false,
     });
     this.heatCue.update(heat, dt);
@@ -1796,7 +1811,7 @@ export class Game {
       this.hud.callout('GOLDEN SMASH! STOKEN', 'good');
     } else if (e.loot === 'spin') {
       this.run.spins++;
-      this.hud.callout(this.level.props[e.index]?.stash ? `${this.sim.down ? 'DIY' : 'SKY'} STASH! SPIN TOKEN` : 'SPIN TOKEN!', 'trick');
+      this.hud.callout(this.level.props[e.index]?.stash ? `${this.sim.down ? 'DIY' : 'SKY'} STASH! CHIP +1 ROLL` : 'CHIP! +1 ROLL', 'trick');
     }
     this.smash({ prop: e.prop, index: e.index, x: toX(e.x), y: toY(this.level, e.y), z: this.level.props[e.index]?.z, how: e.how, speed: Math.abs(this.skater.hsp) / PHYS.baseSpeed });
   }
@@ -1908,7 +1923,7 @@ export class Game {
         //the sewer alligator: a spin token, in a burst of gold
         this.run.spins++;
         this.run.addStyle(SCORE.drone);
-        this.hud.callout('SEWER GATOR! SPIN TOKEN', 'trick');
+        this.hud.callout('SEWER GATOR! CHIP +1 ROLL', 'trick');
         this.particles.coin(x, y + 0.8, 0);
         break;
       case 'bite':
@@ -2062,7 +2077,7 @@ export class Game {
     if (e.type === 'goldBird') {
       //the golden pigeon: a spin token, in a burst of gold
       this.run.spins++;
-      this.hud.callout('GOLDEN PIGEON! SPIN TOKEN', 'trick');
+      this.hud.callout('GOLDEN PIGEON! CHIP +1 ROLL', 'trick');
       this.particles.coin(toX(e.x), toY(this.level, e.y) + 0.8, 0);
       return;
     }
@@ -2244,7 +2259,7 @@ export class Game {
         }
         this.hud.money(this.run.cash, this.run.stoken);
         if (e.kind === 'stoken') this.hud.callout('STOKEN!', 'good');
-        if (e.kind === 'spin') this.hud.callout('SPIN TOKEN!', 'trick');
+        if (e.kind === 'spin') this.hud.callout('CHIP! +1 ROLL', 'trick');
         break;
     }
     if (!wasGnar && this.run.gnar) this.gnarOn();

@@ -49,7 +49,7 @@ import { SETTINGS, buzz, loadSettings, saveSettings } from './ui/settings';
 import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
 import { bindMissions } from './ui/missions-panel';
-import { SlotsPanel } from './ui/slots-panel';
+import { DicePanel } from './ui/dice-panel';
 import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 import { TitleScene } from './title/title-scene';
 
@@ -214,7 +214,7 @@ function makeHud(): Hud {
   const pausedEl = document.getElementById('paused')!;
   const hintEl = document.getElementById('hint')!;
   const view = new HudView();
-  const slots = new SlotsPanel(document.getElementById('spin')!, () => FX.reduceMotion);
+  const dice = new DicePanel(document.getElementById('dice')!, () => FX.reduceMotion);
   const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
   let level = 0;
   let held: Held[] = [];
@@ -366,8 +366,9 @@ function makeHud(): Hud {
     missions: (v) => drawMissions(v),
     missionTick: (t) => missionToast.tick(t),
     missionDone: (t) => missionToast.done(t),
-    slots: (v) => slots.show(v),
-    slotsSkip: () => slots.skip(),
+    dice: (v) => dice.show(v),
+    diceThrow: () => dice.throw(),
+    diceSkip: () => dice.skip(),
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
     over: (result) => {
       overEl.hidden = !result;

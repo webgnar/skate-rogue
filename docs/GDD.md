@@ -199,8 +199,8 @@ built the same day (greybox, waiting on zack's reference images in the shared fo
   cruise; a **window washer's rig** that drops under you once you land, so you pop off it quick onto the roof
   ahead; a **tower crane** whose jib slews out of the lane and back (land early, or it swings away under you); and a
   **paper billboard** across the gap between two decks that you burst through for cash.
-- **Finds:** a **stash crate** on a floor's first water tower (a spin token, or a fresh gear part that replaces your
-  most worn one); now and then a **golden pigeon** on a deck (clear it from just above for a spin token; skate into
+- **Finds:** a **stash crate** on a floor's first water tower (a chip, or a fresh gear part that replaces your
+  most worn one); now and then a **golden pigeon** on a deck (clear it from just above for a chip; skate into
   it and it's a bird strike); and on Chinatown's stretch, **clotheslines** strung between the tenements, short
   sagging wires with the washing on them, to chain.
 
@@ -212,7 +212,7 @@ All of it is physics and tap-only: nothing lifts you up there (zack owns the way
 if we can put as much love into the sky as we did the ground"). From floor 5, way over the hill, far above the
 rooftops and cranes with nothing reaching down to the city: big puffy clouds to land on, drifting clouds that wander
 there and back, thin clouds that puff away a moment after you land (0.66 s: time to take the landing's knock and pop
-off), rainbows to grind up and over (one a floor may hide a spin token at the top), and hot air balloons whose
+off), rainbows to grind up and over (one a floor may hide a chip at the top), and hot air balloons whose
 baskets bob. The layer falls gently with the hill. The way up is a **staircase** (zack picked it): 30% of the way down
 from the crest the sky beats give way to red steel girders hoisted on crane cables and then wisps of cloud, each 1.5
 tiles over the last (an ollie and a flip), about 9 tiles of climb. Only a long run down has room for it (95 tiles from
@@ -272,9 +272,9 @@ for all three:
 
 | Route | Where | How you get on | Danger | Reward | Built |
 | --- | --- | --- | --- | --- | --- |
-| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and spin tokens | Yes |
+| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and chips | Yes |
 | **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
-| **Sewer** | One route under the floor: storm drains under the street, the deep under the hills and canals | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, a stair set with a handrail to grind, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's spin tokens; the sewer road to the underground spot | Yes |
+| **Sewer** | One route under the floor: storm drains under the street, the deep under the hills and canals | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, a stair set with a handrail to grind, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's chips; the sewer road to the underground spot | Yes |
 
 **The sewer route** (first version Oct 31, 2026; built out the same day from zack's "build all of it"; code:
 `src/gen/sewer.ts`, moving pieces `src/sim/sewer.ts`, drawn by `src/render/sewer-kit.ts` and `src/render/sewer-view.ts`).
@@ -311,8 +311,8 @@ Under each street chase where the street is clear runs a brick storm tunnel, dra
   a **full pipe** bowl the floor dips through and carves you out of, or a **subway crossing** (zack: "subway train cars
   that act as cross traffic"): a gap onto the tracks where trains cross under the tunnel; hop off a train's roof or
   ollie the gap, drop in with no train and you bail.
-- **Finds:** the **sewer alligator** (now and then; its jaws open as you come up; ollie it for a spin token, roll into it
-  and it bites) and a **DIY stash** crate on the floor (a spin token or a fresh gear part, like the sky's).
+- **Finds:** the **sewer alligator** (now and then; its jaws open as you come up; ollie it for a chip, roll into it
+  and it bites) and a **DIY stash** crate on the floor (a chip or a fresh gear part, like the sky's).
 - **The sewer road:** on a floor with a fork, the last street chase's tunnel runs to the gate and comes up at it: take
   it and you're on the third road, to the underground spot (a SEWER ROAD sign stands over its way in).
 - Pipes to grind (an ollie gets on), caged work lamps, graffiti, light falling through the holes and grates. The
@@ -880,25 +880,35 @@ floor, run, across runs, or as a best. A rank pays 10 + 5 per rank Stoken (up to
 grip colour the shop never sells on the board (Gold, Camo, Navy, Teal, Chrome). A skip costs 3 Stoken. The playtest
 bot and the tutorial floor don't count.
 
-### Spin tokens and the end-of-run payout (from Jetpack Joyride)
+### Street dice and the Match (the end-of-run payout)
 
-Added Oct 31, 2026 (zack). **Spin tokens** turn up rarely: in a smashed prop now and then, at the end of a side line,
-and on the top route. When the run ends, before the summary, each token pulls a three-reel slot machine once. It pays:
+Changed Nov 3, 2026 (zack: the slot machine "reads very out of place", dice are street). Every run, won or lost, ends
+with a roll of **two dice on the curb** under a street lamp, before the summary. **Chips** (red casino chips, the old
+spin tokens) turn up rarely in runs, and each one found adds a roll. The point is to give the player something even
+when they lose, and the **Match** (from pinball) is the rare roll that feels huge.
 
-- Stoken (most pulls, small amounts),
-- a head start for the next run (cash, a fresh deck, or a free boon pick),
-- a free continue held for the next run,
-- now and then a cosmetic.
+- A plain roll pays a few Stoken: the pips halved, rounded up (2 to 6).
+- **Doubles** (1 in 6) pay a head start for the next run: 2-2 or 3-3 a $40 head start, 4-4 (hard eight) a free boon,
+  5-5 (hard ten) a saved continue.
+- **Snake eyes** (1-1) pays a grip colour.
+- **Boxcars** (6-6) is the **MATCH** (1 in 36): the next run starts with 5 hearts instead of 3. Continues held for the
+  next run cap at 2, so past the cap the Match pays 25 Stoken (and 5-5 pays 10).
 
-Three of a kind pays big. Runs that end badly still pay something, so losing stings less, and smashing props and
-taking the risky lines are worth more. The machine skips with a tap and plays every pull at once when you have many.
+The first tap throws the dice (they shake in your hand until then), a tap while they tumble lands them, and the next
+goes on to the summary. The roll is decided and banked when the run ends, so closing the app doesn't lose it.
 
-Built Oct 31, 2026 (src/gen/spin-tokens.ts, src/run/slots.ts, src/ui/slots-panel.ts): a token is a red casino chip
-with a gold star. A floor has a 15% chance of one prop hiding a token, the side line's prize is a token a quarter of
-the time, and one of the top route's Stoken can be a token. A plain pull pays 2 to 5 Stoken; three ◆ pay 25 Stoken,
-three $ a $40 head start, three ⚡ a free boon at the next run's start, three ♥ a saved continue (2 held at most), and
-three ★ a grip colour. A tap stops the reels, the next goes on to the summary. Tokens found on a floor you continue
-from are lost with the rest of that floor.
+Built Nov 3, 2026 (src/run/dice.ts, src/ui/dice-panel.ts; chips are placed by src/gen/spin-tokens.ts): one free roll
+plus one per chip, 6 rolls at most. A chip is found in a smashed prop now and then (15% of floors), at the top of a
+side line a quarter of the time, on the top route, in the sky and DIY stashes, from the golden pigeon and the sewer
+alligator. Chips found on a floor you continue from are lost with the rest of that floor. No dice sound yet (the
+throw and the landing are silent; a rattle and a clack on the curb would sell it).
+
+**Later (not built yet): the pinball last chance.** zack's idea (Nov 3, 2026): when your last heart is gone, a mini
+pinball table (tap the left or right half for the flippers) instead of the run just ending. Beat a target score and
+you skate on from the floor you bailed on; miss and the run ends as usual. It has its own Match: rarely, the last
+digits of your pinball score match and the next run starts with extra hearts. Styled as the pinball machine in the
+title scene's skate shop. Held for later because it's a second game inside a one-tap skate game and a big build
+(ball physics, a table, tuning); the dice cover "something even when you lose" for now.
 
 ## Monetization: grind or pay
 
@@ -909,7 +919,7 @@ yet:** none of the store exists; this is the plan.)
 What's sold:
 
 1. **Stoken bundles.** Skip the grind: buy Stoken and spend it on the unlocks screen (skaters, decks, boon packs,
-   the daily run), the same things missions, spin tokens and runs already pay for.
+   the daily run), the same things missions, the street dice and runs already pay for.
 2. **The Supporter pack** (one purchase, about $4.99): no ads ever, 2x Stoken from every source, and a supporter
    grip. The "I like this game" buy from Alto's Odyssey and Jetpack Joyride.
 3. **Cosmetics:** outfits, board graphics, grip colours, trails. Bought with Stoken, or some only with money. Pure
@@ -921,8 +931,8 @@ Rules:
 
 - **Never sell power.** No boons, stat buffs, continues or head starts for money; that would break the roguelike.
   Rank grips and other earned-only rewards stay earned-only.
-- **Never sell luck.** Spin tokens and slot pulls can't be bought with real money (app stores and some countries
-  treat paid random rewards as gambling). The slot machine only ever runs on tokens found in runs.
+- **Never sell luck.** Chips and dice rolls can't be bought with real money (app stores and some countries
+  treat paid random rewards as gambling). The dice only ever roll for runs played and chips found in them.
 - **Grinding stays fair.** A player who never pays can earn every skater, deck and boon pack, and every chapter,
   at a pace that feels like progress (target: tune with the playtest bot once prices exist).
 - **Ads stay paused** (zack, Oct 31, 2026). When they come back they're the optional kind only (watch one for a
@@ -1045,7 +1055,7 @@ freefall) pick the same clips Lou Gnar's `player.ts` picks today.
   intended way to play. Built Nov 2, 2026: zack's own sound set, one sound per moment (the list in the project
   files' `audio/sound-effects-list.md`, wired in `src/audio/cues.ts`), with recorded loops for the grind, the
   wheels (pitch up a little with speed) and the siren (louder with Heat). Still Lou Gnar's: a clean landing (no
-  `land.wav` yet) and rolling over glass; a spin token plays the Stoken a little higher. Ambience, passing cars and
+  `land.wav` yet) and rolling over glass; a chip plays the Stoken a little higher. Ambience, passing cars and
   surface-specific wheels **(not in the build yet)**.
 - **A living street:** back-lane traffic, pedestrians who react (duck, cheer, film you on their phone), and Flock
   cameras and AI billboards that turn to track you.
@@ -1205,7 +1215,7 @@ The official roadmap (zack, Oct 31, 2026). Each item is checked against "What th
 
 **Next**
 4. Missions and Skater Rank.
-5. Spin tokens and the end-of-run slot machine.
+5. Spin tokens and the end-of-run slot machine (since replaced by the street dice and the Match, Nov 3, 2026).
 
 **Then**
 6. The Chinatown downhill: skitch cabs and cross traffic.
