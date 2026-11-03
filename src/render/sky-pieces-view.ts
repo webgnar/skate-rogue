@@ -14,6 +14,9 @@ import { groundAt } from '../gen/top-route';
 import { toX, toY } from './kit';
 import { adTexture, adUv } from './sky-kit';
 import { inkify } from './toon';
+import { disposeGeometries } from './dispose';
+
+const disposed = <T extends THREE.Object3D>(o: T): T => (disposeGeometries(o), o);
 
 const T = (px: number) => px / TILE;
 
@@ -204,11 +207,12 @@ export class SkyPiecesView {
   private thin: { s: Surface; g: THREE.Object3D }[] = [];
 
   reset(sky: Sky): void {
-    for (const p of this.pieces) this.group.remove(p.g);
-    if (this.clouds) this.group.remove(this.clouds);
+    //the last floor's pieces are freed, not just taken out (dispose.ts)
+    for (const p of this.pieces) this.group.remove(disposed(p.g));
+    if (this.clouds) this.group.remove(disposed(this.clouds));
     this.clouds = null;
     this.thin = [];
-    for (const b of this.busts) this.group.remove(b);
+    for (const b of this.busts) this.group.remove(disposed(b));
     this.pieces = [];
     this.busts = [];
     const level = sky.level;

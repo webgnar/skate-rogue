@@ -17,6 +17,7 @@ import { GrindImpacts, GRIND_IMPACT } from '../src/render/grind-impact';
 import { landDust, landKick } from '../src/render/land-fx';
 import { FEEL } from '../src/physics/feel';
 import { applyParams, clampPixel, FX, PIXEL_MAX } from '../src/render/fx-settings';
+import { frameDue } from '../src/game/frame-cap';
 import { VisorGlint, VISOR, VISOR_TINT } from '../src/render/visor-glint';
 import { mergeInk, splitSlabs } from '../src/render/kit-merge';
 import { batchStatic } from '../src/render/batch';
@@ -153,7 +154,7 @@ describe('puddles', () => {
 });
 
 describe('effect settings from the URL', () => {
-  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink' } as const;
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink', fps: 60 } as const;
   const q = (s: string) => applyParams({ ...base }, new URLSearchParams(s));
   it('calm turns on both accessibility switches, calm=0 turns them off', () => {
     expect(q('calm')).toMatchObject({ reduceMotion: true, reduceFlashing: true });
@@ -675,7 +676,7 @@ describe('escape set pieces', () => {
 });
 
 describe('flip lines setting', () => {
-  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink' } as const;
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink', fps: 60 } as const;
   it('picks a look from the URL and ignores unknown ones', () => {
     expect(applyParams({ ...base }, new URLSearchParams('fliplines=swoosh')).flipLines).toBe('swoosh');
     expect(applyParams({ ...base }, new URLSearchParams('fliplines=pixels')).flipLines).toBe('pixels');
@@ -716,5 +717,32 @@ describe('grind entry flash', () => {
     expect(live()).toBe(1);
     fx.update(0.5);
     expect(live()).toBe(0);
+  });
+});
+
+describe('the 30 fps setting', () => {
+  const base = { quality: 'auto', reduceMotion: false, reduceFlashing: false, heatCue: false, pixel: 1, ghost: 'pink', flipLines: 'ink', fps: 60 } as const;
+  it('comes from the URL, anything but 30 is 60', () => {
+    expect(applyParams({ ...base }, new URLSearchParams('fps=30')).fps).toBe(30);
+    expect(applyParams({ ...base }, new URLSearchParams('fps=45')).fps).toBe(60);
+    expect(applyParams({ ...base, fps: 30 }, new URLSearchParams('')).fps).toBe(30);
+  });
+  it('runs every second frame of a 60 Hz screen and every fourth of a 120 Hz one', () => {
+    for (const [hz, every] of [[60, 2], [120, 4]] as const) {
+      let ran = -Infinity;
+      const runs: number[] = [];
+      for (let i = 0; i < 40; i++) {
+        const now = (i * 1000) / hz + (i % 3 === 0 ? 0.8 : -0.6); // the timestamps wobble
+        if (frameDue(now, ran, 30)) {
+          ran = now;
+          runs.push(i);
+        }
+      }
+      const gaps = runs.slice(1).map((r, k) => r - runs[k]);
+      expect(new Set(gaps)).toEqual(new Set([every]));
+    }
+  });
+  it('60 runs every frame', () => {
+    expect(frameDue(1, 0, 60)).toBe(true);
   });
 });

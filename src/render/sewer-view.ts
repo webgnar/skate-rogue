@@ -10,6 +10,7 @@ import { SEWER_ROOF, type Level } from '../physics/level';
 import { SEWER_SIM, type SewerSim } from '../sim/sewer';
 import { SEWER } from '../gen/sewer';
 import { inkify } from './toon';
+import { disposeGeometries } from './dispose';
 import { CAR, trainCar } from './el-view';
 import { EL } from '../traffic/el';
 import { warmMesh } from './shader-keep';
@@ -114,6 +115,8 @@ export class SewerView {
 
   // build the pieces for a floor
   reset(level: Level, sim: SewerSim): void {
+    //the last floor's pieces are freed, not just taken out (dispose.ts)
+    disposeGeometries(this.group, [this.warm, this.warmSlime]);
     this.group.clear();
     this.group.add(this.warm, this.warmSlime);
     this.rats = [];

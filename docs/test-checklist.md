@@ -470,6 +470,14 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 - [ ] Pause and drag PIXELS from SHARP to 4X: the game goes blocky and hard-edged straight away, and the HUD stays
       sharp. It's remembered after a reload. `?pixel=3` sets it from the URL.
 
+**Frame rate (2026-11-03)**
+
+- [ ] Pause and tap FRAME RATE to 30 FPS: the game keeps the same speed but steps at 30 frames a second, and feels
+      even, not stuttery. It's remembered after a reload. `?fps=30` sets it from the URL.
+- [ ] At 30 FPS the picture stays sharp (it no longer reads 30 as "slow" and drops the resolution). In Low Power
+      Mode with FRAME RATE on 60, it still goes low-res and chunky, the look you liked.
+- [ ] Gnar mode's shard glow looks the same as before (it now draws as 4 pieces instead of 60-odd).
+
 **Speed lines**
 
 - [ ] They only show at high speed and stay subtle (toned down after your note).

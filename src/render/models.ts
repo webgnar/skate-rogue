@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { DEPTH, depthStep } from './depth';
 import { railMetal } from './rail-metal';
+import { shareGeometry } from './dispose';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const parts = new Map<string, THREE.Mesh>();
@@ -138,7 +139,7 @@ export function flatGeometry(name: string): THREE.BufferGeometry | null {
   }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.clearGroups();
-  flat.set(name, geo);
+  flat.set(name, shareGeometry(geo));
   return geo;
 }
 
@@ -174,6 +175,8 @@ export function flatSplit(name: string, glow: Set<string>): { lit: THREE.BufferG
     return out;
   };
   const out = { lit: pick(false) ?? flatGeo, glow: pick(true) };
+  shareGeometry(out.lit);
+  if (out.glow) shareGeometry(out.glow);
   split.set(name, out);
   return out;
 }

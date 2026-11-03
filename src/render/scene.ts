@@ -132,7 +132,7 @@ export class StreetView {
   private kit: THREE.Group | null = null;
   private cut = cutPlanes(); // the kit's clipping planes: [start, end]
   private aheads = new Map<string, Ahead>();
-  private behind: { root: THREE.Group; kit: THREE.Group; night: NightCity } | null = null;
+  private behind: { root: THREE.Group; kit: THREE.Group; night: NightCity; gates: GateFx; sirens: SirenFx } | null = null;
   private skyDrop = 0; // world units the backdrop still sits above its place after a floor joined on (eases to 0)
   private biome: BiomeId = 'chicago';
   private sheet: HTMLImageElement | null = null; // the biome's tile sheet (skins.ts)
@@ -385,6 +385,8 @@ export class StreetView {
       this.scene.remove(a.root);
       if (a.kit) disposeKit(a.kit);
       a.night.dispose();
+      a.gates.dispose();
+      a.sirens.dispose();
       this.aheads.delete(key);
     }
   }
@@ -453,7 +455,7 @@ export class StreetView {
       root.add(this.kit, this.night.group, this.gates.group, this.sirens.group);
       this.scene.add(root);
       this.cut[1].constant = 0;
-      this.behind = { root, kit: this.kit, night: this.night };
+      this.behind = { root, kit: this.kit, night: this.night, gates: this.gates, sirens: this.sirens };
     }
     //and the next comes to the origin, cut where the last one ended
     this.scene.remove(a.root);
@@ -478,6 +480,8 @@ export class StreetView {
     this.scene.remove(this.behind.root);
     disposeKit(this.behind.kit);
     this.behind.night.dispose();
+    this.behind.gates.dispose();
+    this.behind.sirens.dispose();
     this.behind = null;
     this.cut[0].constant = NO_CUT;
   }
@@ -637,10 +641,11 @@ export class StreetView {
     return f;
   }
 
-  // when frames stay slow (over 20 ms for 2 s): lower the resolution, and before it drops below 1, switch to the
-  // low effects tier (unless the tier was chosen by hand)
+  // when frames stay slow (over 20 ms for 2 s, or 40 ms held to 30 fps): lower the resolution, and before it drops
+  // below 1, switch to the low effects tier (unless the tier was chosen by hand). (A phone in Low Power Mode holds
+  // the page to 30 frames a second, which reads as slow here: that steps it all the way down, the look zack liked)
   adapt(frameMs: number): void {
-    this.slowMs = frameMs > 20 ? this.slowMs + frameMs : 0;
+    this.slowMs = frameMs > (FX.fps === 30 ? 40 : 20) ? this.slowMs + frameMs : 0;
     //the fisheye goes first (its sharp texture, then the lens), so the picture keeps its resolution
     if (this.slowMs > 2000 && this.lensLevel > 0 && CAM.lens > 0) {
       this.lensLevel--;
