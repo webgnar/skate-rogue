@@ -24,3 +24,26 @@ describe('landing quality', () => {
     expect(r.onEvent({ type: 'land', quality: 'clean' }, PHYS.baseSpeed)?.points).toBe(SCORE.lip);
   });
 });
+
+describe('slams and the stoke meter', () => {
+  it('a slam empties the stoke meter', () => {
+    const r = new RunScore();
+    r.stoke = 0.8;
+    r.onEvent({ type: 'slam' }, PHYS.baseSpeed);
+    expect(r.stoke).toBe(0);
+  });
+  it('a slam in the gnar state ends it', () => {
+    const r = new RunScore();
+    r.gnarT = SCORE.gnarSecs;
+    r.onEvent({ type: 'slam' }, PHYS.baseSpeed);
+    expect(r.gnar).toBe(false);
+    expect(r.stoke).toBe(0);
+  });
+  it('Slam Stoke still fills the meter on a slam', () => {
+    const r = new RunScore();
+    r.slamStoke = true;
+    r.stoke = 0.5;
+    r.onEvent({ type: 'slam' }, PHYS.baseSpeed);
+    expect(r.stoke).toBeCloseTo(0.5 + SCORE.slamStoke);
+  });
+});
