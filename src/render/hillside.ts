@@ -834,16 +834,23 @@ export function* buildHillSteps(level: Level, group: THREE.Group, lead = 0): Gen
   //T's in the background to suggest a continuation of where they go"): the back street running off both ways behind
   //the rows, its far sidewalk, and a row of houses along it facing down the cross street
   const rngT = makeRng(level.layout.seed * 61 + level.layout.floor * 13);
+  //(two cross streets close together share the back street between them: each one's arm stops halfway, or their
+  //rows of houses stood in each other, fronts in one plane, and flickered far off behind the street; zack 2026-11-03)
+  const sorted = crossings.slice().sort((p, q) => p[0] - q[0]);
   const tee = function* (x0: number, x1: number, t: number): Generator<void, void> {
     const T = HILLSIDE.tee;
-    const [a, b] = [x0 - T.arm, x1 + T.arm];
+    const i = sorted.findIndex((q) => q[0] === x0);
+    const prev = sorted[i - 1];
+    const next = sorted[i + 1];
+    const a = Math.max(x0 - T.arm, prev ? (prev[1] + x0) / 2 : -Infinity);
+    const b = Math.min(x1 + T.arm, next ? (x1 + next[0]) / 2 : Infinity);
     const z1 = HILLSIDE.crossFar;
     const z0 = z1 - HILLSIDE.crossW;
     m.box(a, b, B, t, t, z0, z1, { top: ['road', (p) => [p[0] / 4, (p[2] - z0) / (z1 - z0)]], left: ['concrete', cs], right: ['concrete', cs] });
     //its near sidewalk, broken by the cross street's mouth, and the far one
     for (const [w0, w1] of [[a, x0 - 0.7], [x1 + 0.7, b]]) m.box(w0, w1, B, t + c, t + c, z1, z1 + T.walk, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
     m.box(a, b, B, t + c, t + c, z0 - T.walk, z0, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf] });
-    yield* houseRowSteps(m, rngT, a, b, z0 - T.walk - T.depth, z0 - T.walk, () => t + c, () => t - 0.5, () => false, { bay: 0.7, chimney: 0.3, hip: true, shrub: 0.4 });
+    yield* houseRowSteps(m, rngT, a, b, z0 - T.walk - T.depth, z0 - T.walk, () => t + c, () => t - 0.5, (_xa, xb) => xb > b + 0.01, { bay: 0.7, chimney: 0.3, hip: true, shrub: 0.4 });
   };
   //the cross streets: flat roads back into the city with their kerbs, and crosswalk lines over the hill's road
   const paint = rectUv(SWATCH.trim);

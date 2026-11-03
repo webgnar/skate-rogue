@@ -202,7 +202,7 @@ export function buildSewers(level: Level): THREE.Group {
   const archDark = new THREE.MeshBasicMaterial({ color: 0x0c0a0c });
   const iron = new THREE.MeshLambertMaterial({ color: 0x2c2826 });
   const ooze = new THREE.MeshBasicMaterial({ color: 0x7cff4a });
-  const oozeGlow = new THREE.MeshBasicMaterial({ map: glowDisc(), color: 0x7cff4a, transparent: true, opacity: 0.45, depthWrite: false });
+  const oozeGlow = depthStep(new THREE.MeshBasicMaterial({ map: glowDisc(), color: 0x7cff4a, transparent: true, opacity: 0.45, depthWrite: false }), DEPTH.mark); // (over the corrugated sheets it lies on)
   const grateGlow = new THREE.MeshBasicMaterial({ map: lattice(), transparent: true, opacity: 0.85, depthWrite: false });
   const barrel = new THREE.MeshLambertMaterial({ color: 0xff6a1a });
   const fence = new THREE.MeshBasicMaterial({ color: 0xff7a2a, transparent: true, opacity: 0.75, side: THREE.DoubleSide });
