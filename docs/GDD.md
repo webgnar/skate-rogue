@@ -741,7 +741,7 @@ The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK
 | Low Profile | COOL | Heat rises 25% slower (QFS Tough Skin) | 3 |
 | Bubble Pads | COOL | The first slam each floor costs no speed and no Heat (QFS Bubble Shield) | 2 |
 | Tuck and Roll | COOL | Falling into a gap bounces you back up once per floor instead of ending the run | 1 |
-| Slam Stoke | COOL | A slam gives +50% stoke instead of losing your combo | 1 |
+| Slam Stoke | COOL | A slam gives +25% stoke instead of emptying the meter and losing your combo | 1 |
 
 ### Combos (duo boons)
 
@@ -942,6 +942,8 @@ is teased.
 - **Score** = tricks × combo × speed multiplier + floor clear (`250 × floor`, QFS) + Stoken grabbed.
 - **Combo** builds with tricks, grinds and car-hops without touching the ground; landing banks it.
 - **Stoke meter** fills with the combo. Full stoke gives a short "gnar" state: speed up, and slams cost no Heat.
+  A slam kills the meter (zack, Nov 3, 2026): it empties, and a slam in the gnar state ends it (that slam still
+  costs no Heat). Slam Stoke turns this around.
 - **Leaderboards:** deepest floor, high score, daily seed. Port `api/leaderboard.ts` and `leaderboard-service.ts` from excaliburSkate. Built Oct 24, 2026: api/leaderboard.ts over a Redis store (Upstash), boards for score, deepest floor and each day's daily run; it needs a store connected on Vercel.
 
 ## Presentation (3D)

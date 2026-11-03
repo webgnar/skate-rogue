@@ -135,14 +135,14 @@ describe('score', () => {
     expect(s.combo).toBe(0);
   });
 
-  it('a slam loses the combo and knocks the stoke meter', () => {
+  it('a slam loses the combo and empties the stoke meter', () => {
     const s = new RunScore();
     s.stoke = 0.5;
     s.onEvent({ type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false }, 0);
     s.onEvent({ type: 'slam' }, 0);
     expect(s.onEvent({ type: 'land' }, PHYS.baseSpeed)).toBeNull();
     expect(s.score).toBe(0);
-    expect(s.stoke).toBeCloseTo(0.25);
+    expect(s.stoke).toBe(0);
   });
 
   it('full stoke starts the gnar state, which wears off', () => {
