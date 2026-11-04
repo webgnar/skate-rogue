@@ -1,10 +1,10 @@
-// Cash coins and Stoken gems floating along the floor's lines. Coins spin; collected coins burst into sparkles, gems
-// pop and vanish.
+// Cash coins and Stoken particles floating along the floor's lines. Coins spin; collected coins burst into sparkles,
+// Stoken particles (stoken-particle.ts) pop and vanish.
 import * as THREE from 'three';
 import { inkify } from './toon';
 import type { Level } from '../physics/level';
 import { toX, toY } from './kit';
-import { flatGeometry } from './models';
+import { StokenParticles } from './stoken-particle';
 
 const POP_SECS = 0.18;
 const COIN_R = 0.2;
@@ -126,9 +126,9 @@ function chipMesh(count: number): THREE.InstancedMesh {
 export class PickupView {
   readonly group = new THREE.Group();
   private coins: THREE.InstancedMesh | null = null;
-  private gems: THREE.InstancedMesh | null = null;
+  private gems: StokenParticles | null = null;
   private chips: THREE.InstancedMesh | null = null; // spin tokens
-  private slots: { mesh: THREE.InstancedMesh; i: number; x: number; y: number; popT: number; gone: boolean }[] = [];
+  private slots: { mesh: THREE.InstancedMesh | null; i: number; x: number; y: number; popT: number; gone: boolean }[] = [];
   private t = 0;
   private readonly m = new THREE.Matrix4();
   private readonly q = new THREE.Quaternion();
@@ -137,39 +137,35 @@ export class PickupView {
   private readonly s = new THREE.Vector3();
 
   setLevel(level: Level): void {
-    for (const mesh of [this.coins, this.gems, this.chips]) {
+    for (const mesh of [this.coins, this.chips]) {
       if (!mesh) continue;
       this.group.remove(mesh);
       mesh.dispose();
+    }
+    if (this.gems) {
+      this.group.remove(this.gems.group);
+      this.gems.dispose();
     }
     this.slots = [];
     const cash = level.pickups.filter((p) => p.kind === 'cash').length;
     const spins = level.pickups.filter((p) => p.kind === 'spin').length;
     const stoken = level.pickups.length - cash - spins;
-    //art/pickups.py: a brilliant-cut gem, colours baked into the vertices
-    const gem = flatGeometry('Stoken');
     this.coins = coinMesh(Math.max(1, cash));
-    this.gems = new THREE.InstancedMesh(
-      gem ?? new THREE.OctahedronGeometry(0.32),
-      new THREE.MeshLambertMaterial(gem ? { vertexColors: true, emissive: 0x2a1460 } : { color: 0xb98cff, emissive: 0x4a2a9a }),
-      Math.max(1, stoken),
-    );
+    this.gems = new StokenParticles(stoken);
     this.chips = chipMesh(Math.max(1, spins));
     this.coins.count = cash;
-    this.gems.count = stoken;
     this.chips.count = spins;
     let c = 0;
     let g = 0;
     let k = 0;
     for (const p of level.pickups) {
-      const mesh = p.kind === 'cash' ? this.coins : p.kind === 'spin' ? this.chips : this.gems;
+      const mesh = p.kind === 'cash' ? this.coins : p.kind === 'spin' ? this.chips : null; // null: a Stoken particle
       const i = p.kind === 'cash' ? c++ : p.kind === 'spin' ? k++ : g++;
       this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), popT: 0, gone: false });
     }
     inkify(this.coins);
-    inkify(this.gems);
     inkify(this.chips);
-    this.group.add(this.coins, this.gems, this.chips);
+    this.group.add(this.coins, this.gems.group, this.chips);
     this.update(0);
   }
 
@@ -184,8 +180,8 @@ export class PickupView {
     }
     slot.gone = true;
     this.m.makeScale(0, 0, 0);
-    slot.mesh.setMatrixAt(slot.i, this.m);
-    slot.mesh.instanceMatrix.needsUpdate = true;
+    this.coins!.setMatrixAt(slot.i, this.m);
+    this.coins!.instanceMatrix.needsUpdate = true;
     return new THREE.Vector3(slot.x, slot.y + Math.sin(this.t * 3 + slot.x) * 0.05, COIN_Z);
   }
 
@@ -205,16 +201,20 @@ export class PickupView {
           scale = 0;
         }
       }
-      const spin = this.t * 4 + s.x * 0.7;
-      this.e.set(0, spin, s.mesh === this.gems ? 0.3 : 0);
-      this.q.setFromEuler(this.e);
       this.v.set(s.x, s.y + lift + Math.sin(this.t * 3 + s.x) * 0.05, COIN_Z);
+      if (!s.mesh) {
+        this.gems?.place(s.i, this.v, scale, this.t, s.x * 0.7);
+        continue;
+      }
+      const spin = this.t * 4 + s.x * 0.7;
+      this.e.set(0, spin, 0);
+      this.q.setFromEuler(this.e);
       this.s.setScalar(scale);
       this.m.compose(this.v, this.q, this.s);
       s.mesh.setMatrixAt(s.i, this.m);
     }
     if (this.coins) this.coins.instanceMatrix.needsUpdate = true;
-    if (this.gems) this.gems.instanceMatrix.needsUpdate = true;
+    this.gems?.flush();
     if (this.chips) this.chips.instanceMatrix.needsUpdate = true;
   }
 }

@@ -9,6 +9,7 @@ import type { DiceView } from '../game/game';
 import { DICE_MS } from '../game/game';
 import type { PrizeIcon } from '../run/dice';
 import { Dice3D, type DieSlot } from '../render/dice3d';
+import { STOKEN_SVG } from './stoken-icon';
 
 const LAND = [0.62, 0.8, 1]; // when each pair lands, as a share of DICE_MS (later pairs land later)
 
@@ -18,11 +19,10 @@ export const SHAKE = {
   within: 900, // ms the jolts have to come in
 };
 
-// the prize icons, inked like the rest of the game (the Stoken gem is the HUD's)
+// the prize icons, inked like the rest of the game (the Stoken particle is the HUD's)
 const ink = (d: string, fill: string, box = '0 0 24 24') => `<svg viewBox="${box}" aria-hidden="true"><path d="${d}" fill="${fill}" stroke="#000" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
 const ICON: Record<PrizeIcon, string> = {
-  stoken:
-    '<svg viewBox="0 0 24 20" aria-hidden="true"><path d="M5 1h14l4 6-11 12L1 7z" fill="#e04cff" stroke="#000" stroke-width="2" stroke-linejoin="round"/><path d="M1 7h22M8 1l-2 6 6 12 6-12-2-6" stroke="#ffb8ff" stroke-width="1.2" fill="none"/></svg>',
+  stoken: STOKEN_SVG,
   cash: '<b class="cash">$</b>',
   boon: ink('M14 1 4 13.5h6.5L8.5 23 20 9.5h-6.8z', '#ffd23a'),
   heart: ink('M12 21.5S2 15 2 8.3A5.2 5.2 0 0 1 12 5.6a5.2 5.2 0 0 1 10 2.7C22 15 12 21.5 12 21.5z', '#ff3b4e'),
