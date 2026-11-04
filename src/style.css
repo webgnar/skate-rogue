@@ -1685,7 +1685,11 @@ html, body {
 }
 #dice.many { --die: 44px; }
 #dice.solo { --die: 84px; }
-#dice.solo .prize { font-size: 24px; padding: 4px 18px 2px; }
+#dice.solo .prize { padding: 6px 18px 5px 12px; gap: 10px; }
+#dice.solo .prize b { font-size: 28px; }
+#dice.solo .prize small { font-size: 12px; }
+#dice.solo .prize .icon { width: 34px; height: 34px; }
+#dice.solo .prize .icon .cash { font-size: 34px; }
 #dice.solo .name { font-size: 28px; }
 #dice .lamp { position: absolute; top: -8%; left: 50%; translate: -50% 0; width: 46px; height: 18px; background: #ffe7a0; border: 3px solid #000; border-radius: 0 0 24px 24px; box-shadow: 0 0 40px 18px rgba(255, 200, 90, 0.5); }
 #dice .title { font-size: clamp(38px, 10vw, 58px); line-height: 1; color: #ffd23a; -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 4px 4px 0 #000; transform: skewX(-8deg); }
@@ -1704,56 +1708,55 @@ html, body {
 #dice.many .curb { gap: 10px 14px; padding: 18px 8px 12px; }
 #dice .pair { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: calc(var(--die) * 2.6); }
 #dice .dice { display: flex; gap: calc(var(--die) * 0.28); }
-#dice .die {
-  width: var(--die);
-  aspect-ratio: 1;
-  box-sizing: border-box;
-  padding: calc(var(--die) * 0.13);
-  display: grid;
-  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-  background: linear-gradient(145deg, #fffdf6, #e9e3d2);
-  border: 3px solid #000;
-  border-radius: calc(var(--die) * 0.2);
-  box-shadow: inset -3px -4px 0 #cfc7b0, 4px 6px 0 rgba(0, 0, 0, 0.75);
-}
-#dice .die.d0 { transform: rotate(-12deg); }
-#dice .die.d1 { transform: rotate(9deg); }
-#dice .die i { place-self: center; width: 62%; aspect-ratio: 1; border-radius: 50%; }
-#dice .die i.on { background: radial-gradient(circle at 40% 35%, #444, #000 70%); }
-#dice .die i.on.ace { background: radial-gradient(circle at 40% 35%, #ff6a6a, #c4101e 70%); }
-/* waiting for the throw: the dice shake in your hand */
-#dice:not(.thrown) .die.d0 { animation: dice-shake 0.28s ease-in-out infinite; }
-#dice:not(.thrown) .die.d1 { animation: dice-shake 0.28s ease-in-out infinite reverse; }
-@keyframes dice-shake { 50% { translate: 0 -5px; rotate: 8deg; } }
+/* a die's slot on the curb: the 3D die (src/render/dice3d.ts) is drawn over it, on the canvas */
+#dice .die { width: var(--die); aspect-ratio: 1; }
+#dice canvas.dice3d { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+#dice .how { font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 13px; letter-spacing: 0.12em; color: #ffd23a; text-shadow: 1px 1px 0 #000; margin-top: 12px; animation: dice-btn 0.9s ease-in-out infinite; }
+#dice.thrown .how { visibility: hidden; }
+#dice .btn { position: relative; z-index: 2; }
 #dice .name, #dice .prize { visibility: hidden; }
 #dice.thrown .name, #dice.thrown .prize { visibility: visible; }
 #dice .name { min-height: 1em; font-size: 20px; line-height: 1; color: #ff5fa8; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
 #dice .name:empty { display: none; }
 #dice .prize {
-  padding: 3px 12px 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 3px 8px;
   background: linear-gradient(#ffe46a, #ffc21a);
   border: 2.5px solid #000;
   box-shadow: 2px 2px 0 #000;
   transform: skewX(-8deg);
-  font-size: 17px;
-  line-height: 1.1;
   color: #1a1028;
   white-space: nowrap;
+  text-align: left;
 }
-#dice .pair.big .prize { background: linear-gradient(#ff8ac6, #ff3d9a); color: #fff; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; font-size: 19px; }
+#dice .prize .icon { flex: none; width: 26px; height: 26px; display: grid; place-items: center; }
+#dice .prize .icon svg { width: 100%; height: 100%; overflow: visible; }
+#dice .prize .icon .cash { font: 900 26px / 1 'Arial Black', sans-serif; color: #2fc25a; -webkit-text-stroke: 2px #000; paint-order: stroke fill; }
+#dice .prize .what { display: flex; flex-direction: column; }
+#dice .prize b { font-weight: normal; font-size: 20px; line-height: 1.05; }
+#dice .prize small { font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 11px; letter-spacing: 0.04em; line-height: 1.2; opacity: 0.8; text-transform: uppercase; }
+#dice .pair.big .prize { background: linear-gradient(#ff8ac6, #ff3d9a); color: #fff; }
+#dice .pair.big .prize b { -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; }
 #dice .pair.match .name { font-size: 28px; color: #ffd23a; }
-#dice .pair.match .prize { background: linear-gradient(#fff3a0, #ffc21a 60%, #e09a12); color: #1a1028; -webkit-text-stroke: 0; font-size: 21px; }
-#dice.landed .pair.match .die { box-shadow: inset -3px -4px 0 #cfc7b0, 0 0 22px 6px rgba(255, 210, 58, 0.85), 4px 6px 0 rgba(0, 0, 0, 0.75); }
+#dice .pair.match .prize { background: linear-gradient(#fff3a0, #ffc21a 60%, #e09a12); color: #1a1028; }
+#dice .pair.match .prize b { -webkit-text-stroke: 0; font-size: 23px; }
+#dice.landed .pair.match .dice { border-radius: 50%; box-shadow: 0 0 40px 18px rgba(255, 210, 58, 0.45); }
 #dice.many .name { font-size: 15px; }
-#dice.many .prize { font-size: 13px; padding: 2px 7px 0; }
+#dice.many .prize { padding: 2px 8px 1px 5px; gap: 5px; }
+#dice.many .prize b { font-size: 14px; }
+#dice.many .prize small { font-size: 8.5px; }
+#dice.many .prize .icon { width: 18px; height: 18px; }
+#dice.many .prize .icon .cash { font-size: 18px; }
 #dice.many .pair.match .name { font-size: 19px; }
-#dice.many .pair.match .prize { font-size: 15px; }
+#dice.many .pair.match .prize b { font-size: 16px; }
 /* the MATCH: a gold word slams in over everything, once */
 #dice .flash { position: absolute; top: 18%; left: 50%; translate: -50% 0; font-size: clamp(64px, 20vw, 120px); color: #ffd23a; -webkit-text-stroke: 3px #000; paint-order: stroke fill; text-shadow: 6px 6px 0 #000; transform: skewX(-8deg) rotate(-6deg); opacity: 0; pointer-events: none; }
 #dice.matched .flash { animation: dice-match 1.6s ease-out forwards; }
 @keyframes dice-match { 0% { opacity: 0; scale: 3; } 14% { opacity: 1; scale: 1; } 70% { opacity: 1; scale: 1.05; } 100% { opacity: 0; scale: 1.1; } }
 #dice .btn {
-  margin-top: 14px;
+  margin-top: calc(var(--die) * 1.15);
   padding: 6px 40px 3px;
   font-size: clamp(26px, 7vw, 38px);
   color: #000;
@@ -1765,18 +1768,19 @@ html, body {
 #dice .btn[hidden] { display: block; visibility: hidden; }
 #dice .btn.go { animation: dice-btn 0.9s ease-in-out infinite; }
 @keyframes dice-btn { 50% { scale: 1.06; } }
-#app.calm #dice .btn.go, #app.calm #dice:not(.thrown) .die, #app.calm #dice.matched .flash { animation: none; }
+#app.calm #dice .btn.go, #app.calm #dice .how, #app.calm #dice.matched .flash { animation: none; }
 #app.calm #dice.matched .flash { opacity: 0; }
 @media (max-height: 460px) {
   #dice { --die: 46px; gap: 2px; }
   #dice.many { --die: 34px; }
   #dice.solo { --die: 60px; }
-  #dice.solo .prize { font-size: 19px; }
+  #dice.solo .prize b { font-size: 20px; }
+  #dice .how { margin-top: 2px; }
   #dice .title { font-size: 34px; }
   #dice .curb { padding: 16px 8px 10px; }
   #dice .btn { margin-top: 6px; font-size: 24px; padding: 3px 30px 1px; }
   #dice .name { font-size: 16px; }
-  #dice .prize { font-size: 14px; }
+  #dice .prize b { font-size: 16px; }
 }
 
 /* the in-run mission popup (src/ui/mission-toast.ts): above the gear wear, bottom right, clear of the callouts.

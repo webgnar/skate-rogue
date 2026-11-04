@@ -19,6 +19,7 @@ export interface Roll {
   dice: [Face, Face];
   prize: Prize;
   match: boolean; // boxcars: the MATCH
+  held?: number; // continues held for the next run once this roll's paid (rollAll fills it)
 }
 
 export const DICE = {
@@ -92,6 +93,7 @@ export function rollAll(rng: () => number, rolls: number, held: HeadStart, grip:
     else if (z.kind === 'boon') head.boons++;
     else if (z.kind === 'continue') head.continues += z.n;
     else grip = z.grip;
+    r.held = head.continues;
   }
   return { rolls: out, head, stoken, grip };
 }
@@ -103,18 +105,32 @@ export function rollName(r: Roll): string {
   return ['', 'SNAKE EYES!', 'HARD FOUR!', 'HARD SIX!', 'HARD EIGHT!', 'HARD TEN!', 'BOXCARS!'][a];
 }
 
-// what a prize says under the dice
-export function prizeText(z: Prize, gripName: (id: GripId) => string, match = false): string {
+// what a prize says under the dice, spelled out: an icon, what you got, and what it's for. hearts: how many hearts the
+// next run starts with, counting this roll's
+export type PrizeIcon = 'stoken' | 'cash' | 'boon' | 'heart' | 'grip';
+export interface PrizeLabel {
+  icon: PrizeIcon;
+  main: string;
+  sub: string;
+}
+
+export function prizeLabel(z: Prize, gripName: (id: GripId) => string, match: boolean, hearts: number): PrizeLabel {
   switch (z.kind) {
     case 'stoken':
-      return match ? `MATCH! +◆${z.n}` : `+◆${z.n}`;
+      return match
+        ? { icon: 'stoken', main: `MATCH! +${z.n} STOKEN`, sub: 'hearts maxed, so Stoken for unlocks' }
+        : { icon: 'stoken', main: `+${z.n} STOKEN`, sub: 'banked, for unlocks' };
     case 'cash':
-      return `HEAD START $${z.n}`;
+      return { icon: 'cash', main: `$${z.n} HEAD START`, sub: 'cash for the shop, next run' };
     case 'boon':
-      return 'FREE BOON NEXT RUN';
+      return { icon: 'boon', main: 'FREE BOON', sub: 'you start your next run with one' };
     case 'continue':
-      return match ? `MATCH! +${z.n} ♥ NEXT RUN` : `+${z.n} ♥ NEXT RUN`;
+      return {
+        icon: 'heart',
+        main: match ? `MATCH! +${z.n} HEARTS` : `+${z.n} HEART${z.n > 1 ? 'S' : ''}`,
+        sub: `next run starts with ${hearts} ♥`,
+      };
     case 'grip':
-      return `${gripName(z.grip).toUpperCase()} GRIP`;
+      return { icon: 'grip', main: `${gripName(z.grip).toUpperCase()} GRIP`, sub: 'new grip tape, on your board now' };
   }
 }

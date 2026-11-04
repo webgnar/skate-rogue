@@ -76,3 +76,15 @@ describe('chips (spin tokens)', () => {
     expect(pickups + props).toBeLessThan(45);
   });
 });
+
+describe('3D dice', () => {
+  it('every result lands with its face pointing at you', async () => {
+    const THREE = await import('three');
+    const { restingQuat, DICE3D } = await import('../src/render/dice3d');
+    const normals: Record<number, [number, number, number]> = { 1: [0, 1, 0], 6: [0, -1, 0], 2: [1, 0, 0], 5: [-1, 0, 0], 3: [0, 0, 1], 4: [0, 0, -1] };
+    for (const f of [1, 2, 3, 4, 5, 6] as const) {
+      const n = new THREE.Vector3(...normals[f]).applyQuaternion(restingQuat(f, 0.3));
+      expect(n.dot(DICE3D.view)).toBeGreaterThan(0.999);
+    }
+  });
+});

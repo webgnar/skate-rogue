@@ -16,7 +16,7 @@ import { SKY, skyMult } from '../sim/sky';
 import { firstCloud } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { loadSave, whole, writeSave } from '../run/save';
-import { NO_HEAD_START, prizeText, rollAll, rollName, rollsFor, type Roll } from '../run/dice';
+import { NO_HEAD_START, prizeLabel, rollAll, rollName, rollsFor, type PrizeLabel, type Roll } from '../run/dice';
 import { boonsOfType, Missions, PX_PER_M, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
@@ -202,7 +202,7 @@ export interface Hud {
 
 // the street dice: a pair per roll (one free, one per chip found), all thrown at once
 export interface DiceView {
-  rolls: { dice: Roll['dice']; name: string; text: string; big: boolean; match: boolean }[];
+  rolls: { dice: Roll['dice']; name: string; prize: PrizeLabel; big: boolean; match: boolean }[];
 }
 
 export const DICE_MS = 1300; // the dice tumble this long before the last pair lands (src/ui/dice-panel.ts)
@@ -1182,7 +1182,7 @@ export class Game {
       rolls: rolls.map((r) => ({
         dice: r.dice,
         name: rollName(r),
-        text: prizeText(r.prize, (id) => gripDef(id).name, r.match),
+        prize: prizeLabel(r.prize, (id) => gripDef(id).name, r.match, CONTINUES + (r.held ?? 0)),
         big: r.dice[0] === r.dice[1],
         match: r.match,
       })),
@@ -1201,6 +1201,15 @@ export class Game {
       this.sprite.setGrip(gripDef(won.grip).color);
     }
     return won.rolls;
+  }
+
+  // a shake of the phone: throws the dice, like the first tap (src/ui/dice-panel.ts listens for it)
+  shakeDice(): void {
+    if (this.state !== 'dice' || this.diceEnd) return;
+    const now = performance.now();
+    this.hud.diceThrow();
+    this.diceEnd = now + DICE_MS;
+    this.menuAt = now;
   }
 
   // the dice's taps: the first throws them, one while they tumble lands them, the next goes on to the summary

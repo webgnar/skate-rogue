@@ -894,10 +894,18 @@ when they lose, and the **Match** (from pinball) is the rare roll that feels hug
 - **Boxcars** (6-6) is the **MATCH** (1 in 36): the next run starts with 5 hearts instead of 3. Continues held for the
   next run cap at 2, so past the cap the Match pays 25 Stoken (and 5-5 pays 10).
 
-The first tap throws the dice (they shake in your hand until then), a tap while they tumble lands them, and the next
-goes on to the summary. The roll is decided and banked when the run ends, so closing the app doesn't lose it.
+**Shake your phone or tap ROLL** to throw the dice (they rattle in your hand until then; zack, Nov 4, 2026), a tap
+while they tumble lands them, and the next goes on to the summary. On an iPhone, motion needs a tap to allow it, so
+the first ROLL tap asks and shaking works from then on.
 
-Built Nov 3, 2026 (src/run/dice.ts, src/ui/dice-panel.ts; chips are placed by src/gen/spin-tokens.ts): one free roll
+The dice are **real 3D casino dice** (zack, Nov 4, 2026, with a casino dice photo): sharp-edged, see-through red with
+flush opaque white pips, glossy, the far side's pips showing faintly through. They tumble onto the curb from your
+hand, bounce twice and settle with the result facing you; the MATCH's dice glow a hotter red. Every prize is spelled
+out under its dice: an icon (the HUD's Stoken gem, $, a boon bolt, a heart, a grip), what you got in big letters
+("+5 STOKEN", "$40 HEAD START", "MATCH! +2 HEARTS") and a line on what it's for ("banked, for unlocks", "next run
+starts with 5 ♥"). The roll is decided and banked when the run ends, so closing the app doesn't lose it.
+
+Built Nov 3, 2026, 3D and shake Nov 4 (src/run/dice.ts, src/ui/dice-panel.ts, src/render/dice3d.ts; chips are placed by src/gen/spin-tokens.ts): one free roll
 plus one per chip, 6 rolls at most. A chip is found in a smashed prop now and then (15% of floors), at the top of a
 side line a quarter of the time, on the top route, in the sky and DIY stashes, from the golden pigeon and the sewer
 alligator. Chips found on a floor you continue from are lost with the rest of that floor. No dice sound yet (the
