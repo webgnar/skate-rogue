@@ -7,7 +7,7 @@ import type { Traffic, Vehicle, VehicleKind } from '../traffic/traffic';
 import { STREET_Z, TRAFFIC } from '../traffic/traffic';
 import { CROSS, type CrossCar } from '../traffic/cross';
 import { DOOR, STOP, type CarDoor } from '../traffic/street';
-import { makeBus, makeCar, makeTruck, toX, toY } from './kit';
+import { makeBus, makeCar, makeTruck, streetCar, toX, toY, type CarModel } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 import { headlights } from './night';
@@ -171,11 +171,11 @@ export class TrafficView {
       if (!mesh) {
         const paint = this.paintOf(v);
         const [w, b, r, look] = [toX(v.x1 - v.x0), toY(level, v.bottom), toY(level, v.roof), STAGE_MODEL[stage]];
-        const name = v.kind === 'bus' ? 'Bus' : v.kind === 'truck' ? 'BoxTruck' : v.kind === 'robotaxi' ? 'Robotaxi' : 'Sedan';
+        const name = v.kind === 'bus' ? 'Bus' : v.kind === 'truck' ? 'BoxTruck' : v.kind === 'robotaxi' ? 'Robotaxi' : streetCar(v.look ?? v.id);
         mesh =
           v.kind === 'bus' ? makeBus(0, w, b, r, look)
           : v.kind === 'truck' ? makeTruck(0, w, b, r, paint, (v.kicker ?? 0) / TILE, look)
-          : makeCar(0, w, b, r, paint, name as 'Robotaxi' | 'Sedan', look);
+          : makeCar(0, w, b, r, paint, name as CarModel, look);
         if (v.speed < 0) mesh.rotation.y = Math.PI; // oncoming: headlights toward the skater
         if (stage) damagedLook(mesh, name, stage, v.id);
         inkify(mesh);
@@ -255,7 +255,7 @@ export class TrafficView {
     const street = toY(level, level.streetY);
     const len = 2.1;
     //a car with its length along z: built along x, turned so the nose faces the camera
-    const body = makeCar(0, len, street, toY(level, c.box.roof), PAINTS.oncoming[i % PAINTS.oncoming.length], 'Sedan');
+    const body = makeCar(0, len, street, toY(level, c.box.roof), PAINTS.oncoming[i % PAINTS.oncoming.length], streetCar(i));
     body.position.x = 0;
     const beams = headlights(len);
     beams.position.y = street;
