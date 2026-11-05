@@ -823,7 +823,17 @@ export function parkedPaint(level: Level, i: number): number {
 
 // the Blender hatchbacks (art/cars.py) are 2.3 long and 1.25 to the roof, for a 2 tile hitbox, and are stretched to
 // other hitboxes; the cruiser SUV only chases, so it keeps its own size
-export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser' | 'Taxi';
+export type CarModel = 'Sedan' | 'Robotaxi' | 'Cruiser' | 'Taxi' | 'Wagon' | 'Coupe' | 'KeiVan';
+
+// the street's everyday cars: the Prius, and the blender bot's boxy wagon, fastback coupe and bread-loaf microvan
+// (.claude/skills/blender-bot/build_cars.py, public/models/bot/cars.glb). Built to the Prius's size, so any of them
+// fills a car hitbox; `look` picks one, the same way it picks the paint, so a car keeps its model. A model that
+// didn't load falls back to the Prius
+const STREET_CARS: CarModel[] = ['Sedan', 'Wagon', 'Coupe', 'KeiVan'];
+export function streetCar(look: number): CarModel {
+  const pick = STREET_CARS[Math.abs(Math.floor(look)) % STREET_CARS.length];
+  return hasModel(pick) ? pick : 'Sedan';
+}
 const MODEL_LEN = 2.3;
 const MODEL_ROOF = 1.25;
 

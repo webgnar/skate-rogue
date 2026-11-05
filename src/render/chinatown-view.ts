@@ -8,7 +8,7 @@ import type { Traffic } from '../traffic/traffic';
 import type { HillCar, HillCross } from '../traffic/hill-cross';
 import { CAB, type Cab } from '../traffic/cab';
 import { STREET_Z } from '../traffic/traffic';
-import { makeCar, toX, toY } from './kit';
+import { makeCar, streetCar, toX, toY } from './kit';
 import { inkify } from './toon';
 import { headlights } from './night';
 import { at } from '../game/interp';
@@ -34,7 +34,7 @@ export class ChinatownView {
 
   private makeCross(level: Level, car: HillCar, h: HillCross): THREE.Group {
     const bottom = toY(level, h.y);
-    const body = makeCar(0, LEN, bottom, toY(level, car.box.roof), PAINTS[(car.look + Math.floor(h.x)) % PAINTS.length], 'Sedan');
+    const body = makeCar(0, LEN, bottom, toY(level, car.box.roof), PAINTS[(car.look + Math.floor(h.x)) % PAINTS.length], streetCar(car.look));
     body.position.x = 0;
     const beams = headlights(LEN);
     beams.position.y = bottom;

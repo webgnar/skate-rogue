@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Level } from '../physics/level';
 import type { Stage } from '../traffic/damage';
-import { makeBus, makeCar, makeParkedCruiser, parkedPaint, toX, toY } from './kit';
+import { makeBus, makeCar, makeParkedCruiser, parkedPaint, streetCar, toX, toY, type CarModel } from './kit';
 import { hasModel } from './models';
 import { inkify } from './toon';
 import type { Particles } from './particles';
@@ -51,7 +51,12 @@ function parkedGroup(level: Level, i: number, stage: Stage): THREE.Group {
   const v = STAGE_MODEL[stage];
   if (car.model === 'bus') return makeBus(x0, x1, bottom, roof, v);
   if (car.model === 'cruiser') return makeParkedCruiser(x0, x1, bottom, roof, i, v);
-  return makeCar(x0, x1, bottom, roof, parkedPaint(level, i), 'Sedan', v);
+  return makeCar(x0, x1, bottom, roof, parkedPaint(level, i), parkedModel(level, i), v);
+}
+
+// which body a parked car is (a bus and a cruiser aside): the Prius or one of the blender bot's cars
+function parkedModel(level: Level, i: number): CarModel {
+  return streetCar(i * 3 + level.layout.floor);
 }
 
 // a group's meshes as plain geometry (position, normal, colour) in the group's parent's space: glowing parts apart
@@ -145,7 +150,7 @@ export function damageParked(kit: THREE.Object3D | null, level: Level, i: number
     hideRange(state.lit, state.ranges[i].lit);
   }
   const mesh = parkedGroup(level, i, stage);
-  damagedLook(mesh, level.cars[i].model === 'bus' ? 'Bus' : level.cars[i].model === 'cruiser' ? 'Cruiser' : 'Sedan', stage, i);
+  damagedLook(mesh, level.cars[i].model === 'bus' ? 'Bus' : level.cars[i].model === 'cruiser' ? 'Cruiser' : parkedModel(level, i), stage, i);
   inkify(mesh);
   root.add(mesh);
   state.shown.set(i, { mesh, stage, slide: stage === 3 ? 0 : -1 });
