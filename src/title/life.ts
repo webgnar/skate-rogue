@@ -11,6 +11,7 @@ import { makeDrone } from '../render/drone-view';
 import { makeParkedCruiser } from '../render/kit';
 import { model } from '../render/models';
 import { makePerson } from '../render/peds';
+import { pigeonRig, type PigeonRig } from '../render/pigeon';
 import { inkify, toon } from '../render/toon';
 import { glowTexture, STORE } from './city';
 import { FACADE } from './facade';
@@ -901,6 +902,56 @@ function cat(): Life {
 // pigeons pecking on the sidewalk by the curb: heads bobbing, a hop now and then; every so often they all take off
 // over the roofs and glide back down
 function pigeons(rng: Rng, at: THREE.Vector3, n: number): Life {
+  return modelPigeons(rng, at, n) ?? codePigeons(rng, at, n);
+}
+
+// the blender bot's pigeon (src/render/pigeon.ts), rigged: it walks about pecking, and flies off and back on the same
+// 15 s loop as the code-built ones. Null when the model didn't load
+function modelPigeons(rng: Rng, at: THREE.Vector3, n: number): Life | null {
+  const group = new THREE.Group();
+  const birds: { rig: PigeonRig; home: THREE.Vector3; ph: number; out: THREE.Vector3; x: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const rig = pigeonRig();
+    if (!rig) return null;
+    inkify(rig.root);
+    rig.root.scale.setScalar(0.95);
+    group.add(rig.root);
+    const home = at.clone().add(new THREE.Vector3((rng() - 0.5) * 3, 0, (rng() - 0.5) * 1.0));
+    birds.push({ rig, home, ph: rng() * 6, out: new THREE.Vector3(8 + rng() * 10, 22 + rng() * 10, -14 - rng() * 10), x: 0 });
+  }
+  return {
+    group,
+    update(t: number, dt: number): void {
+      const p = t % 15;
+      for (const b of birds) {
+        let u = 0; // 0 on the ground, 1 gone over the roof
+        if (p > 10 && p < 12.5) u = (p - 10) / 2.5;
+        else if (p >= 12.5) u = 1 - (p - 12.5) / 2.5;
+        const up = p > 10 && p < 12.5;
+        const e = u * u;
+        const g = b.rig.root;
+        if (u > 0) {
+          b.rig.play('fly', 0.1);
+          g.position.set(b.home.x + b.x + b.out.x * e, b.out.y * e + Math.sin(u * Math.PI) * 3, b.home.z + b.out.z * e);
+          g.rotation.set(0, up ? -0.6 : Math.PI - 0.6, up ? 0.5 : -0.2);
+        } else {
+          //a few seconds walking one way, then stopping to peck, each to its own clock
+          const step = Math.sin(t * 0.5 + b.ph);
+          const walking = Math.abs(step) > 0.45;
+          b.rig.play(walking ? 'walk' : 'peck');
+          const dir = step > 0 ? 1 : -1;
+          if (walking) b.x = Math.max(-1.2, Math.min(1.2, b.x + dir * dt * 0.35));
+          g.position.set(b.home.x + b.x, 0, b.home.z);
+          g.rotation.set(0, dir > 0 ? 0 : Math.PI, 0);
+        }
+        b.rig.update(dt);
+      }
+    },
+  };
+}
+
+// the code-built pigeons: a ball of a body, a head and two flat wings
+function codePigeons(rng: Rng, at: THREE.Vector3, n: number): Life {
   const group = new THREE.Group();
   const feather = toon({ color: 0x5a5a78, side: THREE.DoubleSide });
   const pale = toon({ color: 0x9a96aa });
