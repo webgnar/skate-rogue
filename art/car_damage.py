@@ -8,6 +8,10 @@
 #          and the nose sagging on that corner, the bumper hanging
 #   wreck  the cabin crushed down to the belt line, everything crumpled and scorched, all four tyres flat
 #
+# SHAPE IS OFF (zack, 2026-11-05: "i dont like damaged. changes the shape of the car. we can just change the texture
+# of it to show damaged"): every stage keeps the clean car's shape exactly, and the damage shows only in its surface,
+# cracked glass, scraped paint and soot spreading as the stages go. The pushes below stay for SHAPE = True.
+#
 # The roofs only sink a little (0.1 and 0.16 tiles) on dent and bust: the skater still lands on the hitbox roof.
 # The wreck has no hitbox (it rolls out of the lane), so it can be crushed flat.
 #
@@ -22,6 +26,7 @@ from mathutils import Vector, noise
 
 WHEEL = {'tire', 'rim', 'darkrim'}
 LIT = {'lamp', 'tail', 'accent', 'sign', 'badge'}
+SHAPE = False
 EXTRA = {'crackGlass': 0x7D90A6, 'scrape': 0x9EA2AA, 'soot': 0x2B2724}
 
 
@@ -89,7 +94,7 @@ def damage(src, stage, mats, spec):
     rx = spec['roof_x']
     cam = -W / 2  # Blender -Y is the side the game's camera sees
 
-    for v in bm.verts:
+    for v in (bm.verts if SHAPE else ()):
         co = v.co.copy()
         if v in wheel_verts:
             flat = stage == 'wreck' or (stage == 'bust' and co.x > 0 and co.y < 0)
@@ -137,12 +142,21 @@ def damage(src, stage, mats, spec):
         elif n == names[0]:  # the body's paint (the first piece joined)
             patch = noise.noise(c * 2.2 + off)
             low = c.y < 0 and c.z < belt * 1.05  # scrapes down the camera's side, under the windows
-            if stage == 'dent' and patch > 0.5 and low:
+            seen = c.y < 0 or c.z > top * 0.8  # the camera's side and the roof (where you land)
+            if SHAPE:
+                if stage == 'dent' and patch > 0.5 and low:
+                    f.material_index = slot['scrape']
+                elif stage == 'bust' and patch > 0.3 and low:
+                    f.material_index = slot['scrape']
+                elif stage == 'wreck' and patch > 0.2:
+                    f.material_index = slot['soot' if patch > 0.38 else 'scrape']
+            # the surface alone carries the damage: scrapes, then soot, spreading stage by stage
+            elif stage == 'dent' and patch > 0.25 and seen:
                 f.material_index = slot['scrape']
-            elif stage == 'bust' and patch > 0.3 and low:
-                f.material_index = slot['scrape']
-            elif stage == 'wreck' and patch > 0.2:
-                f.material_index = slot['soot' if patch > 0.38 else 'scrape']
+            elif stage == 'bust' and patch > 0.05 and seen:
+                f.material_index = slot['soot' if patch > 0.45 else 'scrape']
+            elif stage == 'wreck' and patch > -0.25:
+                f.material_index = slot['soot' if patch > 0.1 else 'scrape']
     bm.normal_update()
     bm.to_mesh(ob.data)
     bm.free()

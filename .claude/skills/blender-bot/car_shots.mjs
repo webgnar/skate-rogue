@@ -19,7 +19,7 @@ const r = await page.evaluate(async () => {
   const p = lou.getWorldPosition(lou.position.clone());
   const rows = [
     [['Sedan', ''], ['Wagon', ''], ['Coupe', ''], ['KeiVan', '']],
-    [['Wagon', '_dent'], ['Coupe', '_bust'], ['KeiVan', '_wreck'], ['Wagon', '_wreck']],
+    [['Sedan', '_bust'], ['Wagon', '_dent'], ['Coupe', '_bust'], ['KeiVan', '_wreck']],
   ];
   const paints = [0xe8c33a, 0x3a7be8, 0xd94a4a, 0x48b86a];
   const root = lou.parent.parent ? view.scene : view.scene;
