@@ -39,6 +39,7 @@ import { MetaScreen } from './ui/meta-screen';
 import { BoardPanel } from './ui/board-panel';
 import { MODEL_FILES, loadModels, missingModels } from './render/models';
 import { CAT, DOG } from './render/bot-model';
+import { loadPeople } from './title/bot-people';
 import { loadPigeon } from './render/pigeon';
 import { Loading } from './ui/loading';
 import { parseBoons } from './bot/repro';
@@ -460,7 +461,7 @@ async function start() {
   //at the bottom of it, so his rig loads too
   const titled = wantTitle(params, ['floor', 'seed', 'biome', 'daily', 'gnar', 'escape', 'boons', 'bot'].some((k) => params.has(k)));
   const titleRig = titled ? loading.track(SkaterRig.create(base, 'webster', meshy)) : null;
-  await Promise.all([loading.track(loadCityTiles(`${base}tex/chicago_tiles.png`)), loadModels(base, MODEL_FILES, loading.add(MODEL_FILES.length)), loading.track(loadPigeon(base)), loading.track(DOG.load(base)), loading.track(CAT.load(base))]);
+  await Promise.all([loading.track(loadCityTiles(`${base}tex/chicago_tiles.png`)), loadModels(base, MODEL_FILES, loading.add(MODEL_FILES.length)), loading.track(loadPigeon(base)), loading.track(DOG.load(base)), loading.track(CAT.load(base)), loading.track(loadPeople(base))]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
   await loading.track(view.loadBackdrop(base));
   const sprite = await rig;
