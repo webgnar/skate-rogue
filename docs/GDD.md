@@ -23,6 +23,10 @@ The game is set in Quest For Stoken's world (decided Oct 23, 2026). An AI runs t
 policy, then started phasing out things it didn't understand, and skateboarding was one of them. Skating now
 costs you social credit, Flock cameras watch every street, and the AI's enforcers chase skaters down.
 Shredtoshi Gnarlymoto's **Stoken**, money you earn by getting stoked on skating, is how skaters fight back.
+Stoken looks like a **quantum particle** (zack, Nov 4, 2026; it was a coin in the old games, then a purple gem): a
+dark purple glass core with *the stoked flame of the spirit* burning in it, three electrons orbiting it, and a
+see-through shell with a glowing rim around it all. The pickup, the HUD, the cards and every Stoken price draw it.
+Cash coins keep the old gold Stoken coin face.
 
 Lou Gnar is the lead skater: one run is one session out on the AI's streets, skating as far as you can before
 the enforcers shut you down. The QFS skaters (Webster, Keanu, Roxy, Goldie) are unlockable.
@@ -901,7 +905,7 @@ the first ROLL tap asks and shaking works from then on.
 The dice are **real 3D casino dice** (zack, Nov 4, 2026, with a casino dice photo): sharp-edged, see-through red with
 flush opaque white pips, glossy, the far side's pips showing faintly through. They tumble onto the curb from your
 hand, bounce twice and settle with the result facing you; the MATCH's dice glow a hotter red. Every prize is spelled
-out under its dice: an icon (the HUD's Stoken gem, $, a boon bolt, a heart, a grip), what you got in big letters
+out under its dice: an icon (the HUD's Stoken particle, $, a boon bolt, a heart, a grip), what you got in big letters
 ("+5 STOKEN", "$40 HEAD START", "MATCH! +2 HEARTS") and a line on what it's for ("banked, for unlocks", "next run
 starts with 5 ♥"). The roll is decided and banked when the run ends, so closing the app doesn't lose it.
 

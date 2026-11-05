@@ -787,7 +787,7 @@ export class Game {
     if (this.level.bounty) {
       const pay = bountyPay(this.run.stoken - this.floorStoken, this.sim.heat.value);
       this.run.stoken += pay;
-      this.hud.callout(pay ? `BOUNTY CLAIMED +◆${whole(pay)}` : 'BOUNTY MISSED', pay ? 'good' : 'bad');
+      this.hud.callout(pay ? `BOUNTY CLAIMED +${whole(pay)} STOKEN` : 'BOUNTY MISSED', pay ? 'good' : 'bad');
       if (pay) this.escapeFx.bounty(this.sprite.mesh.position.x, this.sprite.mesh.position.y);
     }
     const fork = this.level.fork;
@@ -823,7 +823,7 @@ export class Game {
       return this.endRun(now, false, true);
     }
     this.advance();
-    this.hud.callout(`ACT ${act} CLEAR +$${cash} +◆${whole(stoken)}`, 'good');
+    this.hud.callout(`ACT ${act} CLEAR +$${cash} +${whole(stoken)} STOKEN`, 'good');
   }
 
   private rerollCost(): number {
@@ -1528,7 +1528,7 @@ export class Game {
     this.phoneFx.update(this.pedView.phones());
     if (this.level.bounty && !this.bountySeen && this.state === 'skate' && this.skater.x >= this.level.bounty.x - 4 * TILE) {
       this.bountySeen = true;
-      this.hud.callout(`WANTED: HEAT ${BOUNTY.heat}+ AT THE GATE PAYS 2× ◆`, 'trick');
+      this.hud.callout(`WANTED: HEAT ${BOUNTY.heat}+ AT THE GATE PAYS 2× STOKEN`, 'trick');
     }
     const lesson = this.level.tutorial?.[this.lesson];
     if (lesson && this.state === 'skate' && this.skater.x >= lesson.x) {
@@ -2015,7 +2015,7 @@ export class Game {
       this.sound?.play(MOMENT.pick);
       if (d.rank === undefined) continue;
       bank += d.pay ?? 0;
-      this.hud.callout(`SKATER RANK ${d.rank}! +◆${d.pay}`, 'good');
+      this.hud.callout(`SKATER RANK ${d.rank}! +${d.pay} STOKEN`, 'good');
       if (d.grip) {
         tape = d.grip;
         this.grip = d.grip;

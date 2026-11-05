@@ -1,6 +1,7 @@
 // The three missions and Skater Rank (src/run/missions.ts), on the pause card and the run summary: each mission's
 // count as a bar, and a SKIP for a little Stoken. The rank's pips fill with the missions done towards the next.
 import { countText, type MissionsView } from '../run/missions';
+import { STOKEN_INLINE } from './stoken-icon';
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
 
@@ -10,7 +11,7 @@ export function missionsHtml(v: MissionsView): string {
     .map((r, i) => {
       const share = Math.round((100 * r.count) / r.goal);
       const n = countText(r.count, r.goal, r.unit);
-      return `<div class="mission"><span class="txt">${esc(r.text)}</span><span class="bar"><i style="width:${share}%"></i></span><span class="n">${n}</span><button data-skip="${i}"${v.bank < v.skip ? ' disabled' : ''}>SKIP ◆${v.skip}</button></div>`;
+      return `<div class="mission"><span class="txt">${esc(r.text)}</span><span class="bar"><i style="width:${share}%"></i></span><span class="n">${n}</span><button data-skip="${i}"${v.bank < v.skip ? ' disabled' : ''}>SKIP ${STOKEN_INLINE}${v.skip}</button></div>`;
     })
     .join('');
   return `<div class="rank"><span class="tag">SKATER RANK</span><span class="num">${v.rank}</span><span class="pips">${pips}</span></div>${rows}`;
