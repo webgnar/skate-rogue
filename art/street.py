@@ -379,7 +379,7 @@ def cable_car(m):
         # the number on the dash, reading across the end (built along x, turned onto the end below)
         dash = bmesh.new()
         digits(dash, '60', -0.13, -0.011, 0.0, 0.69, 0.15)
-        bmesh.ops.rotate(dash, verts=dash.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(-side * math.pi / 2, 3, 'Z'))
+        bmesh.ops.rotate(dash, verts=dash.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(side * math.pi / 2, 3, 'Z'))  # its face outward, so it reads the right way round
         bmesh.ops.translate(dash, verts=dash.verts, vec=(side * hl, 0, 0))
         dm = bpy.data.meshes.new('ccDash')
         dash.to_mesh(dm)
@@ -387,13 +387,13 @@ def cable_car(m):
         gold.from_mesh(dm)
         bpy.data.meshes.remove(dm)
         box(cream, ex - 0.05, ex + 0.05, -0.32, 0.32, 1.68, 1.86)  # the route sign on the roof
-        box(glass, *sorted((side * (hl - 0.04), side * (hl - 0.06))), -0.27, 0.27, 1.71, 1.83)
-    # posts holding the roof up over the open sections
+        box(glass, *sorted((side * (hl - 0.045), side * (hl - 0.03))), -0.27, 0.27, 1.71, 1.83)  # 1 cm proud of the sign
+    # posts holding the roof up over the open sections, 1 cm proud of the end walls and the saloon so no face is shared
     for px in (-hl + 0.12, hl - 0.12, -sx - 0.04, sx + 0.04):
         for py in (-hw + 0.04, hw - 0.04):
-            box(maroon, px - 0.04, px + 0.04, py - 0.04, py + 0.04, 0.56, 1.55)
+            box(maroon, px - 0.05, px + 0.05, py - 0.05, py + 0.05, 0.56, 1.55)
     # the roof: maroon boards with the gold-lettered routes, the cream deck, the clerestory down the middle
-    box(roof, -hl - 0.08, hl + 0.08, -hw - 0.06, hw + 0.06, 1.62, 1.68)
+    box(roof, -hl - 0.07, hl + 0.07, -hw - 0.05, hw + 0.05, 1.62, 1.68)  # 1 cm inside the roof boards' faces
     for fy, out in ((-hw - 0.06, -1), (hw + 0.06, 1)):
         box(maroon, -hl - 0.08, hl + 0.08, *sorted((fy, fy - out * 0.04)), 1.5, 1.66)
         lettering(gold, -hl + 0.2, hl - 0.2, *sorted((fy, fy + out * 0.008)), 1.55, 1.61, seed=3)
