@@ -12,6 +12,7 @@ import { makeParkedCruiser } from '../render/kit';
 import { model } from '../render/models';
 import { CAT, DOG, type CatClip, type DogClip } from '../render/bot-model';
 import { makePerson } from '../render/peds';
+import { botPerson, type Who } from './bot-people';
 import { pigeonRig, type PigeonRig } from '../render/pigeon';
 import { inkify, toon } from '../render/toon';
 import { glowTexture, STORE } from './city';
@@ -503,7 +504,7 @@ function signTexture(text: string[]): THREE.Texture {
 const PED = 1.35; // the people's model to the skater's size
 let HIP_Y0 = 0; // a person's hips' rest height (peds.ts), read off the first one made
 
-type Ped = { mesh: THREE.SkinnedMesh; bones: THREE.Bone[] };
+type Ped = { mesh: THREE.Object3D; bones: THREE.Bone[]; sync?: () => void; hand?: THREE.Object3D };
 const SPIN = (p: number, at: number) => (p > at && p < at + 0.9 ? ((p - at) / 0.9) * Math.PI * 2 : 0); // a quick turn on the spot
 
 // a boombox on the sidewalk: a body, two speakers that thump on the beat, a handle and a tape deck's glow
@@ -554,7 +555,9 @@ function people(rng: Rng): Life {
     group.add(p.mesh);
     return p;
   };
-  const sit = makePerson(rng, 'chicago');
+  // each is the blender bot's model (bot-people.ts), or the code-built person when it didn't load
+  const person = (who: Who, r: Rng): Ped | null => botPerson(who) ?? makePerson(r, 'chicago');
+  const sit = person('homeless', rng);
   if (sit) HIP_Y0 = sit.bones[1].position.y;
   add(sit, -10.5, -2.0); // against the pizza place's front (city.ts STORE)
   if (sit) {
@@ -570,15 +573,24 @@ function people(rng: Rng): Life {
       group.add(box);
     }
   }
-  const hitch = add(makePerson(makeRng(11), 'chicago'), -3.6, 2.5, 0.3);
+  const hitch = add(person('hitch', makeRng(11)), -3.6, 2.5, 0.3);
   //his phone, in his left hand: shown when he checks it
   const phone = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.15, 0.02), new THREE.MeshBasicMaterial({ color: 0x9ad8ff }));
   if (hitch) {
-    phone.position.set(-0.02, -0.66, 0.08);
-    hitch.bones[4].add(phone);
+    if (hitch.hand) {
+      //in the model's left hand: the hand bone runs wrist to fingers along its y, in the model's own units
+      hitch.mesh.updateMatrixWorld(true);
+      const k = 1 / hitch.hand.getWorldScale(new THREE.Vector3()).y;
+      phone.scale.setScalar(k * PED);
+      phone.position.set(0, 0.06 * k * PED, 0.03 * k * PED);
+      hitch.hand.add(phone);
+    } else {
+      phone.position.set(-0.02, -0.66, 0.08);
+      hitch.bones[4].add(phone);
+    }
   }
-  const wild = add(makePerson(makeRng(23), 'chicago'), 9.5, 0.6);
-  const dancer = add(makePerson(makeRng(31), 'chicago'), 13.2, 0.4, -0.35);
+  const wild = add(person('wild', makeRng(23)), 9.5, 0.6);
+  const dancer = add(person('dancer', makeRng(31)), 13.2, 0.4, -0.35);
   const box = boombox();
   box.group.position.set(11.9, 0, 1.3);
   box.group.rotation.y = 0.5;
@@ -596,14 +608,14 @@ function people(rng: Rng): Life {
         //over and pets it, looking down at it
         hips.position.y = 0.32;
         legL.position.y = legR.position.y = 0.32;
-        legL.rotation.set(-1.45, 0, 0.12);
-        legR.rotation.set(-1.4, 0, -0.08);
-        hips.rotation.x = -0.12;
+        legL.rotation.set(-1.3, 0, -0.14); // knees apart, leaning back on the wall: a deeper fold creased the model's seat
+        legR.rotation.set(-1.25, 0, 0.12);
+        hips.rotation.x = -0.25;
         armL.rotation.set(-0.7, 0, -0.1);
         const petting = p > 7.6 && p < 14.6;
         armR.rotation.set(petting ? -0.9 : -0.8 - b * 0.25, 0, petting ? 0.75 + Math.sin(t * 5) * 0.18 : 0.1);
         head.rotation.x = petting ? 0.35 : 0.25 + b * 0.25;
-        head.rotation.y = petting ? 0.7 : 0;
+        head.rotation.y = petting ? 0.5 : 0;
         head.rotation.z = petting ? 0 : Math.sin(n * Math.PI * 0.5) * 0.12;
       }
       if (hitch) {
@@ -624,12 +636,12 @@ function people(rng: Rng): Life {
           head.rotation.y = -0.6 + Math.sin(t * 0.9) * 0.5;
         } else if (what === 'wave') {
           //both arms going over his head: hey! stop!
-          armR.rotation.set(0, 0, 2.5 + Math.sin(t * 10) * 0.45);
-          armL.rotation.set(0, 0, -2.5 - Math.sin(t * 10 + 1) * 0.45);
+          armR.rotation.set(0, 0, 2.3 + Math.sin(t * 10) * 0.3); // no higher: past ~2.6 an arm folds into the model's head
+          armL.rotation.set(0, 0, -2.3 - Math.sin(t * 10 + 1) * 0.3);
           hips.position.y = HIP_Y0 + Math.abs(Math.sin(t * 5)) * 0.06; // up on his toes
         } else if (what === 'phone') {
           //checking his phone, head down, the other hand on his hip
-          armL.rotation.set(-1.25, 0, 0.25);
+          armL.rotation.set(-1.25, 0, -0.05); // held out in front, not across the chest
           armR.rotation.set(0, 0, 0.5);
           head.rotation.x = 0.45;
         } else if (what === 'shrug') {
@@ -641,7 +653,7 @@ function people(rng: Rng): Life {
           hips.position.y = HIP_Y0 + 0.03 * k;
         } else if (what === 'hey') {
           //a wave at you, the player, one hand high
-          armR.rotation.set(0, 0, 2.7 + Math.sin(t * 8) * 0.3);
+          armR.rotation.set(0, 0, 2.4 + Math.sin(t * 8) * 0.2);
           armL.rotation.set(0, 0, -0.1);
           head.rotation.x = -0.1;
         } else {
@@ -670,15 +682,15 @@ function people(rng: Rng): Life {
         else if (what === 'travel') {
           //heading left, a stomp on every beat, arms swinging wide
           wild.mesh.rotation.y = -Math.PI / 2 + 0.4 + Math.sin(n * Math.PI) * 0.3;
-          legL.rotation.x = Math.sin(t * 7) * 0.7;
-          legR.rotation.x = -Math.sin(t * 7) * 0.7;
+          legL.rotation.x = Math.sin(t * 7) * 0.55;
+          legR.rotation.x = -Math.sin(t * 7) * 0.55;
         } else if (what === 'loose') wild.mesh.rotation.y = 0.2 + Math.sin(t * 1.1) * 1.0 + SPIN(p, 23) + SPIN(p, 33);
         else if (what === 'point') {
           //stock still, pointing up at the drones, shouting about it
           wild.mesh.rotation.y = 0.4;
           hips.rotation.set(-0.1, 0, 0);
           legL.rotation.x = legR.rotation.x = 0;
-          armR.rotation.set(0, 0, 2.6 + jerk * 0.2);
+          armR.rotation.set(0, 0, 2.4 + jerk * 0.15);
           armL.rotation.set(-0.3, 0, -0.5);
           head.rotation.set(-0.5, 0.2, 0);
         } else {
@@ -730,14 +742,15 @@ function people(rng: Rng): Life {
           armR.rotation.set(0, 0, 1.4 + Math.sin(t * 4.2 + 1.2) * 0.4);
         } else {
           //arms up on the drop, jumping on the beat
-          armL.rotation.set(0, 0, -2.7 - b * 0.2);
-          armR.rotation.set(0, 0, 2.7 + b * 0.2);
+          armL.rotation.set(0, 0, -2.4 - b * 0.2);
+          armR.rotation.set(0, 0, 2.4 + b * 0.2);
           hips.position.y = HIP_Y0 + b * 0.18;
           legL.rotation.set(-b * 0.3, 0, 0);
           legR.rotation.set(-b * 0.3, 0, 0);
           head.rotation.set(-0.3, 0, 0);
         }
       }
+      for (const who of [sit, hitch, wild, dancer]) who?.sync?.();
       box.update();
     },
   };
