@@ -2264,7 +2264,8 @@ export class Game {
       case 'pickup':
         {
           const at = this.pickups.take(e.index);
-          if (at) this.particles.coin(at.x, at.y, at.z);
+          if (at && e.kind === 'stoken') this.particles.stoken(at.x, at.y, at.z);
+          else if (at) this.particles.coin(at.x, at.y, at.z);
         }
         this.hud.money(this.run.cash, this.run.stoken);
         if (e.kind === 'stoken') this.hud.callout('STOKEN!', 'good');
