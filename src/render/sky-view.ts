@@ -8,7 +8,8 @@ import type { Level, Surface } from '../physics/level';
 import type { Sky } from '../sim/sky';
 import { toX, toY } from './kit';
 import { model } from './models';
-import { inkify } from './toon';
+import { inkify, toon } from './toon';
+import { FLAP_FRAMES, pigeonMaterial, pigeonPoses, type Poses } from './pigeon';
 import { SkyPiecesView } from './sky-pieces-view';
 
 const BIRDS = 5; // pigeons a flock
@@ -35,6 +36,12 @@ export class SkyView {
   private readonly head = new THREE.SphereGeometry(0.09, 8, 6);
   private readonly wing: THREE.BufferGeometry;
   private readonly rightWing: THREE.BufferGeometry;
+  // the blender bot's pigeon (src/render/pigeon.ts), baked into still poses: each pose one instanced mesh, so a
+  // sky route of flocks is a draw (and its outline) a pose in view. Null when the model didn't load: the code-built
+  // birds above stand in
+  private readonly poses: Poses | null = pigeonPoses();
+  private readonly poseGeos: THREE.BufferGeometry[] = this.poses ? [this.poses.sit, this.poses.bow, ...this.poses.flap] : [];
+  private readonly goldToon = toon({ color: 0xffc81e, emissive: 0x6a4a00 });
   private readonly plane: THREE.Group;
   private readonly trail: THREE.Mesh;
   private planeT = 6;
@@ -91,6 +98,16 @@ export class SkyView {
       const gold = f.site.gold;
       g.scale.setScalar(gold ? 1.9 : 1.3);
       for (let b = 0; b < (gold ? 1 : BIRDS); b++) {
+        const k = (i * 13 + b * 7) % 11;
+        if (this.poses) {
+          //the modelled pigeon: a pose holder in the flock (the instances draw it), or for the golden one a mesh whose
+          //pose (geometry) is swapped as it flaps
+          const bird = gold ? new THREE.Mesh(this.poses.sit, this.goldToon) : new THREE.Object3D();
+          bird.position.set(gold ? 0 : (b - 2) * 0.42 + (k % 3) * 0.1, 0, 0.3 + (k % 3) * 0.2);
+          bird.userData.phase = k * 0.6;
+          g.add(bird);
+          continue;
+        }
         //a pigeon: slate body, pale head, wings folded on its back until it takes off
         const bird = new THREE.Group();
         const part = (geo: THREE.BufferGeometry, mat: THREE.Material) => (gold ? new THREE.Mesh(geo, mat) : new THREE.Object3D());
@@ -105,7 +122,6 @@ export class SkyView {
         head.position.set(0.2, 0.26, 0);
         bird.add(l, r, body, head);
         //sat in a loose row, each its own phase
-        const k = (i * 13 + b * 7) % 11;
         bird.position.set(gold ? 0 : (b - 2) * 0.42 + (k % 3) * 0.1, 0, 0.3 + (k % 3) * 0.2);
         bird.userData.phase = k * 0.6;
         g.add(bird);
@@ -115,6 +131,7 @@ export class SkyView {
       inkify(g);
       this.group.add(g);
     });
+    //a plain flock is BIRDS birds; with the modelled pigeon every bird could be in any one pose
     const n = sky.flocks.filter((f) => !f.site.gold).length * BIRDS;
     if (n > this.parts[0].instanceMatrix.count) this.makeParts(n);
     for (const m of this.parts) this.setCount(m, 0);
@@ -126,14 +143,17 @@ export class SkyView {
       this.group.remove(m);
       m.dispose();
     }
-    this.parts = (
-      [
-        [this.wing, this.feather],
-        [this.rightWing, this.feather],
-        [this.body, this.feather],
-        [this.head, this.pale],
-      ] as const
-    ).map(([geo, mat]) => {
+    const look = pigeonMaterial();
+    const kinds: (readonly [THREE.BufferGeometry, THREE.Material])[] =
+      this.poses && look
+        ? this.poseGeos.map((geo) => [geo, look] as const)
+        : [
+            [this.wing, this.feather],
+            [this.rightWing, this.feather],
+            [this.body, this.feather],
+            [this.head, this.pale],
+          ];
+    this.parts = kinds.map(([geo, mat]) => {
       const m = new THREE.InstancedMesh(geo, mat, n);
       m.frustumCulled = false;
       inkify(m);
@@ -146,6 +166,7 @@ export class SkyView {
   // draw the first n instances, and their outlines (inkify's hull shares the instances)
   private setCount(m: THREE.InstancedMesh, n: number): void {
     m.count = n;
+    m.visible = n > 0; // a pose nobody is in costs no draw
     m.instanceMatrix.needsUpdate = true;
     for (const h of m.children) if (h instanceof THREE.InstancedMesh) h.count = n;
   }
@@ -153,6 +174,58 @@ export class SkyView {
   update(level: Level, sky: Sky, skaterX: number, skaterY: number, up: boolean, dt: number, gone?: ReadonlySet<Surface>): void {
     this.t += dt;
     this.pieces.update(level, skaterX, gone);
+    if (this.poses) {
+      this.updatePosed(level, sky, skaterX);
+    } else {
+      this.updateParts(level, sky, skaterX);
+    }
+    this.updatePlane(level, skaterX, skaterY, up, dt);
+  }
+
+  // the modelled pigeons: each bird's pose picked from its state and phase, its matrix put in that pose's instances
+  private updatePosed(level: Level, sky: Sky, skaterX: number): void {
+    const counts = this.parts.map(() => 0);
+    sky.flocks.forEach((f, i) => {
+      const g = this.flocks[i];
+      if (!g) return;
+      g.visible = Math.abs(f.x - skaterX) < 900 && f.y > -2000;
+      if (!g.visible) return;
+      g.position.set(toX(at(f, 'x')), toY(level, at(f, 'y')), 0);
+      const sat = f.state === 'perch';
+      for (const bird of g.children) {
+        const ph = bird.userData.phase as number;
+        const pose = this.poseOf(sat, ph);
+        bird.position.y = sat ? 0 : Math.sin(this.t * 6 + ph) * 0.15;
+        //sat facing you along the street, then away up when they scatter
+        bird.rotation.y = f.state === 'scatter' ? 0 : Math.PI;
+        if (bird instanceof THREE.Mesh) {
+          //the golden pigeon: its own mesh, its outline wearing the same pose
+          const geo = this.poseGeos[pose];
+          if (bird.geometry !== geo) {
+            bird.geometry = geo;
+            for (const h of bird.children) if (h instanceof THREE.Mesh) h.geometry = geo;
+          }
+        }
+      }
+      if (f.site.gold) return;
+      g.updateMatrixWorld(true);
+      g.children.forEach((bird) => {
+        const pose = this.poseOf(sat, bird.userData.phase as number);
+        this.parts[pose].setMatrixAt(counts[pose]++, bird.matrixWorld);
+      });
+    });
+    this.parts.forEach((m, k) => this.setCount(m, counts[k]));
+  }
+
+  // which baked pose a bird is in: sat, mostly still and now and then a bow; flying, through the wingbeat (about
+  // four a second)
+  private poseOf(sat: boolean, ph: number): number {
+    if (sat) return Math.sin(this.t * 0.9 + ph * 2.3) > 0.75 ? 1 : 0;
+    return 2 + (Math.floor((this.t * 3.8 + ph) * FLAP_FRAMES) % FLAP_FRAMES);
+  }
+
+  // the code-built pigeons, part by part (the model didn't load)
+  private updateParts(level: Level, sky: Sky, skaterX: number): void {
     let n = 0;
     sky.flocks.forEach((f, i) => {
       const g = this.flocks[i];
@@ -177,6 +250,9 @@ export class SkyView {
       }
     });
     for (const m of this.parts) this.setCount(m, n);
+  }
+
+  private updatePlane(level: Level, skaterX: number, skaterY: number, up: boolean, dt: number): void {
     //an airliner now and then, left to right far behind
     if (!this.flying) {
       this.planeT -= dt * (up ? 2 : 1);
