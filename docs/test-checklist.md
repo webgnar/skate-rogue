@@ -305,7 +305,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **The rules stack:** 1 heavier traffic, 2 Heat rises 20% faster, 3 three quarters of your Heat carries to the next floor, 4 one fewer boon card, 5 gear wears 50% faster.
 - [ ] **The payoff:** each level adds 15% to score and 20% to Stoken. On the leaderboard a Gnar run shows its level next to the floor (F12 · G3). Winning at a level opens the next. Daily runs are never at a Gnar level.
 - [ ] *Feel:* is level 1 noticeably harder? Is 5 brutal but fair?
-- [ ] On a Gnar level (Stoken pays 1.2 or more a pickup) the ◆ counter, the callouts and the run-over screen only ever show whole Stoken, never a long decimal like 10.7999999.
+- [ ] On a Gnar level (Stoken pays 1.2 or more a pickup) the Stoken counter, the callouts and the run-over screen only ever show whole Stoken, never a long decimal like 10.7999999.
 
 ## Sound, vibration and settings
 
@@ -334,7 +334,7 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **Thumb feel:** the card under your thumb shrinks so you can see the slot under it. Is it easy to drop where you mean on the phone? Are the cards big enough to read?
 - [ ] **No accidental ollie:** nothing you do in the shop makes Lou ollie when you skate on.
 - [ ] **Shop look (zack's Oct 25 mockup, ui3-shop-look):** graffiti SKATE SHOP title, cash on a black strip, RESTOCK and SKATE ON top right; YOUR BOARD and YOUR GEAR with yellow tape labels; cards coloured by type (trigger purple, effect blue, modifier yellow, board green, gear orange) standing on a wooden workbench, with the hint painted along it.
-- [ ] **Card pictures:** every card shows a picture from the game's own models (board, truck, wheel, car, coin, Stoken gem; the sneaker is drawn) with a glyph for what it does. Do the pictures say what each mod does at a glance? Any you'd swap?
+- [ ] **Card pictures:** every card shows a picture from the game's own models (board, truck, wheel, car, coin, Stoken particle; the sneaker is drawn) with a glyph for what it does. Do the pictures say what each mod does at a glance? Any you'd swap?
 - [ ] **Small phone:** on an iPhone SE all slots (even five) and all four gear tiles fit across; gear tiles there show just the picture and the bar.
 - [ ] **Worn looks on Lou:** a chipped deck nose, a scuffed shoe and then a hole, rusty trucks, coned wheels.
 - [ ] **Shop recomposed (ui5-shop-compose):** the cards fill the space under YOUR BOARD and YOUR GEAR with big pictures. On the phone there's no effect text on the cards (the hint strip says what to do). Upright, the cards come three to a row. Tap and drag still buy.
@@ -636,7 +636,7 @@ banks and drops come fast). Add `?skater=roxy` to see any item on another skater
 
 **Coins, gems and the wanted board as models (the PR after #93)**
 - [ ] Cash coins are gold with a rim and a raised $ that reads the right way round on both sides as they spin.
-- [ ] Stoken gems are faceted purple diamonds, table up.
+- [ ] Stoken pickups are quantum particles: a flame flickering in a purple glass core, three electrons orbiting, a glowing shell. The HUD, unlock prices, mission SKIP buttons and dice prize show the same particle as an icon.
 - [ ] A bounty floor's WANTED poster hangs on a wooden board with posts, a frame and a little roof.
 - [ ] *Check:* no frame-rate drop on a floor with lots of coins.
 

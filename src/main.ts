@@ -384,7 +384,7 @@ function makeHud(): Hud {
         : `You made it to act ${result.act}, floor ${result.floor}`;
       if (result.continues) overEl.querySelector('.reached')!.textContent += ` · ${result.continues} continue${result.continues === 1 ? '' : 's'} used`;
       overEl.querySelector('.final')!.textContent = `${result.score.toLocaleString()}${result.newBest ? ' · NEW BEST' : ''}`;
-      overEl.querySelector('.best')!.textContent = `best ${result.best.toLocaleString()} · ◆ ${result.stoken} Stoken this run (${result.bank} banked)`;
+      overEl.querySelector('.best')!.textContent = `best ${result.best.toLocaleString()} · ${result.stoken} Stoken this run (${result.bank} banked)`;
       overEl.querySelector('.best')!.textContent += result.daily
         ? ` · today's daily best ${result.daily.best.toLocaleString()}${result.daily.newBest ? ' (NEW)' : ''}`
         : '';

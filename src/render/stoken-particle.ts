@@ -228,6 +228,7 @@ export class StokenParticles {
     this.flames.renderOrder = 2;
     this.shells.renderOrder = 3;
     for (const mesh of this.all) mesh.frustumCulled = false;
+    this.electrons.userData.inked = true; // keep inkify off them if the particle's parent is inked
     this.count = count;
     // none take the inked hull: the core draws its own ink line, and the electrons, rings and shell are light, which an
     // outline would swallow at phone size

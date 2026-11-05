@@ -1451,6 +1451,9 @@ html, body {
   clip-path: polygon(3% 8%, 98% 0, 100% 92%, 0 100%);
 }
 #meta .bank i { font-style: normal; color: #a23cff; }
+/* the Stoken particle inline in text (src/ui/stoken-icon.ts), where the ◆ used to be */
+.stoken-icon { font-style: normal; display: inline-block; height: 1em; vertical-align: -0.14em; margin-right: 0.08em; }
+.stoken-icon svg { height: 100%; width: auto; overflow: visible; }
 #meta .bank small { font-size: 0.55em; }
 #meta .branches {
   width: 100%;

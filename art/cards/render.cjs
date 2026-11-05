@@ -1,4 +1,5 @@
-// Saves the card art: start `npm run dev`, then `node art/cards/render.cjs [http://localhost:5173]`.
+// Saves the card art: start `npm run dev`, then `node art/cards/render.cjs [http://localhost:5173] [name ...]` (names:
+// only those cards, e.g. stoken).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -12,7 +13,9 @@ const path = require('path');
   p.on('console', (m) => m.type() === 'error' && console.log(m.text()));
   await p.goto(url);
   const shots = await p.evaluate(() => window.cardArt);
+  const only = process.argv.slice(3);
   for (const [name, data] of Object.entries(shots)) {
+    if (only.length && !only.includes(name)) continue;
     fs.writeFileSync(path.join(out, `${name}.png`), Buffer.from(data.split(',')[1], 'base64'));
     console.log(name);
   }

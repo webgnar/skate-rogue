@@ -4,6 +4,7 @@
 import { BRANCH_NAMES, buy, has, UNLOCKS, type Branch, type Unlock, type UnlockId } from '../run/meta';
 import { loadSave, writeSave, type Save } from '../run/save';
 import { glyph, pic, type Pic } from './shop-art';
+import { STOKEN_INLINE } from './stoken-icon';
 
 const BRANCHES: Branch[] = ['skater', 'deck', 'library', 'spot'];
 
@@ -63,7 +64,7 @@ export class MetaScreen {
     let note = '';
     if (!this.owned(save, id)) {
       const got = buy(save.unlocked, save.stoken, id);
-      if (!got) return this.render(save, `Need ◆${u.cost - save.stoken} more Stoken`);
+      if (!got) return this.render(save, `Need ${u.cost - save.stoken} more Stoken`);
       Object.assign(save, got);
       note = `${u.name} unlocked`;
       this.changed = true;
@@ -83,7 +84,7 @@ export class MetaScreen {
   }
 
   private render(save: Save, note: string): void {
-    this.el.querySelector('.bank')!.innerHTML = this.all ? '<i>◆</i> ALL <small>(?unlockall)</small>' : `<i>◆</i> ${save.stoken} <small>STOKEN</small>`;
+    this.el.querySelector('.bank')!.innerHTML = this.all ? `${STOKEN_INLINE} ALL <small>(?unlockall)</small>` : `${STOKEN_INLINE} ${save.stoken} <small>STOKEN</small>`;
     this.el.querySelector('.note')!.textContent = note || 'Tap to unlock with Stoken, or to ride an unlocked skater or deck';
     this.el.querySelector('.branches')!.innerHTML = BRANCHES.map(
       (b) => `<div class="branch ${b}"><h3>${BRANCH_NAMES[b]}</h3><div class="list">${UNLOCKS.filter((u) => u.branch === b).map((u) => this.item(save, u)).join('')}</div></div>`,
@@ -94,7 +95,7 @@ export class MetaScreen {
     const owned = this.owned(save, u.id);
     const on = (u.branch === 'skater' && save.skater === u.id) || (u.branch === 'deck' && save.deck === u.id);
     const cls = ['item', owned ? 'owned' : '', on ? 'on' : '', !owned && save.stoken < u.cost ? 'poor' : ''].filter(Boolean).join(' ');
-    const tag = on ? 'RIDING' : owned ? (u.branch === 'skater' || u.branch === 'deck' ? 'RIDE' : 'OWNED') : `<i>◆</i>${u.cost}`;
+    const tag = on ? 'RIDING' : owned ? (u.branch === 'skater' || u.branch === 'deck' ? 'RIDE' : 'OWNED') : `${STOKEN_INLINE}${u.cost}`;
     return `<button class="${cls}" data-unlock="${u.id}">${art(u)}<span class="body"><span class="name">${u.name}</span><span class="line">${u.line}</span></span><span class="tag">${tag}</span></button>`;
   }
 }

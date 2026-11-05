@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { inkify, setInkResolution } from '../../src/render/toon';
+import { StokenParticles } from '../../src/render/stoken-particle';
 
 const SIZE = 320;
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -63,6 +64,18 @@ function part(src: THREE.Object3D, keep: (m: THREE.Mesh) => boolean, where?: Whe
 }
 
 // frame the object: rotated, then fitted into the square by an orthographic camera
+// the Stoken particle (src/render/stoken-particle.ts) caught mid-orbit, its electrons spread round the flame
+function stokenParticle(): THREE.Object3D {
+  const p = new StokenParticles(1);
+  p.place(0, new THREE.Vector3(), 1, 1.5);
+  p.flush();
+  //the frame: a hidden ball round the shell and orbits (the instanced pieces don't measure themselves to the shell)
+  const frame = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8));
+  frame.visible = false;
+  p.group.add(frame);
+  return p.group;
+}
+
 function shot(obj: THREE.Object3D, rot: [number, number, number], fill = 0.86, extra?: (s: THREE.Scene, pivot: THREE.Group) => void): string {
   const scene = new THREE.Scene();
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445066, 1.6));
@@ -132,7 +145,7 @@ async function main(): Promise<Record<string, string>> {
   out.signal = shot(named(street, 'TrafficSignal'), [0.1, -0.5, 0], 0.9);
   out.rocket = shot(named(landmarks, 'Rocket'), [0.1, -0.4, 0], 0.9);
   out.coin = shot(named(pickups, 'Coin'), [0.2, -0.5, 0], 0.7);
-  out.stoken = shot(named(pickups, 'Stoken'), [0.2, -0.5, 0], 0.7);
+  out.stoken = shot(stokenParticle(), [0, 0, 0], 1.15);
   //for the unlocks screen (openspec ui6-unlocks-look): each skater's head and shoulders, the four decks, a cone
   const props = await load('props.glb');
   out.cone = shot(named(props, 'Cone'), [0.25, -0.5, 0], 0.8);

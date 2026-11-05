@@ -14,3 +14,6 @@ export const STOKEN_SVG =
   '<path d="M12 7.9c1.9 1.9 3 3.4 3 5a3 3 0 0 1-6 0c0-1.1.6-2 1.3-2.7.1 1 .5 1.6 1.1 1.8-.3-1.5.1-2.9.6-4.1z" fill="#ff5a1c"/>' +
   '<path d="M12 11c.9 1 1.5 1.8 1.5 2.6a1.5 1.5 0 0 1-3 0c0-.9.7-1.6 1.5-2.6z" fill="#ffd23a"/>' +
   '</svg>';
+
+// the icon inline in a line of text, a text-height Stoken where the ◆ used to be
+export const STOKEN_INLINE = `<i class="stoken-icon">${STOKEN_SVG}</i>`;
