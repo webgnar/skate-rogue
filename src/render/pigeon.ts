@@ -4,11 +4,10 @@
 //   of flocks draws as one instanced mesh a pose (src/render/sky-view.ts). A skinned mesh can't be instanced, and a
 //   draw a bird made the sky route the most draws in the game on a small iPhone;
 // - rigged: a skinned copy with its own mixer, for the few pigeons on the title screen (src/title/life.ts).
-// Loaded with the other models on the loading screen; if it fails, both fall back to the code-built pigeons.
+// Loaded with the other models on the loading screen (bot-model.ts); if it fails, both fall back to the code-built
+// pigeons.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { toon } from './toon';
+import { BotModel, type BotRig } from './bot-model';
 
 export const PIGEON_FILE = 'bot/pigeon.glb';
 // beak to tail, in world units, before whatever scale the caller puts on it (the code-built pigeons were about this)
@@ -16,9 +15,7 @@ const LENGTH = 0.5;
 // frames of one wingbeat baked for the flocks: the fly clip beats three times a loop
 export const FLAP_FRAMES = 6;
 
-let gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] } | null = null;
-let fit: THREE.Matrix4 | null = null; // model space -> a pigeon LENGTH long, feet on y 0, beak to +x
-let mat: THREE.Material | null = null;
+const PIGEON = new BotModel(PIGEON_FILE, LENGTH);
 let poses: Poses | null = null;
 
 export interface Poses {
@@ -27,64 +24,27 @@ export interface Poses {
   flap: THREE.BufferGeometry[]; // FLAP_FRAMES through one wingbeat
 }
 
-export async function loadPigeon(base: string): Promise<void> {
-  try {
-    const g = await new GLTFLoader().loadAsync(`${base}models/${PIGEON_FILE}`);
-    gltf = { scene: g.scene, animations: g.animations };
-  } catch (err) {
-    console.warn('the pigeon model failed to load, using the built-in pigeons', err);
-  }
-}
-
-function skinnedOf(root: THREE.Object3D): THREE.SkinnedMesh | null {
-  let out: THREE.SkinnedMesh | null = null;
-  root.traverse((o) => {
-    if (!out && (o as THREE.SkinnedMesh).isSkinnedMesh) out = o as THREE.SkinnedMesh;
-  });
-  return out;
+export function loadPigeon(base: string): Promise<void> {
+  return PIGEON.load(base);
 }
 
 // the pigeon's look: its painted texture, toon lit, sampled hard-edged as it was painted
 export function pigeonMaterial(): THREE.Material | null {
-  if (mat || !gltf) return mat;
-  const mesh = skinnedOf(gltf.scene);
-  const src = mesh?.material as THREE.MeshStandardMaterial | undefined;
-  const map = src?.map ?? null;
-  if (map) {
-    map.magFilter = THREE.NearestFilter;
-    map.colorSpace = THREE.SRGBColorSpace;
-  }
-  mat = toon({ map });
-  return mat;
-}
-
-// model space to game space: scaled to LENGTH, turned so the beak points +x (the code-built birds' head), feet on 0
-function fitMatrix(mesh: THREE.SkinnedMesh): THREE.Matrix4 {
-  if (fit) return fit;
-  const box = new THREE.Box3();
-  const v = new THREE.Vector3();
-  for (let i = 0; i < mesh.geometry.getAttribute('position').count; i++) box.expandByPoint(mesh.getVertexPosition(i, v));
-  const size = box.getSize(new THREE.Vector3());
-  const s = LENGTH / size.z; // built facing -Y in Blender, so beak to tail runs along z in glTF
-  const turn = new THREE.Matrix4().makeRotationY(Math.PI / 2); // +z (the beak) to +x
-  const centre = new THREE.Matrix4().makeTranslation(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
-  fit = new THREE.Matrix4().makeScale(s, s, s).premultiply(turn).multiply(centre);
-  return fit;
+  return PIGEON.material();
 }
 
 // the baked poses, or null when the model didn't load
 export function pigeonPoses(): Poses | null {
-  if (poses || !gltf) return poses;
-  const scene = cloneSkinned(gltf.scene);
-  const mesh = skinnedOf(scene);
-  if (!mesh) return null;
+  if (poses) return poses;
+  const c = PIGEON.copy();
+  if (!c) return null;
+  const { scene, mesh } = c;
   const mixer = new THREE.AnimationMixer(scene);
-  const clip = (name: string) => gltf!.animations.find((a) => a.name === name);
   const at = (name: string, time: number): THREE.BufferGeometry => {
     mixer.stopAllAction();
-    const c = clip(name) ?? clip('idle');
-    if (c) {
-      mixer.clipAction(c).play();
+    const clip = PIGEON.clip(name) ?? PIGEON.clip('idle');
+    if (clip) {
+      mixer.clipAction(clip).play();
       mixer.setTime(time);
     }
     scene.updateMatrixWorld(true);
@@ -93,12 +53,11 @@ export function pigeonPoses(): Poses | null {
   };
   // fit to the rest pose, so every pose shares one scale and the feet of the sat bird are on 0
   at('idle', 0);
-  fitMatrix(mesh);
-  const fly = clip('fly');
-  const beat = (fly?.duration ?? 1) / 3;
+  PIGEON.fitTo(mesh);
+  const beat = (PIGEON.clip('fly')?.duration ?? 1) / 3;
   poses = {
     sit: at('idle', 0),
-    bow: at('coo', (clip('coo')?.duration ?? 1) * 0.5),
+    bow: at('coo', (PIGEON.clip('coo')?.duration ?? 1) * 0.5),
     flap: Array.from({ length: FLAP_FRAMES }, (_, k) => at('fly', (beat * k) / FLAP_FRAMES)),
   };
   mixer.stopAllAction();
@@ -111,7 +70,7 @@ function bake(mesh: THREE.SkinnedMesh): THREE.BufferGeometry {
   const n = src.getAttribute('position').count;
   const pos = new Float32Array(n * 3);
   const v = new THREE.Vector3();
-  const m = fit ?? new THREE.Matrix4();
+  const m = PIGEON.fit ?? new THREE.Matrix4();
   for (let i = 0; i < n; i++) {
     mesh.getVertexPosition(i, v).applyMatrix4(m);
     pos[i * 3] = v.x;
@@ -127,43 +86,9 @@ function bake(mesh: THREE.SkinnedMesh): THREE.BufferGeometry {
   return g;
 }
 
-export interface PigeonRig {
-  root: THREE.Object3D; // a pigeon LENGTH long, feet on 0, beak to +x
-  play(name: 'walk' | 'peck' | 'fly' | 'coo' | 'idle', fade?: number): void;
-  update(dt: number): void;
-}
+export type PigeonRig = BotRig<'walk' | 'peck' | 'fly' | 'coo' | 'idle'>;
 
 // a skinned pigeon with its own mixer, or null when the model didn't load
 export function pigeonRig(): PigeonRig | null {
-  if (!gltf) return null;
-  const scene = cloneSkinned(gltf.scene);
-  const mesh = skinnedOf(scene);
-  const m = pigeonMaterial();
-  if (!mesh || !m) return null;
-  mesh.material = m;
-  mesh.frustumCulled = false;
-  if (!fit) {
-    scene.updateMatrixWorld(true);
-    fitMatrix(mesh);
-  }
-  const root = new THREE.Group();
-  scene.applyMatrix4(fit!);
-  root.add(scene);
-  const mixer = new THREE.AnimationMixer(scene);
-  let now: THREE.AnimationAction | null = null;
-  return {
-    root,
-    play(name, fade = 0.2) {
-      const c = gltf!.animations.find((a) => a.name === name);
-      if (!c) return;
-      const next = mixer.clipAction(c);
-      if (next === now) return;
-      next.reset().play();
-      if (now) next.crossFadeFrom(now, fade, false);
-      now = next;
-    },
-    update(dt) {
-      mixer.update(dt);
-    },
-  };
+  return PIGEON.rig();
 }

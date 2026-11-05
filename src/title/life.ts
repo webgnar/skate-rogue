@@ -10,6 +10,7 @@ import { makeRng, type Rng } from '../gen/rng';
 import { makeDrone } from '../render/drone-view';
 import { makeParkedCruiser } from '../render/kit';
 import { model } from '../render/models';
+import { CAT, DOG, type CatClip, type DogClip } from '../render/bot-model';
 import { makePerson } from '../render/peds';
 import { pigeonRig, type PigeonRig } from '../render/pigeon';
 import { inkify, toon } from '../render/toon';
@@ -303,7 +304,50 @@ function cruiser(at: THREE.Vector3): Life {
 // to be petted, trots along behind Webster to the trash can and sniffs it over, sits to scratch an ear with a back
 // leg, trots off right, and later comes running back the other way along the curb
 export const DOG_PET = { x: -9.4, z: -0.9 }; // where it sits by the homeless man (people() reaches out to it)
+// where the dog is on the street's minute, and what it's doing: in from the left to the homeless man, along behind
+// Webster to the trash can, off to the right, and later running back the other way along the curb
+function dogRoute(p: number) {
+  const x = track(p, [[0, -24], [7, DOG_PET.x], [15, DOG_PET.x], [21, 2.6], [30, 2.6], [37, 24], [44, 24], [52, -24]]);
+  const z = track(p, [[0, 0.4], [7, DOG_PET.z], [15, DOG_PET.z], [17, -1.2], [21, -1.0], [30, -1.0], [33, -0.6], [44, 1.4]]);
+  const what = step(p, [[0, 'trot'], [7, 'sit'], [15, 'trot'], [21, 'sniff'], [26, 'scratch'], [30, 'trot'], [37, 'gone'], [44, 'run'], [52, 'gone']] as const);
+  return { x, z, what };
+}
+
+// the stray: the blender bot's dog (src/render/bot-model.ts) when it loaded, else the code-built one
 function dog(): Life {
+  return modelDog() ?? codeDog();
+}
+
+// the blender bot's dog, rigged: the same minute as the code-built dog, each thing it does a clip
+function modelDog(): Life | null {
+  const rig = DOG.rig<DogClip>();
+  if (!rig) return null;
+  const group = new THREE.Group();
+  inkify(rig.root);
+  group.add(rig.root);
+  let face = 0;
+  return {
+    group,
+    update(t: number, dt: number): void {
+      const { x, z, what } = dogRoute(t % SCENE);
+      rig.root.visible = what !== 'gone';
+      rig.root.position.set(x, 0, z);
+      const want = what === 'run' ? Math.PI : what === 'sit' ? -0.6 : 0;
+      face += (want - face) * Math.min(1, dt * 6);
+      rig.root.rotation.y = face;
+      //the clips at the pace the route moves it: trotting about 2 a second, running about 7
+      if (what === 'trot') rig.play('walk', 0.25, 1.6);
+      else if (what === 'run') rig.play('run', 0.2, 1.5);
+      //the model shakes itself off where the code-built dog scratched (a lifted back leg folds its hip through itself)
+      else if (what === 'scratch') rig.play('shake', 0.25);
+      else if (what !== 'gone') rig.play(what, 0.35);
+      rig.update(dt);
+    },
+  };
+}
+
+// the code-built dog: blobs, a jointed tail and legs, posed in code
+function codeDog(): Life {
   const group = new THREE.Group();
   const fur = toon({ color: 0xa87a48 });
   const dark = toon({ color: 0x5a3a24 });
@@ -399,9 +443,7 @@ function dog(): Life {
       const p = t % SCENE;
       //where it is: in from the left to the homeless man, along behind Webster to the trash can, off to the right,
       //and later running back the other way along the curb
-      const x = track(p, [[0, -24], [7, DOG_PET.x], [15, DOG_PET.x], [21, 2.6], [30, 2.6], [37, 24], [44, 24], [52, -24]]);
-      const z = track(p, [[0, 0.4], [7, DOG_PET.z], [15, DOG_PET.z], [17, -1.2], [21, -1.0], [30, -1.0], [33, -0.6], [44, 1.4]]);
-      const what = step(p, [[0, 'trot'], [7, 'sit'], [15, 'trot'], [21, 'sniff'], [26, 'scratch'], [30, 'trot'], [37, 'gone'], [44, 'run'], [52, 'gone']] as const);
+      const { x, z, what } = dogRoute(p);
       d.visible = what !== 'gone';
       d.position.set(x, 0, z);
       const want = what === 'run' ? Math.PI : what === 'sit' ? -0.6 : 0;
@@ -701,10 +743,106 @@ function people(rng: Rng): Life {
   };
 }
 
+//its minute (zack 2026-11-03: off to the right after its first sit, then back in from the right on the fire
+//escape): along the pizza place's sign band (city.ts STORE) to sit a while, down to the sidewalk and away right
+//as the dog comes along, then in from the right on the fire escape's lower landing (facade.ts), up the stair, along
+//the top landing to sit by a window, and in through it
+type CatDoing = 'walk' | 'sit' | 'hop' | 'run' | 'gone' | 'in';
+function catRoute(p: number): { what: CatDoing; x: number; y: number; z: number; dir: number } {
+  const band = STORE.bandTop[0];
+  const bandZ = STORE.face - 0.05;
+  const F = FACADE;
+  const lo = F.floors[0] - F.winH / 2 - 0.36 + 0.08; // the landings' tops
+  const hi = F.floors[1] - F.winH / 2 - 0.36 + 0.08;
+  const fcx = (F.bays[4] + F.bays[5]) / 2;
+  const landZ = F.face + 0.85;
+  const stairZ = F.face + 1.05;
+  const winX = F.bays[4];
+  const what = step(p, [[0, 'walk'], [6, 'sit'], [14, 'walk'], [15.5, 'hop'], [16.3, 'run'], [22, 'gone'], [32, 'walk'], [39.5, 'sit'], [47, 'in'], [48.5, 'gone']] as const);
+  let x = 0;
+  let y = band;
+  let z = bandZ;
+  let dir = 0; // the way it faces: 0 right, PI left, -PI/2 out at the street, PI/2 in at the wall
+  if (p < 15.5) {
+    x = track(p, [[0, -12.4], [6, -6.2], [14, -6.2], [15.5, -4.6]]);
+    dir = p >= 6 && p < 14 ? -0.4 : 0;
+  } else if (p < 16.3) {
+    //the hop down: an arc out from the band to the sidewalk
+    const u = (p - 15.5) / 0.8;
+    x = -4.6 + u * 1.2;
+    y = band * (1 - u * u) + Math.sin(u * Math.PI) * 0.4;
+    z = bandZ + (-0.9 - bandZ) * u;
+  } else if (p < 22) {
+    x = -3.4 + (p - 16.3) * 4.4; // bolting, with the dog coming
+    y = 0;
+    z = -0.9;
+  } else if (p < 35) {
+    x = track(p, [[32, 17.4], [35, fcx - 1.1]]);
+    y = lo;
+    z = landZ;
+    dir = Math.PI;
+  } else if (p < 37) {
+    //up the stair, which climbs to the right
+    const u = (p - 35) / 2;
+    x = fcx - 1.1 + u * 3;
+    y = lo + (hi - lo) * u;
+    z = stairZ;
+    dir = 0;
+  } else if (p < 47) {
+    x = track(p, [[37, fcx + 1.9], [39.5, winX + 0.3]]);
+    y = hi;
+    z = landZ;
+    dir = p < 39.5 ? Math.PI : -Math.PI / 2;
+  } else {
+    //in through the window: up onto the sill and back into the room, out of sight behind the glass
+    const u = Math.min(1, (p - 47) / 1.5);
+    x = winX + 0.3;
+    y = hi + Math.min(1, u * 2) * 0.36;
+    z = landZ + (F.face - 0.8 - landZ) * u;
+    dir = Math.PI / 2;
+  }
+  return { what, x, y, z, dir };
+}
+
 // a cat walking along the tops of the shop signs, stopping to sit and look round: a tuxedo cat (zack: "detail to the
 // cat"), black with a white bib, muzzle and socks, green eyes that catch the light and blink, ears that flick,
 // whiskers, and a tail of jointed pieces that sways as it walks and curls round its feet when it sits
+// the cat: the blender bot's tuxedo (src/render/bot-model.ts) when it loaded, else the code-built one
 function cat(): Life {
+  return modelCat() ?? codeCat();
+}
+
+// the blender bot's cat, rigged: the same minute as the code-built cat, each thing it does a clip
+function modelCat(): Life | null {
+  const rig = CAT.rig<CatClip>();
+  if (!rig) return null;
+  const group = new THREE.Group();
+  inkify(rig.root);
+  group.add(rig.root);
+  let face = 0;
+  return {
+    group,
+    update(t: number, dt: number): void {
+      const { what, x, y, z, dir } = catRoute(t % SCENE);
+      rig.root.visible = what !== 'gone';
+      rig.root.position.set(x, y, z);
+      //turns ease round (the short way)
+      let dd = dir - face;
+      while (dd > Math.PI) dd -= Math.PI * 2;
+      while (dd < -Math.PI) dd += Math.PI * 2;
+      face += dd * Math.min(1, dt * 8);
+      rig.root.rotation.y = face;
+      if (what === 'run') rig.play('run', 0.15, 1.7); // bolting from the dog
+      else if (what === 'hop') rig.play('jump', 0.1, 1.25);
+      else if (what === 'sit') rig.play('sit', 0.4);
+      else if (what !== 'gone') rig.play('walk', 0.25, 1.1);
+      rig.update(dt);
+    },
+  };
+}
+
+// the code-built cat: blobs, cones and a jointed tail, posed in code
+function codeCat(): Life {
   const group = new THREE.Group();
   const fur = toon({ color: 0x23202a });
   const white = toon({ color: 0xf2f0f6 });
@@ -794,69 +932,14 @@ function cat(): Life {
   inkify(c);
   c.scale.setScalar(1.35);
   group.add(c);
-  //its minute (zack 2026-11-03: off to the right after its first sit, then back in from the right on the fire
-  //escape): along the pizza place's sign band (city.ts STORE) to sit a while, down to the sidewalk and away right
-  //as the dog comes along, then in from the right on the fire escape's lower landing (facade.ts), up the stair, along
-  //the top landing to sit by a window, and in through it
-  const band = STORE.bandTop[0];
-  const bandZ = STORE.face - 0.05;
-  const F = FACADE;
-  const lo = F.floors[0] - F.winH / 2 - 0.36 + 0.08; // the landings' tops
-  const hi = F.floors[1] - F.winH / 2 - 0.36 + 0.08;
-  const fcx = (F.bays[4] + F.bays[5]) / 2;
-  const landZ = F.face + 0.85;
-  const stairZ = F.face + 1.05;
-  const winX = F.bays[4];
   let sit = 0; // eases 0 (walking) to 1 (sat)
   let face = 0;
   return {
     group,
     update(t: number, dt: number): void {
       const p = t % SCENE;
-      const what = step(p, [[0, 'walk'], [6, 'sit'], [14, 'walk'], [15.5, 'hop'], [16.3, 'run'], [22, 'gone'], [32, 'walk'], [39.5, 'sit'], [47, 'in'], [48.5, 'gone']] as const);
+      const { what, x, y, z, dir } = catRoute(p);
       c.visible = what !== 'gone';
-      let x = 0;
-      let y = band;
-      let z = bandZ;
-      let dir = 0; // the way it faces: 0 right, PI left, -PI/2 out at the street, PI/2 in at the wall
-      if (p < 15.5) {
-        x = track(p, [[0, -12.4], [6, -6.2], [14, -6.2], [15.5, -4.6]]);
-        dir = p >= 6 && p < 14 ? -0.4 : 0;
-      } else if (p < 16.3) {
-        //the hop down: an arc out from the band to the sidewalk
-        const u = (p - 15.5) / 0.8;
-        x = -4.6 + u * 1.2;
-        y = band * (1 - u * u) + Math.sin(u * Math.PI) * 0.4;
-        z = bandZ + (-0.9 - bandZ) * u;
-      } else if (p < 22) {
-        x = -3.4 + (p - 16.3) * 4.4; // bolting, with the dog coming
-        y = 0;
-        z = -0.9;
-      } else if (p < 35) {
-        x = track(p, [[32, 17.4], [35, fcx - 1.1]]);
-        y = lo;
-        z = landZ;
-        dir = Math.PI;
-      } else if (p < 37) {
-        //up the stair, which climbs to the right
-        const u = (p - 35) / 2;
-        x = fcx - 1.1 + u * 3;
-        y = lo + (hi - lo) * u;
-        z = stairZ;
-        dir = 0;
-      } else if (p < 47) {
-        x = track(p, [[37, fcx + 1.9], [39.5, winX + 0.3]]);
-        y = hi;
-        z = landZ;
-        dir = p < 39.5 ? Math.PI : -Math.PI / 2;
-      } else {
-        //in through the window: up onto the sill and back into the room, out of sight behind the glass
-        const u = Math.min(1, (p - 47) / 1.5);
-        x = winX + 0.3;
-        y = hi + Math.min(1, u * 2) * 0.36;
-        z = landZ + (F.face - 0.8 - landZ) * u;
-        dir = Math.PI / 2;
-      }
       const walking = what === 'walk' || what === 'run' || what === 'in';
       sit += ((what === 'sit' ? 1 : 0) - sit) * Math.min(1, dt * 5);
       //turns ease round (the short way)
