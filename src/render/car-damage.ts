@@ -11,7 +11,6 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Level } from '../physics/level';
 import type { Stage } from '../traffic/damage';
 import { makeBus, makeCar, makeParkedCruiser, parkedPaint, streetCar, toX, toY, type CarModel } from './kit';
-import { hasModel } from './models';
 import { inkify } from './toon';
 import type { Particles } from './particles';
 import type { SmashFx } from './smash';
@@ -163,12 +162,10 @@ export function parkedDamage(kit: THREE.Object3D | null): { key: string; mesh: T
   return state ? [...state.shown].map(([i, s]) => ({ key: `p${i}`, mesh: s.mesh, stage: s.stage })) : [];
 }
 
-// a damaged car sits off true on its broken springs (a flat tyre when busted); a wreck with no model of its own
-// (the code-built fallbacks) is squashed flat instead
-export function damagedLook(mesh: THREE.Group, model: string, stage: Stage, seed: number): void {
-  if (stage === 3 && !hasModel(model + STAGE_MODEL[3])) mesh.scale.y = 0.55;
-  const lean = [0, 0.015, 0.035, 0.04][stage];
-  mesh.rotation.z = seed % 2 ? lean : -lean;
+// a damaged car's look beyond its model: where its smoke rises from
+export function damagedLook(mesh: THREE.Group, _model: string, stage: Stage, _seed: number): void {
+  //no squash, no lean: a damaged car keeps its shape, and its damage is all in its surface (zack, 2026-11-05: "i dont
+  //like damaged. changes the shape of the car"; art/car_damage.py)
   //where it smokes from, over the hood (local, before any turn)
   const box = new THREE.Box3().setFromObject(mesh);
   mesh.userData.smoke = new THREE.Vector3((box.max.x - box.min.x) * (stage === 3 ? 0 : 0.3), box.max.y - 0.25, 0.3);
