@@ -3,7 +3,7 @@ import bpy, sys, os, math, mathutils
 a=sys.argv[sys.argv.index('--')+1:]
 f,out=a[0],a[1]; hide=a[2].split(',') if len(a)>2 and a[2] else []
 bpy.ops.wm.open_mainfile(filepath=f)
-SEARCH=["/home/claude/godot-sandbox/blender files/textures","/home/claude/godot-sandbox/godot-sandbox/resources/models/characters/boss","/home/claude/godot-sandbox/blender files"]
+SEARCH=[os.path.join(os.getcwd(), "art/bot")]  # skate-rogue keeps the bot's textures beside its .blend files
 for im in bpy.data.images:
     if im.size[0]==0 and im.filepath:
         base=os.path.basename(im.filepath)
