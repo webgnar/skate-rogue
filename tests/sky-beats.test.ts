@@ -18,10 +18,10 @@ const skyOf = (l: ReturnType<typeof chicago>) => [...l.surfaces.filter((s) => s.
 afterEach(() => useLevelEdits(SAVED_EDITS));
 
 describe('sky beats', () => {
-  it('none on act 1, a run of them over the hills from floor 4', () => {
+  it('none on act 1 or in act 3 (the clouds), a run of them over the hills in acts 2 and 4', () => {
     for (let seed = 1; seed <= 4; seed++) {
       expect(skyOf(chicago(seed * 53, 2))).toHaveLength(0);
-      for (const f of [4, 8, 13]) expect(skyOf(chicago(seed * 53, f)).length).toBeGreaterThan(3);
+      for (const f of [4, 10, 13]) expect(skyOf(chicago(seed * 53, f)).length).toBeGreaterThan(3);
     }
   });
 

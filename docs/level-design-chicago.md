@@ -97,9 +97,33 @@ line starts and how you get on it.
   line on, onto the overpass past the gate (the high road). In between there are the L and the top route's power
   lines, the act's "first power lines".
 - **The other routes stay.** The hill road and the street are under the roofs, and the sewer under them; the sewer
-  bot rolls off each roof's end to get down to its drains. From floor 5 the cloud layer is still over the roofs.
+  bot rolls off each roof's end to get down to its drains. There's no cloud layer over the roofs: it's act 3's.
 - Tests: `tests/rooftops.test.ts` (starts on a roof, a roof an ollie off every later crest, the sky bot mostly up on
   the roofs and out on the high road).
+
+## Act 3: the clouds (`CLOUD_ACT` in `src/gen/clouds.ts`)
+
+The climb's second step (GDD Roadmap, Nov 6, 2026): act 3 is the cloud layer as the floor, not a lane over it. Same
+clouds, same physics; the hill, the chases, the cable cars and the street finale stay under it.
+
+- **You start on a cloud.** Floors 7-9 open on a big cloud 2.5 tiles over the hill's run-up (`startUp`), from 2 tiles
+  behind the start to 4 tiles past the lip (`startCloud`), and the layer runs on from it: it climbs a flip a beat
+  until it stands 10 tiles over the ground ahead, then falls gently with the floor, on to just before the gate
+  (`CLOUDS.over`, `exitShort`), where you drop onto the top route's roofs and the overpass. So a good player can stay
+  in the clouds the whole floor.
+- **No city sky.** The act's floors have no sky beats (roofs, cranes, water towers, billboards, set pieces): those
+  are act 2's and act 4's. Between the clouds and the street there are the top route's power lines and the girders.
+- **Girders back up.** Fall off and every later stretch has a staircase of red girders off its lip: the first 2 tiles
+  past the lip and a flip over it (`entryIn`, `entryUp`), each step a flip over the last, until a cloud ahead is in
+  reach (up to `steps`, 14). It climbs over the rail that runs down the hill off the lip (only the rail right under a
+  step counts), a step that had to slide along has the step before it run on so the gap stays a step's, the clouds
+  in its way near the top are cleared (with their coins) so it rises through the layer instead of flattening under
+  it, and the top step runs on up to 4 tiles toward a cloud just out of reach (`runOn`).
+- **Act 2 has no clouds over it now** (`CLOUDS.from` 7). Acts 4 and 5 and Endless keep the layer as before, up a
+  staircase partway down the first stretch, until act 4 gets its own pieces.
+- Tests: `tests/cloud-act.test.ts` (starts on a cloud, no city sky, a staircase off every later lip that meets the
+  layer, the sky bot climbs back up from the hill road about 9 times in 10 and is up in the clouds more than three
+  quarters of the floor).
 
 ## The look (`src/render/hillside.ts`)
 

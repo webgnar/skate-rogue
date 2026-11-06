@@ -54,9 +54,9 @@ describe('the sky line', () => {
     }
   });
 
-  it('the long first stretch climbs into the clouds; the ones after stay in the city sky', () => {
+  it('the long first stretch climbs into the clouds; the ones after stay in the city sky (act 4: act 3 is all clouds)', () => {
     for (let seed = 1; seed <= 6; seed++) {
-      const l = chicago(seed * 53, 7);
+      const l = chicago(seed * 53, 10);
       expect(cloudy(l, 0)).toBe(true);
       expect(cloudy(l, 1)).toBe(false);
     }
