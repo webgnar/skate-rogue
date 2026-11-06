@@ -9,6 +9,7 @@ import { actOf, FLOORS_PER_ACT } from '../gen/escape';
 import { label, type Road } from '../gen/roads';
 import { GEAR, type Gear, type GearPart } from '../run/gear';
 import { drawWires } from './board-wires';
+import { gearIcon } from './shop-art';
 import { whole } from '../run/save';
 
 export const STOKE_SEGS = 10;
@@ -129,7 +130,7 @@ export class HudView {
     $('stars').innerHTML = HEAT_STARS.map(() => '<i>★</i>').join('');
     const gear = $('gearbars');
     gear.innerHTML = GEAR_ORDER.map(
-      (p) => `<div class="part" data-part="${p}"><span class="icon">${GEAR_ICONS[p]}</span><span class="name">${GEAR.names[p].toUpperCase()}</span><span class="meter"></span></div>`,
+      (p) => `<div class="part" data-part="${p}"><span class="icon">${gearIcon(p)}</span><span class="name">${GEAR.names[p].toUpperCase()}</span><span class="meter"></span></div>`,
     ).join('');
     gear.querySelectorAll<HTMLElement>('.part').forEach((el) => {
       const p = el.dataset.part as GearPart;
