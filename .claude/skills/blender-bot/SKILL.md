@@ -134,6 +134,16 @@ after its primitive ("Cube").
    prints model against reference and returns what is off by more than 15
    percent. Fix the runs until it returns nothing (`BLOCKOUT_ONLY=1` exits
    there, about 20 seconds a try). The tail's length moves every ratio.
+1c. **When zack sends a side-on drawing, bend the body onto it** (zack,
+   2026-11-06: "your ability to trace is disappointing"; nudging box sizes
+   toward a trace never made the model follow the line). Save the drawing
+   as a black-on-white mask, `art/reference/<name>-outline.png`, and call
+   `bb_profile.conform(C, path, nose=..., ground_row=<the feet's row>)`
+   after the legs (see its header; `build_rat.py` is the example). Then
+   overlay a side silhouette on the drawing at the same ground line and
+   height and give zack that overlap, not a guess. It must still print
+   `CROSSINGS 0` and `MIRROR 0.0`. If a clip then folds, move the limb
+   rather than toning the clip down (the rat's front legs went forward).
 2. **Model the head properly.** Knife the end of the neck across at the
    mouth line (`C.split_face`) and extrude the two halves as the skull/upper
    jaw and the lower jaw (`part=` so it skins to the Jaw bone). Open the jaw

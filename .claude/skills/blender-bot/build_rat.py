@@ -37,7 +37,7 @@ bm = C.bm
 
 # ---------- 1. block out ----------
 HIP = Vector((0, 0, E('HZ', 5.2)))
-C.start_cube((E('BW', 3.6), E('BL', 5.0), E('BD', 8.5)), HIP, round_long=E('RL', 1.6))   # the haunches, the hump
+C.start_cube((E('BW', 4.6), E('BL', 5.0), E('BD', 8.5)), HIP, round_long=E('RL', 1.6))   # the haunches, the hump
 
 front = C.run(C.face_where((0, -1, 0)), [
     ((0, -1, E('C1', -0.6)), E('CL1', 0.8), 0.95, E('CS1', 0.9)),    # the back falling to the chest
@@ -54,7 +54,9 @@ front = C.run(front, [
 ], name='head', region='head')
 
 tail = C.run(C.face_where((0, 1, 0)), [
-    ((0, 1, E('RZ', -0.6)), E('RU', 0.6), 0.85, 0.85),          # the rump, rounding down
+    ((0, 1, E('RZ', -0.3)), E('RU', 0.6), 0.95, 0.95),          # the rump, rounding down
+    ((0, 1, -0.5), E('RU2', 0.6), 0.85, 0.85),                    # (enough rings for the profile to
+    ((0, 1, -0.8), E('RU3', 0.5), 0.7, 0.7),                      #  round it to the drawing's)
     ((0, 1, -0.5), 0.6, E('TW', 0.26), E('TW', 0.26), None, (0, 0, -E('TD', 2.4))),   # the tail's root, thick, low on the rump
 ], name='rump', region='body')
 TS = E('TS', 2.0)
@@ -87,7 +89,7 @@ def belly_pair(y0, y1, x_cut, below=0.8):
 
 
 LEGS = {}
-fp = belly_pair(E('F0', -4.2), E('F1', -3.4), E('FX', 0.6))
+fp = belly_pair(E('F0', -4.6), E('F1', -3.8), E('FX', 0.6))
 for side in (-1, 1):
     key = 'front_l' if side < 0 else 'front_r'
     C.run(fp[side], [
@@ -150,6 +152,17 @@ def curl_tail():
     J['tail'] = [curl(p, y0) for p in J['tail']]
     bm.normal_update()
 
+
+# bend the body onto zack's drawing, traced (art/reference/rat-outline.png): the back and the belly line
+# column by column, the legs and ears and tail root following (bb_profile.py)
+if not os.environ.get('NO_PROFILE'):
+    import bb_profile
+    _here = os.path.dirname(os.path.abspath(__file__))
+    PROFILE = bb_profile.conform(C, os.path.join(_here, '..', '..', '..', 'art', 'reference', 'rat-outline.png'), nose='right',
+                                 ground_row=E('PGR', 233),      # the drawing's feet line (its tail dips below)
+                                 strength=E('PS', 1.0), round_x=E('PRX', 0.7), max_x=E('PMX', 1.6), bulge=E('PB', 0.25),
+                                 relax=E('PRL', 0), belly_min=E('PBM', 0.0))
+    print('PROFILE', {k: round(v, 2) for k, v in PROFILE.items()})
 
 # a brown rat side on: nose to rump 1.0, head 0.32, head depth 0.2, body 0.5 deep at the hump,
 # height ears to soles 0.6
