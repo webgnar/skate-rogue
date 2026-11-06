@@ -16,15 +16,19 @@ Ankle and Foot to each leg. Actions: run (the scurry the pack runs in), walk,
 sniff (stopped, nose up and working, whiskers going), hop (cleared by a skater
 going over: a startled jump).
 
+Painted to read at a few pixels tall (zack, 2026-11-06, with a cartoon villain rat:
+"make the rat more readable"): purple coat, tan belly and muzzle, hot pink ears, hands,
+feet, nose and tail, big white angry eyes and buck teeth; big ears turned to the side.
+
 usage: python build_rat.py -- <out dir> [seed]
-    sketch_marks.py -- <out>/rat.blend Cube <out>/rat.png sketched.png
-    uv_blackout.py  -- <out>/rat.blend Cube sketched.png art/bot/rat.png
+    uv_blackout.py  -- <out>/rat.blend Cube <out>/rat.png art/bot/rat.png   (no sketch marks:
+                       their light seams grey out the colour blocks at the rat's size)
     export_glb.py   -- art/bot/rat.blend public/models/bot/rat.glb
 """
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bb_lib import Creature, Painter, Rig, ease
-from mathutils import Vector
+from mathutils import Vector, Matrix
 import bmesh
 E = lambda k, d: float(os.environ.get(k, d))     # tuning overrides for sweeps
 
@@ -57,7 +61,7 @@ tail = C.run(C.face_where((0, 1, 0)), [
     ((0, 1, E('RZ', -0.3)), E('RU', 0.6), 0.95, 0.95),          # the rump, rounding down
     ((0, 1, -0.5), E('RU2', 0.6), 0.85, 0.85),                    # (enough rings for the profile to
     ((0, 1, -0.8), E('RU3', 0.5), 0.7, 0.7),                      #  round it to the drawing's)
-    ((0, 1, -0.5), 0.6, E('TW', 0.26), E('TW', 0.26), None, (0, 0, -E('TD', 2.4))),   # the tail's root, thick, low on the rump
+    ((0, 1, -0.5), 0.6, E('TW', 0.4), E('TW', 0.4), None, (0, 0, -E('TD', 2.4))),   # the tail's root, thick, low on the rump
 ], name='rump', region='body')
 TS = E('TS', 2.0)
 tip = C.run(tail, [
@@ -106,7 +110,7 @@ for side in (-1, 1):
         (tuple(hp[side].normal), 0.3, 1.0, 1.0, (1.1, 1.0, 1.0), (side * 0.15, 0, 0)),   # the haunch
         ((side * 0.05, -0.4, -1), E('TH', 0.3), 0.85, 1.0),    # the thigh, forward under the hump
         ((0, 0.5, -1), E('SH', 0.2), 0.8, 1.0),                # the shin, back to the heel
-        ((0, -1, -0.15), E('FT', 1.0), 0.9, 0.5),              # the long flat foot
+        ((0, -1, -0.15), E('FT', 1.25), 0.9, 0.5),              # the long flat foot
     ], name=key, region='leg')
     LEGS[key] = side
 
@@ -122,7 +126,7 @@ for side in (-1, 1):
     key = 'ear_l' if side < 0 else 'ear_r'
     tipf = C.run(face, [
         (tuple(face.normal), 0.2, 0.95, 1.0),                          # the ear's root
-        ((side * E('EO', 0.8), E('EF', 0.15), 1), E('EA', 0.5), 1.4, 1.0, (1.0, 0.35, 1.0)),   # up and out, a round thin cup
+        ((side * E('EO', 1.6), E('EF', 0.15), 1), E('EA', 1.4), E('EW', 2.6), 1.0, (E('EXS', 0.5), E('EYS', 1.0), 1.0)),   # up and out, a big round cup turned to the side (it reads side on)
         ((side * 0.5, 0.1, 1), E('EB', 0.3), 0.75, 1.0),
     ], name=key, region='ear')
     C.end_point(tipf, tipf.calc_center_median() + Vector((side * 0.08, 0.05, 0.15)))
@@ -194,28 +198,37 @@ curl_tail()
 # ---------- accents ----------
 for side in (-1, 1):
     p = C.skin((side * 9, hd[1].y - 0.2, hd[1].z + 0.2), (-side, 0, 0))
-    if p is not None: C.ball(p + Vector((side * 0.08, 0, 0)), 0.32, 'eyes')
+    if p is not None: C.ball(p + Vector((side * 0.08, 0, 0)), E('ER', 0.8), 'eyes')   # big white eyes that read small
 p = C.skin(hd[-1] + Vector((0, -6, 0.1)), (0, 1, 0))
-if p is not None: C.ball(p + Vector((0, 0.1, 0)), 0.3, 'nose')
+if p is not None: C.ball(p + Vector((0, 0.1, 0)), E('NR', 0.42), 'nose')
+for side in (-1, 1):                           # the buck teeth, under the nose
+    p = C.skin((side * 0.16, hd[-1].y + E('TY', 0.55), hd[-1].z - 8), (0, 0, 1))
+    if p is not None:
+        C.box(Matrix.Translation(p + Vector((0, 0, -0.22))) @ Matrix.Diagonal((E('TTW', 0.42), 0.16, E('TTH', 0.9), 1)), 'teeth', at=p)
 C.connect()
 ob, me = C.to_object()
 
-# ---------- paint: zack's brown rat ----------
-# brown coat, darker down the back, a paler belly; pink nose, ears, hands, feet and a scaly pink-brown tail
-FUR, BACKC, BELLY, PINK, TAILC, RING, STREAK, EYE, WHITE = (
-    "#5e4a3a", "#45362b", "#8a735e", "#e0a196", "#b9806f", "#94604f", "#4c3b2e", "#0c0a0b", "#f4efe8")
+# ---------- paint: zack's sewer rat ----------
+# (zack, 2026-11-06: "make the rat more readable", with a cartoon villain rat) purple coat with magenta
+# tufts, a darker back, a tan belly and muzzle, hot pink ears, hands, feet, nose and tail, big white
+# angry eyes and buck teeth: every part its own colour, so it reads at a few pixels tall
+FUR, BACKC, BELLY, PINK, TAILC, RING, TUFT, EYE, WHITE, BROW = (
+    "#5d4878", "#3d2c55", "#d9a77e", "#ef7f8c", "#e9808a", "#c25a6a", "#b24fd0", "#0c0a0b", "#fbf7ef", "#1d1428")
 P = Painter(C, FUR, size=512)
-V = P.V; PZ = P.PZ; PY = P.PY
+V = P.V; PZ = P.PZ; PY = P.PY; PX = P.PX
 BODY = P.region('body', 'chest'); NECK = P.region('neck'); HEAD = P.region('head'); TAILR = P.region('tail')
 LEG = P.region('leg'); EAR = P.region('ear')
 FEET = min(J[k][-1].z for k in LEGS)
 P.broad(min(V[:, 1]), max(V[:, 1]), BACKC, 'above', r=1.0, step=0.35)                  # the darker back
-P.broad(J['chest'][0].y, J['rump'][0].y - 1.0, BELLY, 'below', r=0.9, step=0.3)          # the paler belly
-P.img[LEG & (PZ < FEET + 0.8) & P.mask] = P.col(PINK)                                 # pink hands and feet
-P.img[TAILR & P.mask] = P.col(TAILC)                                                  # the tail
+P.broad(J['chest'][0].y, J['rump'][0].y - 1.0, BELLY, 'below', r=1.3, step=0.3)          # the tan belly
+P.broad(J['chest'][-1].y - 0.5, J['chest'][0].y + 0.5, BELLY, 'below', r=1.1, step=0.3)   # and chest
+mz = 0.5 * (min(p.z for r in C.R['head'] for p in r) + max(p.z for r in C.R['head'] for p in r))
+P.img[HEAD & (PZ < mz + 0.1) & P.mask] = P.col(BELLY)                                  # the tan muzzle and jaw
+P.img[LEG & (PZ < FEET + 1.0) & P.mask] = P.col(PINK)                                 # pink hands and feet
+P.img[TAILR & P.mask] = P.col(TAILC)                                                  # the pink tail
 P.img[EAR & P.mask] = P.col(PINK)                                                     # pink ears
 P.img[HEAD & (PY < J['head'][-1].y + 0.35) & P.mask] = P.col(PINK)                     # the pink nose tip
-# the tail's scales: dark rings down its length
+# the tail's scales: darker pink rings down its length
 tj = J['rump'][-1:] + J['tail']
 import numpy as np
 for a, b in zip(tj, tj[1:]):
@@ -223,18 +236,22 @@ for a, b in zip(tj, tj[1:]):
         c = a.lerp(b, k / 4)
         near = TAILR & (np.linalg.norm(V - np.array(c), axis=1) < 0.9) & P.mask if V.ndim == 2 and len(V) == P.mask.size else None
         if near is not None: P.img[near & (np.abs((V - np.array(c)) @ np.array((b - a).normalized())) < 0.07)] = P.col(RING)
-# the coat: dark streaks of fur running back along the sides and the hump (the reference's hatching)
+# the coat: magenta tufts raked back along the sides and up the hump (the art's spiky highlights)
 import random
 _r = random.Random(11)
-for _ in range(420):
-    y = _r.uniform(-6.5, 4.5); z = _r.uniform(FEET + 1.4, 10); side = _r.choice((-1, 1))
+for _ in range(90):
+    y = _r.uniform(-6.5, 4.5); z = _r.uniform(FEET + 4.0, 10); side = _r.choice((-1, 1))
     p = C.skin((side * 12, y, z), (-side, 0, 0))
     if p is None: continue
-    for k in range(3):                         # a short stroke of three dabs, raked back
-        P.dab(p + Vector((0, 0.14 * k, 0.04 * k)), 0.07, STREAK)
-P.accents({'eyes': EYE, 'nose': PINK})
+    for k in range(5):                         # a long tapering stroke, raked back and up
+        P.dab(p + Vector((0, 0.2 * k, 0.12 * k)), 0.16 - 0.025 * k, TUFT)
+P.accents({'eyes': WHITE, 'nose': PINK, 'teeth': WHITE})
 for e in C.ACC['eyes']:
-    P.dab(e + Vector((math.copysign(0.24, e.x), -0.12, 0.1)), 0.08, WHITE)    # a catchlight
+    sx = math.copysign(1, e.x)
+    P.dab(e + Vector((sx * 0.4, -0.18, -0.02)), 0.2, EYE)                         # the pupil, looking ahead
+    P.dab(e + Vector((sx * 0.42, -0.26, 0.06)), 0.06, WHITE)                      # a catchlight
+    for k in range(4):                         # an angry brow, slanting down to the nose
+        P.dab(e + Vector((sx * 0.3, 0.3 - 0.2 * k, 0.5 - 0.1 * k)), 0.14, BROW)
 P.save(OUT, "rat")
 
 # ---------- rig ----------
