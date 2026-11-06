@@ -1,4 +1,4 @@
-// The cloud layer (src/gen/clouds.ts): way up over the hills from floor 5, reached by a staircase of sky pieces
+// The cloud layer (src/gen/clouds.ts): way up over the hills from floor 7 (act 3, tests/cloud-act.test.ts), reached by a staircase of sky pieces
 // (zack, 2026-10-31: "climb a staircase of sky pieces"), with clouds, thin clouds, rainbows and balloons up there.
 import { describe, expect, it } from 'vitest';
 import { buildFloor } from '../src/gen/descent';
@@ -8,20 +8,21 @@ import { TILE } from '../src/physics/constants';
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
 
 describe('the cloud layer', () => {
-  it('none before floor 5; from then a staircase up into clouds, rainbows and balloons', () => {
+  it('none before floor 7; from then a staircase up into clouds, rainbows and balloons', () => {
     let rainbows = 0;
     let balloons = 0;
     for (let seed = 1; seed <= 8; seed++) {
-      expect(chicago(seed * 53, 4).surfaces.some((s) => s.sky === 'cloud')).toBe(false);
-      const l = chicago(seed * 53, 7);
+      expect(chicago(seed * 53, 6).surfaces.some((s) => s.sky === 'cloud')).toBe(false);
+      const l = chicago(seed * 53, 10);
       expect(l.surfaces.filter((s) => s.sky === 'cloud' || s.sky === 'thin').length + l.rails.filter((r) => r.sky === 'rainbow').length + (l.skyMovers ?? []).filter((m) => m.kind === 'cloud' || m.kind === 'balloon').length).toBeGreaterThan(4);
       rainbows += l.rails.filter((r) => r.sky === 'rainbow').length;
       balloons += (l.skyMovers ?? []).filter((m) => m.kind === 'balloon').length;
       //each step of the staircase an ollie over the last, and its top as high as the clouds after it
-      const steps = l.surfaces.filter((s) => s.sky === 'step' || s.sky === 'wisp').sort((a, b) => a.x0 - b.x0);
+      //(the first stretch's: up there the layer has wisps of its own)
+      const steps = l.surfaces.filter((s) => (s.sky === 'step' || s.sky === 'wisp') && s.x0 < l.hillSpans![0][1]).sort((a, b) => a.x0 - b.x0);
       expect(steps.length).toBeGreaterThan(4);
       for (let i = 1; i < steps.length; i++) {
-        if (steps[i].x0 - steps[i - 1].x1 > 6 * TILE) continue; // the next stretch's staircase
+        if (steps[i].x0 - steps[i - 1].x1 > 6 * TILE) break; // up in the layer
         expect(steps[i - 1].y - steps[i].y).toBeLessThanOrEqual((CLOUDS.stairRise + 0.25) * TILE + 0.01);
       }
     }

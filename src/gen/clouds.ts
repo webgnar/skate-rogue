@@ -9,13 +9,15 @@
 import { TILE } from '../physics/constants';
 import { CurvedRail, type Level, type SkyMover, type Surface } from '../physics/level';
 import { PICKUPS } from './descent';
+import { editFloor } from './hills';
 import { makeRng, type Rng } from './rng';
-import { busy, clearAt, groundAt } from './top-route';
+import { busy, clearAt, groundAt, TOP } from './top-route';
+import { CLOUDY, maxGap, openAt, piecesOf, REACH } from './sky-line';
 
 export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb';
 
 export const CLOUDS = {
-  from: 5, // first floor with a cloud layer
+  from: 7, // first floor with a cloud layer: act 3's (CLOUD_ACT), so act 2's floors are all rooftops
   room: 95, // tiles of hill down from its crest a stretch needs for a cloud layer
   stairAt: 0.18, // how far down each stretch of hill from its crest (0-1) the sky beats end and the staircase starts
   // (early: zack's clips, 2026-10-31, the clouds were over in about 7 s; this way about a third longer)
@@ -58,6 +60,46 @@ export const CLOUDS = {
   spin: 0.25, // chance the floor's layer hides a spin token at the top of a rainbow
 };
 
+// Act 3, the cloud act (GDD: How a run ends, and the Roadmap's climb, step b; zack, 2026-11-06). Floors 7-9 are the
+// next step up: the cloud layer is the floor, not the top lane. The floor starts on a cloud over the hill's run-up and
+// the layer climbs from there, on over the whole floor to just before the gate; the city's sky beats under it are
+// gone (the girders and the wires are what's left between the clouds and the street). Fall off and every later
+// stretch has a girder staircase up off its lip, an ollie onto its first step, climbing back into the layer. Level
+// design only: the same clouds and physics, nothing that lifts you
+export const CLOUD_ACT = {
+  floors: [7, 8, 9], // the act's floors (Endless reuses acts 4 and 5, so never these)
+  startUp: 2.5, // tiles the starting cloud stands over the hill's run-up
+  startCloud: 4, // tiles of the starting cloud past the hill's lip
+  entryUp: 1.5, // tiles a later stretch's first girder stands over its lip: a big ollie and a flip off the lip
+  entryIn: 2, // tiles past the lip it starts (rolling off without an ollie, you drop to the hill road under it)
+  steps: 14, // the most steps a staircase climbs before it meets the layer
+  meetUp: 1.5, // tiles: the layer's in reach of a step up to this far over it (an ollie and a flip from its end)
+  meetRoom: 4, // tiles of it past the step's end, to land on (and it starts ahead: nothing to catch overhead)
+  runOn: 4, // tiles a step may run on toward a layer piece just out of its reach
+};
+
+// filter an array in place (other parts of the level may hold it)
+function keep<T>(xs: T[], ok: (x: T) => boolean): void {
+  const kept = xs.filter(ok);
+  xs.splice(0, xs.length, ...kept);
+}
+
+// clearAt, but a rail only counts where it runs right there (openAt): act 3's staircase climbs off a hill's lip over
+// the rail that runs down the hill from it, clear of it where it's fallen away
+function clearOver(level: Level, x0: number, x1: number, y: number): number | null {
+  for (let k = 0; k <= 8; k++) {
+    const dy = (k % 2 ? -1 : 1) * Math.ceil(k / 2) * (TILE / 2);
+    const el = (level.el ?? []).some((e) => e.x1 > x0 - 2 * TILE && e.x0 < x1 + 2 * TILE && y + dy > e.y - 6 * TILE);
+    if (!el && openAt(level, x0, x1, y + dy)) return y + dy;
+  }
+  return null;
+}
+
+// is this floor one of act 3's cloud floors?
+export function cloudFloor(floor: number): boolean {
+  return CLOUD_ACT.floors.includes(editFloor(floor)) && floor <= 15;
+}
+
 // where a stretch of hill [a, b] crests: the highest ground on it (its first stretch starts on top; the later ones
 // climb out of a cross street first, and the sky only starts once the hill falls away under you)
 export function crestOf(level: Level, a: number, b: number): number {
@@ -78,7 +120,10 @@ export function crestOf(level: Level, a: number, b: number): number {
 // row, so the floors that have room for two still end their stretches two ways
 export function cloudy(level: Level, stretch: number): boolean {
   const span = level.hillSpans?.[stretch];
-  if (!span || level.layout.floor < CLOUDS.from || stretch % 2) return false;
+  if (!span || level.layout.floor < CLOUDS.from) return false;
+  //(act 3: every stretch, the first under the layer it starts in, the later ones with a staircase up off the lip)
+  if (cloudFloor(level.layout.floor)) return true;
+  if (stretch % 2) return false;
   const [a, b] = span;
   return b - crestOf(level, a, b) >= CLOUDS.room * TILE;
 }
@@ -151,50 +196,16 @@ export function addClouds(level: Level, seed: number): void {
   //map: "see how i kind of made the sky route go the whole way"): over the cross streets and the chases between the
   //hills too, never down within `over` of the ground ahead. A later stretch with room still gets its own staircase up
   //into it, for whoever came down
-  let layer = false;
-  for (const [i, [a, b]] of spans.entries()) {
-    if (!cloudy(level, i)) continue;
-    //the staircase: from the last sky beat on the stretch (or the sky beats' height, where there are none), deck after
-    //deck, each a step higher, the top steps wisps of cloud
-    const at = stairStart(level, a, b);
-    //(where the line leaves off: the end of the last sky piece before here, a deck, a boom or a moving deck)
-    //(off the end of a falling grind the pop's weak, so the first step's no higher than where it leaves off)
-    const ends: [number, number, boolean][] = [
-      ...level.surfaces.filter((s) => s.sky && s.x1 > a && s.x1 <= at + 4 * TILE).map((s): [number, number, boolean] => [s.x1, s.y, false]),
-      ...level.rails.filter((r) => r.sky && r.x1 > a && r.x1 <= at + 4 * TILE).map((r): [number, number, boolean] => [r.xs[r.xs.length - 1], r.ys[r.ys.length - 1], r.ys[r.ys.length - 1] > r.ys[0] + TILE]),
-      ...(level.skyMovers ?? []).filter((m) => m.x1 > a && m.x1 <= at + 4 * TILE).map((m): [number, number, boolean] => [m.x1, m.y, false]),
-    ].sort((p, q) => q[0] - p[0]);
-    const leave = ends[0];
-    let x = leave ? Math.max(at, leave[0]) + CLOUDS.stairGap * TILE : at;
-    let y = leave ? leave[1] + (leave[2] ? CLOUDS.stairRise * TILE : 0) : (groundAt(level, x) ?? level.streetY) - CLOUDS.stairHeight * TILE;
-    const steps = Math.ceil(CLOUDS.climb / CLOUDS.stairRise);
-    for (let k = 0; k < steps; k++) {
-      const w = range(rng, CLOUDS.stair) * TILE;
-      const wisp = k >= steps / 2;
-      //(crowded by the power line: a little lower, or slide along until it's clear; never a step you can't make)
-      let at: number | null = null;
-      for (let n = 0; n < 12 && at === null; n++) {
-        at = clearAt(level, x, x + w, y - CLOUDS.stairRise * TILE);
-        if (at !== null && at < y - (CLOUDS.stairRise + 0.25) * TILE) at = null;
-        if (at === null) x += TILE;
-      }
-      if (at === null) continue;
-      y = at;
-      surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky: wisp ? 'wisp' : 'step' });
-      coins(x, x + w, () => at);
-      x += w + CLOUDS.stairGap * TILE;
-    }
-    if (layer) continue;
-    layer = true;
-    const end = level.exitX - CLOUDS.exitShort * TILE;
-    //the lowest the layer may stand at x: `over` tiles over the highest ground in the `ahead` tiles from there
-    const lowest = (x: number) => {
-      let top = Infinity;
-      for (let gx = x; gx < Math.min(end, x + CLOUDS.ahead * TILE); gx += TILE) top = Math.min(top, groundAt(level, gx) ?? level.streetY);
-      return top === Infinity ? Infinity : top - CLOUDS.over * TILE;
-    };
+  const end = level.exitX - CLOUDS.exitShort * TILE;
+  //the lowest the layer may stand at x: `over` tiles over the highest ground in the `ahead` tiles from there
+  const lowest = (x: number) => {
+    let top = Infinity;
+    for (let gx = x; gx < Math.min(end, x + CLOUDS.ahead * TILE); gx += TILE) top = Math.min(top, groundAt(level, gx) ?? level.streetY);
+    return top === Infinity ? Infinity : top - CLOUDS.over * TILE;
+  };
+  //the layer itself, from (x, y) on to the end of the floor
+  const lay = (x: number, y: number, first: boolean) => {
     let last: CloudBeat = 'gap';
-    let first = true;
     while (x < end - 6 * TILE) {
       let beat = pick(rng);
       //never two gaps or two rainbows running, and open with a cloud to land on
@@ -316,6 +327,123 @@ export function addClouds(level: Level, seed: number): void {
       x += range(rng, CLOUDS.between) * TILE;
       //(falling gently with the floor; where the ground ahead climbs, up again, a step at a time: a flip makes it)
       y = Math.max(y - CLOUDS.stairRise * TILE, Math.min(y + CLOUDS.step * TILE, lowest(x)));
+    }
+  };
+  //a staircase from (x, y): deck after deck, each a step higher, the top half wisps of cloud (or, `until` it's in
+  //reach of the layer, girders all the way)
+  const stairs = (x: number, y: number, steps: number, until?: (step: Surface) => boolean, clear = clearAt, room?: (x0: number, x1: number, y: number) => void): [number, number] => {
+    for (let k = 0; k < steps; k++) {
+      const w = range(rng, CLOUDS.stair) * TILE;
+      const wisp = !until && k >= steps / 2;
+      //(crowded by the power line: a little lower, or slide along until it's clear; never a step you can't make)
+      let at: number | null = null;
+      const from = x;
+      room?.(x, x + w, y - CLOUDS.stairRise * TILE);
+      for (let n = 0; n < 12 && at === null; n++) {
+        at = clear(level, x, x + w, y - CLOUDS.stairRise * TILE);
+        if (at !== null && at < y - (CLOUDS.stairRise + 0.25) * TILE) at = null;
+        if (at === null) x += TILE;
+      }
+      if (at === null) continue;
+      //(act 3's, slid along: the step before runs on after it, so the gap's still a step's, where that's clear)
+      const prev = surfaces.at(-1);
+      if (until && x > from && prev?.sky === 'step' && openAt(level, prev.x1 + 1, x - CLOUDS.stairGap * TILE, prev.y)) {
+        coins(prev.x1 - TILE, x - CLOUDS.stairGap * TILE, () => prev.y);
+        prev.x1 = x - CLOUDS.stairGap * TILE;
+      }
+      y = at;
+      const step: Surface = { kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky: wisp ? 'wisp' : 'step' };
+      surfaces.push(step);
+      coins(x, x + w, () => at);
+      x += w + CLOUDS.stairGap * TILE;
+      if (until?.(step)) break;
+    }
+    return [x, y];
+  };
+  if (cloudFloor(floor)) {
+    //act 3 (CLOUD_ACT): the floor starts on a cloud over the hill's run-up, and the layer runs on from there
+    const [a, b] = spans[0];
+    const [lip] = lipOf(level, a, b);
+    const y0 = (groundAt(level, a) ?? level.streetY) - CLOUD_ACT.startUp * TILE;
+    const x1 = lip + CLOUD_ACT.startCloud * TILE;
+    surfaces.push({ kind: 'ledge', x0: a - 2 * TILE, x1, y: y0, row: -1, sky: 'cloud' });
+    coins(Math.max(a, level.startX + TILE), x1, () => y0);
+    level.startY = y0;
+    lay(x1 + range(rng, CLOUDS.between) * TILE, y0, false);
+    //(laid, so the staircases keep clear of it)
+    level.surfaces.push(...surfaces.splice(0));
+    level.rails.push(...rails.splice(0));
+    if (movers.length) level.skyMovers = [...(level.skyMovers ?? []), ...movers.splice(0)];
+    let layer = piecesOf(level, a, level.width).filter((p) => p.cloud);
+    //where a staircase climbs up into the layer, the clouds in its way go (and their coins), so it rises on through
+    //the layer to its height instead of flattening out under it with nowhere to go
+    const room = (x0: number, x1: number, y: number) => {
+      const near = (sy: number) => Math.abs(sy - y) < TOP.clear;
+      const over = (p0: number, p1: number) => p1 > x0 - TILE && p0 < x1 + TILE;
+      const gone: [number, number, number][] = [];
+      keep(level.surfaces, (s) => {
+        const hit = !!s.sky && CLOUDY.has(s.sky) && over(s.x0, s.x1) && near(s.y);
+        if (hit) gone.push([s.x0, s.x1, s.y]);
+        return !hit;
+      });
+      keep(level.rails, (r) => {
+        const hit = r.sky === 'rainbow' && over(r.x0, r.x1) && r.ys.some(near);
+        if (hit) gone.push([r.x0, r.x1, Math.max(...r.ys)]);
+        return !hit;
+      });
+      if (level.skyMovers) keep(level.skyMovers, (m) => {
+        const hit = (m.kind === 'cloud' || m.kind === 'balloon') && over(m.x0 - REACH.drift, m.x1 + REACH.drift) && near(m.y);
+        if (hit) gone.push([m.x0 - REACH.drift, m.x1 + REACH.drift, m.y]);
+        return !hit;
+      });
+      if (!gone.length) return;
+      //(a rainbow's coins and chip ride its arch, up to its rise over its feet)
+      keep(level.pickups, (k) => !gone.some(([p0, p1, py]) => k.x >= p0 && k.x <= p1 && k.y < py && k.y > py - (CLOUDS.rainbowRise + 1) * TILE - PICKUPS.arc));
+      layer = piecesOf(level, a, level.width).filter((p) => p.cloud);
+    };
+    //in reach of the layer from the end of a step: a piece starting ahead (nothing to catch overhead), no more than a
+    //flip up, with room to land on it. Just out of reach, the step runs on toward it, where that's clear
+    const reach = (step: Surface, p: (typeof layer)[number]) => p.x0 - step.x1 - maxGap((p.y0 - step.y) / TILE) * TILE;
+    const meets = (step: Surface) => {
+      const ahead = layer.filter((p) => p.x1 > step.x1 + CLOUD_ACT.meetRoom * TILE && p.y0 >= step.y - CLOUD_ACT.meetUp * TILE && p.x0 >= step.x1 - TILE / 2);
+      if (ahead.some((p) => reach(step, p) <= 0)) return true;
+      for (const p of ahead.filter((p) => reach(step, p) <= CLOUD_ACT.runOn * TILE)) {
+        const x1 = step.x1 + reach(step, p) + TILE / 2;
+        if (!openAt(level, step.x1 + 1, x1, step.y)) continue;
+        coins(step.x1 - TILE, x1, () => step.y);
+        step.x1 = x1;
+        return true;
+      }
+      return false;
+    };
+    //every later stretch: girders up off the lip (an ollie onto the first), a flip a step, until the layer's in reach
+    for (const [c, d] of spans.slice(1)) {
+      //(the first step's an ollie and a flip up off the lip, like the sky's way in, so it clears a rail run down the
+      //hill off the lip: the first rise is that, from the lip's height)
+      const [l, top] = lipOf(level, c, d);
+      stairs(l + CLOUD_ACT.entryIn * TILE, top - (CLOUD_ACT.entryUp - CLOUDS.stairRise) * TILE, CLOUD_ACT.steps, meets, clearOver, room);
+    }
+  } else {
+    let layer = false;
+    for (const [i, [a, b]] of spans.entries()) {
+      if (!cloudy(level, i)) continue;
+      //the staircase: from the last sky beat on the stretch (or the sky beats' height, where there are none), deck after
+      //deck, each a step higher, the top steps wisps of cloud
+      const at = stairStart(level, a, b);
+      //(where the line leaves off: the end of the last sky piece before here, a deck, a boom or a moving deck)
+      //(off the end of a falling grind the pop's weak, so the first step's no higher than where it leaves off)
+      const ends: [number, number, boolean][] = [
+        ...level.surfaces.filter((s) => s.sky && s.x1 > a && s.x1 <= at + 4 * TILE).map((s): [number, number, boolean] => [s.x1, s.y, false]),
+        ...level.rails.filter((r) => r.sky && r.x1 > a && r.x1 <= at + 4 * TILE).map((r): [number, number, boolean] => [r.xs[r.xs.length - 1], r.ys[r.ys.length - 1], r.ys[r.ys.length - 1] > r.ys[0] + TILE]),
+        ...(level.skyMovers ?? []).filter((m) => m.x1 > a && m.x1 <= at + 4 * TILE).map((m): [number, number, boolean] => [m.x1, m.y, false]),
+      ].sort((p, q) => q[0] - p[0]);
+      const leave = ends[0];
+      let x = leave ? Math.max(at, leave[0]) + CLOUDS.stairGap * TILE : at;
+      let y = leave ? leave[1] + (leave[2] ? CLOUDS.stairRise * TILE : 0) : (groundAt(level, x) ?? level.streetY) - CLOUDS.stairHeight * TILE;
+      [x, y] = stairs(x, y, Math.ceil(CLOUDS.climb / CLOUDS.stairRise));
+      if (layer) continue;
+      layer = true;
+      lay(x, y, true);
     }
   }
   level.surfaces.push(...surfaces);

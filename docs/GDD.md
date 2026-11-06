@@ -269,7 +269,8 @@ All of it is physics and tap-only: nothing lifts you up there (zack owns the way
 `src/render/sky-pieces-view.ts` and `src/render/sky-kit.ts` (drawing); the level editor lists the new beats.
 
 **The cloud layer** (zack, Oct 31, 2026: "i want sky route to go really tall. we could use the clouds and the rainbow...
-if we can put as much love into the sky as we did the ground"). From floor 5, way over the hill, far above the
+if we can put as much love into the sky as we did the ground"). From floor 7 (act 3, where it's the floor: see How a
+run ends), way over the hill, far above the
 rooftops and cranes with nothing reaching down to the city: big puffy clouds to land on, drifting clouds that wander
 there and back, thin clouds that puff away a moment after you land (0.66 s: time to take the landing's knock and pop
 off), rainbows to grind up and over (one a floor may hide a chip at the top), and hot air balloons whose
@@ -418,9 +419,20 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   odd billboard, water tower, scaffold or set piece between. Over the street chases and the run to the gate the top
   route's rooftops carry the line on, and the overpass past the gate is where it ends, so a good player starts on a
   roof and ends on the overpass (the sky bot: up on the roofs most of each floor's first stretch, and through the
-  gate on the high road on about three floors in four). The cloud layer still sits over the roofs from floor 5 (the
-  sky route, the high way), and the hill road and the sewer under it are unchanged. Endless reuses acts 4 and 5, so it
+  gate on the high road on about three floors in four). There's no cloud layer over the roofs (it moved up to act 3),
+  and the hill road and the sewer under them are unchanged. Endless reuses acts 4 and 5, so it
   never gets these floors.
+- **Act 3's floors are cloud floors** (built Nov 6, 2026, the climb's step b; level design only, the same clouds and
+  physics; `CLOUD_ACT` in src/gen/clouds.ts). Floors 7-9 start on a big cloud 2.5 tiles over the hill's run-up, and
+  the cloud layer is the floor: it climbs from there a flip at a time, then runs on over the hills, the chases and the
+  cross streets to just before the gate, so a good player stays up in the clouds the whole floor (the sky bot: up there
+  more than three quarters of it). There's no city sky in act 3 (no roofs, cranes, water towers, billboards or set
+  pieces: those are acts 2 and 4); between the clouds and the street are the power lines and the girders. Fall off and
+  every later stretch has a **girder staircase** off its lip: a big ollie and a flip onto the first, a flip a step, up
+  through the layer until a cloud ahead is in reach (the sky bot climbs back up about 9 times in 10). The hill road
+  and the sewer under it are unchanged; where the layer ends, just before the gate, you drop onto the top route's roofs
+  and out over the overpass (the sky bot leaves on the high road). Acts 4 and 5 keep the cloud
+  layer as it was (up a staircase partway down the first stretch) until act 4 gets its own pieces.
 - Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
   by skating. They use the same traffic and Heat rules.
 - The Hive is dropped (zack, Nov 6, 2026). The acts' kits are the same fused city seen from higher up, not new
@@ -1381,7 +1393,7 @@ thread of its own:
 - a. **Act 2 rooftops** as level design only: a floor recipe that starts and ends on roofs and overpasses, from the
   kit we have. Built Nov 6, 2026 (see How a run ends).
 - b. **Act 3 as a whole cloud act**: the sky route's pieces (wires, girders, the cloud layer) become the main floor,
-  not the top lane.
+  not the top lane. Built Nov 6, 2026 (see How a run ends).
 - c. **Gravity scaling**: one number per act applied to the ollie, flips and hang time, tested on the bot so act 1's
   feel never changes. Placeholders: 1x for acts 1-3, 0.7x act 4, 0.3x act 5.
 - d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the gunship line, the beam-up finale.
@@ -1426,12 +1438,16 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
   someone awake in another city).
 - **The climb** (fantasy decided Nov 6, 2026, see The fantasy): the act heights are a default to check with zack;
-  where gravity starts to drop and how far it goes are numbers to tune; the level design of the higher acts (the cloud layer as a whole act,
+  where gravity starts to drop and how far it goes are numbers to tune; the level design of the higher acts (act 4's
   blimps and thin air) and the ship as the between-runs hub are not designed or built. Act 2's rooftop floors
   (built Nov 6, 2026) left three calls open, with these defaults: you start 2.5 tiles up on the roof and each later
-  stretch's roof is half a tile over its crest (an ollie, never a flip); the cloud layer still runs over floors 5 and
-  6 (default: it moves up to act 3 when step b makes the clouds the main floor); and the rooftops stay optional,
-  so a player who never ollies off a roof's end skates the hill road as in act 1.
+  stretch's roof is half a tile over its crest (an ollie, never a flip); and the rooftops stay optional,
+  so a player who never ollies off a roof's end skates the hill road as in act 1. Act 3's cloud floors (built Nov 6,
+  2026) left these defaults: you start 2.5 tiles up on a cloud; the layer ends 10 tiles before the gate and you drop
+  onto the top route's roofs for it; act 3 has no city sky beats, so the blimp, crane, billboard
+  and window-washer set pieces and the water tower's stash crate skip it; each girder staircase's first step is a big
+  ollie and a flip off the lip (act 2's roofs are an ollie); and the escape after act 3 is unchanged (matching the
+  escapes to the new act heights is its own step).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
