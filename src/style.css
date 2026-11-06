@@ -25,7 +25,10 @@ html, body {
   font-family: ui-rounded, 'Arial Black', system-ui, sans-serif;
   color: var(--ink);
 }
-#game { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+#game { width: 100%; height: 100%; display: block; image-rendering: pixelated; background: #000; }
+/* the skater over the HUD (src/render/skater-layer.ts): above #hud, under every card that comes after it */
+#skaterlayer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; image-rendering: pixelated; }
+#app.titled #skaterlayer { display: none; }
 #hud { position: absolute; inset: 0; pointer-events: none; }
 #hud > * { position: absolute; text-shadow: 2px 2px 0 var(--shadow); }
 #callout {
@@ -308,7 +311,7 @@ html, body {
   row-gap: calc(var(--u) * 0.9);
   align-items: start;
 }
-#logo { grid-row: 1 / 3; display: flex; flex-direction: column; align-items: flex-start; }
+#logo { grid-row: 1; display: flex; flex-direction: column; align-items: flex-start; }
 #logo .mark {
   font-size: calc(var(--u) * 3.6);
   line-height: 0.9;
@@ -422,7 +425,13 @@ html, body {
 #pausebtn svg { height: 55%; }
 #pausebtn:active { transform: skewX(-10deg) translateY(2px); box-shadow: 0 0 0 2px var(--pink), 1px 2px 0 2px #000; }
 
-#meters { grid-column: 2 / 4; display: flex; justify-content: space-between; gap: calc(var(--u) * 1.2); min-width: 0; padding-right: calc(var(--u) * 0.6); }
+/* split (zack, 2026-11-06): STOKE on the left edge and HEAT mirrored on the right, the same width, so they sit
+   evenly either side of the score and the trick names in the middle */
+#meters { grid-column: 1 / 4; display: flex; justify-content: space-between; gap: calc(var(--u) * 1.2); min-width: 0; }
+#stoke, #heat { width: 36vw; box-sizing: border-box; }
+#heat { flex-direction: row-reverse; }
+#stoke .meter, #heat .meter { flex: 1; }
+#stoke .meter b, #heat .meter b { flex: 1; width: auto; }
 #stoke, #heat {
   display: flex;
   align-items: center;
@@ -528,7 +537,9 @@ html, body {
 #app.noflash #gearbars .part.tick .icon { animation: none; }
 
 /* everything else that sits on the HUD */
-#boons { top: calc(var(--top-b, calc(var(--t) + var(--u) * 7.2)) + var(--u) * 0.6); left: var(--l); right: auto; max-width: 26vw; }
+/* held boons: a list going up from just above BOARD MODS (zack, 2026-11-06), newest at the top; --board-t is the
+   board box's distance from the bottom, measured (HudView) */
+#boons { top: auto; bottom: calc(var(--board-t, 120px) + var(--u) * 0.6); left: var(--l); right: auto; flex-direction: column-reverse; flex-wrap: nowrap; align-items: flex-start; gap: 3px; }
 /* the perf line only with ?debug; the seed is on the pause card */
 #debug { display: none; top: calc(var(--t) + var(--u) * 9); right: auto; left: 50%; bottom: auto; transform: translateX(-50%); white-space: nowrap; }
 #app.debug #debug { display: block; }
@@ -556,16 +567,13 @@ html, body {
   #combobox { position: absolute; top: calc(100% + var(--u) * 0.8); left: 50%; translate: -50% 0; }
   #ngbox { position: absolute; top: calc(100% + var(--u) * 6.6); left: 50%; translate: -50% 0; }
   #money { flex-direction: column; align-items: flex-start; gap: calc(var(--u) * 0.2); font-size: calc(var(--u) * 1.7); padding: calc(var(--u) * 0.3) calc(var(--u) * 0.9); }
-  #meters { grid-column: 1 / 4; flex-direction: column; gap: calc(var(--u) * 0.5); padding: 0 calc(var(--u) * 0.6); }
-  #stoke, #heat { justify-content: flex-start; }
-  #stoke .meter, #heat .meter { flex: 1; }
-  #stoke .meter b, #heat .meter b { flex: 1; width: auto; }
+  #stoke, #heat { width: calc(50% - var(--u) * 0.6); }
+  #stoke .badge span, #heat .cruiser { display: none; }
   #board { bottom: calc(var(--b) + var(--u) * 6.8); }
   #board .tag, #gear .tag { font-size: calc(var(--u) * 1.3); }
   #gear { left: var(--l); }
   #gearbars { justify-content: space-between; }
   #gearbars .part { flex: 1; }
-  #boons { max-width: 50vw; }
 }
 
 /* the pause card */
@@ -629,7 +637,7 @@ html, body {
 #app.calm #paused, #app.calm #stoke .badge svg { animation: none; }
 /* narrow landscape phones (iPhone SE): slimmer meters so Heat's stars fit */
 @media (max-width: 720px) {
-  #hud .meter b { width: calc(var(--u) * 0.8); }
+  #gearbars .meter b { width: calc(var(--u) * 0.8); }
   #stoke .tag, #heat .tag { font-size: calc(var(--u) * 1.5); }
   #stars { font-size: calc(var(--u) * 1.3); }
 }
@@ -1279,7 +1287,7 @@ html, body {
 .chip .ico { width: 1.9em; height: 1.4em; display: grid; place-items: center; }
 .chip .ico .pic, .chip .ico svg { max-width: 100%; max-height: 100%; }
 .chip em { font-style: normal; color: var(--yellow, #ffe23a); margin-left: 2px; }
-#boons .chip { font-size: 11px; }
+#boons .chip { font-size: 10px; }
 #paused .held .chip, #over .held .chip { font-size: 15px; }
 #pick .card .duo { font: 700 calc(var(--u) * 1)/1.2 system-ui, sans-serif; letter-spacing: 0; color: #ff7ad9; }
 /* an upright phone: size off the width, so the cards fill it instead of shrinking to the short side */
