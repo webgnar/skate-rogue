@@ -5,6 +5,7 @@ import { isGrip, type GripId } from '../board/grips';
 import { isDeck, isSkaterId, isUnlockId, type DeckId, type UnlockId } from './meta';
 import { cleanMissions, EMPTY_MISSIONS, type MissionSave } from './missions';
 import { cleanHeadStart, NO_HEAD_START, type HeadStart } from './dice';
+import { store } from '../net/portal';
 
 const KEY = 'gnar-run-save';
 
@@ -33,7 +34,7 @@ export const EMPTY_SAVE: Save = { best: 0, stoken: 0, wins: 0, unlocked: [], ska
 
 export function loadSave(): Save {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = store.getItem(KEY);
     const s = raw ? (JSON.parse(raw) as Partial<Save>) : {};
     return {
       best: Number(s.best) || 0,
@@ -58,7 +59,7 @@ export function loadSave(): Save {
 
 export function writeSave(save: Save): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(save));
+    store.setItem(KEY, JSON.stringify(save));
   } catch {
     //a private window: the run still works, it just isn't remembered
   }

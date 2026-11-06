@@ -2,6 +2,7 @@
 // frame stepping, and the momentum rule. The switches are saved in browser storage like the settings; the game
 // speed isn't, so a reload never comes back frozen.
 import { MOMENTUM, MOMENTUM_MODES, type MomentumMode } from '../physics/feel';
+import { ON_CRAZYGAMES } from '../net/portal';
 
 const KEY = 'gnar-run-dev';
 
@@ -21,6 +22,7 @@ const MESHY_KEY = 'gnarrun.meshy';
 
 // the skater models to load: the URL's ?models=new / ?models=old, else the DEV TOOLS switch
 export function meshyModels(params: URLSearchParams): boolean {
+  if (ON_CRAZYGAMES) return false; // the portal build ships only the shipped skaters (scripts/crazygames/pack.mjs)
   const m = params.get('models');
   return m === 'new' ? true : m === 'old' ? false : DEV.meshy;
 }
