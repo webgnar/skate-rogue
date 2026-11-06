@@ -1,12 +1,22 @@
 {
+  "air": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"yaw":0.1222,"hipX":-0.0758,"hipY":0.5112,"hipZ":-0.1222,"bend":0.4398,"nod":0.658,"armLRaise":1.1,"armLElbow":0.5,"armRRaise":0.95,"armRElbow":0.6,"footFX":0.2802,"footFZ":-0.0244,"footBX":-0.3277,"footBZ":-0.0374,"kneeFX":0.2585,"kneeBX":0.0064}},
+      {"t":0.2,"pose":{"yaw":0.1222,"hipX":-0.0758,"hipY":0.5112,"hipZ":-0.1222,"bend":0.4398,"nod":0.658,"armLRaise":1.1799,"armLFwd":-0.2547,"armLElbow":0.8987,"armRRaise":0.9696,"armRFwd":-0.1389,"armRElbow":0.9901,"footFX":0.2802,"footFZ":-0.0244,"footBX":-0.3277,"footBZ":-0.0374,"kneeFX":0.2585,"kneeBX":0.0064}},
+      {"t":0.5,"pose":{"yaw":0.1222,"hipX":-0.0758,"hipY":0.5112,"hipZ":-0.1222,"bend":0.4398,"nod":0.658,"armLRaise":1.1,"armLElbow":0.5,"armRRaise":0.95,"armRElbow":0.6,"footFX":0.2802,"footFZ":-0.0244,"footBX":-0.3277,"footBZ":-0.0374,"kneeFX":0.2585,"kneeBX":0.0064}},
+      {"t":0.7,"pose":{"yaw":0.1222,"hipX":-0.0758,"hipY":0.5112,"hipZ":-0.1222,"bend":0.4398,"nod":0.658,"armLRaise":1.1065,"armLFwd":0.0144,"armLElbow":0.4544,"armRRaise":0.9442,"armRFwd":-0.2956,"armRElbow":0.7043,"footFX":0.2802,"footFZ":-0.0244,"footBX":-0.3277,"footBZ":-0.0374,"kneeFX":0.2585,"kneeBX":0.0064}},
+      {"t":1,"pose":{"yaw":0.1222,"hipX":-0.0758,"hipY":0.5112,"hipZ":-0.1222,"bend":0.4398,"nod":0.658,"armLRaise":1.1,"armLElbow":0.5,"armRRaise":0.95,"armRElbow":0.6,"footFX":0.2802,"footFZ":-0.0244,"footBX":-0.3277,"footBZ":-0.0374,"kneeFX":0.2585,"kneeBX":0.0064}}
+    ]
+  },
   "boneless": {
     "loop": false,
     "keys": [
-      {"t":0,"pose":{"yaw":1.0821,"hipY":0.5359,"hipZ":-0.1793,"bend":0.8063,"head":-0.23,"nod":0.35,"armLRaise":0.3988,"armLFwd":0.234,"armLElbow":1.4661,"armLTwist":0.4616,"armRRaise":-0.0121,"armRFwd":0.4028,"armRElbow":0.4108,"footFX":0.2,"footFY":0.02,"footFZ":-0.22,"footFOn":0,"footFTurn":0.5,"footBX":-0.1853,"kneeBX":-0.2144,"kneeBY":0.1376}},
-      {"t":0.1333,"pose":{"yaw":-0.4,"hipX":0.1894,"hipY":0.72,"bend":0.9983,"head":1.25,"nod":0.5,"armLRaise":1.5,"armLFwd":0.2,"armLElbow":0.3,"armRRaise":-0.3902,"armRFwd":1.1062,"armRElbow":0,"footFX":0.18,"footFY":-0.0172,"footFZ":0.0086,"footFOn":0,"footFTurn":1.4713,"footFPitch":0.0559,"footBX":-0.4,"kneeFX":0.6792,"boardY":0.3607,"boardZ":0.2415,"boardPitch":0.2}},
-      {"t":0.24,"pose":{"yaw":0.192,"hipY":0.8909,"hipZ":-0.1793,"bend":0.6667,"head":0.66,"nod":0.5,"armLRaise":1.8514,"armLFwd":0.9051,"armLElbow":1.1572,"armLTwist":-0.4978,"armRRaise":-0.26,"armRFwd":0.71,"armRElbow":0,"footFX":-0.1922,"footFY":-0.041,"footFZ":-0.07,"footFOn":0,"footFTurn":0.3543,"footFPitch":0.9111,"footBX":-0.32,"kneeFX":0.7327,"kneeBX":-0.4511,"boardY":0.58,"boardZ":0.2457,"boardPitch":0.15}},
-      {"t":0.36,"pose":{"yaw":-0.4,"hipY":1.139,"hipZ":-0.1632,"bend":1.138,"head":1.25,"nod":0.4,"armLRaise":1.7862,"armLFwd":-0.716,"armLElbow":1.348,"armLTwist":-0.3045,"armRRaise":-0.3659,"armRFwd":1.0165,"armRElbow":0,"footFX":0.3,"footBX":-0.3,"kneeFY":0.2658,"boardY":0.57}},
-      {"t":0.48,"pose":{"hipY":1,"hipZ":-0.124,"bend":0.3,"nod":0.2,"armLRaise":0.2454,"armLFwd":-0.1941,"armLElbow":0.7253,"armRRaise":0.776,"armRFwd":0.1393,"armRElbow":1.2567,"armRTwist":-0.0846,"footFX":0.3,"footBX":-0.3,"boardY":0.3}},
+      {"t":0,"pose":{"yaw":-0.4,"hipY":0.5736,"hipZ":-0.4002,"bend":1.1,"nod":-0.1,"armLRaise":0.9,"armLFwd":0.3,"armLElbow":0.4,"armRRaise":-0.26,"armRFwd":0.71,"armRElbow":0,"footFX":0.2,"footFY":0.0111,"footFZ":-0.33,"footFOn":0,"footFTurn":0.0524,"footFPitch":0.7714,"footFToe":0.7191,"footBX":-0.4,"kneeFX":0.316}},
+      {"t":0.12,"pose":{"yaw":-0.4,"hipY":0.72,"hipZ":-0.4659,"bend":1.15,"nod":0,"armLRaise":1.5,"armLFwd":0.2,"armLElbow":0.3,"armRRaise":-0.26,"armRFwd":0.71,"armRElbow":0,"footFX":0.18,"footFY":-0.12,"footFZ":-0.22,"footFOn":0,"footFTurn":0.5,"footFPitch":0.5,"footBX":-0.4,"boardY":0.3,"boardPitch":0.2}},
+      {"t":0.24,"pose":{"yaw":-0.4,"hipY":0.96,"hipZ":-0.2874,"bend":1.2,"armLRaise":1.7,"armLFwd":0.1,"armLElbow":0.3,"armRRaise":-0.26,"armRFwd":0.71,"armRElbow":0,"footFX":0.3,"footFY":0.78,"footFZ":-0.1,"footFOn":0,"footFTurn":0.3,"footBX":-0.32,"boardY":0.58,"boardPitch":0.15}},
+      {"t":0.3667,"pose":{"yaw":-0.4,"hipY":0.96,"hipZ":-0.304,"bend":1.2,"armLRaise":1.6,"armLFwd":0.2,"armLElbow":0.3,"armRRaise":-0.26,"armRFwd":0.71,"armRElbow":0,"footFX":0.3,"footBX":-0.3,"boardY":0.57}},
+      {"t":0.5,"pose":{"hipY":1,"bend":0.3,"armLRaise":1.4,"armLElbow":0.3,"armRRaise":1.3,"armRElbow":0.35,"footFX":0.3,"footBX":-0.3,"boardY":0.3}},
       {"t":0.62,"pose":{"hipY":0.94,"bend":0.22,"armLRaise":1.2,"armRRaise":1.1,"boardY":0.08}}
     ]
   },
@@ -26,6 +36,35 @@
       {"t":0.25,"pose":{"hipY":0.88,"bend":-0.04,"head":-0.0219,"nod":0.2884,"headTilt":0.2011,"armLRaise":2.5,"armLFwd":0.35,"armLElbow":1,"armRRaise":2.5,"armRFwd":0.35,"armRElbow":1}},
       {"t":1,"pose":{"hipY":0.87,"bend":-0.02,"head":-0.8992,"nod":0.0512,"headTilt":0.3969,"armLRaise":2.45,"armLFwd":0.3,"armLElbow":1.05,"armRRaise":2.55,"armRFwd":0.35,"armRElbow":0.95}},
       {"t":1.75,"pose":{"hipY":0.88,"bend":-0.04,"head":0.6,"nod":0.35,"armLRaise":2.5,"armLFwd":0.35,"armLElbow":1,"armRRaise":2.5,"armRFwd":0.35,"armRElbow":1}}
+    ]
+  },
+  "crooked": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"hipX":0.12,"hipY":0.7914,"hipZ":-0.2118,"lean":0.1,"bend":0.2,"nod":0.3,"armLRaise":1.2789,"armLFwd":1.5581,"armLElbow":0.4834,"armLTwist":-1.503,"armRRaise":0.7943,"armRFwd":-1.4472,"armRElbow":0.829,"armRTwist":1.4339,"footFX":0.3,"footBX":-0.3,"boardY":-0.0588,"boardZ":0.02,"boardPivot":0.2536,"boardPitch":-0.6754,"boardRoll":0.0175,"boardYaw":0.8378}},
+      {"t":0.35,"pose":{"hipX":0.14,"hipY":0.86,"lean":0.12,"bend":0.22,"nod":0.3,"armLRaise":1.6,"armLElbow":0.3,"armRRaise":1.45,"armRElbow":0.25,"footFX":0.3,"footBX":-0.3,"boardY":-0.03,"boardZ":0.0926,"boardPivot":0.2536,"boardPitch":-0.44,"boardRoll":0.3,"boardYaw":0.35}},
+      {"t":0.7,"pose":{"hipX":0.12,"hipY":0.7914,"hipZ":-0.2118,"lean":0.1,"bend":0.2,"nod":0.3,"armLRaise":1.2789,"armLFwd":1.5581,"armLElbow":0.4834,"armLTwist":-1.503,"armRRaise":0.7943,"armRFwd":-1.4472,"armRElbow":0.829,"armRTwist":1.4339,"footFX":0.3,"footBX":-0.3,"boardY":-0.0588,"boardZ":0.02,"boardPivot":0.2536,"boardPitch":-0.6754,"boardRoll":0.0175,"boardYaw":0.8378}}
+    ]
+  },
+  "firecracker": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"hipX":-0.4285,"hipY":0.74,"lean":-0.12,"bend":0.22,"nod":0.35,"armLRaise":1.6,"armLFwd":0.3,"armLElbow":0.3,"armRRaise":1.45,"armRFwd":0.2,"armRElbow":0.35,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.36}},
+      {"t":0.0333,"pose":{"hipX":-0.3856,"hipY":0.7401,"lean":-0.1,"bend":0.28,"nod":0.4,"armLRaise":1.75,"armLFwd":0.35,"armLElbow":0.25,"armRRaise":1.6,"armRFwd":0.25,"armRElbow":0.3,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.24}},
+      {"t":0.0667,"pose":{"hipX":-0.4413,"hipY":0.76,"lean":-0.13,"bend":0.2,"nod":0.35,"armLRaise":1.5,"armLFwd":0.3,"armLElbow":0.35,"armRRaise":1.4,"armRFwd":0.2,"armRElbow":0.4,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.32}},
+      {"t":0.1,"pose":{"hipX":-0.3856,"hipY":0.7478,"lean":-0.1,"bend":0.28,"nod":0.4,"armLRaise":1.75,"armLFwd":0.35,"armLElbow":0.25,"armRRaise":1.6,"armRFwd":0.25,"armRElbow":0.3,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.24}},
+      {"t":0.1333,"pose":{"hipX":-0.4413,"hipY":0.76,"lean":-0.13,"bend":0.2,"nod":0.35,"armLRaise":1.5,"armLFwd":0.3,"armLElbow":0.35,"armRRaise":1.4,"armRFwd":0.2,"armRElbow":0.4,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.32}},
+      {"t":0.1667,"pose":{"hipX":-0.3856,"hipY":0.7362,"lean":-0.1,"bend":0.28,"nod":0.4,"armLRaise":1.75,"armLFwd":0.35,"armLElbow":0.25,"armRRaise":1.6,"armRFwd":0.25,"armRElbow":0.3,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.24}},
+      {"t":0.2,"pose":{"hipX":-0.4413,"hipY":0.76,"lean":-0.13,"bend":0.2,"nod":0.35,"armLRaise":1.5,"armLFwd":0.3,"armLElbow":0.35,"armRRaise":1.4,"armRFwd":0.2,"armRElbow":0.4,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.32}},
+      {"t":0.2333,"pose":{"hipX":-0.4285,"hipY":0.74,"lean":-0.12,"bend":0.22,"nod":0.35,"armLRaise":1.6,"armLFwd":0.3,"armLElbow":0.3,"armRRaise":1.45,"armRFwd":0.2,"armRElbow":0.35,"footFX":0.18,"footBX":-0.4,"boardY":-0.134,"boardPivot":-0.475,"boardPitch":0.36}}
+    ]
+  },
+  "fiveO": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"hipX":-0.2727,"hipY":0.8,"lean":-0.12,"bend":0.16,"nod":0.3,"armLRaise":1.5765,"armLFwd":0.1968,"armLElbow":0.302,"armRRaise":1.9378,"armRFwd":0.4646,"armRElbow":0.6295,"footFX":0.22,"footBX":-0.34,"boardY":-0.03,"boardPivot":-0.27,"boardPitch":0.6336}},
+      {"t":0.35,"pose":{"hipX":-0.16,"hipY":0.78,"lean":-0.15,"bend":0.18,"nod":0.3,"armLRaise":1.6,"armLElbow":0.35,"armRRaise":1.2,"armRElbow":0.35,"footFX":0.22,"footBX":-0.34,"boardY":-0.03,"boardPivot":-0.27,"boardPitch":0.24}},
+      {"t":0.7,"pose":{"hipX":-0.2727,"hipY":0.8,"lean":-0.12,"bend":0.16,"nod":0.3,"armLRaise":1.5765,"armLFwd":0.1968,"armLElbow":0.302,"armRRaise":1.9378,"armRFwd":0.4646,"armRElbow":0.6295,"footFX":0.22,"footBX":-0.34,"boardY":-0.03,"boardPivot":-0.27,"boardPitch":0.6336}}
     ]
   },
   "fsFlip": {
@@ -95,6 +134,34 @@
       {"t":0.3533,"pose":{"hipY":0.98,"nod":0.3,"armLRaise":1,"armRRaise":1.3,"footFX":0.28,"footBX":-0.28,"boardY":0.26,"boardRoll":-6.2832}}
     ]
   },
+  "land": {
+    "loop": false,
+    "keys": [
+      {"t":0,"pose":{"hipY":0.84,"bend":0.2}},
+      {"t":0.1,"pose":{"hipX":-0.0337,"hipY":0.58,"hipZ":-0.133,"bend":0.34,"armLRaise":0.1984,"armLFwd":0.4473,"armLElbow":0.7666,"armRRaise":0.2547,"armRFwd":0.118,"armRElbow":0.8498,"footFX":0.285,"footBX":-0.228,"kneeBX":-0.0384}},
+      {"t":0.35,"pose":{"hipY":0.88}}
+    ]
+  },
+  "landBig": {
+    "loop": false,
+    "keys": [
+      {"t":0,"pose":{"hipY":0.82,"hipZ":-0.0819,"bend":0.25}},
+      {"t":0.1,"pose":{"hipY":0.48,"hipZ":-0.2215,"bend":0.52,"nod":0.35,"armLRaise":1.4,"armLFwd":0.4,"armLElbow":1,"armRRaise":1.3,"armRFwd":0.3,"armRElbow":0.95,"kneeBX":-0.1806}},
+      {"t":0.3,"pose":{"hipY":0.52,"hipZ":-0.1251,"bend":0.46,"nod":0.3,"armLRaise":1.1,"armLFwd":0.3,"armLElbow":0.9,"armRRaise":1,"armRFwd":0.25,"armRElbow":0.85}},
+      {"t":0.6,"pose":{"hipY":0.88}}
+    ]
+  },
+  "manual": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"hipX":-0.204,"hipY":0.9841,"lean":-0.1,"bend":0.14,"nod":0.25,"armLRaise":0.9686,"armLFwd":0.1786,"armLElbow":1.0541,"armRRaise":0.928,"armRFwd":-0.4295,"armRElbow":1.75,"armRTwist":0.2649,"footFX":0.2,"footFTurn":0.8901,"footBX":-0.3087,"footBZ":-0.0108,"footBTurn":0.5061,"kneeBX":0.1817,"boardY":-0.01,"boardPivot":-0.27,"boardPitch":0.2}},
+      {"t":0.2,"pose":{"hipX":-0.2134,"hipY":0.9503,"lean":-0.1106,"bend":0.147,"nod":0.25,"armLRaise":0.8224,"armLFwd":0.0985,"armLElbow":1.2482,"armRRaise":1.0045,"armRFwd":0.1318,"armRElbow":0.7267,"footFX":0.2,"footFTurn":0.7795,"footBX":-0.3154,"footBZ":-0.007,"footBTurn":0.4877,"kneeBX":0.2045,"boardY":-0.01,"boardPivot":-0.27,"boardPitch":0.2141}},
+      {"t":0.3667,"pose":{"hipX":-0.2235,"hipY":0.9492,"lean":-0.1219,"bend":0.1546,"nod":0.25,"armLRaise":2.2176,"armLFwd":-2.7389,"armLElbow":1.4384,"armLTwist":2.9332,"armRRaise":0.7947,"armRFwd":0.0587,"armRElbow":1.0237,"footFX":0.2,"footFTurn":0.6609,"footBX":-0.3226,"footBZ":-0.0029,"footBTurn":0.4679,"kneeBX":0.229,"boardY":-0.01,"boardPivot":-0.27,"boardPitch":0.2292}},
+      {"t":0.5,"pose":{"hipX":-0.2307,"hipY":0.9129,"lean":-0.13,"bend":0.16,"nod":0.25,"armLRaise":0.8949,"armLFwd":0.0599,"armLElbow":1.1554,"armLTwist":0.1359,"armRRaise":0.6446,"armRFwd":0.0063,"armRElbow":1.2361,"footFX":0.2,"footFTurn":0.576,"footBX":-0.3277,"footBTurn":0.4538,"kneeBX":0.2465,"boardY":-0.01,"boardPivot":-0.27,"boardPitch":0.24}},
+      {"t":0.6333,"pose":{"hipX":-0.226,"hipY":0.9254,"lean":-0.1247,"bend":0.1565,"nod":0.25,"armLRaise":0.7972,"armLFwd":-0.5503,"armLElbow":1.6764,"armLTwist":0.4237,"armRRaise":0.742,"armRFwd":0.0403,"armRElbow":1.0982,"footFX":0.2,"footFTurn":0.6311,"footBX":-0.3244,"footBZ":-0.0019,"footBTurn":0.463,"kneeBX":0.2351,"boardY":-0.01,"boardPivot":-0.27,"boardPitch":0.233}},
+      {"t":1,"pose":{"hipX":-0.204,"hipY":0.9841,"lean":-0.1,"bend":0.14,"nod":0.25,"armLRaise":0.9686,"armLFwd":0.1786,"armLElbow":1.0541,"armRRaise":0.928,"armRFwd":-0.4295,"armRElbow":1.75,"armRTwist":0.2649,"footFX":0.2,"footFTurn":0.8901,"footBX":-0.3087,"footBZ":-0.0108,"footBTurn":0.5061,"kneeBX":0.1817,"boardY":-0.01,"boardPivot":-0.27,"boardPitch":0.2}}
+    ]
+  },
   "nollie": {
     "loop": false,
     "keys": [
@@ -107,6 +174,14 @@
       {"t":0.3333,"pose":{"hipX":-0.0579,"hipY":1.1284,"bend":0.3161,"nod":0.3258,"armLRaise":1.4145,"armLFwd":0.3307,"armLElbow":0.4355,"armRRaise":2.2323,"armRElbow":0.3,"footFX":0.2707,"footBX":-0.3625,"boardX":-0.1571,"boardY":0.5,"boardZ":0.02,"boardPivot":-0.085,"boardPitch":0.1693}},
       {"t":0.54,"pose":{"hipY":1.02,"bend":0.28,"armLRaise":1.55,"armLElbow":0.3,"armRRaise":1.6,"armRElbow":0.3,"footFX":0.3,"footBX":-0.1995,"boardY":0.32,"boardPitch":0.12}},
       {"t":0.68,"pose":{"hipY":0.94,"bend":0.22,"armLRaise":1.2,"armRRaise":1.1,"boardY":0.08}}
+    ]
+  },
+  "noseManual": {
+    "loop": true,
+    "keys": [
+      {"t":0,"pose":{"hipX":0.2649,"hipY":0.8782,"lean":0.12,"bend":0.2,"nod":0.35,"armLRaise":0.7805,"armLFwd":0.1358,"armLElbow":0.7466,"armLTwist":0.1035,"armRRaise":0.3202,"armRFwd":-0.2579,"armRElbow":0.9789,"footFX":0.34,"footFTurn":0.6283,"footBX":-0.2,"footBTurn":0.5585,"kneeBX":0.4382,"boardY":-0.01,"boardPivot":0.27,"boardPitch":-0.2}},
+      {"t":0.5,"pose":{"hipX":0.14,"hipY":0.8,"lean":0.15,"bend":0.22,"nod":0.35,"armLRaise":1.1,"armLFwd":0.35,"armRRaise":1.6,"armRFwd":0.15,"footFX":0.34,"footBX":-0.2,"kneeBX":0.4052,"boardY":-0.01,"boardPivot":0.27,"boardPitch":-0.24}},
+      {"t":1,"pose":{"hipX":0.2649,"hipY":0.8782,"lean":0.12,"bend":0.2,"nod":0.35,"armLRaise":0.7805,"armLFwd":0.1358,"armLElbow":0.7466,"armLTwist":0.1035,"armRRaise":0.3202,"armRFwd":-0.2579,"armRElbow":0.9789,"footFX":0.34,"footFTurn":0.6283,"footBX":-0.2,"footBTurn":0.5585,"kneeBX":0.4382,"boardY":-0.01,"boardPivot":0.27,"boardPitch":-0.2}}
     ]
   },
   "ollie": {
