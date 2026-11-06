@@ -38,7 +38,7 @@ function cableCarGeometry(): THREE.BufferGeometry {
     box(L * 0.6, 0.42, 1.34, 0, 1.12, 0, 0x2a3040), // its windows
     box(L + 0.1, 0.12, 1.4, 0, 1.52, 0, 0x5a3a2a), // the roof
     box(L * 0.55, 0.22, 0.9, 0, 1.69, 0, 0x5a3a2a), // the clerestory
-    box(L, 0.08, 1.33, 0, 0.74, 0, 0xd8b048), // the gold stripe
+    box(L + 0.02, 0.08, 1.33, 0, 0.74, 0, 0xd8b048), // the gold stripe, past the body's ends so they share no face
     box(0.3, 0.18, 1.2, -L / 2 + 0.05, 0.1, 0, 0x2a2228), // the running boards' ends and the wheels' trucks
     box(0.3, 0.18, 1.2, L / 2 - 0.05, 0.1, 0, 0x2a2228),
   ];

@@ -170,10 +170,15 @@ export class PickupView {
   }
 
   // a coin vanishes on the spot (the game bursts it into sparkles, Particles.coin) and its position comes back; a
-  // gem pops
+  // Stoken particle pops and its position comes back too (for Particles.stoken); a spin chip just pops
   take(index: number): THREE.Vector3 | null {
     const slot = this.slots[index];
     if (!slot) return null;
+    if (!slot.mesh) {
+      //a Stoken particle pops (swells away) and the game bursts it into blue sparkles (Particles.stoken)
+      slot.popT = POP_SECS;
+      return new THREE.Vector3(slot.x, slot.y + Math.sin(this.t * 3 + slot.x) * 0.05, COIN_Z);
+    }
     if (slot.mesh !== this.coins) {
       slot.popT = POP_SECS;
       return null;

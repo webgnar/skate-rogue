@@ -4,6 +4,7 @@
 // frames, gold, white-hot, gold, at 3x), flickering between frames and flipping like the old GameMaker o_grindspark.
 // Smash and wreck dust draws its dust puff (the atlas's fourth cell), tinted, turned a random way and swelling.
 // A collected coin bursts into gold pixel sparkles (cells five to nine: stars and crosses), twinkling between shapes.
+// Collected Stoken bursts into the same sparkles, bigger and recoloured blue (their gold turned to light, then tinted).
 // They draw in a second layer, `behind`: in the level's pass, so the skater and board always draw over them.
 import * as THREE from 'three';
 import { ParticlePool } from './particle-pool';
@@ -90,7 +91,9 @@ const fragment = /* glsl */ `
       uv += 0.5;
       vec4 s = texture2D(uSparks, vec2((vSprite + uv.x) / ${ATLAS_CELLS}.0, 1.0 - uv.y));
       if (s.a < 0.5) discard;
-      gl_FragColor = vec4(s.rgb * vColor, vAlpha);
+      // ink 2: recolour the gold frame (its brightness, tinted), so a sparkle can come in any colour
+      vec3 rgb = vInk > 1.5 ? vec3(min(1.0, dot(s.rgb, vec3(0.3, 0.59, 0.11)) * 1.35)) * vColor : s.rgb * vColor;
+      gl_FragColor = vec4(rgb, vAlpha);
       return;
     }
     vec2 e = abs(gl_PointCoord - 0.5);
@@ -105,6 +108,17 @@ const SPARK = [
   [1, 0.93, 0.45],
   [1, 0.72, 0.2],
   [1, 0.5, 0.15],
+];
+// a Stoken pickup's sparkles: the particle's electron cyan to ice blue; and its loose pixels, blue to violet
+const STOKEN_SPARKLE = [
+  [0.35, 0.85, 1],
+  [0.5, 0.75, 1],
+  [0.3, 0.55, 1],
+];
+const STOKEN_BITS = [
+  [0.55, 0.95, 1],
+  [0.4, 0.6, 1],
+  [0.75, 0.5, 1],
 ];
 const DUST = [
   [0.78, 0.74, 0.7],
@@ -398,6 +412,39 @@ export class Particles {
       p.vy[i] = Math.sin(a) * sp + 0.4;
       p.grav[i] = 4;
       p.drag[i] = 4;
+      this.under(i);
+    }
+  }
+
+  // Stoken collected: a bigger burst than a coin's, in blue-white sparkles (the coin's frames recoloured) flung
+  // further, with blue and violet pixels, like the particle's electrons and shell flying apart
+  stoken(x: number, y: number, z: number): void {
+    const p = this.pool;
+    const n = FX.tier === 'low' ? 7 : 13;
+    const a0 = Math.random() * Math.PI * 2;
+    for (let k = 0; k < n; k++) {
+      const a = a0 + (k / n) * Math.PI * 2 + rand(-0.2, 0.2);
+      const sp = rand(2.6, 4.6);
+      const i = this.spawn(x, y, z + 0.05, rand(0.55, 0.85), pick(STOKEN_SPARKLE), rand(0.8, 1.1), 0.2, 1, 0.55, false);
+      this.ink.setX(i, 2);
+      p.vx[i] = Math.cos(a) * sp;
+      p.vy[i] = Math.sin(a) * sp + 0.6;
+      p.vz[i] = rand(-0.3, 0.3);
+      p.grav[i] = 2.5;
+      p.drag[i] = 4.5;
+      this.cycle[i] = SPARKLE;
+      this.frame0[i] = Math.floor(Math.random() * 8);
+      this.fps[i] = rand(10, 16);
+      this.under(i);
+    }
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = rand(1, 3);
+      const i = this.spawn(x, y, z + 0.05, rand(0.3, 0.55), pick(STOKEN_BITS), rand(0.08, 0.12), 0.03, 1, 0.4, false);
+      p.vx[i] = Math.cos(a) * sp;
+      p.vy[i] = Math.sin(a) * sp + 0.4;
+      p.grav[i] = 3;
+      p.drag[i] = 3.5;
       this.under(i);
     }
   }

@@ -75,7 +75,7 @@ describe('rig poses', () => {
   it('after a shove-it the feet land where they were, on the other ends of the board', () => {
     for (const name of ['shuv1', 'fsShuv', 'hardflip', 'varial', 'varialHeel']) {
       const p = sample(CLIPS[name], clipLength(CLIPS[name]));
-      expect(Math.abs(Math.abs(p.boardYaw) - Math.PI), name).toBeLessThan(1e-6);
+      expect(Math.abs(Math.abs(p.boardYaw) - Math.PI), name).toBeLessThan(1e-4); // the editor saves 4 decimals
       expect(footTarget(p, true).x, name).toBeGreaterThan(0.2);
       expect(footTarget(p, false).x, name).toBeLessThan(-0.2);
     }
@@ -163,7 +163,7 @@ describe('rig poses', () => {
 
   it('nollie: the ollie popped off the nose, with a fakie ollie twin; nose clips pop out with it', () => {
     const o = sample(CLIPS.ollie, 0.27);
-    const n = sample(CLIPS.nollie, 0.27);
+    const n = sample(CODE_CLIPS.nollie, 0.27); // the nollie made from the ollie (zack keys his own in ?editor)
     expect(n.boardPitch).toBeCloseTo(-o.boardPitch, 5);
     expect(n.boardPivot).toBeCloseTo(-o.boardPivot, 5);
     expect(n.footFX).toBeCloseTo(-o.footBX, 5);

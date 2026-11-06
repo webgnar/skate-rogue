@@ -37,7 +37,7 @@ export const SPIN: Record<TrickId, 0 | 180> = {
 // board isn't under you (a slam). tests/feel.test.ts checks these against the clips.
 export const TRICK_CATCH: Record<TrickId, number> = {
   kickflip: 0.32,
-  heelflip: 0.33,
+  heelflip: 0.3333, // zack keyed it in ?editor, which snaps to 30 fps frames
   shuv1: 0.28,
   shuv2: 0.32,
   bs180: 0.36,

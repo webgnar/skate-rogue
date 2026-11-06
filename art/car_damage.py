@@ -19,6 +19,7 @@
 # function of position, so the separate pieces of a car (body, glass, trim) that share a corner move together and
 # no seams open up.
 import math
+import random
 
 import bpy
 import bmesh
@@ -27,7 +28,7 @@ from mathutils import Vector, noise
 WHEEL = {'tire', 'rim', 'darkrim'}
 LIT = {'lamp', 'tail', 'accent', 'sign', 'badge'}
 SHAPE = False
-EXTRA = {'crackGlass': 0x7D90A6, 'scrape': 0x9EA2AA, 'soot': 0x2B2724}
+EXTRA = {'crackGlass': 0x7D90A6, 'scrape': 0x9EA2AA, 'soot': 0x2B2724, 'crackLine': 0xE8F0F6}
 
 
 def smooth(t):
@@ -75,7 +76,7 @@ def damage(src, stage, mats, spec):
     ob.name = ob.data.name = f'{src.name}_{stage}'
     bpy.context.scene.collection.objects.link(ob)
     names = [m.name for m in ob.data.materials]
-    for k in ('crackGlass', 'scrape', 'soot'):
+    for k in ('crackGlass', 'scrape', 'soot', 'crackLine'):
         if k not in names:
             ob.data.materials.append(mats[k])
             names.append(k)
@@ -158,11 +159,122 @@ def damage(src, stage, mats, spec):
             elif stage == 'wreck' and patch > -0.25:
                 f.material_index = slot['soot' if patch > 0.1 else 'scrape']
     bm.normal_update()
+    cracks(bm, slot, stage, spec['seed'])
     bm.to_mesh(ob.data)
     bm.free()
     for p in ob.data.polygons:
         p.use_smooth = False
     return ob
+
+
+def _hull(pts):
+    pts = sorted(set(pts))
+    if len(pts) < 3:
+        return pts
+    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, hi = [], []
+    for p in pts:
+        while len(lo) > 1 and cross(lo[-2], lo[-1], p) <= 0: lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(hi) > 1 and cross(hi[-2], hi[-1], p) <= 0: hi.pop()
+        hi.append(p)
+    return lo[:-1] + hi[:-1]
+
+
+def _inside(hull, p):
+    n = len(hull)
+    for i in range(n):
+        a, b = hull[i], hull[(i + 1) % n]
+        if (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]) < 0:
+            return False
+    return True
+
+
+def cracks(bm, slot, stage, seed):
+    """Crack lines over the cracked glass (zack, 2026-11-05: "make the gray windows have like crack lines in them"):
+    each pane (crackGlass faces joined edge to edge, facing one way) gets a star of jagged light lines from an impact
+    point out to its frame, with a few branches, and a spider-web ring once it's busted. The lines are thin flat
+    strips laid a hair over the glass: the car's shape doesn't change."""
+    cg = slot['crackGlass']
+    line = slot['crackLine']
+    todo = [f for f in bm.faces if f.material_index == cg]
+    seen = set()
+    panes = []
+    for f in todo:
+        if f in seen: continue
+        pane, stack = [], [f]
+        seen.add(f)
+        while stack:
+            g = stack.pop()
+            pane.append(g)
+            for e in g.edges:
+                for h in e.link_faces:
+                    if h not in seen and h.material_index == cg and h.normal.dot(f.normal) > 0.97:
+                        seen.add(h)
+                        stack.append(h)
+        panes.append(pane)
+    for pi, pane in enumerate(panes):
+        rng = random.Random(seed * 1000 + {'dent': 1, 'bust': 2, 'wreck': 3}[stage] * 100 + pi)
+        n = sum((f.normal * f.calc_area() for f in pane), Vector()).normalized()
+        u = n.cross(Vector((0, 0, 1)))
+        if u.length < 0.3: u = n.cross(Vector((1, 0, 0)))
+        u.normalize()
+        v = n.cross(u).normalized()
+        verts = list({x for f in pane for x in f.verts})
+        o = sum((x.co for x in verts), Vector()) / len(verts)
+        hull = _hull([(round((x.co - o).dot(u), 5), round((x.co - o).dot(v), 5)) for x in verts])
+        if len(hull) < 3: continue
+        # pull the hull in off the frame
+        cx = sum(p[0] for p in hull) / len(hull); cy = sum(p[1] for p in hull) / len(hull)
+        hull = [(cx + (p[0] - cx) * 0.9, cy + (p[1] - cy) * 0.9) for p in hull]
+        size = max(math.hypot(p[0] - cx, p[1] - cy) for p in hull)
+        if size < 0.08: continue
+        lift = n * 0.005
+        w = 0.013 + 0.005 * min(1.0, size)
+        def to3(p):
+            return o + u * p[0] + v * p[1] + lift
+        def strip(a, b, width):
+            d = (b[0] - a[0], b[1] - a[1])
+            ln = math.hypot(*d)
+            if ln < 1e-4: return
+            s_ = (-d[1] / ln * width / 2, d[0] / ln * width / 2)
+            q = [bm.verts.new(to3((a[0] + s_[0], a[1] + s_[1]))), bm.verts.new(to3((b[0] + s_[0], b[1] + s_[1]))),
+                 bm.verts.new(to3((b[0] - s_[0], b[1] - s_[1]))), bm.verts.new(to3((a[0] - s_[0], a[1] - s_[1])))]
+            face = bm.faces.new(q)
+            face.material_index = line
+            face.normal_update()
+            if face.normal.dot(n) < 0: face.normal_flip()
+        def ray(start, ang, reach, width, steps):
+            pts = [start]
+            p = start
+            for _ in range(steps):
+                ang += rng.uniform(-0.45, 0.45)
+                seg = reach / steps * rng.uniform(0.7, 1.3)
+                q = (p[0] + math.cos(ang) * seg, p[1] + math.sin(ang) * seg)
+                if not _inside(hull, q): break
+                strip(p, q, width)
+                pts.append(q)
+                p = q
+            return pts
+        # the impact point, somewhere in the middle of the pane
+        k = rng.uniform(0.0, 0.35)
+        h = hull[rng.randrange(len(hull))]
+        imp = (cx + (h[0] - cx) * k, cy + (h[1] - cy) * k)
+        count = {'dent': 6, 'bust': 8, 'wreck': 9}[stage]
+        arms = []
+        for i in range(count):
+            ang = i * 2 * math.pi / count + rng.uniform(-0.3, 0.3)
+            arm = ray(imp, ang, size * 1.2, w, 5)
+            arms.append(arm)
+            if len(arm) > 2 and rng.random() < 0.6:  # a branch off the arm
+                b = arm[rng.randrange(1, len(arm) - 1)]
+                ray(b, ang + rng.choice((-1, 1)) * rng.uniform(0.5, 0.9), size * 0.5, w * 0.8, 3)
+        if stage != 'dent':  # the web: a ring joining the arms part way out
+            for r in (1, 2) if stage == 'wreck' else (1,):
+                ring = [a[min(r, len(a) - 1)] for a in arms if len(a) > 1]
+                for i in range(len(ring)):
+                    strip(ring[i], ring[(i + 1) % len(ring)], w * 0.8)
 
 
 def variants(src, mats, spec):
