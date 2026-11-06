@@ -7,6 +7,10 @@ npm run dev
 # open http://localhost:5173/?editor          (or ?editor&clip=kickflip, ?editor&skater=roxy)
 ```
 
+The editor shows **Webster** (the hero, the skater on the title screen) unless `?skater=` picks another
+(`lou-gnar`, `keanu`, `roxy`, `goldie`). Every skater shares Lou's rig and plays the same clips, so a key saved on
+Webster plays the same on all of them.
+
 ## Posing
 
 - **Pick a clip** at the top left. `air` is the one that plays after every air trick (and off drops) until you land;

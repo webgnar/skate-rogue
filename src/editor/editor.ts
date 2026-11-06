@@ -174,7 +174,9 @@ export async function startEditor(base: string): Promise<void> {
   document.getElementById('app')?.remove();
   document.title = 'Skate Escape · animation editor';
   const params = new URLSearchParams(location.search);
-  const skater = params.get('skater');
+  // Webster (the hero, the one on the title screen) unless ?skater= picks another
+  const urlSkater = params.get('skater');
+  const skater = isSkater(urlSkater) ? urlSkater : 'webster';
 
   // ---------- state ----------
   let saved = { ...(savedEdits as Record<string, Clip>) }; // what clip-edits.json holds
@@ -329,12 +331,12 @@ export async function startEditor(base: string): Promise<void> {
   // the same models as the game (?models=new / old, else the DEV TOOLS switch)
   loadDev();
   const meshy = meshyModels(params);
-  const rig = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar', meshy);
+  const rig = await SkaterRig.create(base, skater, meshy);
   inkify(rig.mesh, { toon: false });
   if (params.has('debug')) Object.assign(window, { editorRig: rig });
   scene.add(rig.mesh);
   // the ghost: the same rig, see-through, showing the key before the playhead
-  const ghost = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar', meshy);
+  const ghost = await SkaterRig.create(base, skater, meshy);
   ghost.mesh.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
     const mats = [o.material].flat().map((m: THREE.Material) => {
