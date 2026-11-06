@@ -630,6 +630,7 @@ export class Skater {
         if (ramp && ramp !== this.surface) this.surface = ramp;
       }
       if (this.surface?.y1 !== undefined && this.supported()) this.y = surfaceY(this.surface, this.x);
+      this.ghostOnto();
       //ground under the middle of the board first, then a truck still on the edge holds you
       if (!this.underFeet() && !this.rollOnto() && !this.supported()) {
         //rolled off the edge: fall, keeping both jumps (QFS); a slope throws you along its angle (bank kick)
@@ -710,6 +711,31 @@ export class Skater {
         this.crumbling.delete(ruin);
         this.gone.add(ruin);
       }
+    }
+  }
+
+  // Ghost Rail (and Sky Line): the ghost is a flat bar in thin air, so ground rising up through it (an embankment, a
+  // bank, the foot of a ledge) would let you grind on inside the hill and drop out under it (zack, 2026-11-06: died
+  // after the ghost carried him through a slanted brick embankment). Ground that comes up to the bar takes over: you
+  // roll on up the slope, and the ghost is gone.
+  private ghostOnto(): void {
+    const g = this.ghost;
+    if (this.mode !== 'grind' || !g || this.surface !== g) return;
+    //how far a slope can climb past the bar in one step, plus the usual 8 px of a step up
+    for (const s of this.level.surfaces) {
+      if (s.kind === 'rail' || this.x < s.x0 || this.x > s.x1 || this.gone.has(s)) continue;
+      const sy = surfaceY(s, this.x);
+      const reach = 8 + Math.abs(surfaceSlope(s) * this.hsp);
+      if (sy > this.y + 0.5 || sy < this.y - reach) continue;
+      this.carry = Math.max(this.carry, Math.abs(this.hsp));
+      this.y = sy;
+      this.surface = s;
+      this.ghost = null;
+      this.onRailT = 0;
+      this.spare = 0;
+      this.mode = 'roll';
+      if (s.kind === 'stairs') this.intoStairs(s);
+      return;
     }
   }
 
