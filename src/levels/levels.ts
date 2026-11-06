@@ -12,6 +12,8 @@ import { SAVED_EDITS, floorEdit, useLevelEdits, type FloorEdit, type LevelEdits 
 import { buildFloor, type FloorOptions } from '../gen/descent';
 import { validatedFloor } from '../gen/validate';
 import { floorTwist } from '../gen/twists';
+import { actOf } from '../gen/escape';
+import { actGravity } from '../physics/feel';
 import { PIECES } from '../gen/pieces';
 import { FloorSim } from '../sim/floor';
 import { Pilot } from '../bot/pilot';
@@ -239,6 +241,7 @@ export function startLevels(): void {
     short: r.kind === 'stash',
     twist: floorTwist(seed, f),
     hills: true,
+    gravity: actGravity(actOf(f)), // the act's, as in the game (src/run/floor-level.ts)
   });
 
   // ---------- page ----------
