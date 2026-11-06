@@ -940,11 +940,16 @@ Oct 30), each worn by the thing it takes the beating from:
   and Shoe Sponsor does the same for the shoes (about 58).
 - **Supply pickups on long routes** (zack, Nov 6, 2026) **(not in the build yet):** once routes get longer, a
   single-part replacement lies along the way now and then: a new deck, a pair of shoes, a set of wheels, bearings
-  or trucks, ridden through like a coin and fitted on the spot (that part back to 100). Defaults until tuned: from
-  act 3 on, at most one per floor, more likely on the longer routes (the sewer and sky routes, long hills), placed on
-  the harder line so reaching it is a choice, and the part is whichever of yours is most worn when you grab it
-  (the pickup shows a plain gear crate until then). Open: whether it's always the most-worn part or a fixed part
-  you can see from afar, and how rare.
+  or trucks, ridden through like a coin and fitted on the spot (that part back to 100).
+  - **A fixed part you can see:** each pickup is one part, shown from afar as that part's own model spinning in
+    the air, so you know what it is and decide whether to go for it.
+  - **Rare, and only when you need it:** a part's chance to spawn builds up the longer that part has been busted
+    (at 0, or under the busted line of 15) and is none while it's in good shape, so good gear never sees one. The
+    clock resets when the part is replaced (shop, pickup). A part you've ridden busted for a long time is the most
+    likely to turn up.
+  - Defaults until tuned: the chance builds from 0 to about one pickup a floor over a floor's worth of riding busted
+    (~60 s), at most one pickup on screen at a time, placed on the harder line (more often on the longer routes:
+    sewer, sky, long hills) so reaching it takes some skating.
 - **Later:** decks from the meta tree can wear slower (a "pro deck" stat), and boons can play with wear (a curse
   that wears gear twice as fast for a big effect, or a LUCK boon that repairs a part on each floor clear).
 
