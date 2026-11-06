@@ -75,8 +75,9 @@ What it means for the game:
   The sleepwalkers are the AI's eyes: pedestrians and cops on foot who stop, stare and point you out to the cameras.
 - **Caught is being dragged back down to the street. Winning is the beam of light**: the board floats up, and the
   city goes dark and small below. Endless is just how high you can get.
-- **The ship is the home between runs** (direction, not built: the meta is still menus). The crew you've unlocked
-  are aboard; Stoken is the fare, and a failed run still sends its Stoken up.
+- **The ship is the home between runs** (built Nov 6, 2026, the climb's step e; see Meta progression, The ship
+  hub). The crew you've unlocked are aboard; Stoken is the fare and the ship's fuel, and a failed run still sends
+  its Stoken up.
 - **Three kinds of NPC**: the asleep (pedestrians, cops, clerks, all on their phones), the awake (the crew, the
   shopkeeper, whoever runs the underground spot) and the machine (cameras, billboards, chasers).
 
@@ -1033,6 +1034,20 @@ GRIND to start; FLOW, COOL and LUCK packs (15 to 25) add their boons and their r
 Duos (40). Spots: the daily run (20; one seed per UTC day, its own best). Biome starts and gnar mode are still to
 come. See docs/overnight-decisions.md.
 
+### The ship hub
+
+Built Nov 6, 2026 (the climb's step e; src/ship/). The run summary goes up over the inside of the Pleiadian ship's
+glass dome instead of the street. The crew built a DIY spot there from city scrap: a pallet quarter pipe, a rail
+that was a WEBSTER AVE street sign laid on two cinder blocks, cones, milk crates, and the Flock camera they pulled
+off its pole (NO SIGNAL on its screen). In the middle stands the **Stoken core**, the Stoken particle the size of a
+room: its flame is the ship's fuel and burns bigger the more Stoken you've banked (full at 300). Earth hangs outside
+the glass. Every skater you've unlocked is aboard, dancing to the title music's beat, the one you ride out front
+twirling their board; the ones still locked stand as dark silhouettes, heads down, still asleep. Opening UNLOCKS
+moves the camera in on the crew, and a skater bought there wakes up in their spot. It's cosmetic only: the summary,
+the dice, UNLOCKS, the daily run, the scores and the Gnar levels are all as they were. The skaters' models are the
+ones the game already ships; they load in the background a few seconds into the first run (before then the summary
+shows over the street, as it used to). `?ship` shows the hub on its own (`?ship=crew` framed on the crew).
+
 Small permanent stat buffs are kept rare and capped (for example Heat starts 10% lower, a free reroll per run), so
 skill and builds stay the point, not grinding the tree. Unlocking is mostly *more variety*, not *more power*.
 
@@ -1296,7 +1311,7 @@ this is the plan, with the intro and the ending storyboarded below.)
 | 2 | **Act breaks** | 3-5 s | After each act's escape set piece, the first time you clear that act | The hunt gets bigger: act 1's cruisers radio ahead, the chopper lifts off, the drones wake up, the gunships rise to the ceiling. Plays before the boon pick, while the game is already between floors. |
 | 3 | **A new route** | ~2 s | The first time you ever drop into the sky or the sewer route | A hint of what's down there: the camera tilts up into the cloud layer, or down into the dark of the storm drain with a drip and a rat. The sim holds still while it plays, so you never lose a line to it. |
 | 4 | **A new hunter** | 2-3 s | The first time each chaser shows up: the cruiser, the chopper, the drone swarm, the guards, the flood wave, the gunships | A quick reveal of the new threat (the chopper's spotlight swings onto you, the flood roars down the tunnel). It plays before the danger starts (at a floor or set-piece start), never in the middle of a line, so it can't cost you a slam. |
-| 5 | **Chapter 1 ending** | ~40 s | The first time you beat act 5 | The payoff: up out of the city into the beam, the crew aboard the ship, and the tease for Chapter 2. Storyboard below. Later wins get a 5 s version (the beam-up beat) and go straight to the summary. |
+| 5 | **Chapter 1 ending** | ~40 s | The first time you beat act 5 | The payoff: up out of the city into the beam, the crew aboard the ship, and the tease for Chapter 2. Storyboard below. Later wins get a 5 s version (the beam-up beat) and go straight to the summary. Built Nov 6, 2026 (below). |
 | 6 | **The shopkeeper** (optional) | ~3 s | Your first visit to the skate shop | A quick hello from whoever runs the shop, one caption, then the shop as normal. |
 
 ### Storyboard: the first-launch intro (~15 s)
@@ -1328,6 +1343,19 @@ is the skaters you've unlocked, with the rest as silhouettes still to be woken.
 | 6 | 27-33 s | The skater looks out the window: the city glows under its clouds, small and far. | The far-off hum of the city, through glass. | "Everyone down there is still asleep." |
 | 7 | 33-38 s | The tease: the ship turns away from Earth. Out the window, the Pleiades, seven stars in a tight cluster, grow brighter, and the stars stretch into lines as it jumps. | The hum rises, then a soft boom. | "Next stop: the stars." |
 | 8 | 38-40 s | Title card: CHAPTER 1 COMPLETE, then the Chapter 2 card (its store page once it exists, COMING SOON until then). Then the run summary, with Endless unlocked. | The music resolves. | (none) |
+
+Built Nov 6, 2026 (src/ship/ending-scene.ts), from this storyboard, in 40 s: the beam lifts the rider over the
+clouds while the Flock camera on the tallest tower tilts up, sparks and goes NO SIGNAL (0-5 s); looking down, the
+drones, the cruiser on its jets and the falling rocket stall at the cloud tops and sink back (5-10 s); up into the
+black as the stars come out and the ship fills the frame, into a white-out (10-16 s); inside the ship hub, the rider
+drops in among the crew (16-23 s); over their shoulder to Earth through the glass (23-29 s); the ship turns, the
+Pleiades come round, the stars stretch into lines and it jumps (29-35 s); then the two title cards (35-40 s), and on
+to the street dice and the summary. A tap skips to the title cards; a tap there ends it. It plays in full once (the
+save remembers it); every win after gets the 5 s version (the beam lift and up into the ship). `?ending` plays it
+(`?ending=short` the 5 s one). What's not in it yet **(not in the build yet)**: shot 1's ollie off the last blimp
+(it starts in the beam), the crew throwing a drink, the board clattering, its own sound and music (it keeps the
+run's), and "Endless unlocked" on the summary. Shots 1 and 2 are folded into one, and the cruiser's lights hang at
+the cloud tops with the drones (shot 3).
 
 ## UI
 
@@ -1435,7 +1463,8 @@ thread of its own:
   the street, 4.4 tiles for 1.6 s in act 4 and 10.5 tiles for 3.7 s in act 5. Endless past act 5 stays at 0.3x.
 - d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the gunship line, the beam-up finale.
   Built Nov 6, 2026 (see How a run ends).
-- e. **The ship as the hub** between runs, last; it's cosmetic for the menus.
+- e. **The ship as the hub** between runs, last; it's cosmetic for the menus. Built Nov 6, 2026 (see Meta
+  progression, The ship hub), with the Chapter 1 ending (see Cutscenes).
 
 **Ship**
 10. A performance pass for small iPhones.
@@ -1476,8 +1505,11 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
   someone awake in another city).
 - **The climb** (fantasy decided Nov 6, 2026, see The fantasy): the act heights are a default to check with zack;
-  where gravity starts to drop and how far it goes are numbers to tune; the ship as the between-runs hub is not
-  designed or built. Act 2's rooftop floors
+  where gravity starts to drop and how far it goes are numbers to tune. The ship hub (built Nov 6, 2026) left these
+  defaults: it shows behind the run summary after every run, caught or not (Stoken goes up either way); the locked
+  skaters stand aboard as silhouettes (so you can see who's still to wake); the core's flame is full at 300 banked
+  Stoken; the hub doesn't show behind the street dice or on the title screen; and nothing in it is tappable (the
+  menus stay the menus). Act 2's rooftop floors
   (built Nov 6, 2026) left three calls open, with these defaults: you start 2.5 tiles up on the roof and each later
   stretch's roof is half a tile over its crest (an ollie, never a flip); and the rooftops stay optional,
   so a player who never ollies off a roof's end skates the hill road as in act 1. Act 3's cloud floors (built Nov 6,

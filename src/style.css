@@ -2044,3 +2044,33 @@ html, body {
   #paused .opts .settings { width: min(700px, 100%); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
   #paused .boardview { max-width: 340px; }
 }
+
+/* the ship hub behind the run summary (src/ship/hub-scene.ts): the run's HUD and skater layer step aside for it */
+#app.aboard #hud, #app.aboard #skaterlayer { display: none; }
+/* dark down the middle where the summary reads, clear out to the sides where the crew stand */
+#app.aboard #over { background: linear-gradient(90deg, rgba(18, 12, 30, 0.2), rgba(18, 12, 30, 0.78) 32%, rgba(18, 12, 30, 0.78) 68%, rgba(18, 12, 30, 0.2)); }
+@media (max-aspect-ratio: 1/1) { #app.aboard #over { background: linear-gradient(180deg, rgba(18, 12, 30, 0.82), rgba(18, 12, 30, 0.6)); } }
+/* the unlocks screen lets the ship (in on the crew) glow through it, the summary under it out of the way */
+#app.aboard:has(#meta:not([hidden])) #over { visibility: hidden; }
+#app.aboard #meta { background-color: transparent; background-image:
+    radial-gradient(ellipse 45% 40% at 85% 0%, rgba(255, 47, 180, 0.3), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 24px),
+    linear-gradient(180deg, rgba(42, 28, 72, 0.88), rgba(26, 18, 48, 0.86) 60%, rgba(18, 12, 34, 0.9)); }
+/* the Chapter 1 ending (src/ship/ending-scene.ts): comic captions low on the frame, white-outs, the title card */
+#ending { position: absolute; inset: 0; pointer-events: none; font-family: 'Bangers', 'Arial Black', sans-serif; letter-spacing: 0.06em; z-index: 30; }
+#ending .flash { position: absolute; inset: 0; background: #fffaeb; opacity: 0; }
+#ending .cap {
+  position: absolute; left: 50%; bottom: max(9vh, calc(env(safe-area-inset-bottom) + 24px)); transform: translateX(-50%) rotate(-1.5deg);
+  max-width: min(86vw, 620px); padding: 8px 18px; background: #ffe23a; color: #120a16; border: 3px solid #120a16; box-shadow: 5px 5px 0 #120a16;
+  font-size: clamp(20px, 4.6vw, 32px); text-align: center; opacity: 0; transition: opacity 0.35s;
+}
+#ending .cap.on { opacity: 1; }
+#ending .endcard { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(6, 4, 14, 0.82); opacity: 0; transition: opacity 0.5s; }
+#ending .endcard b { display: block; text-align: center; -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 4px 4px 0 #000; }
+#ending .endcard .c1 { font-size: clamp(44px, 11vw, 92px); line-height: 0.95; color: #8cff3a; }
+#ending .endcard .c2, #ending .endcard .soon { display: none; }
+#ending .endcard[data-step='2'] .c1 { display: none; }
+#ending .endcard[data-step='2'] .c2 { display: block; font-size: clamp(40px, 10vw, 80px); color: #3ff0ff; }
+#ending .endcard[data-step='2'] .soon { display: block; font-size: clamp(24px, 6vw, 40px); color: #ff2fb4; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; }
+#ending .endcard.on { opacity: 1; }
+#ending .skip { position: absolute; right: max(14px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); font-size: 16px; color: #fff; opacity: 0.7; text-shadow: 2px 2px 0 #000; }

@@ -324,6 +324,13 @@ export class Game {
   private cloudStart = false; // ?clouds: each new floor starts up on its cloud layer (src/gen/clouds.ts)
   paused = false; // frozen by the pause button, Esc / P, or the page going hidden
   titleDraw: ((dt: number) => void) | null = null; // draws the title's own scene in place of the street (src/title)
+  // a cutscene drawn in place of the street (the Chapter 1 ending, src/ship/ending-scene.ts): taps go to it, the run
+  // waits for it
+  cinema: { frame(dt: number): void; tap(): void } | null = null;
+  // act 5 won: play the ending, then call done (main.ts makes it; null, or no ending ready: straight to the summary)
+  playEnding: ((done: () => void, full?: boolean) => { frame(dt: number): void; tap(): void } | null) | null = null;
+  // what's drawn behind the run summary in place of the street (the ship hub, src/ship/hub-scene.ts); false: not ready
+  backdrop: ((dt: number) => boolean) | null = null;
   titled = false; // held still under the title screen (src/ui/title.ts) until SKATE: the street drawn, the title music on
   sound: Sound | null = null; // set by main once the page is up
   private menuAt = 0;
@@ -841,6 +848,16 @@ export class Game {
     this.mission('act', act);
     if (act >= ACTS) {
       this.mission('escape');
+      //into the ship's beam: the ending, then the dice and the summary
+      const scene = this.autopilot ? null : this.playEnding?.(() => {
+        this.cinema = null;
+        this.endRun(performance.now(), false, true);
+      });
+      if (scene) {
+        this.openMenu('over', now); // nothing in the run moves while it plays
+        this.cinema = scene;
+        return;
+      }
       return this.endRun(now, false, true);
     }
     this.advance();
@@ -1383,6 +1400,13 @@ export class Game {
       else this.view.render();
       return;
     }
+    //a cutscene: a tap is its own (to skip), the run holds still behind it
+    if (this.cinema) {
+      if (this.input.takePress()) this.cinema.tap();
+      this.sound?.update({ mode: 'roll', speed: 0, heat: 0, skating: false, over: true, paused: false });
+      this.cinema?.frame(realDt);
+      return;
+    }
     //paused: the street holds its last frame and presses are dropped
     if (this.paused) {
       this.input.clear();
@@ -1600,7 +1624,8 @@ export class Game {
     this.view.close.update(realDt * this.timeScale * devSpeed(), this.skater.mode, CAM.closeUp && SETTINGS.closeUp && !FX.reduceMotion);
     this.view.follow(x, y, dt, realDt * this.timeScale * devSpeed());
     this.view.adapt(realDt * 1000);
-    this.view.render();
+    //behind the run summary: the ship, if it's ready (the street otherwise)
+    if (!(this.state === 'over' && this.backdrop?.(realDt))) this.view.render();
     this.perf(realDt);
     if (this.colDebug?.on) this.colDebug.draw(this.level, this.skater, this.view.camera, realDt, this.perfText, { x, y });
     this.updatePlaytest();
