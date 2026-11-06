@@ -4,24 +4,19 @@
 import type { BoonId, BoonType } from '../boons/defs';
 import { glyph, pic, type Glyph, type Pic } from './shop-art';
 
-const BY_TYPE: Record<BoonType, Pic> = { POP: 'pop', GRIND: 'grind', FLOW: 'wheel', COOL: 'cruiser', LUCK: 'stoken', STREET: 'car' };
+const BY_TYPE: Record<BoonType, Pic> = { POP: 'pop', GRIND: 'grind', FLOW: 'wheel', COOL: 'cruiser', LUCK: 'stoken' };
 
 const BOON_ART: Partial<Record<BoonId, [Pic, Glyph?]>> = {
   tripleThreat: ['pop', '+1'],
   bigPop: ['pop', 'up'],
-  pressureFlip: ['pop', 'waves'],
-  strongLegs: ['shoe', 'sparks'],
   railMagnet: ['grind', 'magnet'],
   grease: ['butter', 'speed'],
   railLaunch: ['grind', 'up'],
   ghostRail: ['grind', 'ghost'],
   newWheels: ['wheel', 'speed'],
-  bombHill: ['board', 'down'],
   butter: ['board', 'waves'],
-  slingshot: ['grind', 'right'],
   lowProfile: ['cruiser', 'down'],
   bubblePads: ['shoe', 'shield'],
-  stokenMagnet: ['stoken', 'magnet'],
   doubleStoken: ['stoken', '×2'],
   hustler: ['coin', '+1'],
   roofRider: ['bus', 'right'],
@@ -32,6 +27,7 @@ const BOON_ART: Partial<Record<BoonId, [Pic, Glyph?]>> = {
   skyLine: ['grind', 'ghost'],
   perpetualMotion: ['wheel', '∞'],
   fiberglassCore: ['deck', 'shield'],
+  shoeSponsor: ['shoe', 'shield'],
   ceramicBearings: ['bearing', 'shield'],
   classifiedUrethane: ['wheel', 'shield'],
 };

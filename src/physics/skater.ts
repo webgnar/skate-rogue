@@ -53,7 +53,6 @@ export class Skater {
   buffer = 0; // frames a press stays valid
   spinTap = false; // the buffered press came while a flip was still spinning: it can't become a dead flip
   impactT = 0; // frames left of the landing's impact: no ollie, and a press then is lost (Lou Gnar's LANDING state)
-  impactTaps = 0; // presses during this impact (Strong Legs: the second one ollies anyway)
   flipLow: number | null = null; // where the last flip was thrown, if it was on the way down (px), for a PERFECT
   airT = 0; // frames in this air, for how hard a flip pops
   topY = 0; // the highest point of this air (px; y points down), for how big the drop was
@@ -189,12 +188,10 @@ export class Skater {
     //the button: ollie from the ground (or just after leaving it), flip trick in the air
     if (this.mode !== 'roll') this.impactT = 0;
     if (this.impactT > 0) {
-      //Strong Legs: tapping again because nothing happened (zack, 2026-10-26) cuts the impact short and pops
-      if (input.pressed && this.mods.strongLegs && ++this.impactTaps >= 2) this.impactT = 0;
-      else {
-        this.buffer = 0;
-        this.impactT--;
-      }
+      //(Strong Legs, a second tap that cut this short, was cut on 2026-11-06: as every landing's rule it let a quick
+      //double tap off a high ledge reach the power line from below)
+      this.buffer = 0;
+      this.impactT--;
     }
     if (this.buffer > 0) {
       if (this.grounded || (this.mode === 'air' && this.coyote > 0)) this.ollie();
@@ -238,7 +235,6 @@ export class Skater {
     this.buffer = from.buffer;
     this.spinTap = from.spinTap;
     this.impactT = from.impactT;
-    this.impactTaps = from.impactTaps;
     this.topY = from.topY + dy;
     this.airT = from.airT;
     this.flipLow = from.flipLow === null ? null : from.flipLow + dy;
@@ -946,7 +942,6 @@ export class Skater {
       this.events.push({ type: 'land', impact, quality, ...(manual ? { manual, pad: this.stance } : { drop: tier.drop, lock, ...(perfectLand ? { perfect: true } : {}) }), ...(lined > 0 ? { lined } : {}), ...(spare >= 0 ? { spare } : {}), ...(flush >= 0 ? { flush } : {}), ...(lost > 0 ? { lost } : {}) });
       if (!s?.manual || quality === 'slam') {
         this.impactT = tier.frames;
-        this.impactTaps = 0;
       }
       if (quality === 'slam') this.slam();
     }

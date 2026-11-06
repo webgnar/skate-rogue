@@ -221,7 +221,7 @@ spot; gap challenge and Shredtoshi's mark come in a later update):
 
 | Node | What it is |
 | --- | --- |
-| **Boon street** | A normal floor; the reward is a boon pick of a shown type (POP, GRIND, FLOW, LUCK, COOL or STREET) |
+| **Boon street** | A normal floor; the reward is a boon pick of a shown type (POP, GRIND, FLOW, LUCK or COOL) |
 | **Cash street** | A normal floor with a big cash payout, for the shop |
 | **Hot street** (elite) | Rush-hour traffic, Heat starts at 30, and the reward is a rare boon or a duo boon |
 | **Skate shop** | No floor: spend cash on board mods, rerolls and a slot (the Noita Holy Mountain beat) |
@@ -410,6 +410,17 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
 | 4 | **Above the clouds:** blimps, thin air, the tops of the tallest towers, the stars coming out | 3 + escape | **The ceiling:** the AI's drones and gunships hold a line at the top of the sky; break through it on the blimps |
 | 5 | **Space:** low gravity, huge jumps, top speed; satellites, debris, the black | 3 + finale | **The beam-up:** the AI's last launch chases you; reach the Pleiadian ship's beam, and it jumps to the stars |
 
+- **Act 2's floors are rooftop floors** (built Nov 6, 2026, the climb's step a; level design only, the same kit and
+  physics; `ROOFTOPS` in src/gen/sky-beats.ts). Floors 4-6 start up on a rooftop deck 2.5 tiles over the hill's
+  run-up, so the act opens on the roofs and the street is somewhere you fall to. At the top of each cable car the
+  next stretch's first roof starts 2 tiles past the crest's lip, half a tile up: an ollie off the lip makes it, and
+  rolling off without one drops you onto the hill road under it. The act's sky recipes are roof after roof, with the
+  odd billboard, water tower, scaffold or set piece between. Over the street chases and the run to the gate the top
+  route's rooftops carry the line on, and the overpass past the gate is where it ends, so a good player starts on a
+  roof and ends on the overpass (the sky bot: up on the roofs most of each floor's first stretch, and through the
+  gate on the high road on about three floors in four). The cloud layer still sits over the roofs from floor 5 (the
+  sky route, the high way), and the hill road and the sewer under it are unchanged. Endless reuses acts 4 and 5, so it
+  never gets these floors.
 - Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
   by skating. They use the same traffic and Heat rules.
 - The Hive is dropped (zack, Nov 6, 2026). The acts' kits are the same fused city seen from higher up, not new
@@ -444,14 +455,10 @@ on every slam, and three close together catch you. See docs/overnight-decisions.
 
 ### 4. Boons for traffic and the chase
 
-The boon pool gets a sixth type, **STREET** (red), for traffic and the chase, and keeps the other five. New cards:
-
-| Boon | Type | Effect | Max |
-| --- | --- | --- | --- |
-| Roof Rider | STREET | Car and bus roofs grind like rails | 1 |
-
-Cut Nov 6, 2026 (see Boons, "The cut"): Slipstream, Hood Pop, Spoofed Plate, Jaywalker, Siren Song, Decoy and
-Ghost Mode. Roof Rider is the STREET card left.
+The boon pool had a sixth type, **STREET** (red), for traffic and the chase. Cut Nov 6, 2026 (see Boons, "The
+cut"): Slipstream, Hood Pop, Spoofed Plate, Jaywalker, Siren Song, Decoy and Ghost Mode. Its last card, **Roof
+Rider** (car and bus roofs grind like rails), moved to GRIND in the overlap pass the same day, and the STREET type
+and its meta pack went.
 
 ## Controls
 
@@ -768,30 +775,25 @@ SPEED to skate types:
 | **FLOW** | Cyan | Speed, momentum, landings, slopes |
 | **LUCK** | Green | Cash, Stoken, rerolls, shop prices |
 | **COOL** | Blue | Heat, slams, bails |
-| **STREET** | Red | Traffic: car-hops, roofs, near-misses (see Run structure) |
 
 ### Starting boon pool (draft)
 
-The first playable set (M1) is the six POP and six GRIND boons below; FLOW, LUCK, COOL and STREET come later.
+The pool as it stands after the overlap pass (Nov 6, 2026, below).
 
 | Boon | Type | Effect | Max |
 | --- | --- | --- | --- |
 | Triple Threat | POP | +1 jump (QFS Triple Jump) | 1 |
-| Big Pop | POP | +20% ollie height | 3 |
-| Mad Pop | POP | Keep holding after an ollie and gravity drops 30% after 0.25 s, so you float | 1 |
-| Strong Legs | POP | Normally a press during the landing's impact (350 ms) is lost. With this, a second tap during it ollies at once | 1 |
+| Big Pop | POP | +20% ollie height, and keep holding after an ollie and gravity drops 30% after 0.25 s, so you float (took in Mad Pop) | 3 |
 | Rail Magnet | GRIND | Rails pull you in from 48 px further away | 2 |
 | Ledge Butter | GRIND | +25% grind speed, minimum grind speed doubled | 2 |
-| Full Sail | GRIND | Ollieing off a rail adds your grind speed to the ollie height | 1 |
+| Full Sail | GRIND | Ollieing off a rail adds your grind speed to the ollie height, and riding off a rail's end launches ×1.5 (took in Slingshot) | 1 |
 | Sparky | GRIND | Grinding leaves sparks that make cars swerve out of the skate lane | 1 |
 | Ghost Rail | GRIND | Your last grind leaves a 2 s ghost rail behind you in the air | 1 |
+| Roof Rider | GRIND | Car and bus roofs grind like rails (was STREET's) | 1 |
 | New Wheels | FLOW | +20% base speed and +20% score (QFS New Wheels) | 2 |
-| Bomb Hill | FLOW | Flow speed bleeds off half as fast | 1 |
-| Butter | FLOW | Landing on flat ground keeps 100% of air speed | 1 |
-| Slingshot | FLOW | Curved-rail launches ×1.5 | 2 |
+| Butter | FLOW | Landing on flat ground keeps 100% of air speed, and flow speed bleeds off half as fast (took in Bomb Hill) | 1 |
 | Firecracker | FLOW | Roll into a stair set without popping and you ride it down in a manual, the tail clacking on each step, instead of slamming. Ollie out any time | 1 |
-| Stoken Magnet | LUCK | Pickups fly to you (QFS) | 1 |
-| Double Stoken | LUCK | 2× Stoken (QFS) | 1 |
+| Double Stoken | LUCK | 2× Stoken, and pickups fly to you from 3× as far (took in Stoken Magnet) | 1 |
 | Hustler | LUCK | +1 card on every boon pick | 1 |
 | Low Profile | COOL | Heat rises 25% slower (QFS Tough Skin) | 3 |
 | Bubble Pads | COOL | The first slam each floor costs no speed and no Heat (QFS Bubble Shield) | 2 |
@@ -810,7 +812,7 @@ less art too (NO BLOAT).
   Boost, Slam Stoke, Tuck and Roll.** Their code went with them (and the "Ride 2 slipstreams" mission). Butter
   stays: it's half of Perpetual Motion. The bot never holds a button, falls in a gap or runs Heat high, so it
   can't show what a skilled player gets from a card; that's a reason to keep the cut lean, not a verdict on every card.
-- **What's left:** 19 boons (POP 5, GRIND 4, FLOW 7, COOL 2, LUCK 3, STREET 1, counting the gear boons), 3 curses, 3
+- **What was left then:** 19 boons (POP 5, GRIND 4, FLOW 7, COOL 2, LUCK 3, STREET 1, counting the gear boons), 3 curses, 3
   duos: 25 cards, from 41. A boon street whose type has fewer cards left than the offer fills up from the other types.
 - **The gear boons** (one stack each, offered from floor 2's pick on, in every library whatever types the meta tree
   has opened):
@@ -818,10 +820,30 @@ less art too (NO BLOAT).
 | Boon | Type | Effect |
 | --- | --- | --- |
 | Fiberglass Core | POP | Your deck wears half as fast, and every new deck you buy |
+| Shoe Sponsor | POP | Your shoes wear half as fast, and every new pair you buy (zack, Nov 6: the shoes' card) |
 | Ceramic Bearings | FLOW | Your bearings wear half as fast, and every new set you buy |
 | Classified Urethane | FLOW | Your wheels wear half as fast, and every new set you buy |
 
   Trucks have none: they wear the least (zack). Half is a default (`GEAR_BOON_WEAR` in src/boons/mods.ts) to tune.
+
+### The overlap pass (Nov 6, 2026)
+
+zack, the same day: "i still feel like our boons are totally bloated". Several cards said the same thing, so each
+idea now lives on one card:
+
+- **Big Pop** took in **Mad Pop** (more air: higher ollies, and holding floats).
+- **Full Sail** took in **Slingshot** (leaving a rail launches you harder, more the faster you grind).
+- **Butter** took in **Bomb Hill** (keep your speed: land with your air speed, and extra speed fades half as fast).
+- **Double Stoken** took in **Stoken Magnet** (more Stoken: each counts twice, and pickups fly to you).
+- The three gear boons stay separate: zack wants gear wear to matter more than the other upgrades (the gear thread owns them).
+- **Roof Rider** moved to GRIND; STREET, a type with one card, went (and its meta pack). Roxy's first pick is GRIND.
+- **Strong Legs** was cut. The plan was to make its quick re-ollie every landing's rule, but then a double tap
+  off a high ledge reached the power line from below (the top route only lets you down onto it from the sky), so
+  landings keep the 350 ms impact for everyone.
+- The duos re-pair: **Perpetual Motion** is Butter + Full Sail. The board mod **Jump Refill** went (Double Pop is
+  the extra-jump effect).
+- **Left:** 18 boons (POP 4, GRIND 5, FLOW 5, COOL 2, LUCK 2, counting the four gear boons with Shoe Sponsor), 3 curses, 3 duos: 24 cards. The curses echo Big
+  Pop, New Wheels and Double Stoken on purpose: a curse is a strong version with a catch.
 
 ### Combos (duo boons)
 
@@ -830,7 +852,7 @@ boons and Noita's spell interactions. Examples:
 
 - **Full Sail + Big Pop → Rocket Grind:** ollie off a rail at max grind speed and you launch straight up, refilling all jumps at the top.
 - **Ghost Rail + Triple Threat → Sky Line:** every air trick leaves a short ghost rail under you.
-- **Butter + Slingshot → Perpetual Motion:** flow speed never decays.
+- **Butter + Full Sail → Perpetual Motion:** flow speed never decays (Butter + Slingshot until Nov 6, 2026).
 
 ### Curses (trade-offs)
 
@@ -851,7 +873,7 @@ Noita's wands take spells in slots that fire in order and modify each other. Our
 - A board has **slots** (start with 3). Each slot holds one mod.
 - Mods are **triggers** and **effects**. A trigger (On Ollie, On Land, On Grind Start, On Grind End, On Trick,
   On Car-hop) fires the effects that follow it in the slots, left to right, until the next trigger.
-- Effects: Spark Trail, Double Pop (a second small ollie 0.2 s later), Speed Kick, Jump Refill (+0.5),
+- Effects: Spark Trail, Double Pop (a second small ollie 0.2 s later), Speed Kick,
   Cash Burst, Slow-mo (0.5 s), Gravity Flip (0.3 s), Shockwave (makes nearby cars swerve out of the skate lane).
 - Modifiers change the next effect: ×2, Delay 0.5 s, Only On Combo ×5, Chance 50%.
 - Example build: `[On Grind End] [×2] [Speed Kick]` = every time you leave a rail you get two speed kicks.
@@ -875,6 +897,11 @@ then a slot to buy it there; tap two slots to swap them for free. The board show
 and a slot flashes when it fires. No Heat cool-down or boon reroll in the shop yet.
 
 ## Gear and wear
+
+**Gear comes first** (zack, Nov 6, 2026): keeping your setup rolling should matter MORE than the other upgrades
+(boons and board mods). A worn-out board is the run's main pressure, the gear boons (Fiberglass Core, Shoe Sponsor,
+Ceramic Bearings, Classified Urethane) are the strongest picks for a long run, and shop cash should mostly go on
+parts. When a choice between gear and another upgrade comes up in tuning, gear wins.
 
 zack, Oct 24, 2026: your gear wears out with use and has to be replaced at the shop. Five parts (bearings added
 Oct 30), each worn by the thing it takes the beating from:
@@ -909,7 +936,20 @@ Oct 30), each worn by the thing it takes the beating from:
 - **Acts 3-4 (measured Nov 6, 2026):** a floor wears gear about twice as hard late in the run as in act 1 (the
   deck and wheels lose 35 to 45 a floor by acts 3-4, against about 20). Buying every part at every shop, the bot
   still reached the floor 9 shop with the deck at 4, wheels 12 and shoes 16. The gear boons (see Boons) halve the
-  deck, bearings and wheels, which puts them back near act 1's numbers at that shop (deck about 52, wheels about 56).
+  deck, bearings and wheels, which puts them back near act 1's numbers at that shop (deck about 52, wheels about 56),
+  and Shoe Sponsor does the same for the shoes (about 58).
+- **Supply pickups on long routes** (zack, Nov 6, 2026) **(not in the build yet):** once routes get longer, a
+  single-part replacement lies along the way now and then: a new deck, a pair of shoes, a set of wheels, bearings
+  or trucks, ridden through like a coin and fitted on the spot (that part back to 100).
+  - **A fixed part you can see:** each pickup is one part, shown from afar as that part's own model spinning in
+    the air, so you know what it is and decide whether to go for it.
+  - **Rare, and only when you need it:** a part's chance to spawn builds up the longer that part has been busted
+    (at 0, or under the busted line of 15) and is none while it's in good shape, so good gear never sees one. The
+    clock resets when the part is replaced (shop, pickup). A part you've ridden busted for a long time is the most
+    likely to turn up.
+  - Defaults until tuned: the chance builds from 0 to about one pickup a floor over a floor's worth of riding busted
+    (~60 s), at most one pickup on screen at a time, placed on the harder line (more often on the longer routes:
+    sewer, sky, long hills) so reaching it takes some skating.
 - **Later:** decks from the meta tree can wear slower (a "pro deck" stat), and boons can play with wear (a curse
   that wears gear twice as fast for a big effect, or a LUCK boon that repairs a part on each floor clear).
 
@@ -931,13 +971,13 @@ Oct 30), each worn by the thing it takes the beating from:
 | Lou Gnar (default) | None: the baseline | Any |
 | Webster | Grinds start 15% faster | GRIND |
 | Keanu | Heat cools 15% faster while you're airborne | COOL |
-| Roxy | Car-hops bounce 20% higher | STREET |
+| Roxy | Car-hops bounce 20% higher | GRIND |
 | Goldie | +25% cash from every source | LUCK |
 
 Built Oct 24, 2026 (first version, src/run/meta.ts): an UNLOCKS screen off the run-over screen. Skaters cost 30
 to 60 Stoken with the passives above. Decks: Popsicle (stock, 3 slots), Cruiser (+10% speed, ollies 5% lower,
 25), Bombhill (+15% speed, gear wears 30% faster, 35), Slab (4 slots, ollies 8% lower, 45). Boon library: POP and
-GRIND to start; FLOW, COOL, STREET and LUCK packs (15 to 25) add their boons and their road signs; Curses (35) and
+GRIND to start; FLOW, COOL and LUCK packs (15 to 25) add their boons and their road signs; Curses (35) and
 Duos (40). Spots: the daily run (20; one seed per UTC day, its own best). Biome starts and gnar mode are still to
 come. See docs/overnight-decisions.md.
 
@@ -1330,6 +1370,17 @@ The official roadmap (zack, Oct 31, 2026). Each item is checked against "What th
 8. Grass strips that punish worn wheels.
 9. Wall rides, only if they earn their place.
 
+**The climb** (zack, Nov 6, 2026: "this seems good"; see The fantasy and How a run ends). In this order, each a
+thread of its own:
+- a. **Act 2 rooftops** as level design only: a floor recipe that starts and ends on roofs and overpasses, from the
+  kit we have. Built Nov 6, 2026 (see How a run ends).
+- b. **Act 3 as a whole cloud act**: the sky route's pieces (wires, girders, the cloud layer) become the main floor,
+  not the top lane.
+- c. **Gravity scaling**: one number per act applied to the ollie, flips and hang time, tested on the bot so act 1's
+  feel never changes. Placeholders: 1x for acts 1-3, 0.7x act 4, 0.3x act 5.
+- d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the gunship line, the beam-up finale.
+- e. **The ship as the hub** between runs, last; it's cosmetic for the menus.
+
 **Ship**
 10. A performance pass for small iPhones.
 11. Release on ad-supported web game portals (zack still picks which).
@@ -1356,10 +1407,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 
 ## Open questions
 
-- **After the boon cut** (Nov 6, 2026, see Boons): COOL is down to 2 cards and STREET to 1, so their boon streets
-  mostly deal other types (default: fill from any type) and unlocking those types in the meta tree buys little.
-  Shoes still wear out by act 3 (16 at the floor 9 shop for the bot) with no gear boon for them. Whether to add
-  new STREET or COOL cards, fold the types, or leave it lean is zack's call; default: leave it lean.
+- **After the boon cut and the overlap pass** (Nov 6, 2026, see Boons): COOL and LUCK are 2 cards each, so their boon streets mostly deal other types (default: fill from any type) and unlocking COOL or LUCK in
+  the meta tree buys little. Whether to add cards there, fold more types, or leave it lean is zack's call; default: leave it lean.
 - **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
   to each, and how each is designed for them.
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
@@ -1371,8 +1420,12 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
   someone awake in another city).
 - **The climb** (fantasy decided Nov 6, 2026, see The fantasy): the act heights are a default to check with zack;
-  where gravity starts to drop and how far it goes are numbers to tune; the level design of the higher acts (rooftop floors, the cloud layer as a whole act,
-  blimps and thin air) and the ship as the between-runs hub are not designed or built.
+  where gravity starts to drop and how far it goes are numbers to tune; the level design of the higher acts (the cloud layer as a whole act,
+  blimps and thin air) and the ship as the between-runs hub are not designed or built. Act 2's rooftop floors
+  (built Nov 6, 2026) left three calls open, with these defaults: you start 2.5 tiles up on the roof and each later
+  stretch's roof is half a tile over its crest (an ollie, never a flip); the cloud layer still runs over floors 5 and
+  6 (default: it moves up to act 3 when step b makes the clouds the main floor); and the rooftops stay optional,
+  so a player who never ollies off a roof's end skates the hill road as in act 1.
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the

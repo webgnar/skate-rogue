@@ -98,9 +98,10 @@ const SKY_RECIPES: SkyBeat[][][] = [
   [],
   [],
   [],
-  R('roofs gap split billboard gap roofs'),
-  R('split roofs/billboard beam gap tower bust/rig gap billboard roofs'),
-  R('beam scaffold split gap swing roofs gap tower crane'),
+  //act 2, the rooftops (ROOFTOPS): roof after roof, the odd billboard, tower or scaffold between
+  R('roofs roofs split roofs gap billboard roofs roofs'),
+  R('roofs split roofs/billboard roofs bust/rig roofs gap tower roofs'),
+  R('roofs split scaffold roofs gap swing/bust roofs tower roofs scaffold'),
   R('split roofs beam tower gap blimp gap billboard scaffold gap roofs'),
   R('beam crane split gap roofs bust/rig scaffold gap tower roofs'),
   R('split tower beam gap crane roofs swing/blimp gap billboard/scaffold crane'),
@@ -111,6 +112,25 @@ const SKY_RECIPES: SkyBeat[][][] = [
   R('tower beam crane split gap scaffold rig/bust/swing roofs beam gap billboard tower'),
   R('split crane beam scaffold tower gap blimp/swing/rig/bust roofs beam billboard gap scaffold crane'),
 ];
+
+// Act 2, the rooftops (GDD: How a run ends, and the Roadmap's climb, step a; zack, 2026-11-06). Floors 4-6 are
+// the first step up out of the street: the floor starts up on a rooftop deck instead of on the street, and every
+// later stretch's roofs start right off the lip at the top of its cable car, an ollie up, so the rooftops are the
+// main line and the street under them is where you fall to. Over the street chases and the run to the gate the top
+// route's rooftops carry it on, onto the overpass past the gate. Level design only: the same sky beats, the same
+// physics, nothing that lifts you
+export const ROOFTOPS = {
+  floors: [4, 5, 6], // the act's floors (Endless reuses acts 4 and 5, so never these)
+  startUp: 2.5, // tiles the starting roof stands over the hill's run-up: you start up there, the street far under
+  startRoof: 4, // tiles of the starting roof past the hill's lip: room to see the gap coming
+  entryUp: 0.5, // tiles a later stretch's first roof stands over its lip: an ollie off the lip, never a flip
+  entryIn: 2, // tiles past the lip it starts (rolling off without an ollie, you drop to the street under it)
+};
+
+// is this floor one of act 2's rooftop floors?
+export function rooftopFloor(floor: number): boolean {
+  return ROOFTOPS.floors.includes(editFloor(floor)) && floor <= 15;
+}
 
 export function skyRecipe(floor: number): SkyBeat[][] {
   const i = editFloor(floor) - 1;
@@ -168,6 +188,7 @@ export function addSkyBeats(level: Level, seed: number): void {
   const decks: Surface[] = []; // rooftop decks a golden pigeon could sit on
   let pieces = 0;
   let ceiling = -Infinity; // the highest the next piece may stand: a flip over where the line leaves off
+  const rooftops = rooftopFloor(floor);
   const coins = (x0: number, x1: number, y: (x: number) => number) => {
     for (let c = x0 + TILE; c < x1 - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y(c) - PICKUPS.ride });
   };
@@ -227,11 +248,27 @@ export function addSkyBeats(level: Level, seed: number): void {
     let x = c + d.skyStart * (b - c);
     //the way in (zack's clips, 2026-10-31: the bot ollied off the crest and never reached the sky): the first piece
     //stands low enough over the hill's lip that a big ollie and a flip off it lands on it; the line climbs from there
-    const [, lipTop] = lipOf(level, a, b);
+    const [lip, lipTop] = lipOf(level, a, b);
     leave = lipTop - (SKY.entryUp - SKY.rise) * TILE;
     const picks = skyPick(seed, floor, i);
     //Chinatown's stretch opens on its clotheslines
     if (level.chinatown?.some(([c0, c1]) => c1 > a && c0 < b)) picks.unshift('lines');
+    //act 2's rooftops: the floor starts on a roof over the hill's run-up, and each later stretch's roofs start just
+    //past its lip, an ollie up (ROOFTOPS). Laid as they are, not moved off the hill under them: they stand over it on
+    //purpose (anything else up there, the power line, starts further down)
+    if (rooftops) {
+      const roof = (x0: number, x1: number, y: number) => {
+        const deck: Surface = { kind: 'ledge', x0, x1, y, row: -1, sky: 'roofs' };
+        surfaces.push(deck);
+        decks.push(deck);
+        coins(Math.max(x0, level.startX + TILE), x1, () => y);
+        settle();
+        x = x1 + range(rng, SKY.roofGap) * TILE;
+        return deck;
+      };
+      if (i === 0) level.startY = roof(a - 2 * TILE, lip + ROOFTOPS.startRoof * TILE, (groundAt(level, a) ?? level.streetY) - ROOFTOPS.startUp * TILE).y;
+      else roof(lip + ROOFTOPS.entryIn * TILE, lip + (ROOFTOPS.entryIn + range(rng, SKY.roof)) * TILE, lipTop - ROOFTOPS.entryUp * TILE);
+    }
     for (let beat of picks) {
       if (x >= end) break;
       const t = (n: number) => Math.min(n * TILE, end - x);

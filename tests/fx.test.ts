@@ -187,22 +187,18 @@ describe('boon and board mod looks', () => {
     calls.length = 0;
     fx.event({ type: 'ollie', spin: 0 }, 0, 0, 3);
     fx.update(1 / 60, look, 0, 0);
-    expect(calls).toEqual(['spray']);
-    fx.setBoons([{ id: 'pressureFlip', stacks: 1 }]);
-    calls.length = 0;
-    fx.event({ type: 'ollie', spin: 0 }, 0, 0, 3);
-    fx.update(1 / 60, look, 0, 0);
-    expect(calls).toEqual(['pressure']);
+    //Big Pop's ollie burst, then the float's updraft (Mad Pop's, merged into Big Pop)
+    expect(calls).toEqual(['spray', 'pressure']);
   });
   it('every board mod effect except sparks has a look', () => {
     const fx = new BoonFx(fake);
-    for (const e of ['doublePop', 'speedKick', 'jumpRefill', 'cashBurst', 'slowMo', 'gravFlip', 'shockwave'] as const) {
+    for (const e of ['doublePop', 'speedKick', 'cashBurst', 'slowMo', 'gravFlip', 'shockwave'] as const) {
       calls.length = 0;
       fx.mod(e, 0, 0);
       expect(calls.length, e).toBeGreaterThan(0);
     }
   });
-  it('curses, duos and the FLOW, COOL and STREET boons show on their moments', () => {
+  it('curses, duos and the FLOW and COOL boons show on their moments', () => {
     const fx = new BoonFx(fake);
     const at = (id: BoonId, e: Parameters<BoonFx['event']>[0], speed = 3) => {
       fx.setBoons([{ id, stacks: 1 }]);
@@ -210,13 +206,13 @@ describe('boon and board mod looks', () => {
       fx.event(e, 0, 0, speed);
       return calls.length;
     };
-    expect(at('slingshot', { type: 'exit' })).toBeGreaterThan(0);
+    expect(at('railLaunch', { type: 'exit' })).toBeGreaterThan(0);
     expect(at('bubblePads', { type: 'pad' })).toBeGreaterThan(0);
     expect(at('moonShoes', { type: 'ollie', spin: 0 })).toBeGreaterThan(0);
     expect(at('skyLine', { type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false })).toBeGreaterThan(0);
     expect(at('butter', { type: 'land' }, 1)).toBe(0); // only when the air speed carries on
     expect(at('butter', { type: 'land' }, 9)).toBeGreaterThan(0);
-    expect(at('slingshot', { type: 'slam' })).toBe(0);
+    expect(at('railLaunch', { type: 'slam' })).toBe(0);
     //Rocket Grind only off a fast grind
     fx.setBoons([{ id: 'rocketGrind', stacks: 1 }]);
     fx.update(1 / 60, { ...look, mode: 'grind' }, 0, 0);

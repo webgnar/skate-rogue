@@ -52,14 +52,14 @@ export class BoonFx {
     const p = this.particles;
     const air = sk.mode === 'air';
     const grinding = sk.mode === 'grind' || sk.mode === 'rail';
-    //Mad Pop: an updraft pushing under the board while it floats (after 0.25 s held)
-    if (this.held.has('pressureFlip') && air && sk.holdT > 15) p.stream('pressure', x, y - 0.1, 40, dt, { n: 0, colors: POP, life: [0.2, 0.35], size: [0.08, 0.12], speed: [1.5, 3], angle: [DOWN - 0.3, DOWN + 0.3], jitter: 0.3, drag: 2 });
+    //Big Pop's float (Mad Pop until 2026-11-06): an updraft pushing under the board while it floats (after 0.25 s held)
+    if (this.held.has('bigPop') && air && sk.holdT > 15) p.stream('pressure', x, y - 0.1, 40, dt, { n: 0, colors: POP, life: [0.2, 0.35], size: [0.08, 0.12], speed: [1.5, 3], angle: [DOWN - 0.3, DOWN + 0.3], jitter: 0.3, drag: 2 });
     //Ledge Butter: dark glossy drips off the trucks
     if (this.held.has('grease') && grinding) p.stream('grease', x, y, 22, dt, { n: 0, colors: GREASE, life: [0.4, 0.6], size: [0.07, 0.1], speed: [0.2, 0.6], angle: [DOWN - 0.4, DOWN + 0.4], jitter: 0.12, grav: 12, ink: true, floor: y - 2 });
-    //Bomb Hill / Perpetual Motion: extra speed that won't bleed off streams cyan (pink when fused) off the wheels
+    //Butter (it took in Bomb Hill) / Perpetual Motion: extra speed that won't bleed off streams cyan (pink when fused) off the wheels
     if (sk.mode === 'roll' && sk.carry > 0.3) {
       if (this.held.has('perpetualMotion')) p.stream('perpetual', x, y + 0.03, 30 * Math.min(1, sk.carry / 2), dt, { n: 0, colors: DUO, life: [0.3, 0.5], size: [0.08, 0.12], speed: [0.5, 1.5], angle: [Math.PI - 0.2, Math.PI + 0.2], drag: 3, alpha: 0.8 });
-      else if (this.held.has('bombHill')) p.stream('bomb', x, y + 0.03, 18 * Math.min(1, sk.carry / 2), dt, { n: 0, colors: FLOW, life: [0.25, 0.4], size: [0.07, 0.1], speed: [0.5, 1.2], angle: [Math.PI - 0.2, Math.PI + 0.2], drag: 3, alpha: 0.7 });
+      else if (this.held.has('butter')) p.stream('bomb', x, y + 0.03, 18 * Math.min(1, sk.carry / 2), dt, { n: 0, colors: FLOW, life: [0.25, 0.4], size: [0.07, 0.1], speed: [0.5, 1.2], angle: [Math.PI - 0.2, Math.PI + 0.2], drag: 3, alpha: 0.7 });
     }
     //Speed Wobbles (curse): purple wisps shake off the trucks when you're going too fast to land clean
     if (this.held.has('speedWobbles') && air && Math.abs(sk.hsp) > PHYS.baseSpeed * 1.5) p.stream('wobbles', x, y, 14, dt, { n: 0, colors: CURSE, life: [0.2, 0.35], size: [0.07, 0.1], speed: [0.6, 1.4], jitter: 0.15, drag: 2, alpha: 0.8 });
@@ -99,8 +99,8 @@ export class BoonFx {
         if (this.held.has('skyLine')) p.spray(x, y - 0.25, { n: 14, colors: DUO, life: [0.4, 0.6], size: [0.1, 0.12], speed: [2.5, 4], angle: [-0.05, 0.05], jitter: 0.05, drag: 3 });
         break;
       case 'exit':
-        //Slingshot: riding off a rail's end, streaks stretch out ahead
-        if (this.held.has('slingshot')) p.spray(x, y, { n: 12, colors: FLOW, life: [0.2, 0.3], size: [0.1, 0.13], speed: [6, 9], angle: [-0.25, 0.25], drag: 3 });
+        //Full Sail (it took in Slingshot): riding off a rail's end, streaks stretch out ahead
+        if (this.held.has('railLaunch')) p.spray(x, y, { n: 12, colors: FLOW, life: [0.2, 0.3], size: [0.1, 0.13], speed: [6, 9], angle: [-0.25, 0.25], drag: 3 });
         break;
       case 'land':
         //Butter: a smooth yellow smear along the ground as the air speed carries on
@@ -127,9 +127,6 @@ export class BoonFx {
         break;
       case 'speedKick':
         p.spray(x, y + 0.3, { n: 16, colors: KICK, life: [0.2, 0.3], size: [0.1, 0.15], speed: [6, 9], angle: [Math.PI - 0.15, Math.PI + 0.15], jitter: 0.3, drag: 3 });
-        break;
-      case 'jumpRefill':
-        p.spray(x, y + 0.6, { n: 6, colors: POP, life: [0.45, 0.55], size: [0.14, 0.16], speed: [1.6, 2], angle: [UP - 0.5, UP + 0.5], ring: true, drag: 1.5 });
         break;
       case 'cashBurst':
         p.spray(x, y + 0.6, { n: 16, colors: CASH, life: [0.6, 0.9], size: [0.12, 0.16], speed: [2, 4], angle: [UP - 0.9, UP + 0.9], grav: 9, drag: 0.8, ink: true });

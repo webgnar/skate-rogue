@@ -27,7 +27,7 @@ describe('curse and duo offers', () => {
     const duo = BOONS.find((b) => b.id === 'perpetualMotion')!;
     const has = (boons: Held[]) => Array.from({ length: 200 }, (_, seed) => offerBoons(seed, { floor: 2, boons })).filter((o) => o.includes(duo));
     expect(has(held('butter'))).toHaveLength(0);
-    const offers = has(held('butter', 'slingshot'));
+    const offers = has(held('butter', 'railLaunch'));
     expect(offers.length).toBeGreaterThan(40);
     expect(offers.every((o) => o.length === 4)).toBe(true);
   });

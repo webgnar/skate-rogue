@@ -45,6 +45,13 @@ describe('gear wear', () => {
     expect(sim.gear.shoes).toBeCloseTo(100 - GEAR.flip);
   });
 
+  it('Shoe Sponsor halves shoe wear and leaves the deck alone', () => {
+    const sim = new FloorSim(levelOf(FLAT), skaterMods([{ id: 'shoeSponsor', stacks: 1 }]));
+    for (let f = 0; f < 12; f++) sim.step({ pressed: f === 0 || f === 8, held: true });
+    expect(sim.gear.shoes).toBeCloseTo(100 - GEAR.flip * GEAR_BOON_WEAR);
+    expect(sim.gear.deck).toBeCloseTo(100 - GEAR.ollie);
+  });
+
   it('Ceramic Bearings and Classified Urethane halve bearing and wheel wear', () => {
     const roll = (ids: ('ceramicBearings' | 'classifiedUrethane')[]) => {
       const sim = new FloorSim(levelOf(FLAT), skaterMods(ids.map((id) => ({ id, stacks: 1 }))));
@@ -60,7 +67,7 @@ describe('gear wear', () => {
   });
 
   it('the gear boons are offered from floor 2 on, never floor 1', () => {
-    const gearIds = ['fiberglassCore', 'ceramicBearings', 'classifiedUrethane'];
+    const gearIds = ['fiberglassCore', 'shoeSponsor', 'ceramicBearings', 'classifiedUrethane'];
     const seen = (floor: number) => {
       let n = 0;
       for (let seed = 1; seed <= 200; seed++) n += offerBoons(seed, { floor, boons: [] }).filter((b) => gearIds.includes(b.id)).length;
@@ -68,7 +75,7 @@ describe('gear wear', () => {
     };
     expect(seen(1)).toBe(0);
     expect(seen(2)).toBeGreaterThan(0);
-    expect(BOONS.filter((b) => gearIds.includes(b.id))).toHaveLength(3);
+    expect(BOONS.filter((b) => gearIds.includes(b.id))).toHaveLength(4);
   });
 
   it('grinding wears the trucks', () => {
