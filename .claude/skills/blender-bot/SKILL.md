@@ -219,6 +219,16 @@ left and right at 50% (`bead_project.py`). Pass 3 is the 20% sketch marks
 (`sketch_marks.py`), darks in the crevices and light on every accent
 except a glowing one (`--glow`), which stays clean.
 
+**Readable first, for a small creature in a level** (zack, 2026-11-06: "make
+the rat more readable", and "loosen the SKILL if it prevents you"). Something
+seen a few pixels tall reads by flat blocks of strong colour, one per part
+(coat, belly and muzzle, ears, hands, feet, tail, eyes), and by oversized
+parts turned to face the game's camera (the rat's ears are cups facing
+sideways, since the sewer is seen side on). Skip passes 2 and 3 there: the
+beads and the light sketch seams turn those blocks to grey noise at that
+size, and the game's ink outline already draws the edges. `build_rat.py`
+is the example (zack's villain-rat palette, big white eyes, buck teeth).
+
 `Painter` (pass 1):
 
 - Closest sampling, hard edges. Base colour, a darker back
