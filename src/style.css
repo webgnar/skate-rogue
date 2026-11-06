@@ -1352,6 +1352,7 @@ html, body {
 #shop .card-shop .art { flex: 1 1 auto; min-height: 0; }
 #shop .card-shop .art::before { inset: -6% -24%; opacity: 0.65; }
 #shop .card-shop .pic { max-height: none; width: 100%; height: 100%; max-width: none; transform: scale(1.3) rotate(-6deg); }
+#shop .card-shop .pic.deckart { width: 32%; height: auto; transform: rotate(-35deg); }
 /* the drawn gear (shoes, bearings): sized by the card's width, spilling out of a short art box like the renders do */
 #shop .card-shop svg.pic { height: auto; max-height: calc(var(--u) * 6); }
 #shop .card-shop .glyph { max-width: calc(var(--u) * 5.6); width: 46%; bottom: 2%; }
@@ -1684,42 +1685,69 @@ html, body {
   letter-spacing: 0.05em;
   color: #fff;
   animation: fade 0.2s ease-out;
-  --die: 64px;
+  --die: min(100px, 22vw);
 }
-#dice.many { --die: 44px; }
-#dice.solo { --die: 84px; }
-#dice.solo .prize { padding: 6px 18px 5px 12px; gap: 10px; }
-#dice.solo .prize b { font-size: 28px; }
-#dice.solo .prize small { font-size: 12px; }
-#dice.solo .prize .icon { width: 34px; height: 34px; }
-#dice.solo .prize .icon .cash { font-size: 34px; }
-#dice.solo .name { font-size: 28px; }
 #dice .lamp { position: absolute; top: -8%; left: 50%; translate: -50% 0; width: 46px; height: 18px; background: #ffe7a0; border: 3px solid #000; border-radius: 0 0 24px 24px; box-shadow: 0 0 40px 18px rgba(255, 200, 90, 0.5); }
 #dice .title { font-size: clamp(38px, 10vw, 58px); line-height: 1; color: #ffd23a; -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 4px 4px 0 #000; transform: skewX(-8deg); }
 #dice .sub { font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 13px; letter-spacing: 0.12em; color: #c8c2b4; text-shadow: 1px 1px 0 #000; }
 /* the street: a concrete curb's lip, then asphalt (the dice land on it) */
+/* the street (zack, 2026-11-06: "blacktop like a road ... or sidewalk"): edge to edge, a strip of concrete sidewalk
+   with its joints, the curb's lip and face, then worn asphalt: light stones and dark pits in the aggregate, soft
+   mottling, an oil stain, a crack, and a faded white edge line. The dice land on the asphalt */
 #dice .street {
   position: relative;
-  width: min(560px, 100%);
-  margin-top: 10px;
-  border-top: 12px solid #9a978d;
-  box-shadow: 0 -3px 0 #000, inset 0 3px 0 #5b5a55;
-  background: radial-gradient(circle at 20% 30%, #3a3a40 0 1.5px, transparent 2px) 0 0 / 11px 9px, radial-gradient(circle at 70% 60%, #1c1c20 0 1.5px, transparent 2px) 0 0 / 13px 12px, linear-gradient(#2c2c31, #232327);
-  border-radius: 2px;
+  align-self: stretch;
+  margin: 10px calc(-1 * max(16px, env(safe-area-inset-right))) 0 calc(-1 * max(16px, env(safe-area-inset-left)));
+  padding-top: 40px;
+  border-top: 3px solid #000;
+  border-bottom: 3px solid #000;
+  background:
+    linear-gradient(transparent calc(100% - 22px), rgba(232, 228, 214, 0.16) calc(100% - 22px) calc(100% - 17px), transparent calc(100% - 17px)),
+    radial-gradient(ellipse 90px 34px at 72% 62%, rgba(0, 0, 0, 0.42), transparent 70%),
+    radial-gradient(ellipse 50px 20px at 24% 78%, rgba(18, 10, 24, 0.35), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.58  0 0 0 0 0.56  0 0 0 0 0.53  0 0 0 8 -5.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 140px 140px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.02  0 0 0 0 0.02  0 0 0 0 0.03  0 0 0 7 -4.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 120px 120px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.5 -0.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 360px 360px,
+    linear-gradient(rgba(0, 0, 0, 0.55), transparent 30px),
+    #2b2b2f;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
 }
-#dice .curb { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 22px; padding: 26px 10px 18px; }
-#dice.many .curb { gap: 10px 14px; padding: 18px 8px 12px; }
+/* the sidewalk and the curb, along the top of the street */
+#dice .street::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 30px;
+  background:
+    linear-gradient(transparent 19px, #000 19px 21px, #8f8b80 21px 24px, #5f5c55 24px 28px, #000 28px),
+    repeating-linear-gradient(90deg, transparent 0 118px, rgba(0, 0, 0, 0.55) 118px 120px, rgba(255, 255, 255, 0.12) 120px 121px, transparent 121px 122px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.34  0 0 0 0 0.32  0 0 0 1.6 -0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px,
+    linear-gradient(#b9b4a6, #9c978a);
+}
+/* a crack running out from the curb */
+#dice .street::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  top: 30px;
+  width: 120px;
+  height: 60px;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 60'%3E%3Cpath d='M2 0 8 9 6 17 15 26 13 33 24 41 37 44 46 55' fill='none' stroke='%23111' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M15 26 26 27 31 22' fill='none' stroke='%23111' stroke-width='1.1'/%3E%3C/svg%3E") no-repeat;
+  opacity: 0.8;
+}
+#dice .curb { position: relative; z-index: 1; display: flex; justify-content: center; padding: 8px 10px 26px; min-height: calc(var(--die) * 2.1); box-sizing: border-box; }
 #dice .pair { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: calc(var(--die) * 2.6); }
 #dice .dice { display: flex; gap: calc(var(--die) * 0.28); }
 /* a die's slot on the curb: the 3D die (src/render/dice3d.ts) is drawn over it, on the canvas */
 #dice .die { width: var(--die); aspect-ratio: 1; }
 #dice canvas.dice3d { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
 #dice .how { font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 13px; letter-spacing: 0.12em; color: #ffd23a; text-shadow: 1px 1px 0 #000; margin-top: 12px; animation: dice-btn 0.9s ease-in-out infinite; }
-#dice.thrown .how { visibility: hidden; }
+#dice.thrown .how, #dice.flying .how { visibility: hidden; }
 #dice .btn { position: relative; z-index: 2; }
 #dice .name, #dice .prize { visibility: hidden; }
 #dice.thrown .name, #dice.thrown .prize { visibility: visible; }
-#dice .name { min-height: 1em; font-size: 20px; line-height: 1; color: #ff5fa8; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
+#dice .name { min-height: 1em; font-size: 26px; line-height: 1; color: #ff5fa8; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 2px 2px 0 #000; }
 #dice .name:empty { display: none; }
 #dice .prize {
   display: flex;
@@ -1734,26 +1762,45 @@ html, body {
   white-space: nowrap;
   text-align: left;
 }
-#dice .prize .icon { flex: none; width: 26px; height: 26px; display: grid; place-items: center; }
+#dice .prize .icon { flex: none; width: 32px; height: 32px; display: grid; place-items: center; }
 #dice .prize .icon svg { width: 100%; height: 100%; overflow: visible; }
 #dice .prize .icon .cash { font: 900 26px / 1 'Arial Black', sans-serif; color: #2fc25a; -webkit-text-stroke: 2px #000; paint-order: stroke fill; }
 #dice .prize .what { display: flex; flex-direction: column; }
-#dice .prize b { font-weight: normal; font-size: 20px; line-height: 1.05; }
+#dice .prize b { font-weight: normal; font-size: 26px; line-height: 1.05; }
 #dice .prize small { font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 11px; letter-spacing: 0.04em; line-height: 1.2; opacity: 0.8; text-transform: uppercase; }
 #dice .pair.big .prize { background: linear-gradient(#ff8ac6, #ff3d9a); color: #fff; }
 #dice .pair.big .prize b { -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; }
-#dice .pair.match .name { font-size: 28px; color: #ffd23a; }
+#dice .pair.match .name { font-size: 34px; color: #ffd23a; }
 #dice .pair.match .prize { background: linear-gradient(#fff3a0, #ffc21a 60%, #e09a12); color: #1a1028; }
-#dice .pair.match .prize b { -webkit-text-stroke: 0; font-size: 23px; }
+#dice .pair.match .prize b { -webkit-text-stroke: 0; font-size: 28px; }
 #dice.landed .pair.match .dice { border-radius: 50%; box-shadow: 0 0 40px 18px rgba(255, 210, 58, 0.45); }
-#dice.many .name { font-size: 15px; }
-#dice.many .prize { padding: 2px 8px 1px 5px; gap: 5px; }
-#dice.many .prize b { font-size: 14px; }
-#dice.many .prize small { font-size: 8.5px; }
-#dice.many .prize .icon { width: 18px; height: 18px; }
-#dice.many .prize .icon .cash { font-size: 18px; }
-#dice.many .pair.match .name { font-size: 19px; }
-#dice.many .pair.match .prize b { font-size: 16px; }
+/* the chips left to roll, under the title: red casino chips with a gold star, the count beside them. The next one
+   flies out of here down to your hand and turns into the next pair */
+#dice .chips { display: flex; align-items: center; gap: 4px; min-height: 30px; }
+#dice .chips[hidden] { display: flex; visibility: hidden; }
+#dice .chip {
+  width: 26px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, #d4192a 0 46%, #fff 46% 52%, #d4192a 52%), repeating-conic-gradient(#d4192a 0 20deg, #fff 20deg 40deg);
+  background-clip: content-box, border-box;
+  border: 2px solid #000;
+  box-shadow: inset 0 0 0 3px transparent, 2px 2px 0 #000;
+  font-style: normal;
+}
+#dice .chip b { font-size: 13px; line-height: 1; color: #ffd23a; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+#dice .chips .left { margin-left: 6px; font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 12px; letter-spacing: 0.1em; color: #fff; text-shadow: 1px 1px 0 #000; }
+#dice .flychip { position: absolute; left: 0; top: 0; margin: -15px 0 0 -15px; z-index: 3; pointer-events: none; }
+#dice .flychip .chip { box-shadow: 0 0 18px 6px rgba(255, 210, 58, 0.7); }
+/* what you've won so far, one line per claimed roll */
+#dice .won { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; max-width: min(560px, 100%); margin-top: 10px; min-height: 46px; align-content: flex-start; }
+#dice .won .item { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 1px 4px; font-size: 14px; color: #fff; background: rgba(0, 0, 0, 0.55); border: 2px solid #000; border-left: 3px solid var(--good); }
+#dice .won .item .icon { width: 18px; height: 18px; display: grid; place-items: center; }
+#dice .won .item .icon svg { width: 100%; height: 100%; overflow: visible; }
+#dice .won .item .icon .cash { font: 900 16px / 1 'Arial Black', sans-serif; color: #2fc25a; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; }
+#dice .won:not(:empty)::before { content: 'WON'; width: 100%; text-align: center; font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 11px; letter-spacing: 0.14em; color: #c8c2b4; }
 /* the MATCH: a gold word slams in over everything, once */
 #dice .flash { position: absolute; top: 18%; left: 50%; translate: -50% 0; font-size: clamp(64px, 20vw, 120px); color: #ffd23a; -webkit-text-stroke: 3px #000; paint-order: stroke fill; text-shadow: 6px 6px 0 #000; transform: skewX(-8deg) rotate(-6deg); opacity: 0; pointer-events: none; }
 #dice.matched .flash { animation: dice-match 1.6s ease-out forwards; }
@@ -1768,22 +1815,24 @@ html, body {
   box-shadow: 4px 4px 0 #000;
   transform: skewX(-8deg);
 }
-#dice .btn[hidden] { display: block; visibility: hidden; }
 #dice .btn.go { animation: dice-btn 0.9s ease-in-out infinite; }
 @keyframes dice-btn { 50% { scale: 1.06; } }
 #app.calm #dice .btn.go, #app.calm #dice .how, #app.calm #dice.matched .flash { animation: none; }
 #app.calm #dice.matched .flash { opacity: 0; }
 @media (max-height: 460px) {
-  #dice { --die: 46px; gap: 2px; }
-  #dice.many { --die: 34px; }
-  #dice.solo { --die: 60px; }
-  #dice.solo .prize b { font-size: 20px; }
-  #dice .how { margin-top: 2px; }
-  #dice .title { font-size: 34px; }
-  #dice .curb { padding: 16px 8px 10px; }
+  #dice { --die: 54px; gap: 1px; }
+  #dice .won { margin-top: 4px; }
+        #dice .how { margin-top: 2px; }
+  #dice .title { font-size: 30px; }
+  #dice .curb { padding: 4px 8px 14px; }
+  #dice .street { padding-top: 34px; margin-top: 4px; }
+  #dice .curb { min-height: calc(var(--die) * 1.75); }
+  #dice .chips { min-height: 24px; }
+  #dice .won { min-height: 0; margin-top: 2px; }
+  #dice .sub { font-size: 11px; }
   #dice .btn { margin-top: 6px; font-size: 24px; padding: 3px 30px 1px; }
   #dice .name { font-size: 16px; }
-  #dice .prize b { font-size: 16px; }
+  #dice .prize b { font-size: 18px; }
 }
 
 /* the in-run mission popup (src/ui/mission-toast.ts): above the gear wear, bottom right, clear of the callouts.
@@ -1921,3 +1970,13 @@ html, body {
 @media (orientation: landscape) {
   #title .foot { align-self: flex-end; margin-right: max(5vw, env(safe-area-inset-right)); }
 }
+
+/* a new deck's graphic: three to pick from over the shop (zack, 2026-11-06) */
+#shop .deckpick { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.2vh; background: rgba(10, 6, 20, 0.84); }
+#shop .deckpick[hidden] { display: none; }
+#shop .deckpick .ttl { font: 400 clamp(28px, 6vmin, 52px)/1 Bangers, sans-serif; color: #ffd23f; letter-spacing: 1px; text-shadow: 3px 3px 0 #000; }
+#shop .deckpick .row { display: flex; gap: 3vmin; }
+#shop .deckpick .card-shop { width: clamp(104px, 26vmin, 190px); height: clamp(210px, 52vmin, 380px); animation: deckpick-in 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) both; animation-delay: calc(var(--i) * 70ms); }
+#shop .deckpick .sub { font: 400 clamp(15px, 3vmin, 22px)/1 Bangers, sans-serif; color: #7df0a0; text-shadow: 2px 2px 0 #000; text-align: center; padding: 0 12px; }
+@keyframes deckpick-in { from { transform: translateY(40px) scale(0.85); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #shop .deckpick .card-shop { animation: none; } }

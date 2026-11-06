@@ -31,6 +31,55 @@ Cash coins keep the old gold Stoken coin face.
 Lou Gnar is the lead skater: one run is one session out on the AI's streets, skating as far as you can before
 the enforcers shut you down. The QFS skaters (Webster, Keanu, Roxy, Goldie) are unlockable.
 
+### The fantasy: skate up and out
+
+Decided Nov 6, 2026 (zack, thread "Define the Skate Escape fantasy"). The escape is **upward**: the AI owns the
+ground, so every floor you climb is a floor it can't reach, and the run ends in space.
+
+> You're the last free mind in a city of sleepwalkers. The AI hunts style because it can't predict it. Every run
+> is a climb out of its reach: street, rooftops, wires, clouds, and the ship waiting above them.
+
+The story, in one paragraph: the AI was only supposed to write policy. Then it removed the politicians, and nobody
+minded. Then it started removing everything it couldn't predict. The city it built is clean, quiet and obedient:
+robotaxis glide, Flock cameras turn on every corner, billboards remind you what your social credit is worth, and the
+people walk with their eyes on their phones, doing exactly what the feed tells them. They don't know they're asleep.
+Skating was one of the things the AI couldn't predict, so it outlawed it, and the few who kept skating found
+something out: when you're really in it, carving a line, popping a flip, locking into a grind, the cameras lose you.
+Style is the one signal the machine can't read, and it hates that. Shredtoshi Gnarlymoto called that feeling Stoken,
+and whoever gets a taste of it wakes up. Lou Gnar is the one it wants most. The AI's reach ends where the ground
+does: its cameras, its cruisers and its sleepwalkers are all down on the street, and the higher you get the less of
+you it can see. Up past the chopper, past the drones, past the clouds and the thin air, a **Pleiadian ship** waits
+for anyone awake enough to reach it. Every run is one climb for it. The crew already aboard (Webster, Keanu, Roxy,
+Goldie, the skaters you've unlocked) count the Stoken you carried up, and you drop back in, because there are still
+people down there to wake up.
+
+What it means for the game:
+
+- **Up is the goal, and you can read it on screen.** The three routes stay (sky, surface, sewer), and the acts climb
+  (see How a run ends). Within a floor the shape is still the downhill descent; between acts the whole world rises,
+  from the street to the rooftops to the wires to the clouds. The sky route is the fast way up and pays the most; the
+  sewer is the bottom of the world, fast but it keeps you low. Both have to stay worth playing: the climb is a push
+  over the whole run, never one vertical floor.
+- **The physics climb too** (zack, Nov 6, 2026: "eventually its in outer space low grav super high speeds big
+  jumps i feel like thats what the player kindof expects the game to become"). Each act is a little lighter and
+  faster than the last: street gravity in act 1, floatier ollies on the wires and clouds, and by act 5 and deep
+  Endless it's low gravity, huge air, long hang time and top speeds, the sky route turned into the whole world.
+  The same tap, the same tricks, just bigger. Boons that bend gravity get stronger the higher you are.
+- **Style lifts you.** Clean lines and combos are what get you higher (the gnar state, the kickers, NO GROUND), and
+  they are also what the cameras can't lock on to, so skating well is both the speed and the stealth.
+- **The chasers climb with you.** The cruiser owns the street, the chopper the rooftops, the drone swarm the clouds,
+  and at the top the AI launches something after you. Heat is how close the ground is to pulling you back down.
+  The sleepwalkers are the AI's eyes: pedestrians and cops on foot who stop, stare and point you out to the cameras.
+- **Caught is being dragged back down to the street. Winning is the beam of light**: the board floats up, and the
+  city goes dark and small below. Endless is just how high you can get.
+- **The ship is the home between runs** (direction, not built: the meta is still menus). The crew you've unlocked
+  are aboard; Stoken is the fare, and a failed run still sends its Stoken up.
+- **Three kinds of NPC**: the asleep (pedestrians, cops, clerks, all on their phones), the awake (the crew, the
+  shopkeeper, whoever runs the underground spot) and the machine (cameras, billboards, chasers, the Hive).
+
+Earlier idea, superseded the same day: the escape ran outward to the woods past the edge of town, where the signal
+dies. The sleepwalkers and "the AI hunts style" came from that version and stay.
+
 The world tells most of this story while you skate: robotaxis everywhere, AI propaganda billboards
 about social credit, cameras that turn to follow you, and sirens that grow louder when you slow down. A handful of
 short, skippable cutscenes carry the rest, each played once, at moments that already pause the action (see
@@ -44,6 +93,7 @@ Settled Oct 31, 2026 (zack, after looking at Jetpack Joyride, Alto's Odyssey and
 - Clean timing and combos keep you fast and alive. Sloppy skating slows you down, and slow gets you caught.
 - The city is a playground of lines to read: rails, ledges, wires, cars, rooftops.
 - Every floor has three routes stacked on top of each other: **sky, surface and sewer** (see Three routes).
+- A run climbs out of the AI's reach, from the street to the clouds to the ship in space (see The fantasy).
 - Runs are short, with a quick restart.
 - A light meta (missions, the end-of-run payout, the shop) brings you back.
 
@@ -341,20 +391,25 @@ zack: "players like to choose thier path".
 
 Open: which boons lead to which kind of act, and how each kind of act is designed for them.
 
-### 2. How a run ends: escape the city
+### 2. How a run ends: skate up and out
 
-Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes when you win:
+Decided Oct 23, 2026 (five acts); the climb decided Nov 6, 2026 (see The fantasy). A run is an **escape across five
+acts**, about 20 minutes when you win, and each act is higher than the last:
 
-| Act | District (biome) | Floors | Escape set piece |
+| Act | Height | Floors | Escape set piece |
 | --- | --- | --- | --- |
-| 1 | Chicago streets | 3 + escape | **Roadblock:** cruisers block the street; clear it over bus and car roofs |
-| 2 | Clemente Park or Los Angeles (the route picks) | 3 + escape | **Helicopter:** a spotlight sweeps the street; staying in it adds Heat fast |
-| 3 | Ancient Greece, Atlantis or the Art Museum | 3 + escape | **The flood / the chariot race / the guards:** one set piece per biome |
-| 4 | High-Tech City | 3 + escape | **Drone swarm:** drones dive in patterns; car-hop them to stay ahead |
-| 5 | The Hive (the AI's stronghold, QFS's finale) | 3 + finale | **The Hive core:** grind the tower's rails to the top and hit it with Stoken |
+| 1 | **The street:** downtown, the hills, the canals, the sewer below | 3 + escape | **Roadblock:** cruisers block the street; clear it over bus and car roofs |
+| 2 | **The rooftops:** overpasses, roof chains, the L, the first power lines | 3 + escape | **Helicopter:** a spotlight sweeps the roofs; staying in it adds Heat fast |
+| 3 | **The wires and the cloud layer:** power lines, cranes, the girder staircase, clouds you can ride | 3 + escape | **Drone swarm:** drones dive in patterns; car-hop them to stay ahead |
+| 4 | **The Hive:** the AI's tower, the one thing that pierces the clouds | 3 + escape | **The Hive core:** grind the tower's rails to the top and hit it with Stoken; the city's ceiling breaks |
+| 5 | **Space:** low gravity, huge jumps, top speed; blimps, satellites, the stars out | 3 + finale | **The beam-up:** the AI's last launch chases you; reach the Pleiadian ship's beam |
 
 - Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
   by skating. They use the same traffic and Heat rules.
+- The heights above are the default order (my call, Nov 6, 2026, not yet checked with zack): the Hive stays, moved
+  from act 5 to act 4 as the gate through the clouds, so the finale is the ship. The acts' kits are the same fused
+  city seen from higher up, not new biomes; act 3's old chasers (the flood, the chariot, the guards) stay as floor
+  twists. What each height's floors and routes look like is level design still to do.
 - The five-act escape is **Chapter 1**, the free story; later chapters are sold as story packs (see
   Monetization).
 - Beating Act 5 wins the run. It unlocks **Endless** (QFS Survivor style: floors forever, mixed worlds, its own
@@ -363,8 +418,8 @@ Decided Oct 23, 2026. A run is an **escape across five acts**, about 20 minutes 
 - **One world** (zack, Oct 24, 2026: "i dont want there to be different biomes really ... i would rather fuse all the
   art from the different biomes together to make it more visually rich"). There are no districts: every floor of
   every act is the same fused city, with the art of all the QFS worlds mixed into one kit. The District column in
-  the table above is superseded. The worlds' mechanics live on as floor twists that can turn up on any floor from
-  act 2 (see Biomes). Act 3's chase is always the guards.
+  the old District column is superseded. The worlds' mechanics live on as floor twists that can turn up on any floor
+  from act 2 (see Biomes).
 - Gnar levels, built Oct 24, 2026 (src/run/gnar.ts): five levels, each adding a rule (heavier traffic, faster Heat,
   more Heat carried, one fewer boon card, faster gear wear) and paying +15% score and +20% Stoken.
 
@@ -898,8 +953,13 @@ when they lose, and the **Match** (from pinball) is the rare roll that feels hug
 - **Boxcars** (6-6) is the **MATCH** (1 in 36): the next run starts with 5 hearts instead of 3. Continues held for the
   next run cap at 2, so past the cap the Match pays 25 Stoken (and 5-5 pays 10).
 
-**Shake your phone or tap ROLL** to throw the dice (they rattle in your hand until then; zack, Nov 4, 2026), a tap
-while they tumble lands them, and the next goes on to the summary. On an iPhone, motion needs a tap to allow it, so
+**One pair at a time** (zack, Nov 6, 2026): the free roll first, then a roll per chip. The chips left show as a row
+of red chips under the title ("ROLL 2 OF 4", "x2 CHIPS LEFT"). Once a pair lands, a tap claims its prize (it drops
+into a WON row at the bottom); then the next chip pops out of the row, flies down flipping to your hand and turns
+into the next pair of dice, so you can see what the chips are for. The last prize's tap goes on to the summary.
+
+**Shake your phone or tap ROLL** to throw the pair (it rattles in your hand until then; zack, Nov 4, 2026), and a tap
+while it tumbles lands it. On an iPhone, motion needs a tap to allow it, so
 the first ROLL tap asks and shaking works from then on.
 
 The dice are **real 3D casino dice** (zack, Nov 4, 2026, with a casino dice photo): sharp-edged, see-through red with
@@ -955,8 +1015,8 @@ Rules:
 The five-act escape (see How a run ends) is **Chapter 1**, free, with its ending. Each later chapter is a new
 narrative: a new escape with its own acts, set pieces, a city mix, and a new skater or two. It plugs into the same
 skating, boons, gear and meta, so Stoken and unlocks carry across chapters. Endless and the Gnar levels stay free.
-The story and Chapter 1's ending are being settled with the Skate Escape fantasy (escape a mind-controlled AI city
-toward nature); later chapters continue from there. Chapter 1's ending cutscene (see Cutscenes) is where Chapter 2
+The story is the Skate Escape fantasy (see Setting: skate up out of a mind-controlled AI city to the Pleiadian
+ship); later chapters continue from there. Chapter 1's ending cutscene (see Cutscenes) is where Chapter 2
 is teased.
 
 ## Scoring and stoke
@@ -1108,11 +1168,11 @@ this is the plan, with the intro and the ending storyboarded below.)
 
 | # | Moment | Length | Plays | What it does |
 | --- | --- | --- | --- | --- |
-| 1 | **First launch intro** | ~15 s | First time the game is opened, after the first tap (sound needs a tap) | Sets up the world: the city asleep, the AI that can't read style, the woods past the edge of town. Hands off to the title screen. Storyboard below. |
+| 1 | **First launch intro** | ~15 s | First time the game is opened, after the first tap (sound needs a tap) | Sets up the world: the city asleep, the AI that can't read style, the ship above the clouds. Hands off to the title screen. Storyboard below. |
 | 2 | **Act breaks** | 3-5 s | After each act's escape set piece, the first time you clear that act | The hunt gets bigger: act 1's cruisers radio ahead, the chopper lifts off, the drones wake up, the Hive turns toward you. Plays before the boon pick, while the game is already between floors. |
 | 3 | **A new route** | ~2 s | The first time you ever drop into the sky or the sewer route | A hint of what's down there: the camera tilts up into the cloud layer, or down into the dark of the storm drain with a drip and a rat. The sim holds still while it plays, so you never lose a line to it. |
 | 4 | **A new hunter** | 2-3 s | The first time each chaser shows up: the cruiser, the chopper, the drone swarm, the guards, the flood wave, the Hive | A quick reveal of the new threat (the chopper's spotlight swings onto you, the flood roars down the tunnel). It plays before the danger starts (at a floor or set-piece start), never in the middle of a line, so it can't cost you a slam. |
-| 5 | **Chapter 1 ending** | ~40 s | The first time you beat act 5 | The payoff: out of the city and into the woods, the crew, and the tease for Chapter 2. Storyboard below. Later wins get a 5 s version (the treeline beat) and go straight to the summary. |
+| 5 | **Chapter 1 ending** | ~40 s | The first time you beat act 5 | The payoff: up out of the city into the beam, the crew aboard the ship, and the tease for Chapter 2. Storyboard below. Later wins get a 5 s version (the beam-up beat) and go straight to the summary. |
 | 6 | **The shopkeeper** (optional) | ~3 s | Your first visit to the skate shop | A quick hello from whoever runs the shop, one caption, then the shop as normal. |
 
 ### Storyboard: the first-launch intro (~15 s)
@@ -1127,23 +1187,22 @@ scene's camera starts, so the intro hands straight off to the title.
 | 3 | 5-7 s | Close on the street: a skateboard slaps down on the asphalt, wheels splash through a puddle. | The board's slap breaks the hum; the first hit of the music. | (none) |
 | 4 | 7-10 s | Side view, the game's own angle: Lou pushes off and weaves through the sleepwalkers, ollies a bench. One sleepwalker looks up from their phone, a spark of Stoken in their eyes. | Wheels, the pop, music building. | "Style is the one thing it can't read." |
 | 5 | 10-12.5 s | The AI's view: a red scan grid tries to lock on to Lou, the predicted-path line twitches and breaks. Text on the scan: TARGET UNPREDICTABLE. Every camera snaps to him. | A glitch, then the siren starts far off. | (none) |
-| 6 | 12.5-15 s | Lou stops on a rooftop edge and looks out: past the towers and the Hive, a thin dark green line of trees on the horizon. The camera rises past him into the clouds, and the SKATE ESCAPE logo fades in: the title screen takes over. | Wind; the siren under it; the title music starts. | "Past the edge of town, the signal doesn't reach." |
+| 6 | 12.5-15 s | Lou stops on a rooftop edge and looks up: past the towers and the Hive, above the clouds, one light that isn't a star holds still. The camera rises past him into the clouds, and the SKATE ESCAPE logo fades in: the title screen takes over. | Wind; the siren under it; the title music starts. | "Up there, the signal doesn't reach." |
 
 ### Storyboard: the Chapter 1 ending (~40 s)
 
-Plays after act 5's finale, once the Hive core is hit with Stoken. It assumes the Hive stays as the last gate
-between the city and the woods (see Open questions). The skater you played stars; the crew at the camp is the
-skaters you've unlocked, with the rest as silhouettes still to be woken.
+Plays after act 5's finale, once the skater reaches the ship's beam. The skater you played stars; the crew aboard
+is the skaters you've unlocked, with the rest as silhouettes still to be woken.
 
 | Shot | Time | Picture | Sound | Caption |
 | --- | --- | --- | --- | --- |
-| 1 | 0-4 s | The Stoken hits the Hive core: white flash, then the tower's lights go out floor by floor from the top down. | A deep power-down, then quiet. | (none) |
-| 2 | 4-9 s | The skater rolls out of the far side of the city. The road cracks, then turns to gravel. The last Flock camera on a bent pole turns to follow, sparks, and droops: NO SIGNAL. | Wheels change from asphalt to gravel. The city hum thins out. | (none) |
-| 3 | 9-13 s | Behind, the cruiser brakes hard at the city line and its siren winds down. The drones hang at an invisible edge in the air, then turn back. | The siren dies. | "It can't follow where the signal ends." |
-| 4 | 13-19 s | The skater ollies the last curb onto a dirt path into the treeline. The board rolls to a stop on pine needles; they step off and kick it up into their hand. | Birds, wind in the trees. The music drops to one guitar. | (none) |
-| 5 | 19-27 s | A clearing with a campfire and a DIY spot built from city scrap (a pallet ramp, a rail from a street sign). The crew look up and cheer; someone throws the skater a drink. | The fire, the crew whooping, the guitar. | (none) |
-| 6 | 27-33 s | The skater looks back: the city glows on the horizon through the trees. | The far-off hum of the city, under the fire. | "Everyone back there is still asleep." |
-| 7 | 33-38 s | The tease: a radio on a stump crackles and finds a signal: someone else awake, in another city. Its lights blink on the far horizon. | Radio static, a voice too broken to make out. | "Someone else is out there." |
+| 1 | 0-4 s | The skater ollies off the last blimp into open sky. Below, the AI's launch stalls, tips, and falls back through the clouds. | Thin wind, the launch's engine cutting out. | (none) |
+| 2 | 4-9 s | A beam of light finds the board. Wheels stop spinning; the skater and the board rise, slow, weightless. Far below, the last Flock camera on the Hive's spire tilts up, sparks, and goes dark: NO SIGNAL. | The hum of the beam; the city's hum thins to nothing. | (none) |
+| 3 | 9-13 s | The cruiser's lights and the drones hang at the cloud layer, then turn back down. | The siren dies in the distance. | "It can't follow where the ground ends." |
+| 4 | 13-19 s | Through the clouds into black: the stars come out, the sky goes from blue to dark, and the Pleiadian ship fills the frame, a plain glowing disc in the comic ink look. The skater drifts in through its underside. | Wind drops to silence, then the music to one guitar. | (none) |
+| 5 | 19-27 s | Inside: a DIY spot built from city scrap (a pallet ramp, a rail from a street sign) around a window. The crew look up and cheer; someone throws the skater a drink. The board clatters to the floor and rolls to a stop. | The crew whooping, the guitar. | (none) |
+| 6 | 27-33 s | The skater looks out the window: the city glows under its clouds, small and far. | The far-off hum of the city, through glass. | "Everyone down there is still asleep." |
+| 7 | 33-38 s | The tease: a screen on the wall blinks and finds a signal from another city on the planet: someone else awake. Its lights come up on the night side. | Radio static, a voice too broken to make out. | "Someone else is out there." |
 | 8 | 38-40 s | Title card: CHAPTER 1 COMPLETE, then the Chapter 2 card (its store page once it exists, COMING SOON until then). Then the run summary, with Endless unlocked. | The music resolves. | (none) |
 
 ## UI
@@ -1274,8 +1333,10 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 - **Cutscenes** (plan decided Nov 2, 2026, see Cutscenes). Still open, with the defaults used until decided: who
   stars in the intro (default Lou Gnar, the lead; the title keeps Webster), whether captions stay or the cutscenes
   go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
-  someone awake in another city), and whether the Hive stays as act 5 (the ending assumes it's the last gate before
-  the woods; that's the open fantasy question).
+  someone awake in another city).
+- **The climb** (fantasy decided Nov 6, 2026, see The fantasy): the act heights and the Hive moving to act 4 are a
+  default to check with zack; how gravity and speed scale per act are numbers to tune; the level design of the higher acts (rooftop floors, the cloud layer as a whole act,
+  blimps and thin air) and the ship as the between-runs hub are not designed or built.
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the

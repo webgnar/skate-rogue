@@ -11,6 +11,7 @@ import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
+import { deckChoices, STOCK_DECK, type DeckArt } from '../board/deck-art';
 import { RunScore, SCORE } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
 import { firstCloud } from '../gen/clouds';
@@ -169,6 +170,8 @@ export interface ShopView {
   gear: Gear; // what your gear is at; the shop sells new parts
   grip: GripId; // the grip on the board; the shop sells one other colour (shop.grip)
   gripPrice: number;
+  deckArt: DeckArt; // the graphic a new deck from this shop comes in (src/board/deck-art.ts)
+  deckPick: DeckArt[] | null; // a new deck just bought: the graphics to pick from (zack, 2026-11-06: pick 1 of 3)
 }
 
 export interface Hud {
@@ -196,16 +199,15 @@ export interface Hud {
   missionTick?(t: MissionTick): void; // a mission moved on mid-run: the popup above the gear wear
   missionDone?(t: MissionTick): void; // a mission finished mid-run: the popup goes gold
   dice(view: DiceView | null): void; // the end-of-run street dice, before the summary; null hides them
-  diceThrow(): void; // throw the dice (the first tap)
-  diceSkip(): void; // land every die where it stops
+  diceTap(): boolean; // a tap on the dice: throw, land, claim, next pair; true once the last prize is claimed
 }
 
-// the street dice: a pair per roll (one free, one per chip found), all thrown at once
+// the street dice: a pair per roll (one free, one per chip found), thrown one at a time
 export interface DiceView {
   rolls: { dice: Roll['dice']; name: string; prize: PrizeLabel; big: boolean; match: boolean }[];
 }
 
-export const DICE_MS = 1300; // the dice tumble this long before the last pair lands (src/ui/dice-panel.ts)
+export const DICE_MS = 1300; // a pair of dice tumbles this long before it lands (src/ui/dice-panel.ts)
 
 type State = 'skate' | 'caught' | 'cont' | 'pick' | 'shop' | 'under' | 'dice' | 'over';
 
@@ -412,6 +414,9 @@ export class Game {
   private shop: ShopState | null = null;
   private shopPick: ShopPick = null;
   private shopVisits = 0;
+  private deckArt: DeckArt = STOCK_DECK; // the graphic under the board this run (a new deck brings a new one)
+  private shopDecks: DeckArt[] = []; // the graphics this shop's new deck comes in
+  private deckPick: DeckArt[] | null = null; // open while you pick the new deck's graphic
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
   private grip: GripId = loadSave().tape ?? GRIP.start; // the grip tape's colour, kept between runs (src/board/grips.ts)
   // the three missions and Skater Rank (src/run/missions.ts), kept between runs
@@ -421,7 +426,6 @@ export class Game {
   private grindPx = 0;
   private floorBusted = false; // a part busted this floor
   private overResult: RunResult | null = null; // the summary, shown once the dice are done
-  private diceEnd = 0; // when the last pair of dice lands; 0: not thrown yet
   // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
   // next one is already there, built in the background while you skated this one
   private readonly prefetch = new FloorPrefetch();
@@ -598,6 +602,7 @@ export class Game {
     this.board = newBoard(DECK_SLOTS[this.meta.loadout.deck]);
     this.gear = freshGear();
     this.shopVisits = 0;
+    this.setDeckArt(STOCK_DECK);
     this.run = new RunScore();
     this.carry = 0;
     this.continuesLeft = CONTINUES;
@@ -955,9 +960,17 @@ export class Game {
     this.startFloor({ skater, dx: -old.width, dy: level.startY - old.streetY });
   }
 
+  // the deck's paint and graphic, on the board
+  private setDeckArt(art: DeckArt): void {
+    this.deckArt = art;
+    this.sprite.setDeckArt(art);
+  }
+
   private openShop(): void {
     this.shopVisits++;
     this.shop = { cash: this.run.cash, board: this.board.slice(), stock: rollStock(this.seed, this.shopVisits, 0), restocks: 0, grip: gripFor(this.seed, this.shopVisits, this.grip) };
+    this.shopDecks = deckChoices(this.seed, this.shopVisits, this.deckArt.id);
+    this.deckPick = null;
     this.shopPick = null;
     this.openMenu('shop', performance.now());
     this.showShop();
@@ -974,6 +987,8 @@ export class Game {
       gear: this.gear,
       grip: this.grip,
       gripPrice: GRIP.price,
+      deckArt: this.shopDecks[0] ?? STOCK_DECK,
+      deckPick: this.deckPick,
     });
     this.hud.money(this.shop.cash, this.run.stoken);
   }
@@ -994,6 +1009,18 @@ export class Game {
     if (this.state !== 'shop') return;
     const s = this.shop;
     if (!s) return;
+    //a new deck's graphic, picked from the three on offer; nothing else in the shop takes a tap till then
+    if (this.deckPick) {
+      const card = target.closest<HTMLElement>('[data-deckart]');
+      const art = card ? this.deckPick[Number(card.dataset.deckart)] : undefined;
+      if (!art) return;
+      this.deckPick = null;
+      this.setDeckArt(art);
+      this.hud.callout(`${art.name.toUpperCase()} DECK`, 'good');
+      this.sound?.play(MOMENT.pick);
+      this.showShop();
+      return;
+    }
     const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-gear],[data-grip],[data-done]');
     if (!el) return;
     const pick = this.shopPick;
@@ -1037,7 +1064,9 @@ export class Game {
         this.gear = got.gear;
         next = { ...s, cash: got.cash };
         this.hud.gear(this.gear);
-        this.hud.callout(`NEW ${GEAR.names[part].toUpperCase()}`, 'good');
+        //a new deck: pick its graphic next (the pick shows over the shop)
+        if (part === 'deck' && this.shopDecks.length) this.deckPick = this.shopDecks;
+        else this.hud.callout(`NEW ${GEAR.names[part].toUpperCase()}`, 'good');
       } else if (this.gear[part] < 100) this.hud.callout('NOT ENOUGH CASH', 'bad');
       this.shopPick = null;
     } else if (el.dataset.grip !== undefined) {
@@ -1071,6 +1100,8 @@ export class Game {
 
   private leaveShop(): void {
     if (!this.shop) return;
+    if (this.deckPick) this.setDeckArt(this.deckPick[0]); // left mid-pick: the first one
+    this.deckPick = null;
     this.run.cash = this.shop.cash;
     this.board = this.shop.board;
     this.shop = null;
@@ -1177,7 +1208,6 @@ export class Game {
     if (!rolls.length) return this.hud.over(result);
     this.overResult = result;
     this.openMenu('dice', now);
-    this.diceEnd = 0;
     this.hud.dice({
       rolls: rolls.map((r) => ({
         dice: r.dice,
@@ -1203,29 +1233,11 @@ export class Game {
     return won.rolls;
   }
 
-  // a shake of the phone: throws the dice, like the first tap (src/ui/dice-panel.ts listens for it)
-  shakeDice(): void {
-    if (this.state !== 'dice' || this.diceEnd) return;
-    const now = performance.now();
-    this.hud.diceThrow();
-    this.diceEnd = now + DICE_MS;
-    this.menuAt = now;
-  }
-
-  // the dice's taps: the first throws them, one while they tumble lands them, the next goes on to the summary
+  // the dice's taps go to the dice screen (src/ui/dice-panel.ts), one pair at a time; once the last prize is
+  // claimed, on to the summary (a shake of the phone throws a pair there too)
   private diceTap(now: number): void {
-    if (!this.diceEnd) {
-      this.hud.diceThrow();
-      this.diceEnd = now + DICE_MS;
-      this.menuAt = now;
-      return;
-    }
-    if (now < this.diceEnd) {
-      this.hud.diceSkip();
-      this.diceEnd = now;
-      this.menuAt = now;
-      return;
-    }
+    this.menuAt = now;
+    if (!this.hud.diceTap()) return;
     this.hud.dice(null);
     this.openMenu('over', now);
     if (this.overResult) this.hud.over(this.overResult);

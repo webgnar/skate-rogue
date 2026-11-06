@@ -8,7 +8,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
-import { bearingCaps, deckPaint, paintGrip, wearBoard, wearShoes } from './wear';
+import { bearingCaps, deckDecal, deckPaint, paintDeckBase, paintGrip, wearBoard, wearShoes } from './wear';
+import { deckTexture } from './deck-graphic';
+import { STOCK_DECK, type DeckArt } from '../board/deck-art';
 import { GEAR_PARTS, type Gear } from '../run/gear';
 import { PHYS } from '../physics/constants';
 import type { Skater, SkaterEvent } from '../physics/skater';
@@ -304,6 +306,15 @@ export class SkaterRig {
     const caps = this.lambert(0xffffff);
     caps.vertexColors = true;
     board.add(bearingCaps(caps));
+    //the deck graphic's layer under the deck, hidden till a deck with a graphic goes on (setDeckArt)
+    const art = this.lambert(0xffffff);
+    art.vertexColors = true;
+    art.alphaTest = 0.5;
+    art.polygonOffset = true;
+    art.polygonOffsetFactor = -1;
+    art.polygonOffsetUnits = -2;
+    this.decal = deckDecal(board, art);
+    if (this.decal) this.decal.visible = false;
   }
 
   // the model's materials as the rig's own, so they blink on slams and take the toon ramp
@@ -1199,8 +1210,29 @@ export class SkaterRig {
     const key = GEAR_PARTS.map((p) => Math.round(g[p] / 5)).join();
     if (key === this.worn) return;
     this.worn = key;
+    this.gear = g;
     if (this.board) wearBoard(this.board, g);
     wearShoes(this.mesh, g.shoes);
+  }
+  private gear: Gear | null = null;
+  private decal: THREE.Mesh | null = null; // the deck graphic (wear.ts deckDecal)
+  private art: DeckArt = STOCK_DECK;
+
+  // the deck's paint and graphic (src/board/deck-art.ts): the stock deck is plain red
+  setDeckArt(art: DeckArt): void {
+    this.art = art;
+    if (!this.board) return;
+    paintDeckBase(this.board, art.base);
+    if (this.decal) {
+      const mat = this.decal.material as THREE.MeshToonMaterial;
+      mat.map?.dispose();
+      mat.map = art.shape === 'plain' ? null : deckTexture(art);
+      mat.needsUpdate = true;
+      this.decal.visible = !!mat.map;
+    }
+    //redraw the wear over the new paint
+    this.worn = '';
+    if (this.gear) this.setGear(this.gear);
   }
 
   // the deck as drawn (origin at the middle of its top), for effects that follow the board (flip-lines.ts)
@@ -1211,6 +1243,11 @@ export class SkaterRig {
   // the colours a slide shreds off the deck (wear.ts deckPaint); the built-in board is plain red
   deckPaint(): number[][] {
     const paint = this.board ? deckPaint(this.board) : [];
+    //a few flakes of the graphic's colours too
+    for (const ink of this.art.ink.slice(0, 2)) {
+      const c = new THREE.Color(ink).getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
+      paint.push([c.r, c.g, c.b], [c.r, c.g, c.b]);
+    }
     if (paint.length > 2) return paint;
     const c = new THREE.Color(COLORS.deck).getRGB({ r: 0, g: 0, b: 0 }, THREE.SRGBColorSpace);
     return [[c.r, c.g, c.b]];

@@ -836,7 +836,11 @@ export function* buildHillSteps(level: Level, group: THREE.Group, lead = 0): Gen
   const rngT = makeRng(level.layout.seed * 61 + level.layout.floor * 13);
   //(two cross streets close together share the back street between them: each one's arm stops halfway, or their
   //rows of houses stood in each other, fronts in one plane, and flickered far off behind the street; zack 2026-11-03)
-  const sorted = crossings.slice().sort((p, q) => p[0] - q[0]);
+  //(the crest-jump pits have back streets too, so they're neighbours here as well: a pit left out found no street
+  //of its own, took the first cross street on the floor for its next one and built its sidewalk arm backwards, a
+  //hundred tiles long and inside out, which drew as a giant black wall behind the street; zack 2026-11-06)
+  const holes = gaps(ground);
+  const sorted = [...crossings, ...holes].sort((p, q) => p[0] - q[0]);
   const tee = function* (x0: number, x1: number, t: number): Generator<void, void> {
     const T = HILLSIDE.tee;
     const i = sorted.findIndex((q) => q[0] === x0);
@@ -848,7 +852,7 @@ export function* buildHillSteps(level: Level, group: THREE.Group, lead = 0): Gen
     const z0 = z1 - HILLSIDE.crossW;
     m.box(a, b, B, t, t, z0, z1, { top: ['road', (p) => [p[0] / 4, (p[2] - z0) / (z1 - z0)]], left: ['concrete', cs], right: ['concrete', cs] });
     //its near sidewalk, broken by the cross street's mouth, and the far one
-    for (const [w0, w1] of [[a, x0 - 0.7], [x1 + 0.7, b]]) m.box(w0, w1, B, t + c, t + c, z1, z1 + T.walk, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
+    for (const [w0, w1] of [[a, x0 - 0.7], [x1 + 0.7, b]]) if (w1 > w0) m.box(w0, w1, B, t + c, t + c, z1, z1 + T.walk, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf], left: ['concrete', cs], right: ['concrete', cs] });
     m.box(a, b, B, t + c, t + c, z0 - T.walk, z0, { top: ['walk', UV.top(1, 1)], front: ['concrete', cf] });
     yield* houseRowSteps(m, rngT, a, b, z0 - T.walk - T.depth, z0 - T.walk, () => t + c, () => t - 0.5, (_xa, xb) => xb > b + 0.01, { bay: 0.7, chimney: 0.3, hip: true, shrub: 0.4 });
   };
@@ -896,7 +900,6 @@ export function* buildHillSteps(level: Level, group: THREE.Group, lead = 0): Gen
     }
   }
   //under each crest jump, the cross street it clears, running from the city behind to the camera
-  const holes = gaps(ground);
   //(the sewer's shaft, src/gen/sewer.ts: a pit whose cross street is dug up over the lane, straight down to the deep)
   const shafts = (level.sewers ?? []).filter((s) => s.entry === 'shaft' && s.top !== undefined);
   for (const [x0, x1, t] of holes) {

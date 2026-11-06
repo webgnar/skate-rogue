@@ -10,6 +10,8 @@ import { GEAR, wornness } from './run/gear';
 import { chainText, modDef, type ModId, type Slots } from './board/mods';
 import { dropBoard, type ShopState } from './board/shop';
 import { gripCardColor, gripDef } from './board/grips';
+import type { DeckArt } from './board/deck-art';
+import { deckArtUrl } from './render/deck-graphic';
 import { drawWires } from './ui/board-wires';
 import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
@@ -58,9 +60,6 @@ import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 import { TitleScene } from './title/title-scene';
 
 const base = import.meta.env.BASE_URL;
-
-// a shake of the phone throws the dice on the dice screen (set once the game exists)
-let onShake = (): void => {};
 
 function esc(text: string): string {
   return text.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -132,6 +131,11 @@ function slot(id: ModId | null, i: number, cls = ''): string {
   return `<button class="slot ${modKind(id)} ${cls}" data-slot="${i}">${id ? esc(modDef(id).short) : ''}</button>`;
 }
 
+// a new deck's card shows the graphic it comes in (src/board/deck-art.ts)
+function deckCardArt(art: DeckArt): string {
+  return `<span class="art"><img class="pic deckart" src="${deckArtUrl(art)}" alt="${esc(art.name)}" draggable="false" /></span>`;
+}
+
 const KIND_TAG = { trigger: 'TRIGGER', effect: 'EFFECT', modifier: 'MODIFIER' } as const;
 
 // the skate shop as a card game (src/ui/shop-drag.ts): your setup across the top is where cards land, the hand of
@@ -174,8 +178,8 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     const c = Math.round(v.gear[p]);
     if (c >= 100) continue; // only worn parts are for sale
     cards.push(`<button class="card-shop gearcard ${shop.cash < GEAR.price[p] ? 'poor' : ''}" data-gear="${p}">
-      <span class="kind">GEAR</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>${gearArt(p)}
-      <span class="text">Yours: ${c}%</span><span class="price">$${GEAR.price[p]}</span>
+      <span class="kind">GEAR</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>${p === 'deck' ? deckCardArt(v.deckArt) : gearArt(p)}
+      <span class="text">${p === 'deck' ? `Pick 1 of 3 graphics · yours ${c}%` : `Yours: ${c}%`}</span><span class="price">$${GEAR.price[p]}</span>
     </button>`);
   }
   const hint = !picked
@@ -221,7 +225,7 @@ function makeHud(): Hud {
   const pausedEl = document.getElementById('paused')!;
   const hintEl = document.getElementById('hint')!;
   const view = new HudView();
-  const dice = new DicePanel(document.getElementById('dice')!, () => FX.reduceMotion, () => onShake());
+  const dice = new DicePanel(document.getElementById('dice')!, () => FX.reduceMotion);
   const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
   let level = 0;
   let held: Held[] = [];
@@ -314,6 +318,17 @@ function makeHud(): Hud {
       shopCash = v.shop.cash;
       shopEl.querySelector('.hand')!.innerHTML = h.hand;
       shopEl.querySelector('.hint')!.textContent = h.hint;
+      //a new deck just bought: its three graphics over the shop, tap the one to ride
+      const deckPickEl = shopEl.querySelector<HTMLElement>('.deckpick')!;
+      const wasOpen = !deckPickEl.hidden;
+      deckPickEl.hidden = !v.deckPick;
+      if (v.deckPick && !wasOpen) {
+        deckPickEl.querySelector('.row')!.innerHTML = v.deckPick
+          .map((a, i) => `<button class="card-shop gearcard pickdeck" data-deckart="${i}" style="--i:${i}">
+            <span class="kind">DECK</span><b>${esc(a.name.toUpperCase())}</b>${deckCardArt(a)}<span class="text">Tap to ride it</span>
+          </button>`)
+          .join('');
+      }
       shopEl.querySelector('.cash')!.textContent = `$${v.shop.cash}`;
       const re = shopEl.querySelector<HTMLButtonElement>('.restock')!;
       re.textContent = `RESTOCK $${v.restockPrice}`;
@@ -374,8 +389,7 @@ function makeHud(): Hud {
     missionTick: (t) => missionToast.tick(t),
     missionDone: (t) => missionToast.done(t),
     dice: (v) => dice.show(v),
-    diceThrow: () => dice.throw(),
-    diceSkip: () => dice.skip(),
+    diceTap: () => dice.tap(),
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
     over: (result) => {
       overEl.hidden = !result;
@@ -491,7 +505,6 @@ async function start() {
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
-  onShake = () => game.shakeDice();
   skipMission = (i) => game.skipMission(i);
   built();
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster

@@ -109,7 +109,9 @@ export class Dice3D {
   private readonly pipMat = new THREE.MeshStandardMaterial({ color: 0xfbfbf6, roughness: 0.45 });
   private readonly shadowMat: THREE.MeshBasicMaterial;
   private dice: Die[] = [];
-  private thrownAt = -1; // performance.now() of the throw; -1 still in the hand
+  private thrownAt = 0; // performance.now() of the throw
+  private held = true; // still in the hand (not thrown yet)
+  private appearAt = -1e9; // when this pair popped out of a chip (they grow in)
   private shake = 0; // how hard the phone's shaking right now (0-1), rattles the dice in the hand
   private raf = 0;
   private w = 1;
@@ -137,7 +139,8 @@ export class Dice3D {
   }
 
   // the dice for these results (two per roll); they sit in the hand until thrown. hand: where the hand is
-  set(results: Face[], slots: DieSlot[], hand: { x: number; y: number }, lands: number[], match: boolean[]): void {
+  // pop: they grow in, out of the chip that bought them
+  set(results: Face[], slots: DieSlot[], hand: { x: number; y: number }, lands: number[], match: boolean[], pop = false): void {
     for (const d of this.dice) this.scene.remove(d.body, d.shadow);
     this.dice = results.map((f, i) => {
       const seed = Math.random();
@@ -170,18 +173,21 @@ export class Dice3D {
         seed,
       };
     });
-    this.thrownAt = -1;
+    this.held = true;
+    this.appearAt = pop ? performance.now() : -1e9;
     this.start();
   }
 
   // the dice leave the hand
   throwNow(): void {
     this.thrownAt = performance.now();
+    this.held = false;
   }
 
   // every die on its result now
   finish(): void {
-    this.thrownAt = performance.now() - 1e6;
+    this.thrownAt = -Infinity;
+    this.held = false;
   }
 
   // the phone's shaking (0-1): the dice rattle in the hand
@@ -225,13 +231,16 @@ export class Dice3D {
     const shake = this.shake;
     this.shake *= 0.86;
     const spin = new THREE.Quaternion();
+    //out of the chip: a quick overshooting grow
+    const g = Math.min(1, (now - this.appearAt) / 260);
+    const grow = g >= 1 ? 1 : Math.max(0.01, 1 + 2.2 * (g - 1) ** 3 + 1.2 * (g - 1) ** 2);
     for (const d of this.dice) {
       const s = d.slot.size;
       let x: number;
       let y: number;
       let lift = 0; // height above the ground, in die sizes
       const q = new THREE.Quaternion();
-      if (t0 < 0) {
+      if (this.held) {
         //in the hand: a little wobble, a lot more while the phone shakes
         const k = 0.06 + shake * 0.5;
         const a = now / 90 + d.seed * 10;
@@ -251,12 +260,12 @@ export class Dice3D {
         //tumbling, slowing to a stop on its result
         q.copy(d.end).multiply(spin.setFromAxisAngle(d.axis, d.turns * Math.PI * 2 * (1 - easeOut(Math.min(1, t * 1.08)))));
       }
-      const scale = s * (0.8 + lift * 0.18);
+      const scale = s * (0.8 + lift * 0.18) * grow;
       d.body.position.set(x, -(y - lift * s * 0.9), 0);
       d.body.quaternion.copy(q);
       d.body.scale.setScalar(scale);
       d.shadow.position.set(x + s * 0.08, -(y + s * 0.42), -s * 2);
-      d.shadow.scale.set(s * (1.25 - lift * 0.2), s * 0.42, 1);
+      d.shadow.scale.set(s * grow * (1.25 - lift * 0.2), s * grow * 0.42, 1);
       (d.shadow.material as THREE.MeshBasicMaterial).opacity = 1;
     }
     this.renderer.render(this.scene, this.camera);
