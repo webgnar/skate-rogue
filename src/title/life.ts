@@ -362,7 +362,7 @@ function dog(): Life {
 
 // where the dog looks when it turns to the camera: the camera's last stop across the street, its body turned part
 // way there (radians, its facing)
-const DOG_LOOK = { at: new THREE.Vector3(3.6, 1.5, 17), body: -0.5 };
+const DOG_LOOK = { at: new THREE.Vector3(3.6, 1.5, 17), body: -0.6, most: 0.9 }; // most: the furthest its neck turns, radians
 
 // turns a bone by a world yaw (about the up axis) on top of its pose; the bone's parents' world matrices must be current
 const _q = new THREE.Quaternion();
@@ -383,8 +383,11 @@ function modelDog(): Life | null {
   const group = new THREE.Group();
   inkify(rig.root);
   group.add(rig.root);
-  const neck = rig.root.getObjectByName('Neck');
-  const head = rig.root.getObjectByName('Head');
+  //the bones the look turns, base to tip, and how much of the turn each takes: spread down the neck so no one joint
+  //twists the mesh
+  const lookBones = (['Neck', 'Neck.001', 'Head'] as const).map((n) => rig.root.getObjectByName(n)).filter((b): b is THREE.Object3D => !!b);
+  const share = 1 / Math.max(1, lookBones.length);
+  const posed = lookBones.map((b) => b.quaternion.clone()); // each bone as the clip posed it, before the look
   let face = 0;
   let look = 0; // how far its head is turned to the camera, 0 to 1
   return {
@@ -403,14 +406,18 @@ function modelDog(): Life | null {
       else if (what === 'scratch') rig.play('shake', 0.25);
       else if (what === 'look') rig.play('idle', 0.35);
       else if (what !== 'gone') rig.play(what, 0.35);
+      //put back the clip's pose under last frame's look first, so the look never piles up on a bone the clip doesn't
+      //key every frame
+      lookBones.forEach((b, i) => b.quaternion.copy(posed[i]));
       rig.update(dt);
-      //the look: the rest of the turn to the camera in its neck and head, on top of the clip, eased in and out
+      lookBones.forEach((b, i) => posed[i].copy(b.quaternion));
+      //the look: the rest of the turn to the camera down its neck to its head, on top of the clip, eased in and out
       look += ((what === 'look' ? 1 : 0) - look) * Math.min(1, dt * 4);
-      if (look > 0.001 && neck && head) {
+      if (look > 0.001 && lookBones.length) {
         rig.root.updateMatrixWorld(true);
-        const turn = (Math.atan2(DOG_LOOK.at.x - x, DOG_LOOK.at.z - z) - Math.PI / 2 - face) * look * 0.85;
-        turnBone(neck, turn * 0.4);
-        turnBone(head, turn * 0.6);
+        const want = Math.atan2(DOG_LOOK.at.x - x, DOG_LOOK.at.z - z) - Math.PI / 2 - face;
+        const turn = THREE.MathUtils.clamp(want, -DOG_LOOK.most, DOG_LOOK.most) * look;
+        for (const b of lookBones) turnBone(b, turn * share);
       }
     },
   };
