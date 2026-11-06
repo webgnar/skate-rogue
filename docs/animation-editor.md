@@ -44,7 +44,8 @@ Webster plays the same on all of them.
 - **Auto-key:** changing anything between keys adds a key at the playhead. `k` adds one, delete removes one (the
   first key stays at 0). Drag a key's diamond to retime it, or type a new **length** to stretch the whole clip.
 - On a looping clip whose last key matches its first, editing either one edits both, so the loop doesn't jump.
-- **copy pose / paste pose** (ctrl+c / ctrl+v) copies the pose at the playhead to another time.
+- **copy pose / paste pose** (ctrl+c / ctrl+v) copies the pose at the playhead to another time. With a dot picked
+  it copies just that dot's values (the button reads "copy back foot" and so on), and paste puts back only those.
 - **ghost** shows the previous key see-through. **ref photo** (or drop an image on the view) lays a reference photo
   over the view, with a fade slider and a mirror button. The side view is the game's camera.
 - ctrl+z / ctrl+shift+z undo and redo. Unsaved clips survive a reload (they're kept in this browser).
