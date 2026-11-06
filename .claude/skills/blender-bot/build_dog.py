@@ -1,9 +1,10 @@
-"""The title screen's stray dog for Skate Escape, one-shot from SKILL.md on
-bb_lib (zack 2026-11-05: "do the cat and dog from the intro"). It replaces the
-code-built dog in src/title/life.ts, so it keeps that dog's look: a scruffy tan
-mutt with a dark saddle, a white chest, muzzle, socks and tail tip, floppy dark
-ears, a red collar with a gold tag. The colours are the code-built dog's, which
-zack approved (title scene passes, 2026-11-02/03), so no palette was invented.
+"""The title screen's dog for Skate Escape, on bb_lib. First a stray mutt
+(zack 2026-11-05: "do the cat and dog from the intro"); reshaped 2026-11-06 into
+a tri-colour Bernedoodle after zack's photo and cartoon ("trace the dogs outline
+and compare it to your dog"): a shorter, deeper body (length to height 1.21, as
+the cartoon's outline), a big head on an upright neck, thick legs, long curly
+ears, a short plume of a tail; black curly coat, rust legs, cheeks and brows,
+white blaze, muzzle and paws.
 
   1. block out from one Cube (the ribcage): the deep chest, the neck held up,
      the skull knifed across at the mouth into the muzzle and the jaw (it
@@ -29,6 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bb_lib import Creature, Painter, Rig, ease
 from mathutils import Vector
 import bmesh
+E = lambda k, d: float(os.environ.get(k, d))     # tuning overrides for sweeps
 
 args = sys.argv[sys.argv.index('--') + 1:]
 OUT = args[0]
@@ -40,44 +42,46 @@ JAW = 1
 
 # ---------- 1. block out ----------
 HIP = Vector((0, 0, 9.5))
-C.start_cube((4.6, 7.0, 5.0), HIP, round_long=1.6)        # the ribcage and loins
+C.start_cube((5.0, 8.6, 5.4), HIP, round_long=1.6)        # the ribcage and loins
 
 front = C.run(C.face_where((0, -1, 0)), [
-    ((0, -1, 0.1), 1.4, 1.05, 1.1),      # the deep chest
-    ((0, -1, 0.45), 1.0, 0.85, 0.8),     # the shoulders, rounding up
+    ((0, -1, E('CZ', 0.05)), 0.6, 1.0, 1.15),    # the deep chest, dropping to the front legs
+    ((0, -0.6, 0.8), 0.5, 0.95, 1.0),      # the shoulders, rounding up
 ], name='chest', region='chest')
 front = C.run(front, [
-    ((0, -0.8, 0.75), 1.3, 0.85, 0.9),   # the neck, held up and forward
-    ((0, -0.75, 0.8), 0.9, 0.95, 1.0),
+    ((0, 0.15, 1), 0.8, 1.0, 1.05),   # the neck, thick with coat, held up
+    ((0, 0.0, 1), 0.5, 1.0, 1.0),
 ], name='neck', region='neck')
 front = C.run(front, [
-    ((0, -1, 0.3), 0.8, 1.35, 1.3),      # the back of the skull swells
-    ((0, -1, 0.0), 1.8, 1.0, 0.95),      # the skull, to the stop
+    ((0, -1, 0.1), 1.0, 1.25, 1.0),      # the back of the skull swells: a big round doodle head
+    ((0, -1, 0.0), 1.6, 1.0, 0.9),       # the skull, to the stop
 ], name='head', region='head')
 nc = front.calc_center_median()
 hh = max(v.co.z for v in front.verts) - min(v.co.z for v in front.verts)
 MOUTH_Z = nc.z - hh * 0.22
 low, up = C.split_face(front, (0, 0, MOUTH_Z))
 C.run(up, [
-    ((0, -1, -0.1), 1.2, 0.85, 0.8),     # the muzzle
-    ((0, -1, -0.05), 1.0, 0.85, 0.85),   # to the nose
+    ((0, -1, -0.1), 1.0, 0.9, 0.85),     # the muzzle
+    ((0, -1, -0.05), 0.8, 0.85, 0.85),   # to the nose
 ], name='muzzle', region='head', keep=(MOUTH_Z, 1, 2))
 C.run(low, [
-    ((0, -1, -0.12), 1.1, 0.8, 0.8),     # the lower jaw
-    ((0, -1, 0.0), 0.9, 0.8, 0.8),
+    ((0, -1, -0.12), 0.9, 0.85, 0.8),    # the lower jaw
+    ((0, -1, 0.0), 0.8, 0.8, 0.8),
 ], name='jaw', region='head', part=JAW, keep=(MOUTH_Z, -1, 2))
 
 tail = C.run(C.face_where((0, 1, 0)), [
-    ((0, 1, -0.05), 1.3, 0.92, 0.92),    # the rump
-    ((0, 1, 0.2), 1.0, 0.5, 0.5),        # the tail's root
+    ((0, 1, 0.0), 0.4, 0.95, 0.95),      # the rump
+    ((0, 1, 0.3), 0.8, 0.6, 0.6),        # the tail's root
 ], name='rump', region='body')
 tip = C.run(tail, [
-    ((0, 0.8, 0.7), 1.6, 0.85, 0.85),    # the tail, carried up in a curve
-    ((0, 0.45, 1), 1.6, 0.85, 0.85),
-    ((0, 0.1, 1), 1.4, 0.8, 0.8),
-    ((0, -0.2, 1), 1.0, 0.7, 0.7),
+    ((0, 0.6, 0.8), 1.2, 1.0, 1.0),      # the tail: a short curly plume, carried up
+    ((0, 0.1, 1), 1.1, 1.05, 1.05),
+    ((0, 0.0, 1), 0.8, 0.8, 0.8),
 ], name='tail', region='tail')
 C.end_point(tip, tip.calc_center_median() + Vector((0, -0.2, 0.6)))
+
+
+OPEN = (0, C.regions['chest'])   # a leg may grow out of the body or the chest
 
 
 def belly_pair(y0, y1, x_cut, below=1.0):
@@ -85,7 +89,7 @@ def belly_pair(y0, y1, x_cut, below=1.0):
     bm.normal_update()
     faces = [f for f in bm.faces if f.normal.z < -0.3 and f.calc_center_median().z < HIP.z - below
              and min(v.co.y for v in f.verts) < y1 and max(v.co.y for v in f.verts) > y0
-             and all(v[C.LIMB] == 0 and v[C.REG] == 0 for v in f.verts)]
+             and all(v[C.LIMB] == 0 and v[C.REG] in OPEN for v in f.verts)]
     pats = C.knife_pair(faces, [((0, y1, 0), (0, 1, 0)), ((0, y0, 0), (0, -1, 0))], x_cut)
     for side in (-1, 1):
         fs = pats[side]
@@ -95,25 +99,25 @@ def belly_pair(y0, y1, x_cut, below=1.0):
 
 
 LEGS = {}
-fp = belly_pair(-3.8, -1.5, 0.35)
+fp = belly_pair(-5.4, -2.9, E('FX', 0.6))
 for side in (-1, 1):
     key = 'front_l' if side < 0 else 'front_r'
     C.run(fp[side], [
         (tuple(fp[side].normal), 0.5, 1.0, 1.0, (1.1, 1.0, 1.0), (side * 0.15, 0, 0)),   # the shoulder
-        ((side * 0.05, 0.15, -1), 2.0, 0.85, 1.0),       # the upper arm
-        ((0, -0.05, -1), 2.2, 0.85, 1.0),                # the forearm
-        ((0, -0.12, -1), 1.4, 0.9, 1.0),                 # the pastern
+        ((side * 0.05, -0.2, -1), 1.4, 1.05, 1.0),       # the upper arm, forward under the chest, thick with coat
+        ((0, -0.05, -1), 2.05, 1.05, 1.0),               # the forearm, fluffing out to the paw
+        ((0, -0.12, -1), 1.0, 1.05, 1.0),                # the pastern
         ((0, -1, -0.2), 0.9, 1.0, 0.55),                 # the paw
     ], name=key, region='leg')
     LEGS[key] = side
-hp = belly_pair(1.3, 3.7, 0.35)
+hp = belly_pair(1.9, 4.3, 0.3)
 for side in (-1, 1):
     key = 'hind_l' if side < 0 else 'hind_r'
     C.run(hp[side], [
         (tuple(hp[side].normal), 0.5, 1.0, 1.0, (1.15, 1.0, 1.0), (side * 0.15, 0, 0)),  # the haunch
-        ((side * 0.05, -0.3, -1), 2.2, 0.85, 1.0),       # the thigh, forward
-        ((0, 0.45, -1), 2.2, 0.8, 1.0),                  # the shin, back to the hock
-        ((0, -0.08, -1), 1.4, 0.9, 1.0),                 # below the hock
+        ((side * 0.05, -0.1, -1), 1.6, 1.05, 1.0),       # the thigh
+        ((0, 0.4, -1), 1.6, 1.0, 1.0),                   # the shin, back to the hock
+        ((0, -0.08, -1), 1.0, 1.05, 1.0),                # below the hock
         ((0, -1, -0.2), 0.9, 1.0, 0.55),                 # the paw
     ], name=key, region='leg')
     LEGS[key] = side
@@ -131,8 +135,8 @@ for side in (-1, 1):
     key = 'ear_l' if side < 0 else 'ear_r'
     tipf = C.run(face, [
         (tuple(face.normal), 0.2, 0.85, 1.0),                        # the ear's root
-        ((side, 0.0, -0.6), 0.45, 0.9, 1.0, (0.5, 1.1, 1.0)),        # off the side of the skull, folding over
-        ((side * 0.25, 0.05, -1), 1.7, 1.0, 1.0, (0.45, 1.15, 1.0)), # the flap, hanging by the cheek
+        ((side * 0.5, 0.0, -1), 0.45, 0.9, 1.0, (0.5, 1.1, 1.0)),    # off the side of the skull, folding over
+        ((side * 0.08, 0.05, -1), 2.3, 1.0, 1.0, (0.5, 1.3, 1.0)),  # the flap, long and curly, hanging by the cheek
         ((side * 0.05, 0.0, -1), 1.0, 0.7, 1.0),
     ], name=key, region='ear')
     C.end_point(tipf, tipf.calc_center_median() + Vector((0, 0, -0.35)))
@@ -159,15 +163,8 @@ assert C.mirror_error() < 1e-3, "the skeleton must be mirror-true before the cla
 C.clay(jitter=0.04, lumps=5, box=((-2.5, 2.5), (-9, 6), (3, 14)), lump_r=(1.0, 2.0), lump_amt=(-0.12, 0.16))
 
 # ---------- personality ----------
-el = J['ear_l']                                # the left ear torn short at the tip, an old fight
-for v in bm.verts:
-    if v[C.LIMB] == C.limbs['ear_l'] and v.co.z < el[2].z:
-        v.co.z = el[2].z + (v.co.z - el[2].z) * 0.45
-ck = J['muzzle'][0]                            # a scruffy tuft on the right cheek
-for v in bm.verts:
-    d = v.co - Vector((hw * 0.9, ck.y + 0.8, MOUTH_Z - 0.2))
-    if d.length < 1.0 and v[C.REG] == C.regions['head']:
-        v.co += Vector((0.25, 0.05, -0.12)) * (1 - d.length) * (1 if v.index % 2 else -0.3)
+# a doodle's coat: lots of small soft lumps all over, the curls (the clay above gives the big ones)
+C.clay(jitter=0.03, lumps=16, box=((-2.8, 2.8), (-9, 7), (2, 15)), lump_r=(0.6, 1.1), lump_amt=(-0.06, 0.18))
 
 # ---------- accents ----------
 for side in (-1, 1):
@@ -176,55 +173,42 @@ for side in (-1, 1):
 nose = J['muzzle'][-1]
 p = C.skin(nose + Vector((0, -6, 0.25)), (0, 1, 0))
 if p is not None: C.ball(p + Vector((0, 0.15, 0)), 0.5, 'nose')
-nk = J['neck'][0]                              # the collar's tag, hanging under the throat
-p = C.skin(nk + Vector((0, -1.0, -8)), (0, 0, 1))
-if p is not None: C.ball(p + Vector((0, -0.1, -0.25)), 0.32, 'tag')
 C.connect()
 ob, me = C.to_object()
 
-# ---------- paint: the stray's own colours (the code-built dog's) ----------
-FUR, SADDLE, WHITE, INK, RED, GOLD, MARK = "#a87a48", "#5a3a24", "#f0e8dc", "#141218", "#c8303a", "#e8c050", "#7a5230"
-P = Painter(C, FUR, size=512)
+# ---------- paint: a tri-colour Bernedoodle (zack's photo and cartoon, 2026-11-06) ----------
+# black curly coat, rust on the legs, the cheeks and over the eyes, white down the chest, on the muzzle and the paws
+BLACK, CURL, RUST, WHITE, INK, PINK = "#231e1d", "#3b3230", "#b0602c", "#efe9df", "#141218", "#d8586a"
+P = Painter(C, BLACK, size=512)
 V = P.V; PZ = P.PZ; PY = P.PY
 BODY = P.region('body', 'chest'); NECK = P.region('neck'); HEAD = P.region('head'); TAILR = P.region('tail')
 LEG = P.region('leg'); EAR = P.region('ear')
-P.broad(J['chest'][-1].y, J['rump'][0].y, SADDLE, 'above', r=1.5, step=0.4)     # the dark saddle over the back
-P.img[EAR & P.mask] = P.col(SADDLE)                                              # dark floppy ears
-P.broad(J['chest'][0].y - 0.5, J['chest'][-1].y + 0.4, WHITE, 'below', r=1.3, step=0.35)   # the white chest
+FEET = min(J[k][-1].z for k in LEGS)
+P.img[LEG & (PZ < FEET + 3.2) & P.mask] = P.col(RUST)                             # rust legs
+P.img[LEG & (PZ < FEET + 0.9) & P.mask] = P.col(WHITE)                            # white paws
+P.view_line([J['chest'][0] + Vector((0, 0, -1.8)), J['neck'][0], J['neck'][-1] + Vector((0, 0, -0.6))], 1.2, WHITE, BODY | NECK, 'front')   # the white blaze down the chest
+P.img[HEAD & (PY < mz[0].y + 0.5) & P.mask] = P.col(RUST)                         # rust cheeks and muzzle sides
+P.img[HEAD & (PY < mz[0].y + 0.2) & (PZ < MOUTH_Z + 0.9) & P.mask] = P.col(WHITE)  # the white muzzle and chin
+P.view_line([Vector((0, 0, MOUTH_Z + 0.4)), Vector((0, 0, hd[-1].z + 1.6))], 0.5, WHITE, HEAD, 'front')   # the white stripe up the face
 for side in (-1, 1):
-    P.side_oval(J['chest'][-1].y + 0.3, J['chest'][-1].z - 0.6, 1.0, 1.6, WHITE, BODY | NECK, side, tilt=0.3)
-P.view_line([J['chest'][0] + Vector((0, 0, -1.5)), J['neck'][0], J['neck'][-1] + Vector((0, 0, -0.8))], 1.1, WHITE, BODY | NECK, 'front')
-P.img[HEAD & (PY < mz[0].y + 0.3) & (PZ < MOUTH_Z + 0.5) & P.mask] = P.col(WHITE)   # the white muzzle and chin
-P.img[HEAD & (PY < mz[-1].y + 0.6) & P.mask] = P.col(WHITE)
-P.img[LEG & (PZ < 2.0) & P.mask] = P.col(WHITE)                                   # white socks
-P.img[TAILR & (PZ > J['tail'][-2].z) & P.mask] = P.col(WHITE)                       # the white tail tip
-cz = (J['neck'][0].z + J['neck'][1].z) / 2                                         # the red collar round the neck
-for side in (-1, 1):
-    P.side_line([(J['neck'][0].y - 0.9, cz + 0.6), (J['neck'][0].y + 0.4, cz - 0.6)], 0.4, RED, NECK | BODY, side)
-for view in ('front', 'back'):
-    P.view_line([Vector((-3, 0, cz)), Vector((3, 0, cz))], 0.4, RED, NECK, view)
-P.top_line([(-3, J['neck'][0].y + 0.2), (3, J['neck'][0].y + 0.2)], 0.4, RED, NECK)
-# the skeleton under the coat: ribs down the flanks, the shoulder blade, the hip, the spine
-for side in (-1, 1):
-    for k in range(4):
-        y = -2.4 + k * 0.9
-        tz, bz = P.top_z(y, HIP.z + 2), P.bot_z(y, HIP.z - 2)
-        P.side_line([(y - 0.2, tz - 1.4), (y + 0.4, bz + 0.9)], 0.16, MARK, BODY, side)
-    P.side_line([(-3.2, HIP.z + 1.8), (-2.2, HIP.z - 0.4)], 0.22, MARK, BODY, side)     # the shoulder blade
-    P.side_oval(2.6, HIP.z + 0.5, 0.9, 0.7, MARK, BODY, side)                          # the hip
-for view in ('front', 'back'):
-    for lk in LEGS:
-        L = J[lk]
-        P.view_line([L[1], L[2], L[3]], 0.2, MARK, LEG & (PZ >= 2.0), view)
-P.spine_bars([J['neck'][-1], J['neck'][0], J['chest'][0], HIP, J['rump'][0]], MARK, BODY | NECK, every=1.1, width=0.5)
-P.accents({'eyes': INK, 'nose': INK, 'tag': GOLD})
+    P.side_oval(hd[1].y - 0.2, hd[1].z + 0.95, 0.35, 0.28, RUST, HEAD, side)          # rust brows over the eyes
+P.img[TAILR & (PZ > J['tail'][-2].z + 0.3) & P.mask] = P.col(WHITE)                 # a white tip to the plume
+# the curls: little lighter rings all over the black (the cartoon's curl marks)
+import random
+_r = random.Random(7)
+for _ in range(220):
+    y = _r.uniform(-6, 6); z = _r.uniform(FEET + 3.6, 15); side = _r.choice((-1, 1))
+    p = C.skin((side * 12, y, z), (-side, 0, 0))
+    if p is None: continue
+    P.dab(p, _r.uniform(0.18, 0.3), CURL)
+P.accents({'eyes': INK, 'nose': INK})
 for e in C.ACC['eyes']:
     P.dab(e + Vector((math.copysign(0.22, e.x), -0.14, 0.1)), 0.08, WHITE)     # a catchlight
 P.save(OUT, "dog")
 
 # ---------- rig ----------
 G = Rig(C)
-REAR = Vector((0, 3.2, HIP.z))
+REAR = Vector((0, 4.0, HIP.z))
 G.bone("Body", REAR, J['chest'][0])
 G.bone("Chest", J['chest'][0], J['chest'][-1], "Body")
 G.chain("Neck", [J['chest'][-1]] + J['neck'], "Chest")
@@ -241,7 +225,7 @@ for key, side in LEGS.items():
     p = J[key]
     sfx = ("Front" if key.startswith('front') else "Hind") + ("Left" if side < 0 else "Right")
     sock = Vector((p[0].x * 0.6, p[0].y, HIP.z - 0.8))
-    G.bone("Leg" + sfx, sock, p[1], "Body", limb=key)
+    G.bone("Leg" + sfx, sock, p[1], "Chest" if key.startswith("front") else "Body", limb=key)   # the front legs grow out of the chest
     G.bone("Shin" + sfx, p[1], p[2], "Leg" + sfx, limb=key)
     G.bone("Ankle" + sfx, p[2], p[3], "Shin" + sfx, limb=key)
     G.bone("Foot" + sfx, p[3], p[4], "Ankle" + sfx, limb=key)
@@ -307,7 +291,6 @@ SIT_BODY = float(os.environ.get("SIT_BODY", -35))     # the back tipped up on it
 SIT_DROP = float(os.environ.get("SIT_DROP", 4.6))
 
 
-E = lambda k, d: float(os.environ.get(k, d))
 SH_LX, SH_LZ, SH_SH, SH_AH = E("SH_LX", 0), E("SH_LZ", 38), E("SH_SH", 40), E("SH_AH", -10)   # the sat hind leg
 
 
@@ -322,7 +305,7 @@ def sat(n):
     if n.startswith("FootHind"): return [-10, 0, 0], [0, 0, 0]
     if n.startswith("Neck"): return [-SIT_BODY * 0.5 / NECK_BONES, 0, 0], [0, 0, 0]
     if n == "Head": return [-SIT_BODY * 0.4, 0, 0], [0, 0, 0]
-    if n.startswith("Tail"): return [40 / TAIL_BONES, 0, 0], [0, 0, 0]
+    if n.startswith("Tail"): return [-20 / TAIL_BONES, 0, 0], [0, 0, 0]
     return [0, 0, 0], [0, 0, 0]
 
 
