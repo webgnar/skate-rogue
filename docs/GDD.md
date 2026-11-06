@@ -772,7 +772,7 @@ as **floor twists** (src/gen/twists.ts). Act 1 has none; from floor 4 on, about 
 | Ceiling | Art Museum | A low ceiling (a tunnel) over the street: no high flips, more grind lines |
 | Conveyors | High-Tech City | Some flat rails run forward (faster) or back (slower) while you grind |
 
-District gravity (Atlantis 0.8, Space 0.6) is dropped: every floor is 1.0.
+District gravity (Atlantis 0.8, Space 0.6) is dropped: gravity follows the act instead (see the climb, step c).
 
 ## Boons
 
@@ -1400,7 +1400,10 @@ thread of its own:
 - b. **Act 3 as a whole cloud act**: the sky route's pieces (wires, girders, the cloud layer) become the main floor,
   not the top lane. Built Nov 6, 2026 (see How a run ends).
 - c. **Gravity scaling**: one number per act applied to the ollie, flips and hang time, tested on the bot so act 1's
-  feel never changes. Placeholders: 1x for acts 1-3, 0.7x act 4, 0.3x act 5.
+  feel never changes. Placeholders: 1x for acts 1-3, 0.7x act 4, 0.3x act 5. Built Nov 6, 2026: `ACT_GRAVITY` in
+  `src/physics/feel.ts`; a floor is generated and bot-checked in its act's gravity, and it scales everything gravity
+  touches (ollie and flip height, hang time, slopes, rail pull). An ollie and a flip go 2.9 tiles high for 1.0 s on
+  the street, 4.4 tiles for 1.6 s in act 4 and 10.5 tiles for 3.7 s in act 5. Endless past act 5 stays at 0.3x.
 - d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the gunship line, the beam-up finale.
 - e. **The ship as the hub** between runs, last; it's cosmetic for the menus.
 
@@ -1452,7 +1455,11 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   onto the top route's roofs for it; act 3 has no city sky beats, so the blimp, crane, billboard
   and window-washer set pieces and the water tower's stash crate skip it; each girder staircase's first step is a big
   ollie and a flip off the lip (act 2's roofs are an ollie); and the escape after act 3 is unchanged (matching the
-  escapes to the new act heights is its own step).
+  escapes to the new act heights is its own step). Act gravity (built Nov 6, 2026) left these defaults: the
+  placeholders 1x / 0.7x / 0.3x as they are; the escapes keep street gravity (their car-hops and drones are tuned
+  for it); gravity drops in one step at the act gate rather than easing floor by floor; and the boons that bend
+  gravity (Big Pop's float, Gravity Flip) keep their share of it, so they get bigger in absolute terms as you climb
+  but no extra boost on top.
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the

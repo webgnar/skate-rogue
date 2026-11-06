@@ -72,6 +72,17 @@ export const BIOME_GRAVITY: Record<string, number> = {
   hive: 1,
 };
 
+// gravity by act (GDD: The fantasy, the climb), a share of QFS's: the city acts keep street gravity so the tuned
+// ollie, flips and grinds never drift; it drops once you're super high, at the top of the sky (act 4) and in space
+// (act 5 and Endless past it). Everything gravity touches scales with it: ollie and flip height, hang time, slopes,
+// rail pull. Escapes keep street gravity for now (matching them to the climb is its own step).
+export const ACT_GRAVITY = [1, 1, 1, 0.7, 0.3];
+
+// the gravity a floor of this act skates in
+export function actGravity(act: number): number {
+  return ACT_GRAVITY[Math.min(ACT_GRAVITY.length, Math.max(1, act)) - 1];
+}
+
 export class Feel {
   squash = 0; // 0..1, how far the knees are bent soaking something up
   lean = 0; // rad, torso toward the way you skate (+)
