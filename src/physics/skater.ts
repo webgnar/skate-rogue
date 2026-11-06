@@ -52,6 +52,7 @@ export class Skater {
   slamT = 0; // frames left of slam recovery
   boost = 1; // cruising speed multiplier (the gnar state)
   buffer = 0; // frames a press stays valid
+  spinTap = false; // the buffered press came while a flip was still spinning: it can't become a dead flip
   impactT = 0; // frames left of the landing's impact: no ollie, and a press then is lost (Lou Gnar's LANDING state)
   impactTaps = 0; // presses during this impact (Strong Legs: the second one ollies anyway)
   flipLow: number | null = null; // where the last flip was thrown, if it was on the way down (px), for a PERFECT
@@ -179,7 +180,10 @@ export class Skater {
     //a wall slam only lasts while you drop: came up over the lip and landed anyway, you ride on and the button works
     //again (zack, 2026-10-31: taps did nothing for the rest of the floor after a pit wall slam on floor 2)
     if (this.walled && this.mode !== 'air') this.walled = false;
-    if (input.pressed && !this.walled) this.buffer = PHYS.bufferFrames;
+    if (input.pressed && !this.walled) {
+      this.buffer = PHYS.bufferFrames;
+      this.spinTap = this.mode === 'air' && this.caught < 1;
+    }
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
     if (this.floatT > 0) this.floatT--;
@@ -204,8 +208,10 @@ export class Skater {
       if (this.grounded || (this.mode === 'air' && this.coyote > 0)) this.ollie();
       else if (this.mode === 'air' && (this.jumps > 0 || this.spare >= 1)) this.trick();
       //jumps all used: a dead flip, the board spins and you keep falling (zack, 2026-11-01). One at a time, and a tap
-      //right before touchdown stays the buffered ollie off whatever you land on (a rail, a pad)
-      else if (this.mode === 'air' && this.caught >= 1 && !this.landingSoon()) this.trick(true);
+      //right before touchdown stays the buffered ollie off whatever you land on (a rail, a pad). A tap made while the
+      //last flip was still spinning does nothing: buffered, it threw a flip a few frames later on its own once the
+      //spin was caught, which read as flips with no click (zack, 2026-11-06)
+      else if (this.mode === 'air' && this.caught >= 1 && !this.spinTap && !this.landingSoon()) this.trick(true);
       if (this.buffer > 0) this.buffer--;
     }
 
@@ -238,6 +244,7 @@ export class Skater {
     this.slamT = from.slamT;
     this.boost = from.boost;
     this.buffer = from.buffer;
+    this.spinTap = from.spinTap;
     this.impactT = from.impactT;
     this.impactTaps = from.impactTaps;
     this.topY = from.topY + dy;
