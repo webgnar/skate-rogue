@@ -10,6 +10,8 @@ import { GEAR, wornness } from './run/gear';
 import { chainText, modDef, type ModId, type Slots } from './board/mods';
 import { dropBoard, type ShopState } from './board/shop';
 import { gripCardColor, gripDef } from './board/grips';
+import type { DeckArt } from './board/deck-art';
+import { deckArtUrl } from './render/deck-graphic';
 import { drawWires } from './ui/board-wires';
 import { GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
@@ -129,6 +131,11 @@ function slot(id: ModId | null, i: number, cls = ''): string {
   return `<button class="slot ${modKind(id)} ${cls}" data-slot="${i}">${id ? esc(modDef(id).short) : ''}</button>`;
 }
 
+// a new deck's card shows the graphic it comes in (src/board/deck-art.ts)
+function deckCardArt(art: DeckArt): string {
+  return `<span class="art"><img class="pic deckart" src="${deckArtUrl(art)}" alt="${esc(art.name)}" draggable="false" /></span>`;
+}
+
 const KIND_TAG = { trigger: 'TRIGGER', effect: 'EFFECT', modifier: 'MODIFIER' } as const;
 
 // the skate shop as a card game (src/ui/shop-drag.ts): your setup across the top is where cards land, the hand of
@@ -171,8 +178,8 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     const c = Math.round(v.gear[p]);
     if (c >= 100) continue; // only worn parts are for sale
     cards.push(`<button class="card-shop gearcard ${shop.cash < GEAR.price[p] ? 'poor' : ''}" data-gear="${p}">
-      <span class="kind">GEAR</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>${gearArt(p)}
-      <span class="text">Yours: ${c}%</span><span class="price">$${GEAR.price[p]}</span>
+      <span class="kind">GEAR</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>${p === 'deck' ? deckCardArt(v.deckArt) : gearArt(p)}
+      <span class="text">${p === 'deck' ? `${esc(v.deckArt.name)} graphic · yours ${c}%` : `Yours: ${c}%`}</span><span class="price">$${GEAR.price[p]}</span>
     </button>`);
   }
   const hint = !picked
