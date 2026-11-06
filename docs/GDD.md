@@ -898,8 +898,13 @@ when they lose, and the **Match** (from pinball) is the rare roll that feels hug
 - **Boxcars** (6-6) is the **MATCH** (1 in 36): the next run starts with 5 hearts instead of 3. Continues held for the
   next run cap at 2, so past the cap the Match pays 25 Stoken (and 5-5 pays 10).
 
-**Shake your phone or tap ROLL** to throw the dice (they rattle in your hand until then; zack, Nov 4, 2026), a tap
-while they tumble lands them, and the next goes on to the summary. On an iPhone, motion needs a tap to allow it, so
+**One pair at a time** (zack, Nov 6, 2026): the free roll first, then a roll per chip. The chips left show as a row
+of red chips under the title ("ROLL 2 OF 4", "x2 CHIPS LEFT"). Once a pair lands, a tap claims its prize (it drops
+into a WON row at the bottom); then the next chip pops out of the row, flies down flipping to your hand and turns
+into the next pair of dice, so you can see what the chips are for. The last prize's tap goes on to the summary.
+
+**Shake your phone or tap ROLL** to throw the pair (it rattles in your hand until then; zack, Nov 4, 2026), and a tap
+while it tumbles lands it. On an iPhone, motion needs a tap to allow it, so
 the first ROLL tap asks and shaking works from then on.
 
 The dice are **real 3D casino dice** (zack, Nov 4, 2026, with a casino dice photo): sharp-edged, see-through red with

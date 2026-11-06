@@ -59,9 +59,6 @@ import { TitleScene } from './title/title-scene';
 
 const base = import.meta.env.BASE_URL;
 
-// a shake of the phone throws the dice on the dice screen (set once the game exists)
-let onShake = (): void => {};
-
 function esc(text: string): string {
   return text.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 }
@@ -221,7 +218,7 @@ function makeHud(): Hud {
   const pausedEl = document.getElementById('paused')!;
   const hintEl = document.getElementById('hint')!;
   const view = new HudView();
-  const dice = new DicePanel(document.getElementById('dice')!, () => FX.reduceMotion, () => onShake());
+  const dice = new DicePanel(document.getElementById('dice')!, () => FX.reduceMotion);
   const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
   let level = 0;
   let held: Held[] = [];
@@ -374,8 +371,7 @@ function makeHud(): Hud {
     missionTick: (t) => missionToast.tick(t),
     missionDone: (t) => missionToast.done(t),
     dice: (v) => dice.show(v),
-    diceThrow: () => dice.throw(),
-    diceSkip: () => dice.skip(),
+    diceTap: () => dice.tap(),
     continues: (left) => (document.getElementById('continues')!.textContent = `${'♥'.repeat(left)}`),
     over: (result) => {
       overEl.hidden = !result;
@@ -491,7 +487,6 @@ async function start() {
     if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
-  onShake = () => game.shakeDice();
   skipMission = (i) => game.skipMission(i);
   built();
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
