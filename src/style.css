@@ -1690,16 +1690,52 @@ html, body {
 #dice .title { font-size: clamp(38px, 10vw, 58px); line-height: 1; color: #ffd23a; -webkit-text-stroke: 2px #000; paint-order: stroke fill; text-shadow: 4px 4px 0 #000; transform: skewX(-8deg); }
 #dice .sub { font-family: ui-rounded, 'Arial Black', system-ui, sans-serif; font-size: 13px; letter-spacing: 0.12em; color: #c8c2b4; text-shadow: 1px 1px 0 #000; }
 /* the street: a concrete curb's lip, then asphalt (the dice land on it) */
+/* the street (zack, 2026-11-06: "blacktop like a road ... or sidewalk"): edge to edge, a strip of concrete sidewalk
+   with its joints, the curb's lip and face, then worn asphalt: light stones and dark pits in the aggregate, soft
+   mottling, an oil stain, a crack, and a faded white edge line. The dice land on the asphalt */
 #dice .street {
   position: relative;
-  width: min(560px, 100%);
-  margin-top: 10px;
-  border-top: 12px solid #9a978d;
-  box-shadow: 0 -3px 0 #000, inset 0 3px 0 #5b5a55;
-  background: radial-gradient(circle at 20% 30%, #3a3a40 0 1.5px, transparent 2px) 0 0 / 11px 9px, radial-gradient(circle at 70% 60%, #1c1c20 0 1.5px, transparent 2px) 0 0 / 13px 12px, linear-gradient(#2c2c31, #232327);
-  border-radius: 2px;
+  align-self: stretch;
+  margin: 10px calc(-1 * max(16px, env(safe-area-inset-right))) 0 calc(-1 * max(16px, env(safe-area-inset-left)));
+  padding-top: 40px;
+  border-top: 3px solid #000;
+  border-bottom: 3px solid #000;
+  background:
+    linear-gradient(transparent calc(100% - 22px), rgba(232, 228, 214, 0.16) calc(100% - 22px) calc(100% - 17px), transparent calc(100% - 17px)),
+    radial-gradient(ellipse 90px 34px at 72% 62%, rgba(0, 0, 0, 0.42), transparent 70%),
+    radial-gradient(ellipse 50px 20px at 24% 78%, rgba(18, 10, 24, 0.35), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.58  0 0 0 0 0.56  0 0 0 0 0.53  0 0 0 8 -5.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 140px 140px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.02  0 0 0 0 0.02  0 0 0 0 0.03  0 0 0 7 -4.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 120px 120px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.5 -0.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 360px 360px,
+    linear-gradient(rgba(0, 0, 0, 0.55), transparent 30px),
+    #2b2b2f;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
 }
-#dice .curb { display: flex; justify-content: center; padding: 26px 10px 18px; min-height: calc(var(--die) * 2.1); box-sizing: border-box; }
+/* the sidewalk and the curb, along the top of the street */
+#dice .street::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 30px;
+  background:
+    linear-gradient(transparent 19px, #000 19px 21px, #8f8b80 21px 24px, #5f5c55 24px 28px, #000 28px),
+    repeating-linear-gradient(90deg, transparent 0 118px, rgba(0, 0, 0, 0.55) 118px 120px, rgba(255, 255, 255, 0.12) 120px 121px, transparent 121px 122px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.34  0 0 0 0 0.32  0 0 0 1.6 -0.62'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px,
+    linear-gradient(#b9b4a6, #9c978a);
+}
+/* a crack running out from the curb */
+#dice .street::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  top: 30px;
+  width: 120px;
+  height: 60px;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 60'%3E%3Cpath d='M2 0 8 9 6 17 15 26 13 33 24 41 37 44 46 55' fill='none' stroke='%23111' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M15 26 26 27 31 22' fill='none' stroke='%23111' stroke-width='1.1'/%3E%3C/svg%3E") no-repeat;
+  opacity: 0.8;
+}
+#dice .curb { position: relative; z-index: 1; display: flex; justify-content: center; padding: 8px 10px 26px; min-height: calc(var(--die) * 2.1); box-sizing: border-box; }
 #dice .pair { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: calc(var(--die) * 2.6); }
 #dice .dice { display: flex; gap: calc(var(--die) * 0.28); }
 /* a die's slot on the curb: the 3D die (src/render/dice3d.ts) is drawn over it, on the canvas */
@@ -1783,11 +1819,16 @@ html, body {
 #app.calm #dice .btn.go, #app.calm #dice .how, #app.calm #dice.matched .flash { animation: none; }
 #app.calm #dice.matched .flash { opacity: 0; }
 @media (max-height: 460px) {
-  #dice { --die: 60px; gap: 2px; }
+  #dice { --die: 54px; gap: 1px; }
   #dice .won { margin-top: 4px; }
         #dice .how { margin-top: 2px; }
-  #dice .title { font-size: 34px; }
-  #dice .curb { padding: 16px 8px 10px; }
+  #dice .title { font-size: 30px; }
+  #dice .curb { padding: 4px 8px 14px; }
+  #dice .street { padding-top: 34px; margin-top: 4px; }
+  #dice .curb { min-height: calc(var(--die) * 1.75); }
+  #dice .chips { min-height: 24px; }
+  #dice .won { min-height: 0; margin-top: 2px; }
+  #dice .sub { font-size: 11px; }
   #dice .btn { margin-top: 6px; font-size: 24px; padding: 3px 30px 1px; }
   #dice .name { font-size: 16px; }
   #dice .prize b { font-size: 18px; }
