@@ -59,7 +59,7 @@ export function bindShopDrag(shop: HTMLElement, actions: ShopActions, calm: () =
     e.stopPropagation(); // not an ollie
     e.preventDefault();
     if (press || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    const el = (e.target as HTMLElement).closest<HTMLElement>(`${CARD},[data-restock],[data-done]`);
+    const el = (e.target as HTMLElement).closest<HTMLElement>(`${CARD},[data-restock],[data-done],[data-deckart]`);
     if (!el || (el as HTMLButtonElement).disabled) return;
     press = { el, id: e.pointerId, x: e.clientX, y: e.clientY };
   });

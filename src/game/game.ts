@@ -171,6 +171,7 @@ export interface ShopView {
   grip: GripId; // the grip on the board; the shop sells one other colour (shop.grip)
   gripPrice: number;
   deckArt: DeckArt; // the graphic a new deck from this shop comes in (src/board/deck-art.ts)
+  deckPick: DeckArt[] | null; // a new deck just bought: the graphics to pick from (zack, 2026-11-06: pick 1 of 3)
 }
 
 export interface Hud {
@@ -415,6 +416,7 @@ export class Game {
   private shopVisits = 0;
   private deckArt: DeckArt = STOCK_DECK; // the graphic under the board this run (a new deck brings a new one)
   private shopDecks: DeckArt[] = []; // the graphics this shop's new deck comes in
+  private deckPick: DeckArt[] | null = null; // open while you pick the new deck's graphic
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
   private grip: GripId = loadSave().tape ?? GRIP.start; // the grip tape's colour, kept between runs (src/board/grips.ts)
   // the three missions and Skater Rank (src/run/missions.ts), kept between runs
@@ -968,6 +970,7 @@ export class Game {
     this.shopVisits++;
     this.shop = { cash: this.run.cash, board: this.board.slice(), stock: rollStock(this.seed, this.shopVisits, 0), restocks: 0, grip: gripFor(this.seed, this.shopVisits, this.grip) };
     this.shopDecks = deckChoices(this.seed, this.shopVisits, this.deckArt.id);
+    this.deckPick = null;
     this.shopPick = null;
     this.openMenu('shop', performance.now());
     this.showShop();
@@ -985,6 +988,7 @@ export class Game {
       grip: this.grip,
       gripPrice: GRIP.price,
       deckArt: this.shopDecks[0] ?? STOCK_DECK,
+      deckPick: this.deckPick,
     });
     this.hud.money(this.shop.cash, this.run.stoken);
   }
@@ -1005,6 +1009,18 @@ export class Game {
     if (this.state !== 'shop') return;
     const s = this.shop;
     if (!s) return;
+    //a new deck's graphic, picked from the three on offer; nothing else in the shop takes a tap till then
+    if (this.deckPick) {
+      const card = target.closest<HTMLElement>('[data-deckart]');
+      const art = card ? this.deckPick[Number(card.dataset.deckart)] : undefined;
+      if (!art) return;
+      this.deckPick = null;
+      this.setDeckArt(art);
+      this.hud.callout(`${art.name.toUpperCase()} DECK`, 'good');
+      this.sound?.play(MOMENT.pick);
+      this.showShop();
+      return;
+    }
     const el = target.closest<HTMLElement>('[data-stock],[data-slot],[data-buyslot],[data-restock],[data-gear],[data-grip],[data-done]');
     if (!el) return;
     const pick = this.shopPick;
@@ -1048,9 +1064,9 @@ export class Game {
         this.gear = got.gear;
         next = { ...s, cash: got.cash };
         this.hud.gear(this.gear);
-        const art = part === 'deck' ? this.shopDecks[0] : undefined;
-        if (art) this.setDeckArt(art);
-        this.hud.callout(art ? `NEW DECK: ${art.name.toUpperCase()}` : `NEW ${GEAR.names[part].toUpperCase()}`, 'good');
+        //a new deck: pick its graphic next (the pick shows over the shop)
+        if (part === 'deck' && this.shopDecks.length) this.deckPick = this.shopDecks;
+        else this.hud.callout(`NEW ${GEAR.names[part].toUpperCase()}`, 'good');
       } else if (this.gear[part] < 100) this.hud.callout('NOT ENOUGH CASH', 'bad');
       this.shopPick = null;
     } else if (el.dataset.grip !== undefined) {
@@ -1084,6 +1100,8 @@ export class Game {
 
   private leaveShop(): void {
     if (!this.shop) return;
+    if (this.deckPick) this.setDeckArt(this.deckPick[0]); // left mid-pick: the first one
+    this.deckPick = null;
     this.run.cash = this.shop.cash;
     this.board = this.shop.board;
     this.shop = null;
