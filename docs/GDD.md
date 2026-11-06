@@ -883,12 +883,17 @@ Noita's wands take spells in slots that fire in order and modify each other. Our
 **mods**, bought at the Skate Shop every 3 floors with run cash.
 
 - A board has **slots** (start with 3). Each slot holds one mod.
-- Mods are **triggers** and **effects**. A trigger (On Ollie, On Land, On Grind Start, On Grind End, On Trick,
-  On Car-hop) fires the effects that follow it in the slots, left to right, until the next trigger.
-- Effects: Spark Trail, Double Pop (a second small ollie 0.2 s later), Speed Kick,
-  Cash Burst, Slow-mo (0.5 s), Gravity Flip (0.3 s), Shockwave (makes nearby cars swerve out of the skate lane).
-- Modifiers change the next effect: ×2, Delay 0.5 s, Only On Combo ×5, Chance 50%.
-- Example build: `[On Grind End] [×2] [Speed Kick]` = every time you leave a rail you get two speed kicks.
+- Mods are **triggers** and **effects**. A trigger (On Ollie, On Land, On Grind, On Trick) fires the effects that
+  follow it in the slots, left to right, until the next trigger.
+- Effects: Double Pop (a second small ollie 0.2 s later), Speed Kick, Cash Burst, Shockwave (makes nearby cars
+  swerve out of the skate lane), Patch Job (+5 to your most worn gear part, at most 6 times a floor, so the board
+  can feed the gear without wear stopping mattering).
+- Modifiers change the next effect: ×2, Only On Combo ×5, Chance 50%.
+- Example build: `[On Grind] [×2] [Speed Kick]` = every time you lock onto a rail you get two speed kicks.
+- **Trimmed Nov 6, 2026** (zack: "i wonder if our board mods are also bloated?", picked the cut from a card): 17
+  mods down to 12. Cut: Spark Trail (+50 style was nothing), Slow-mo (bullet time already does it), Gravity Flip
+  (hard to read), Delay (rarely helped), On Grind End (Full Sail covers leaving a rail) and On Car-hop. Patch Job
+  added, so the board can help the gear, which matters most.
 
 Boards also have **base stats** (from the deck you pick): pop, grind grip, speed, weight, slots. Decks are
 unlocked in the meta tree. The shop also sells a Heat cool-down, a boon reroll and a slot.

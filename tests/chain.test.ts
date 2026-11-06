@@ -11,12 +11,12 @@ describe('board chain', () => {
   });
   it('leaves what nothing fires dead', () => {
     // an effect before any trigger, a trigger with nothing after it, a modifier with no effect after it
-    expect(wires(['sparks', 'onOllie', 'onLand', 'cashBurst', 'twice'])).toEqual(['-.', '-.', '+start', '+end', '-.']);
-    expect(chainText(['sparks', 'onOllie', 'onLand', 'cashBurst', 'twice'])).toEqual(['LAND ▸ +$2']);
+    expect(wires(['doublePop', 'onOllie', 'onLand', 'cashBurst', 'twice'])).toEqual(['-.', '-.', '+start', '+end', '-.']);
+    expect(chainText(['doublePop', 'onOllie', 'onLand', 'cashBurst', 'twice'])).toEqual(['LAND ▸ +$2']);
   });
   it('gives each trigger its own run', () => {
-    expect(wires(['onOllie', 'sparks', 'onGrind', 'delay', 'speedKick'])).toEqual(['+start', '+end', '+start', '+mid', '+end']);
-    expect(chainText(['onOllie', 'sparks', 'onGrind', 'delay', 'speedKick'])).toEqual(['OLLIE ▸ SPARKS', 'GRIND ▸ DELAY KICK']);
+    expect(wires(['onOllie', 'doublePop', 'onGrind', 'comboOnly', 'speedKick'])).toEqual(['+start', '+end', '+start', '+mid', '+end']);
+    expect(chainText(['onOllie', 'doublePop', 'onGrind', 'comboOnly', 'speedKick'])).toEqual(['OLLIE ▸ 2X POP', 'GRIND ▸ COMBO 5+ KICK']);
   });
   it('an empty board fires nothing', () => {
     expect(chainText([null, null, null])).toEqual([]);
@@ -24,15 +24,15 @@ describe('board chain', () => {
 });
 
 describe('drag preview board', () => {
-  const s = { cash: 99, board: ['sparks', 'onOllie', null] as Slots, stock: ['speedKick', null] as ShopState['stock'], restocks: 0 };
+  const s = { cash: 99, board: ['doublePop', 'onOllie', null] as Slots, stock: ['speedKick', null] as ShopState['stock'], restocks: 0 };
   it('a stock card held over a slot replaces it', () => {
-    expect(dropBoard(s, { stock: 0 }, 2)).toEqual(['sparks', 'onOllie', 'speedKick']);
+    expect(dropBoard(s, { stock: 0 }, 2)).toEqual(['doublePop', 'onOllie', 'speedKick']);
   });
   it('a slot held over another swaps them', () => {
-    expect(chainText(dropBoard(s, { slot: 0 }, 1))).toEqual(['OLLIE ▸ SPARKS']);
+    expect(chainText(dropBoard(s, { slot: 0 }, 1))).toEqual(['OLLIE ▸ 2X POP']);
   });
   it('leaves the shop as it was', () => {
     dropBoard(s, { slot: 0 }, 1);
-    expect(s.board).toEqual(['sparks', 'onOllie', null]);
+    expect(s.board).toEqual(['doublePop', 'onOllie', null]);
   });
 });

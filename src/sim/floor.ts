@@ -30,6 +30,7 @@ export type FloorEvent =
   | SkaterEvent
   | { type: 'pickup'; kind: PickupKind; index: number; mult?: number } // mult: NO GROUND's coin multiplier (src/sim/sky.ts)
   | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
+  | { type: 'patch'; part: GearPart } // Patch Job put a little back on this part
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
@@ -69,7 +70,6 @@ const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
   grind: 'onGrind',
   rail: 'onGrind',
   trick: 'onTrick',
-  hop: 'onHop',
 };
 
 // the furthest any smash below can reach: a bomb, a big landing or a slam, or touching the widest prop
@@ -101,8 +101,8 @@ export class FloorSim {
   readonly shooter: Shooter | null; // and its guards' guns
   readonly trains: ElTrain[]; // the L's trains, one line per stretch of track
   private pops: number[] = []; // frames until each Double Pop
-  private wasGrinding = false;
   private later: { effect: EffectId; slot: number; t: number }[] = []; // board effects waiting to fire
+  private patches = 0; // Patch Jobs fired this floor
   combo = 0; // the run's live combo count, set by the game each step (Combo Only reads it)
   skyLine = 0; // NO GROUND: sky pieces chained since you last touched the ground below (src/sim/sky.ts)
   private skyPiece: object | null = null; // the last of them
@@ -355,19 +355,16 @@ export class FloorSim {
       }
       return false;
     }).map((t) => t - 1);
-    const grinding = isGrind(sk.mode);
     const triggers: TriggerId[] = [];
     for (const e of events) {
       const t = TRIGGERS[e.type];
       if (t) triggers.push(t);
     }
-    if (this.wasGrinding && !grinding && sk.mode !== 'bail' && sk.mode !== 'exit') triggers.unshift('onGrindEnd');
-    this.wasGrinding = grinding;
     for (const t of triggers) {
       for (const f of fires(this.board, t)) {
         if (f.comboOnly && this.combo < BOARD.comboOnly) continue;
         const times = f.coinFlip ? (this.flip() < 0.5 ? 0 : 3 * f.times) : f.times;
-        for (let k = 0; k < times; k++) this.later.push({ effect: f.effect, slot: f.slot, t: f.delay });
+        for (let k = 0; k < times; k++) this.later.push({ effect: f.effect, slot: f.slot, t: 0 });
       }
     }
     //effects whose time has come (a Delay holds them back), firing in order
@@ -391,12 +388,16 @@ export class FloorSim {
         else sk.hsp = Math.max(sk.hsp, Math.min(BOARD.speedKickMax, sk.hsp + BOARD.speedKick));
         sk.carry = Math.max(sk.carry, Math.abs(sk.mode === 'rail' ? sk.railV : sk.hsp));
         break;
-      case 'gravFlip':
-        if (sk.mode === 'air') {
-          sk.gravFlipT = BOARD.gravFlipFrames;
-          sk.snap = false;
-        }
+      case 'patchJob': {
+        //the most worn part gets a little back, a few times a floor
+        if (this.patches >= BOARD.patchJobPerFloor) break;
+        this.patches++;
+        const part = GEAR_PARTS.reduce((a, b) => (this.gear[b] < this.gear[a] ? b : a));
+        this.gear[part] = Math.min(100, this.gear[part] + BOARD.patchJob);
+        sk.gear = gearScale(this.gear);
+        this.events.push({ type: 'patch', part });
         break;
+      }
       case 'shockwave':
         for (const v of this.traffic.vehicles) {
           if (Math.abs((v.x0 + v.x1) / 2 - sk.x) < BOARD.shockwaveTiles * TILE) v.leaving = true;

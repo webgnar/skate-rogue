@@ -77,7 +77,6 @@ export class Skater {
   ledgeGrinds = 0; // grinds and manuals so far, to take turns
   railGrinds = 0;
   manuals = 0;
-  gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   pads = 0; // Bubble Pads slams left this floor
   walled = false; // hit a pit's far wall (see wall()): no more pops or flips, just the drop
   cracker: Surface | null = null; // Firecracker: the stair set we're riding down
@@ -178,7 +177,6 @@ export class Skater {
     }
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
-    if (this.gravFlipT > 0) this.gravFlipT--;
     if (this.ghost && --this.ghost.ttl <= 0 && this.surface !== this.ghost) this.ghost = null;
     this.stepRuins();
     this.holdT = input.held && this.holdT > 0 ? this.holdT + 1 : 0;
@@ -248,7 +246,6 @@ export class Skater {
     this.ledgeGrinds = from.ledgeGrinds;
     this.railGrinds = from.railGrinds;
     this.manuals = from.manuals;
-    this.gravFlipT = from.gravFlipT;
     this.rocket = from.rocket;
     this.kicked = from.kicked;
     this.snap = from.snap;
@@ -556,16 +553,14 @@ export class Skater {
       if (this.snap && this.vsp >= PHYS.popHang) this.snap = false;
       if (this.snap) grav *= this.vsp < -PHYS.popHang ? PHYS.popSnap * PHYS.popSnap : PHYS.popHangGrav;
       if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Mad Pop
-      //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
-      if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - this.grav));
-      else this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
+      this.vsp = Math.min(this.vsp + grav, PHYS.maxFall);
       //Rocket Grind: at the top, every jump comes back
       if (this.rocket && this.vsp >= 0) {
         this.rocket = false;
         this.jumps = this.maxJumps;
       }
       //let go while rising: a short hop (QFS variable jump)
-      const cut = this.gravFlipT === 0 && !this.kicked;
+      const cut = !this.kicked;
       //(off a snapped-up pop, letting go goes straight to the hang at the top)
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, this.snap ? -PHYS.popHang : PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
