@@ -1245,18 +1245,22 @@ function wind(rng: Rng): Life {
   inkify(tree);
   inkify(pole);
   group.add(tree);
+  let wave = 0; // the cloth's wave, how far it has run
   return {
     group,
-    update(t: number): void {
+    update(t: number, dt: number): void {
       const w = gust(t);
-      //the cloth: a wave running out from the pole, bigger in the gusts, and the free end lifting
+      //the cloth: a slow, lazy wave running out from the pole, a little bigger in the gusts, the free end lifting a
+      //touch (zack 2026-11-06: "mellow out the flag waving"). Its phase is kept, not t times a speed that changes
+      //with the wind, which jerked the wave about whenever a gust came
+      wave += dt * (2 + w * 1.2);
       const pos = clothGeo.getAttribute('position');
       for (let k = 0; k < pos.count; k++) {
         const x = rest[k * 3];
         const y = rest[k * 3 + 1];
         const u = x / 2.4;
-        pos.setZ(k, Math.sin(x * 2.6 - t * (5 + w * 5)) * u * (0.12 + w * 0.3));
-        pos.setY(k, y + u * (w - 0.6) * 0.5);
+        pos.setZ(k, Math.sin(x * 2.0 - wave) * u * (0.07 + w * 0.1));
+        pos.setY(k, y + u * (w - 0.6) * 0.18);
       }
       pos.needsUpdate = true;
       clothGeo.computeVertexNormals();
