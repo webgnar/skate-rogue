@@ -1977,3 +1977,65 @@ html, body {
 #shop .deckpick .sub { font: 400 clamp(15px, 3vmin, 22px)/1 Bangers, sans-serif; color: #7df0a0; text-shadow: 2px 2px 0 #000; text-align: center; padding: 0 12px; }
 @keyframes deckpick-in { from { transform: translateY(40px) scale(0.85); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { #shop .deckpick .card-shop { animation: none; } }
+
+/* the pause card split down the middle (zack, 2026-11-06): you on the left (your board turning, Skater Rank and the
+   missions, the boons you hold), the pause options on the right. Each side scrolls on its own. */
+#paused { flex-direction: row; align-items: stretch; justify-content: center; gap: 0; padding: 0; overflow: hidden; }
+#paused .me, #paused .opts {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: 9px;
+  overflow-y: auto;
+  padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+#paused .me { padding-left: max(12px, env(safe-area-inset-left)); background: rgba(0, 0, 0, 0.25); border-right: 3px solid #000; box-shadow: 3px 0 0 var(--trick); }
+#paused .opts { padding-right: max(12px, env(safe-area-inset-right)); }
+#paused .me .missions, #paused .opts .settings { width: 100%; max-width: 440px; }
+#paused .opts .settings { grid-template-columns: 1fr; }
+#paused .me .held { max-width: 100%; padding: 0; }
+#paused .boardview { width: 100%; max-width: 420px; aspect-ratio: 2.2; flex: none; touch-action: none; cursor: grab; }
+.missions .rank { flex-wrap: wrap; }
+.missions .rank .bank { margin-left: 6px; padding: 1px 7px; font-size: 13px; color: #fff; background: rgba(0, 0, 0, 0.55); border: 2px solid #000; }
+.missions .rank .bank.low { color: #ff8a8a; }
+.missions .next { text-align: center; font-size: 12px; color: #e4c8ff; opacity: 0.9; }
+/* a narrow side (a phone held upright): a mission's words over its bar, count and SKIP */
+@media (max-width: 760px) and (orientation: landscape) {
+  #paused .me, #paused .opts { padding-inline: 6px; gap: 7px; }
+  #paused .me { padding-left: max(6px, env(safe-area-inset-left)); }
+  #paused .opts { padding-right: max(6px, env(safe-area-inset-right)); }
+  #paused .title { font-size: clamp(30px, 9vw, 52px); }
+  #resume { padding: 8px 18px; font-size: 20px; }
+  #paused .missions .mission { grid-template-columns: 1fr auto auto; row-gap: 3px; padding: 4px 5px 4px 7px; }
+  #paused .missions .mission .txt { grid-column: 1 / -1; }
+  #paused .missions .rank { gap: 5px; font-size: 13px; }
+  #paused .missions .rank .num { font-size: 20px; }
+  #paused .settings .row { font-size: 13px; min-height: 36px; padding: 2px 6px; gap: 6px; }
+  #paused .settings b { min-width: 2.8em; }
+  #paused .settings input[type='range'] { width: 45%; }
+}
+@media (max-height: 460px) { #over .missions .next { display: none; } }
+#paused .me { background: rgba(10, 6, 20, 0.55); }
+
+/* SKIP with its Stoken price, bigger and easier to hit (zack, 2026-11-06) */
+.missions button { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 18px; }
+.missions button .stoken-icon { height: 1.25em; margin: 0; }
+@media (max-height: 460px) { .missions button { padding: 3px 9px; font-size: 15px; } }
+@media (max-width: 760px) and (orientation: landscape) { #paused .missions button { padding: 5px 10px; font-size: 17px; } }
+/* a phone held upright: stacked (zack, 2026-11-06): PAUSED and RESUME on top, then you (board, rank, missions,
+   boons), then the rest of the options, the whole card scrolling */
+@media (orientation: portrait) {
+  #paused { flex-direction: column; align-items: center; justify-content: flex-start; gap: 9px; overflow-y: auto; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  #paused .opts { display: contents; }
+  #paused .opts > .title { order: 1; }
+  #paused #resume { order: 2; }
+  #paused .me { order: 3; flex: none; overflow: visible; width: 100%; max-width: 480px; padding: 8px 10px 12px; border: 2px solid #000; border-right: 2px solid #000; box-shadow: 3px 3px 0 var(--trick); }
+  #paused .opts > * { order: 4; }
+  #paused .opts > .title, #paused .opts > #resume { flex: none; }
+  #paused .opts .settings { width: min(700px, 100%); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  #paused .boardview { max-width: 340px; }
+}

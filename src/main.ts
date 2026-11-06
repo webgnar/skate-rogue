@@ -49,6 +49,7 @@ import { parseBoons } from './bot/repro';
 import { ACTS, FLOORS_PER_ACT } from './gen/escape';
 import { DEV, loadDev, meshyModels, saveDev, slower, stepFrame } from './ui/dev';
 import { DevPanel } from './ui/dev-panel';
+import { BoardView } from './render/board-view';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
 import { MUSIC } from './audio/cues';
@@ -211,6 +212,7 @@ function gearTone(c: number): string {
 let shopPreview: (card: HTMLElement, to: HTMLElement | null) => void = () => {};
 // set once the game is up: a mission's SKIP
 let skipMission: (i: number) => void = () => {};
+let pauseBoard: BoardView | null = null; // the pause card's turntable board, once the rig has loaded
 
 function makeHud(): Hud {
   const callouts = makeCallouts(document.getElementById('callout')!, () => FX.reduceMotion);
@@ -340,6 +342,7 @@ function makeHud(): Hud {
       pausedEl.hidden = !on;
       callouts.pause(on);
       if (on) pausedEl.querySelector('.held')!.innerHTML = held.length ? held.map(chip).join('') : '<span class="none">no boons yet</span>';
+      pauseBoard?.show(on);
     },
     boons: (h) => {
       held = h;
@@ -484,6 +487,7 @@ async function start() {
   view.layer = layer;
   await loading.track(view.loadBackdrop(base));
   const sprite = await rig;
+  pauseBoard = new BoardView(document.querySelector<HTMLCanvasElement>('#paused .boardview')!, () => sprite.boardModel());
   const built = loading.add(2);
   loading.say('BUILDING THE CITY');
   await loading.paint();

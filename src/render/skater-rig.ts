@@ -1253,6 +1253,11 @@ export class SkaterRig {
     return [[c.r, c.g, c.b]];
   }
 
+  // the board as it is now (deck, graphic, grip, wear), for the pause card's turntable (src/render/board-view.ts)
+  boardModel(): THREE.Object3D {
+    return this.board ?? this.boardFace;
+  }
+
   // the grip tape's colour (src/board/grips.ts)
   setGrip(color: number): void {
     paintGrip(this.board ?? this.boardFace, color);

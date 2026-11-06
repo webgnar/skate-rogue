@@ -151,6 +151,7 @@ export interface MissionsView {
   rows: MissionRow[];
   skip: number; // the skip price
   bank: number; // Stoken banked, to see if a skip is affordable
+  nextPay: number; // Stoken the next rank pays
 }
 
 // a mission finished, and what it paid if it finished a rank
@@ -285,6 +286,7 @@ export class Missions {
       rows: this.state.active.map((_, i) => ({ text: this.def(i).text, ...(this.def(i).unit ? { unit: this.def(i).unit } : {}), count: Math.min(this.count(i), this.def(i).goal), goal: this.def(i).goal, scope: this.def(i).scope })),
       skip: RANK.skip,
       bank,
+      nextPay: RANK.pay(this.rank + 1),
     };
   }
 }

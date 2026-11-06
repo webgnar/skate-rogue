@@ -1,6 +1,8 @@
 // The three missions and Skater Rank (src/run/missions.ts), on the pause card and the run summary: each mission's
 // count as a bar, and a SKIP for a little Stoken. The rank's pips fill with the missions done towards the next.
-import { countText, type MissionsView } from '../run/missions';
+// The Stoken you have banked shows beside the rank, so a SKIP's price reads against it (the HUD's Stoken counter is
+// only this run's, which isn't banked till the run ends: zack, 2026-11-06, saw 0 there and SKIP still lit).
+import { countText, RANK, type MissionsView } from '../run/missions';
 import { STOKEN_INLINE } from './stoken-icon';
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
@@ -14,7 +16,9 @@ export function missionsHtml(v: MissionsView): string {
       return `<div class="mission"><span class="txt">${esc(r.text)}</span><span class="bar"><i style="width:${share}%"></i></span><span class="n">${n}</span><button data-skip="${i}"${v.bank < v.skip ? ' disabled' : ''}>SKIP ${STOKEN_INLINE}${v.skip}</button></div>`;
     })
     .join('');
-  return `<div class="rank"><span class="tag">SKATER RANK</span><span class="num">${v.rank}</span><span class="pips">${pips}</span></div>${rows}`;
+  const bank = `<span class="bank${v.bank < v.skip ? ' low' : ''}">${STOKEN_INLINE}${v.bank} BANKED</span>`;
+  const next = `<div class="next">${RANK.per - v.toNext} MORE ${RANK.per - v.toNext === 1 ? 'MISSION' : 'MISSIONS'} TO RANK ${v.rank + 1} · +${v.nextPay} STOKEN</div>`;
+  return `<div class="rank"><span class="tag">SKATER RANK</span><span class="num">${v.rank}</span><span class="pips">${pips}</span>${bank}</div>${next}${rows}`;
 }
 
 // draws into every .missions box, and hands a SKIP tap to the game (a tap there never reaches the one button)
