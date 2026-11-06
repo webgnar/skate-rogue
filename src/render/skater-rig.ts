@@ -476,6 +476,13 @@ export class SkaterRig {
         this.bound.push({ bone, driver, offset: d.invert().multiply(b), local: new THREE.Matrix4(), rest: { p: bone.position.clone(), q: bone.quaternion.clone() } });
       }
     });
+    // each leg bone's (and the hips') front at bind, in its own space, for untwistLegs
+    for (const { bone } of this.bound) {
+      if (/^(Hips|(Left|Right)(UpLeg|Leg))$/.test(bone.name)) {
+        const q = new THREE.Quaternion().setFromRotationMatrix(this.inRig(bone));
+        this.front.set(bone.name, FRONT.clone().applyQuaternion(q.invert()));
+      }
+    }
     const scale = this.mesh.getWorldScale(new THREE.Vector3()).x;
     const springs = new Springs(model, bodyColliders((name) => this.bindPos.get(name), scale, !!model.getObjectByName('LouGnar')));
     if (springs.count) this.springs = springs;
@@ -522,6 +529,66 @@ export class SkaterRig {
     return { clip: this.clipName, fading: this.fade > 0, feet, stretch };
   }
   private legBind: Map<string, number> | null = null;
+  private readonly front = new Map<string, THREE.Vector3>(); // bone-local direction that faced front (+z) at bind
+
+  // Turn each thigh and shin about its own length so its front faces the way the knee bends (the hips' front for a
+  // straight leg), the foot kept where it was. The legs are aimed by the shortest turn from hanging straight down,
+  // which leaves their twist where the bind pose had it whatever the hips do: when a 180 turned the hips half round
+  // the thighs stayed facing the old way, and the skin between them and the hips wrung shut like a towel (zack,
+  // 2026-11-06: the crotch pinched and the legs crossed in the backside 180). Clips baked to Blender carry the same
+  // twist, so this runs after them too.
+  private untwistLegs(): void {
+    const bones = new Map(this.bound.map((b) => [b.bone.name, b.bone]));
+    const hips = bones.get('Hips');
+    const hipsFront = hips && this.front.has('Hips') ? this.frontOf(hips) : FRONT.clone();
+    const at = (m: THREE.Matrix4) => new THREE.Vector3().setFromMatrixPosition(m);
+    for (const side of ['Left', 'Right']) {
+      const up = bones.get(`${side}UpLeg`);
+      const low = bones.get(`${side}Leg`);
+      const foot = bones.get(`${side}Foot`);
+      if (!up || !low || !foot || !this.front.has(up.name) || !this.front.has(low.name)) continue;
+      const footM = this.inRig(foot);
+      const lowM = this.inRig(low);
+      const hip = at(this.inRig(up));
+      const knee = at(lowM);
+      const ankle = at(footM);
+      const line = ankle.clone().sub(hip);
+      if (line.lengthSq() < 1e-8) continue;
+      line.normalize();
+      const off = knee.clone().sub(hip);
+      const bend = off.sub(line.clone().multiplyScalar(off.dot(line)));
+      // a leg about straight has no bend to read, so it faces the hips' way
+      const w = Math.min(Math.max((bend.length() - 0.01) / 0.04, 0), 1);
+      const want = hipsFront.clone().multiplyScalar(1 - w);
+      if (w > 0) want.addScaledVector(bend.normalize(), w);
+      this.twist(up, hip, knee, want);
+      this.setInRig(low, lowM); // the shin stays put while the thigh turns over it
+      this.twist(low, knee, ankle, want);
+      this.setInRig(foot, footM);
+    }
+  }
+
+  private frontOf(b: THREE.Bone): THREE.Vector3 {
+    return this.front.get(b.name)!.clone().applyQuaternion(new THREE.Quaternion().setFromRotationMatrix(this.inRig(b)));
+  }
+
+  // turn a bone about the line from head to tail so its front swings round toward `want`
+  private twist(b: THREE.Bone, head: THREE.Vector3, tail: THREE.Vector3, want: THREE.Vector3): void {
+    const axis = tail.clone().sub(head);
+    if (axis.lengthSq() < 1e-8) return;
+    axis.normalize();
+    const cur = this.frontOf(b);
+    cur.addScaledVector(axis, -cur.dot(axis));
+    const to = want.clone().addScaledVector(axis, -want.dot(axis));
+    if (cur.lengthSq() < 1e-6 || to.lengthSq() < 1e-6) return;
+    cur.normalize();
+    to.normalize();
+    const angle = Math.atan2(cur.clone().cross(to).dot(axis), cur.dot(to));
+    if (Math.abs(angle) < 1e-4) return;
+    const turn = new THREE.Matrix4().makeRotationAxis(axis, angle);
+    const m = new THREE.Matrix4().makeTranslation(head.x, head.y, head.z).multiply(turn).multiply(new THREE.Matrix4().makeTranslation(-head.x, -head.y, -head.z)).multiply(this.inRig(b));
+    this.setInRig(b, m);
+  }
   private readonly bindPos = new Map<string, THREE.Vector3>(); // bone positions in world units at bind
 
   // an object's transform in the rig's own space (this.mesh), from the local transforms up the tree
@@ -784,7 +851,10 @@ export class SkaterRig {
     this.raw?.rot.forEach((q, i) => this.bound[i].bone.quaternion.copy(q));
     this.applyPose(p);
     this.mesh.rotation.set(0, 0, 0);
-    if (this.bound.length) this.absorb(0);
+    if (this.bound.length) {
+      this.untwistLegs();
+      this.absorb(0);
+    }
   }
 
   // the animation editor's knee handles: each leg's pole target as last posed, and where it sits with no offset
@@ -988,6 +1058,7 @@ export class SkaterRig {
       } else {
         this.applyPose(pose);
       }
+      this.untwistLegs();
       if (k < 1) this.blendSnap(k);
     } else {
       if (k < 1) pose = mix(this.from, pose, k);
@@ -1225,6 +1296,7 @@ function shoulderTurn(p: Pose, arm: 0 | 1): THREE.Quaternion {
   return new THREE.Quaternion().setFromEuler(new THREE.Euler(-fwd, 0, raise, 'XYZ')).multiply(new THREE.Quaternion().setFromAxisAngle(UP_Y, twist));
 }
 const UP_Y = new THREE.Vector3(0, 1, 0);
+const FRONT = new THREE.Vector3(0, 0, 1);
 
 // Knees bend the way the chest faces, which in the riding stance is toward the camera (+z in the rig), a touch
 // outward from the stance's middle, whatever the feet do, so a squash, a slope or a landing never folds a knee

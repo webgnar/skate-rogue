@@ -61,8 +61,48 @@ function step<T extends string>(p: number, steps: [number, T][]): T {
   return cur;
 }
 
-// a flock of pigeons on a loop round the sky: each bird a body and two flapping wings
+// a flock of pigeons on a loop round the sky: the blender bot's pigeon (src/render/pigeon.ts) flying, or the
+// code-built birds when the model didn't load
 function flock(rng: Rng, center: THREE.Vector3, radius: number, n: number, speed: number): Life {
+  return modelFlock(rng, center, radius, n, speed) ?? codeFlock(rng, center, radius, n, speed);
+}
+
+// the blender bot's pigeons on their fly clip, each a beat out from the next (zack 2026-11-06: "replace the pigeons
+// flying in the splash screen with the new ones"). Null when the model didn't load
+function modelFlock(rng: Rng, center: THREE.Vector3, radius: number, n: number, speed: number): Life | null {
+  const group = new THREE.Group();
+  const birds: { rig: PigeonRig; off: THREE.Vector3; phase: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const rig = pigeonRig();
+    if (!rig) return null;
+    //no ink: from this far off a fixed-width outline swallows the bird and it reads as a black blot
+    rig.root.scale.setScalar(4.4); // the code-built flock's size
+    rig.root.rotation.order = 'YZX'; // turned to its heading, then pitched nose down along it
+    rig.play('fly', 0, 0.9 + rng() * 0.25);
+    const phase = rng() * 6;
+    rig.update(phase); // out of step with the others
+    group.add(rig.root);
+    birds.push({ rig, off: new THREE.Vector3((rng() - 0.5) * 14, (rng() - 0.5) * 5, (rng() - 0.5) * 12), phase });
+  }
+  return {
+    group,
+    update(t: number, dt: number): void {
+      const a = t * speed;
+      for (const b of birds) {
+        const x = center.x + Math.cos(a) * radius + b.off.x;
+        const z = center.z + Math.sin(a) * radius * 0.5 + b.off.z;
+        const y = center.y + b.off.y + Math.sin(t * 1.3 + b.phase) * 1.5;
+        b.rig.root.position.set(x, y, z);
+        //the model stands upright: in the air it leans forward into its flight, and rolls a little in the turn
+        b.rig.root.rotation.set(-0.2 * Math.sign(speed) + Math.sin(t * 0.9 + b.phase) * 0.1, -a - (Math.PI / 2) * Math.sign(speed), -0.7);
+        b.rig.update(dt);
+      }
+    },
+  };
+}
+
+// the code-built flock: each bird a body and two flapping wings
+function codeFlock(rng: Rng, center: THREE.Vector3, radius: number, n: number, speed: number): Life {
   const group = new THREE.Group();
   const feather = toon({ color: 0x6a6478, side: THREE.DoubleSide });
   const pale = toon({ color: 0xc8c0d0 });
@@ -1205,18 +1245,22 @@ function wind(rng: Rng): Life {
   inkify(tree);
   inkify(pole);
   group.add(tree);
+  let wave = 0; // the cloth's wave, how far it has run
   return {
     group,
-    update(t: number): void {
+    update(t: number, dt: number): void {
       const w = gust(t);
-      //the cloth: a wave running out from the pole, bigger in the gusts, and the free end lifting
+      //the cloth: a slow, lazy wave running out from the pole, a little bigger in the gusts, the free end lifting a
+      //touch (zack 2026-11-06: "mellow out the flag waving"). Its phase is kept, not t times a speed that changes
+      //with the wind, which jerked the wave about whenever a gust came
+      wave += dt * (2 + w * 1.2);
       const pos = clothGeo.getAttribute('position');
       for (let k = 0; k < pos.count; k++) {
         const x = rest[k * 3];
         const y = rest[k * 3 + 1];
         const u = x / 2.4;
-        pos.setZ(k, Math.sin(x * 2.6 - t * (5 + w * 5)) * u * (0.12 + w * 0.3));
-        pos.setY(k, y + u * (w - 0.6) * 0.5);
+        pos.setZ(k, Math.sin(x * 2.0 - wave) * u * (0.07 + w * 0.1));
+        pos.setY(k, y + u * (w - 0.6) * 0.18);
       }
       pos.needsUpdate = true;
       clothGeo.computeVertexNormals();

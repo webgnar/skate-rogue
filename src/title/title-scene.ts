@@ -30,10 +30,31 @@ export const PATH: { at: [number, number, number]; look: [number, number, number
 // the last stop on an upright phone: in closer, so Webster's big in the narrow frame, looking up past the cat on the
 // shop signs and the flag to the sky over the roofs
 const TALL_END = { at: [1.4, 1.2, 12] as [number, number, number], look: [0.5, 5.2, 0] as [number, number, number] };
-export const DESCENT = 11; // seconds from the sky to Webster
+export const DESCENT = 12; // seconds from the sky to Webster
 
 // a smooth step that eases in and out but doesn't stall in the middle
 const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+// the way down's pace (zack 2026-11-06: "pan past the drones a little slower"): eased time to how far along the
+// path, held back through the stretch where the drones patrol (the path's middle stop, at 0.5)
+const PACE: [number, number][] = [[0, 0], [0.38, 0.41], [0.64, 0.58], [1, 1]];
+function paced(e: number): number {
+  for (let i = 1; i < PACE.length; i++) {
+    const [t1, v1] = PACE[i];
+    if (e <= t1) {
+      const [t0, v0] = PACE[i - 1];
+      return v0 + ((e - t0) / (t1 - t0)) * (v1 - v0);
+    }
+  }
+  return 1;
+}
+const smooth = (a: number, b: number, x: number) => {
+  const u = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return u * u * (3 - 2 * u);
+};
+// the camera tips down a little on the way (zack: "look the camera down a little bit, then level it back out at the
+// end"), radians, by how far along it is
+const TILT = 0.16;
+const tilt = (e: number) => TILT * smooth(0.08, 0.3, e) * (1 - smooth(0.72, 0.97, e));
 
 const HAND_ARM = 0; // the lead (left, +x) arm twirls the board
 const SPIN = 8; // the board's twirl, radians a second (zack's sprite: a turn in 0.75 s)
@@ -165,13 +186,14 @@ export class TitleScene {
   private place(): void {
     const css = this.renderer.domElement;
     this.camera.aspect = css.clientWidth / Math.max(1, css.clientHeight);
-    const e = ease(this.k);
+    const e = paced(ease(this.k));
     const tall = this.camera.aspect < 1;
     const path = this.curves[tall ? 1 : 0];
     this.camera.position.copy(path.at.getPoint(e));
     //waiting at the top: a slow drift so the sky isn't a still
     if (!this.going) this.camera.position.x += Math.sin(this.t * 0.25) * 6;
     this.camera.lookAt(path.look.getPoint(e));
+    this.camera.rotateX(-tilt(e));
     //the lens narrows on the way down: wide over the city, tighter on Webster (wider upright, so the street still fits)
     this.camera.fov = (tall ? 66 : 50) - (tall ? 10 : 8) * e;
   }
