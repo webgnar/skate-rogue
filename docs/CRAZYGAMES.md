@@ -38,8 +38,8 @@ All of it is in `src/net/portal.ts`, read through `ON_CRAZYGAMES`.
 
 - 1,500 files, 250 MB in all, 50 MB initial download (20 MB for the mobile homepage). Measured with the SDK, the
   initial download runs until the first `gameplayStart`.
-- The build is 136 files, 22.0 MB (12.6 MB zipped). The run's music (3.8 MB) loads during play, so the download
-  before the first `gameplayStart` is a little under 20 MB.
+- The build is 137 files, 19.3 MB (9.9 MB zipped), under the 20 MB mobile homepage mark. `pack.mjs` re-encodes the
+  music at 96 kbps for the portal (Vercel keeps 160), and every PNG in `public/` is losslessly recompressed.
 - Relative paths only (`base: './'` in `vite.config.ts`; `pack.mjs` checks the page).
 - 20 seconds or less to gameplay. It loads in about 4 to 7 s in a cloud browser.
 - Touch, mouse and keyboard all work (tap / click / Space). `user-select: none` and safe area padding are already in
