@@ -13,8 +13,7 @@ const GRIND = [hex(0xff8c2b), hex(0xffc07a)];
 const MAGNET = [hex(0x8a7dff), hex(0x5ad0ff)];
 const GREASE = [hex(0x1a1c2a), hex(0x3a4060)];
 const CASH = [hex(0x3ddc84), hex(0x9cf5c0)];
-const TIME = [hex(0x9ad8ff), hex(0xe0f4ff)];
-const GRAV = [hex(0xb06cff), hex(0xe0c0ff)];
+const PATCH = [hex(0x5fe08a), hex(0xd8ffe4)];
 const KICK = [hex(0x4ad8ff), hex(0xffffff)];
 const DUSTY = [hex(0xc8c0b8), hex(0xa8a098)];
 const FLOW = [hex(0x3ee0f0), hex(0xc8f8ff)];
@@ -131,11 +130,9 @@ export class BoonFx {
       case 'cashBurst':
         p.spray(x, y + 0.6, { n: 16, colors: CASH, life: [0.6, 0.9], size: [0.12, 0.16], speed: [2, 4], angle: [UP - 0.9, UP + 0.9], grav: 9, drag: 0.8, ink: true });
         break;
-      case 'slowMo':
-        p.spray(x, y + 0.6, { n: 18, colors: TIME, life: [0.6, 0.7], size: [0.1, 0.12], speed: [1.2, 1.2], ring: true, radius: 0.4, drag: 0.5, alpha: 0.85 });
-        break;
-      case 'gravFlip':
-        p.spray(x, y + 0.4, { n: 16, colors: GRAV, life: [0.5, 0.7], size: [0.1, 0.14], speed: [0.2, 0.8], jitter: 0.6, grav: -8, drag: 1 });
+      case 'patchJob':
+        //a green puff off the board, rising: a part got a little back
+        p.spray(x, y + 0.2, { n: 14, colors: PATCH, life: [0.5, 0.7], size: [0.1, 0.14], speed: [1, 2], angle: [UP - 0.6, UP + 0.6], grav: -3, drag: 1.2 });
         break;
       case 'shockwave':
         p.spray(x, y + 0.05, { ...ring(DUSTY, 20, 7), size: [0.16, 0.22], size1: 0.3, life: [0.4, 0.5], drag: 2.5, alpha: 0.8 });

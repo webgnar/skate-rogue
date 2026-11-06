@@ -1804,18 +1804,9 @@ export class Game {
     this.hud.fire(slot);
     this.boonFx.mod(effect, this.sprite.mesh.position.x, this.sprite.mesh.position.y);
     switch (effect) {
-      case 'sparks':
-        this.run.addStyle(BOARD.sparkStyle);
-        this.particles.grindStart(...this.backTruck(), 1);
-        this.particles.grindStart(...this.backTruck(), 1);
-        break;
       case 'cashBurst':
         this.run.addCash(BOARD.cashBurst);
         this.hud.money(this.run.cash, this.run.stoken);
-        break;
-      case 'slowMo':
-        //no freeze: drop to half speed and ease back over the half second
-        this.warp.hit(0, BOARD.slowMoScale, BOARD.slowMoSecs);
         break;
       case 'shockwave':
         this.burst(0.5, 0.15);
@@ -2118,6 +2109,11 @@ export class Game {
       this.run.spins++;
       this.hud.callout('GOLDEN PIGEON! CHIP +1 ROLL', 'trick');
       this.particles.coin(toX(e.x), toY(this.level, e.y) + 0.8, 0);
+      return;
+    }
+    if (e.type === 'patch') {
+      //Patch Job: a little back on the most worn part, the gear bar shows it
+      this.hud.gear(this.sim.gear);
       return;
     }
     if (e.type === 'supply') {
