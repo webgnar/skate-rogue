@@ -11,7 +11,7 @@ import type { GripId } from '../board/grips';
 export type Stat =
   | 'flip' | 'kickflip' | 'heelflip' | 'tre' | 'fakie' | 'nollie' | 'spin'
   | 'grind' | 'rail' | 'ledge' | 'manual' | 'perfect'
-  | 'hop' | 'near' | 'doorSlam' | 'wreck' | 'kicker' | 'skitch' | 'slip' | 'firecracker'
+  | 'hop' | 'near' | 'doorSlam' | 'wreck' | 'kicker' | 'skitch' | 'firecracker'
   | 'smash' | 'stoken' | 'dodge' | 'drone'
   | 'grindDist' | 'travel' // metres on a rail or ledge, metres skated (the game adds whole metres as they pile up)
   | 'combo' | 'bank' | 'floor' | 'act' | 'escape'
@@ -85,7 +85,6 @@ export const MISSIONS: MissionDef[] = [
   { id: 'drone3', text: 'Stomp 3 drones', stat: 'drone', goal: 3, scope: 'ever', tier: 4 },
   { id: 'clean3run', text: 'Clear 3 floors in a run without slamming', stat: 'cleanFloor', goal: 3, scope: 'run', tier: 4 },
   { id: 'popBoons4', text: 'Hold 4 POP boons', stat: 'popBoons', goal: 4, scope: 'best', tier: 4 },
-  { id: 'slip2', text: 'Ride 2 slipstreams', stat: 'slip', goal: 2, scope: 'ever', tier: 4 },
   { id: 'firecracker1', text: 'Firecracker down a stair set', stat: 'firecracker', goal: 1, scope: 'ever', tier: 4 },
   { id: 'smash25run', text: 'Smash 25 props in one run', stat: 'smash', goal: 25, scope: 'run', tier: 4 },
   { id: 'bank20k', text: 'Bank 20,000 in one combo', stat: 'bank', goal: 20000, scope: 'best', tier: 5 },
@@ -125,11 +124,14 @@ export const rankOf = (done: number): number => Math.floor(done / RANK.per);
 
 export function cleanMissions(raw: unknown): MissionSave {
   const s = (raw ?? {}) as Partial<MissionSave>;
-  const active = Array.isArray(s.active) ? s.active.filter((id) => typeof id === 'string' && missionDef(id)) : [];
+  const raw0 = Array.isArray(s.active) ? s.active : [];
   const progress = Array.isArray(s.progress) ? s.progress.map((n) => Number(n) || 0) : [];
+  //a mission taken out of the game (Ride 2 slipstreams went with its boon, 2026-11-06) drops with its progress
+  const keep = raw0.map((id, i) => ({ id, n: progress[i] ?? 0 })).filter((m) => typeof m.id === 'string' && missionDef(m.id));
+  const active = keep.map((m) => m.id as string);
   return {
     active,
-    progress: active.map((_, i) => progress[i] ?? 0),
+    progress: keep.map((m) => m.n),
     done: Math.max(0, Math.floor(Number(s.done) || 0)),
     seen: Array.isArray(s.seen) ? s.seen.filter((id) => typeof id === 'string') : [],
   };
@@ -319,8 +321,6 @@ export function statsOf(e: FloorEvent): Stat[] {
       return ['kicker'];
     case 'skitch':
       return e.on ? ['skitch'] : [];
-    case 'slip':
-      return ['slip'];
     case 'firecracker':
       return ['firecracker'];
     case 'smash':

@@ -67,9 +67,7 @@ function skate(level: Level, p: FloorPlay): FloorReport & { fork: 'high' | 'low'
   //the game's score, stepped alongside: the gnar state speeds the skater up and makes slams free of Heat
   const run = new RunScore();
   run.scoreScale = mods.scoreScale;
-  run.slamStoke = mods.slamStoke;
   run.stokenScale = mods.stokenScale;
-  run.nearScale = mods.nearScale;
   const pilot = new Pilot(p.pilot, p.seed + p.floor);
   const checks = new FloorChecks(sim);
   let slams = 0;

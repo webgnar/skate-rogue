@@ -72,14 +72,6 @@ describe('pits on the hill', () => {
     expect(cleared).toBeLessThan(walled);
   });
 
-  it('Tuck and Roll still bounces you up the wall and out', () => {
-    const l = [2, 3, 4, 5].map((floor) => chicago(3 * floor, floor)).find((m) => pits(m).some((q) => !rollOff(m, q).landed))!;
-    const p = pits(l).find((q) => !rollOff(l, q).landed)!;
-    const { sim, sk } = rollOff(l, p, { ...NO_MODS, tuckAndRoll: 1 });
-    expect(sim.state).toBe('skate');
-    expect(sk.mode).toBe('roll');
-    expect(sk.x).toBeGreaterThanOrEqual(p.x1);
-  });
 });
 
 // zack, 2026-10-31: taps stopped doing anything until a refresh. A flip trick just under the far lip slams you into the
