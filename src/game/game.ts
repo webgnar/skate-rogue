@@ -11,6 +11,7 @@ import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
+import { deckChoices, STOCK_DECK, type DeckArt } from '../board/deck-art';
 import { RunScore, SCORE } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
 import { firstCloud } from '../gen/clouds';
@@ -169,6 +170,7 @@ export interface ShopView {
   gear: Gear; // what your gear is at; the shop sells new parts
   grip: GripId; // the grip on the board; the shop sells one other colour (shop.grip)
   gripPrice: number;
+  deckArt: DeckArt; // the graphic a new deck from this shop comes in (src/board/deck-art.ts)
 }
 
 export interface Hud {
@@ -412,6 +414,8 @@ export class Game {
   private shop: ShopState | null = null;
   private shopPick: ShopPick = null;
   private shopVisits = 0;
+  private deckArt: DeckArt = STOCK_DECK; // the graphic under the board this run (a new deck brings a new one)
+  private shopDecks: DeckArt[] = []; // the graphics this shop's new deck comes in
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
   private grip: GripId = loadSave().tape ?? GRIP.start; // the grip tape's colour, kept between runs (src/board/grips.ts)
   // the three missions and Skater Rank (src/run/missions.ts), kept between runs
@@ -598,6 +602,7 @@ export class Game {
     this.board = newBoard(DECK_SLOTS[this.meta.loadout.deck]);
     this.gear = freshGear();
     this.shopVisits = 0;
+    this.setDeckArt(STOCK_DECK);
     this.run = new RunScore();
     this.carry = 0;
     this.continuesLeft = CONTINUES;
@@ -955,9 +960,16 @@ export class Game {
     this.startFloor({ skater, dx: -old.width, dy: level.startY - old.streetY });
   }
 
+  // the deck's paint and graphic, on the board
+  private setDeckArt(art: DeckArt): void {
+    this.deckArt = art;
+    this.sprite.setDeckArt(art);
+  }
+
   private openShop(): void {
     this.shopVisits++;
     this.shop = { cash: this.run.cash, board: this.board.slice(), stock: rollStock(this.seed, this.shopVisits, 0), restocks: 0, grip: gripFor(this.seed, this.shopVisits, this.grip) };
+    this.shopDecks = deckChoices(this.seed, this.shopVisits, this.deckArt.id);
     this.shopPick = null;
     this.openMenu('shop', performance.now());
     this.showShop();
@@ -974,6 +986,7 @@ export class Game {
       gear: this.gear,
       grip: this.grip,
       gripPrice: GRIP.price,
+      deckArt: this.shopDecks[0] ?? STOCK_DECK,
     });
     this.hud.money(this.shop.cash, this.run.stoken);
   }
@@ -1037,7 +1050,9 @@ export class Game {
         this.gear = got.gear;
         next = { ...s, cash: got.cash };
         this.hud.gear(this.gear);
-        this.hud.callout(`NEW ${GEAR.names[part].toUpperCase()}`, 'good');
+        const art = part === 'deck' ? this.shopDecks[0] : undefined;
+        if (art) this.setDeckArt(art);
+        this.hud.callout(art ? `NEW DECK: ${art.name.toUpperCase()}` : `NEW ${GEAR.names[part].toUpperCase()}`, 'good');
       } else if (this.gear[part] < 100) this.hud.callout('NOT ENOUGH CASH', 'bad');
       this.shopPick = null;
     } else if (el.dataset.grip !== undefined) {

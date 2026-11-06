@@ -109,6 +109,13 @@ export function deckPaint(board: THREE.Object3D): number[][] {
   return [...out, ...PLY_PAINT.map((p) => [p.r, p.g, p.b])];
 }
 
+// how far the deck's paint has rubbed through to the wood at a place on its underside, 0 to 1: at the tips and along
+// the rails first (tail drags and boardslides), ragged
+function rubbed(x: number, z: number, deck: number): number {
+  const rub = Math.max((Math.abs(x) - 0.36) / 0.115, (Math.abs(z) - BOARD.rail * 0.8) / (BOARD.rail * 0.2)) + hash(Math.round(x * 300), Math.round(z * 300)) * 0.6 - 0.3;
+  return Math.min(1, Math.max(0, rub)) * Math.min(1, deck * 1.6);
+}
+
 export function wearBoard(board: THREE.Object3D, g: Gear): void {
   const deck = look(g.deck);
   const trucks = look(g.trucks);
@@ -134,6 +141,17 @@ export function wearBoard(board: THREE.Object3D, g: Gear): void {
     }
     const pos = mesh.geometry.attributes.position as THREE.BufferAttribute;
     const fresh = original(pos);
+    if (mesh.userData.mat === 'deckArt') {
+      //the graphic chips with the deck under it, and rubs off where its paint does (its vertex alpha)
+      const col = mesh.geometry.attributes.color as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        pos.setXYZ(i, fresh[i * 3], fresh[i * 3 + 1], fresh[i * 3 + 2]);
+        chip(pos, fresh, i, deck);
+        col.setW(i, 1 - rubbed(fresh[i * 3], fresh[i * 3 + 2], deck));
+      }
+      pos.needsUpdate = col.needsUpdate = true;
+      return;
+    }
     const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
     const tint = col ? original(col) : null;
     const c = new THREE.Color();
@@ -154,10 +172,7 @@ export function wearBoard(board: THREE.Object3D, g: Gear): void {
       // the graphic rubs through to the wood at the tips and along the rails (tail drags and boardslides)
       for (const [a, b] of ranges(mesh, 'deck')) {
         for (let i = a; i < b; i++) {
-          const x = Math.abs(fresh[i * 3]);
-          const z = Math.abs(fresh[i * 3 + 2]);
-          const rub = Math.max((x - 0.36) / 0.115, (z - BOARD.rail * 0.8) / (BOARD.rail * 0.2)) + hash(i) * 0.6 - 0.3;
-          const k = Math.min(1, Math.max(0, rub)) * Math.min(1, deck * 1.6);
+          const k = rubbed(fresh[i * 3], fresh[i * 3 + 2], deck);
           c.setRGB(tint[i * 3], tint[i * 3 + 1], tint[i * 3 + 2]).lerp(WOOD, k);
           col.setXYZ(i, c.r, c.g, c.b);
         }
@@ -251,4 +266,86 @@ export function paintGrip(board: THREE.Object3D, color: number): void {
     }
     col.needsUpdate = true;
   });
+}
+
+// the deck's paint (src/board/deck-art.ts base): the underside's vertices, into the fresh copy too so wear redraws
+// over it
+export function paintDeckBase(board: THREE.Object3D, color: number): void {
+  const c = new THREE.Color(color);
+  board.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const col = mesh.geometry.attributes.color as THREE.BufferAttribute | undefined;
+    if (!col) {
+      if (mesh.userData.mat === 'deck') (mesh.material as THREE.MeshToonMaterial).color.copy(c);
+      return;
+    }
+    if (mesh.userData.mat === 'deckArt') return;
+    const fresh = original(col);
+    for (const [a, b] of ranges(mesh, 'deck')) {
+      for (let i = a; i < b; i++) {
+        fresh.set([c.r, c.g, c.b], i * 3);
+        col.setXYZ(i, c.r, c.g, c.b);
+      }
+    }
+    col.needsUpdate = true;
+  });
+}
+
+// The deck graphic (src/render/deck-graphic.ts): a copy of the deck's underside a hair below it, mapped along and
+// across, so the texture's shapes lie on the paint. Its vertex alpha is where the wear has rubbed the graphic off
+// (with the material's alphaTest). `mat` takes the texture; null if the board has no deck.
+export function deckDecal(board: THREE.Object3D, mat: THREE.Material): THREE.Mesh | null {
+  const found: { mesh: THREE.Mesh; range: [number, number] }[] = [];
+  board.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const r = ranges(mesh, 'deck')[0];
+    if (r) found.push({ mesh, range: r });
+  });
+  if (!found.length) return null;
+  const from = found[0].mesh;
+  const [a, b] = found[0].range;
+  const geo = from.geometry;
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  const nor = geo.attributes.normal as THREE.BufferAttribute;
+  const tris: number[] = [];
+  if (geo.index) {
+    const idx = geo.index;
+    for (let t = 0; t + 2 < idx.count; t += 3) {
+      const v = [idx.getX(t), idx.getX(t + 1), idx.getX(t + 2)];
+      if (v.every((i) => i >= a && i < b)) tris.push(...v);
+    }
+  } else {
+    for (let i = a; i + 2 < b; i += 3) tris.push(i, i + 1, i + 2);
+  }
+  const n = tris.length;
+  const p = new Float32Array(n * 3);
+  const nn = new Float32Array(n * 3);
+  const uv = new Float32Array(n * 2);
+  const col = new Float32Array(n * 4).fill(1);
+  const lift = 0.0015; // proud of the paint, outward
+  tris.forEach((v, j) => {
+    const [nx, ny, nz] = [nor.getX(v), nor.getY(v), nor.getZ(v)];
+    const [x, y, z] = [pos.getX(v), pos.getY(v), pos.getZ(v)];
+    p.set([x + nx * lift, y + ny * lift, z + nz * lift], j * 3);
+    nn.set([nx, ny, nz], j * 3);
+    //the picture's nose (its top) at +x; seen from below, across runs the way it reads
+    uv.set([0.5 - z / (2 * BOARD.rail), 0.5 + x / (2 * BOARD.tip)], j * 2);
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nn, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 4));
+  const decal = new THREE.Mesh(g, mat);
+  decal.name = 'DeckArt';
+  decal.userData.mat = 'deckArt';
+  decal.userData.inked = true; // no hull of its own: the deck's outlines it
+  decal.frustumCulled = false;
+  decal.position.copy(from.position);
+  decal.quaternion.copy(from.quaternion);
+  decal.scale.copy(from.scale);
+  from.parent!.add(decal);
+  return decal;
 }
