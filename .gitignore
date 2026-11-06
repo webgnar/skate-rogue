@@ -5,3 +5,5 @@ dist
 __pycache__/
 playtest-report/
 zfight-report/
+dist-crazygames
+dist-crazygames.zip

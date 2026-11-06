@@ -13,11 +13,14 @@ export function offerBoons(seed: number, run: RunView, count = 3, type?: BoonTyp
   const rng = makeRng(seed + run.floor * 104729 + reroll * 7841);
   const open = (b: Boon) => stacksOf(run.boons, b.id) < b.max && (b.when?.(run) ?? true);
   const lib = run.library;
-  let pool = BOONS.filter((b) => !b.cursed && !b.duo && open(b) && (!lib || lib.types.includes(b.type)));
-  //a typed street with that type maxed out falls back to any type
-  if (type && pool.some((b) => b.type === type)) pool = pool.filter((b) => b.type === type);
+  const pool = BOONS.filter((b) => !b.cursed && !b.duo && open(b) && (!lib || b.gear || lib.types.includes(b.type)));
+  //a typed street deals its own type first; when that type has fewer cards left than the offer (the pool was cut
+  //to 19 boons on 2026-11-06, so COOL and STREET are small), the rest come from any type
+  const typed = type ? pool.filter((b) => b.type === type) : [];
+  const rest = type ? pool.filter((b) => b.type !== type) : pool;
   const picks: Boon[] = [];
-  while (picks.length < count && pool.length > 0) picks.push(pool.splice(randInt(rng, pool.length), 1)[0]);
+  while (picks.length < count && typed.length > 0) picks.push(typed.splice(randInt(rng, typed.length), 1)[0]);
+  while (picks.length < count && rest.length > 0) picks.push(rest.splice(randInt(rng, rest.length), 1)[0]);
   const curses = lib && !lib.curses ? [] : BOONS.filter((b) => b.cursed && open(b));
   if (run.floor >= CURSES_FROM && curses.length && picks.length > 1 && rng() < OFFER.curseChance) {
     picks[picks.length - 1] = curses[randInt(rng, curses.length)];

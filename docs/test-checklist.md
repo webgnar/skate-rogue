@@ -80,9 +80,10 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 
 ## Boons
 
-- [ ] **FLOW** (New Wheels, Bomb Hill, Butter, Kicker Boost, Slingshot) and **COOL** (Low Profile, Bubble Pads, Tuck and Roll, Slam Stoke, Siren Song, Decoy, Ghost Mode): each card does what it says.
-- [ ] **LUCK:** Stoken Magnet (picks up from further away), Double Stoken, Hustler (a 4th card on every pick), Lucky Reroll (the first reroll each pick is free).
-- [ ] **STREET:** Roof Rider (grind parked car roofs), Slipstream (tuck behind a car about half a second, then a burst of speed), Hood Pop (car-hops bounce higher), Spoofed Plate (robotaxis don't brake), Jaywalker (close calls count from twice as far and score double).
+- [ ] **FLOW** (New Wheels, Bomb Hill, Butter, Slingshot, Firecracker) and **COOL** (Low Profile, Bubble Pads): each card does what it says.
+- [ ] **Gear boons** (from floor 2): Fiberglass Core, Ceramic Bearings and Classified Urethane each make the deck, bearings or wheels wear half as fast (watch the GEAR WEAR bars).
+- [ ] **LUCK:** Stoken Magnet (picks up from further away), Double Stoken, Hustler (a 4th card on every pick).
+- [ ] **STREET:** Roof Rider (grind parked car roofs). A STREET or COOL boon street fills its offer from other types.
 - [ ] **Curses (from floor 6, about one offer in three):** a dashed purple card marked CURSED. Moon Shoes (ollies 60% higher, grinds 30% slower), Wanted (double Stoken, Heat rises twice as fast), Speed Wobbles (40% faster cruising, but landing well over cruising speed, e.g. off a kicker, slams you). *Tuning:* is Speed Wobbles too harsh?
 - [ ] **Duos:** pink cards that show up once you hold both halves. Rocket Grind (Rail Launch + Big Pop: ollie off a full-speed grind launches higher and gives every jump back at the top), Sky Line (Ghost Rail + Triple Threat: each flip leaves a rail under you), Perpetual Motion (Butter + Slingshot: extra speed never bleeds off).
 - [ ] **Remove a curse** at the underground spot lifts it off whole.
@@ -176,7 +177,7 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 
 - [ ] Clip the near corner of a roof, ledge, bar or car roof as you come down: you land on it rather than slipping
       past. Drop off the far end of something at speed with your feet still over it: you land on the edge, then roll off.
-- [ ] With fast builds (New Wheels, Slingshot, Kicker Boost) you never fall through a roof, bar, bank or car roof.
+- [ ] With fast builds (New Wheels, Slingshot) you never fall through a roof, bar, bank or car roof.
 - [ ] Drop onto a robotaxi's roof just as it starts pulling out of the lane (it slides to the back). You land on it
       and ride or hop off; you never fall through it. Same for a drone bobbing up under you on the act 4 escape.
 
@@ -409,10 +410,8 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 **Boon, curse and duo looks** (each shows only when that boon is held)
 
-- [ ] Hood Pop: a red ring off a car hop. Siren Song: blue notes rising. Kicker Boost: cyan streaks off a tailgate.
-      Slingshot: streaks ahead off a rail's end. Butter: a yellow smear on a fast landing.
-- [ ] Bubble Pads: the free slam pops into soap bubbles. Tuck and Roll: a blue ring as you bounce out. Slam Stoke:
-      pink sparks off a slam.
+- [ ] Slingshot: streaks ahead off a rail's end. Butter: a yellow smear on a fast landing.
+- [ ] Bubble Pads: the free slam pops into soap bubbles.
 - [ ] Bomb Hill: a cyan trail while extra speed lasts. Perpetual Motion: a pink trail.
 - [ ] Curses are purple. Moon Shoes leaves a slow moon-dust puff on each ollie. Speed Wobbles sheds wisps when
       you're airborne too fast. Wanted sends a bounty pixel up now and then.

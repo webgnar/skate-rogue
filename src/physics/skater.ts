@@ -20,7 +20,6 @@ export type SkaterEvent =
   | { type: 'kicker' } // launched off a box truck's tailgate
   | { type: 'skitch'; on: boolean } // grabbed a cab's back bumper (on), or let go of it
   | { type: 'pad' } // a slam the Bubble Pads took
-  | { type: 'tuck' } // Tuck and Roll: fell in a gap and bounced back out
   | { type: 'firecracker' } // Firecracker: rolled into a stair set and rode it down instead of slamming
   | { type: 'clack'; step: number } // a firecracker's tail hitting the next step down
   | { type: 'glass' } // rolled over broken glass on wheels good enough to take it (a crunch, and it chunks them)
@@ -70,11 +69,8 @@ export class Skater {
   hitGlass = new Set<number>();
   events: SkaterEvent[] = [];
   // boon state
-  floatT = 0; // Boostin frames left
-  flipped = false; // last jump was a flip trick (Late Flip)
   holdT = 0; // frames the button has stayed held since the ollie (Mad Pop)
-  spare = 0; // banked bonus jump (Spare Change)
-  onRailT = 0; // frames on the current rail (More Wax)
+  spare = 0; // banked bonus jump (the board's Jump Refill)
   ghost: (Surface & { ttl: number }) | null = null; // Ghost Rail
   fakie = false; // riding with the other foot forward, after a 180
   stance = ''; // the grind or manual being ridden (its clip name), '' for none
@@ -84,9 +80,7 @@ export class Skater {
   manuals = 0;
   gravFlipT = 0; // frames of upward gravity left (the Gravity Flip mod)
   pads = 0; // Bubble Pads slams left this floor
-  tucks = 0; // Tuck and Roll saves left this floor
   walled = false; // hit a pit's far wall (see wall()): no more pops or flips, just the drop
-  private tuckOut = false; // bouncing up out of a pit (Tuck and Roll): you slide up its wall, not into it
   cracker: Surface | null = null; // Firecracker: the stair set we're riding down
   crackStep = -1; // the last step the tail clacked on
   rocket = false; // Rocket Grind: jumps come back at the top of this launch
@@ -120,7 +114,6 @@ export class Skater {
     this.hsp = PHYS.baseSpeed; // rolling start
     this.jumps = this.maxJumps;
     this.pads = this.mods.bubblePads;
-    this.tucks = this.mods.tuckAndRoll;
   }
 
   // the world's gravity: QFS's, scaled by the floor's biome (GDD: Atlantis 0.8, Outer Space 0.6)
@@ -186,7 +179,6 @@ export class Skater {
     }
     if (this.railIgnoreT > 0 && --this.railIgnoreT === 0) this.railIgnore = null;
     if (this.slamT > 0) this.slamT--;
-    if (this.floatT > 0) this.floatT--;
     if (this.gravFlipT > 0) this.gravFlipT--;
     if (this.ghost && --this.ghost.ttl <= 0 && this.surface !== this.ghost) this.ghost = null;
     this.stepRuins();
@@ -233,7 +225,7 @@ export class Skater {
   }
 
   // the run flows on from the last floor (src/game/game.ts): pick up where `from` left off, moved (dx, dy) px into
-  // this floor's space, at the same speed, in the same air, mid-trick. The floor's own saves (pads, tucks) are new.
+  // this floor's space, at the same speed, in the same air, mid-trick. The floor's own saves (pads) are new.
   carryOn(from: Skater, dx: number, dy: number): void {
     this.x = from.x + dx;
     this.y = from.y + dy;
@@ -252,8 +244,6 @@ export class Skater {
     this.flipLow = from.flipLow === null ? null : from.flipLow + dy;
     this.coyote = from.coyote;
     this.tricks = from.tricks;
-    this.floatT = from.floatT;
-    this.flipped = from.flipped;
     this.holdT = from.holdT;
     this.spare = from.spare;
     this.fakie = from.fakie;
@@ -313,7 +303,6 @@ export class Skater {
     this.snapUp();
     this.buffer = 0;
     this.coyote = 0;
-    this.flipped = false;
     this.holdT = 1;
     this.events.push({ type: 'ollie', spin: 0, lip, ...(nose ? { nose } : {}) });
   }
@@ -424,7 +413,7 @@ export class Skater {
   }
 
   // dead: no jumps left, so no pop and no jump spent: the board spins while the arc carries on, and landing before it's
-  // caught is the slam it always was (landQuality). The flip boons (Boostin, Sky Line) only come with a real flip
+  // caught is the slam it always was (landQuality). The flip boons (Sky Line) only come with a real flip
   private trick(dead = false): void {
     this.flipLow = this.vsp > 0 ? this.y : null;
     this.buffer = 0;
@@ -434,8 +423,6 @@ export class Skater {
       if (this.jumps > 0) this.jumps--;
       else this.spare -= 1;
       this.vsp = this.flipPop();
-      this.flipped = true;
-      if (this.mods.floatyFlip) this.floatT = PHYS.floatyFrames;
     }
     const name = rollTrick(this.tricks);
     const spin = SPIN[name];
@@ -469,7 +456,6 @@ export class Skater {
   }
 
   private bankSpare(): void {
-    this.spare += this.mods.spareChange;
   }
 
   // Ghost Rail: the rail we just left keeps going for a while
@@ -486,7 +472,6 @@ export class Skater {
     if (this.mode === 'grind' || this.mode === 'rail') this.carry = Math.max(this.carry, Math.abs(this.hsp));
     if (this.mode === 'grind' && this.surface) this.spawnGhost(this.surface.y);
     else if (this.mode === 'rail') this.spawnGhost(this.y);
-    this.onRailT = 0;
     if (this.mode === 'rail' && this.rail) {
       this.railIgnore = this.rail;
       this.railIgnoreT = PHYS.railIgnoreFrames;
@@ -560,14 +545,10 @@ export class Skater {
       this.hsp = this.hsp < cap ? Math.min(cap, this.hsp + PHYS.accel) : bog ? Math.max(cap, this.hsp * 0.93) : cap;
       if (this.skitching) this.skitch();
     } else if (this.mode === 'grind') {
-      this.onRailT++;
-      //More Wax: builds on a flat ledge, not a sloped one
-      const flat = !this.surface || Math.abs(surfaceSlope(this.surface)) < PHYS.frenzyFlat;
-      const frenzy = this.mods.feebleFrenzy && flat ? 1 + PHYS.frenzyStep * Math.min(10, Math.floor(this.onRailT / 30)) : 1;
       const mat = MATERIALS[this.material];
       //a High-Tech conveyor rail runs you faster, or holds you back
       const belt = this.surface?.conveyor ?? 0;
-      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * this.gear.grind * mat.grindScale * frenzy, this.carry) + belt;
+      const target = Math.max(PHYS.grindSpeed * this.mods.grindScale * this.gear.grind * mat.grindScale, this.carry) + belt;
       const accel = PHYS.grindAccel * mat.grindAccel;
       const slowed = belt < 0 ? Math.max(target, this.hsp - accel) : this.hsp;
       this.hsp = Math.max(PHYS.grindMin, this.hsp < target ? Math.min(target, this.hsp + accel) : slowed);
@@ -578,7 +559,6 @@ export class Skater {
       let grav = this.grav;
       if (this.snap && this.vsp >= PHYS.popHang) this.snap = false;
       if (this.snap) grav *= this.vsp < -PHYS.popHang ? PHYS.popSnap * PHYS.popSnap : PHYS.popHangGrav;
-      if (this.floatT > 0) grav *= 0.5; // Boostin
       if (this.mods.pressureFlip && this.holdT > PHYS.pressureFrames) grav *= 0.7; // Mad Pop
       //Gravity Flip mod: a fall stops dead and gravity pulls up, to a cap (never slowing a faster rise)
       if (this.gravFlipT > 0) this.vsp = Math.min(this.vsp, Math.max(PHYS.ollie * 1.2, Math.min(this.vsp, 0) - this.grav));
@@ -588,8 +568,8 @@ export class Skater {
         this.rocket = false;
         this.jumps = this.maxJumps;
       }
-      //let go while rising: a short hop (QFS variable jump); Late Flip keeps flips full height
-      const cut = !(this.flipped && this.mods.lateFlip) && this.gravFlipT === 0 && !this.kicked;
+      //let go while rising: a short hop (QFS variable jump)
+      const cut = this.gravFlipT === 0 && !this.kicked;
       //(off a snapped-up pop, letting go goes straight to the hang at the top)
       if (cut && this.vsp < 0 && !held) this.vsp = Math.max(this.vsp, this.snap ? -PHYS.popHang : PHYS.ollie / PHYS.jumpCut);
       if (this.coyote > 0) this.coyote--;
@@ -646,7 +626,6 @@ export class Skater {
           this.kicked = true;
           this.coyote = 0;
           this.jumps = this.maxJumps;
-          this.flipped = false;
           this.events.push({ type: 'kicker' });
         }
       }
@@ -666,18 +645,7 @@ export class Skater {
     //(down a pit that's the sewer's shaft, the deep's floor)
     const shaft = sewer?.entry === 'shaft' && this.x >= sewer.drain[0] && this.x <= sewer.drain[1];
     const bottom = deep || shaft ? sewerFloor(sewer!, this.x) + PHYS.bailDepth : pitAt(this.level, this.x)?.floor ?? (open ? sewerFloor(sewer, this.x) : this.level.streetY) + PHYS.bailDepth;
-    if (this.mode === 'air' && this.y > bottom && this.tucks > 0) {
-      //Tuck and Roll: bounce back up out of the gap with your jumps back, for a slam's Heat
-      this.tucks--;
-      this.walled = false;
-      this.tuckOut = true;
-      this.vsp = PHYS.tuckBounce;
-      this.snap = false;
-      this.hsp = Math.max(this.hsp, PHYS.baseSpeed);
-      this.jumps = this.maxJumps;
-      this.kicked = true;
-      this.events.push({ type: 'tuck' });
-    } else if (this.mode === 'air' && this.y > bottom) {
+    if (this.mode === 'air' && this.y > bottom) {
       this.y = Math.min(this.y, bottom);
       this.mode = 'bail';
       this.hsp = 0;
@@ -731,7 +699,6 @@ export class Skater {
       this.y = sy;
       this.surface = s;
       this.ghost = null;
-      this.onRailT = 0;
       this.spare = 0;
       this.mode = 'roll';
       if (s.kind === 'stairs') this.intoStairs(s);
@@ -895,8 +862,6 @@ export class Skater {
         this.touchDown(p.far);
         return;
       }
-      //bouncing up out of the pit (Tuck and Roll), you slide up the wall and over the lip
-      if (this.tuckOut && this.vsp < 0) return;
       this.hsp = 0;
       this.carry = 0;
       if (this.walled) return;
@@ -918,15 +883,11 @@ export class Skater {
     this.trickCatch = 0;
     this.surface = s;
     this.vsp = 0;
-    this.tuckOut = false;
     this.jumps = this.maxJumps;
     this.coyote = 0;
-    this.flipped = false;
-    this.floatT = 0;
     this.nose = false;
     if (s?.kind === 'rail') {
       this.mode = 'grind';
-      this.onRailT = 0;
       const enter = this.mods.grindInstant ? PHYS.grindSpeed * this.mods.grindScale : PHYS.grindMin;
       this.hsp = Math.max(this.hsp, enter);
       //a perfect catch onto it: straight in at grind speed, and a bit over
@@ -1038,7 +999,6 @@ export class Skater {
     this.vsp = PHYS.carHop * this.mods.hopScale;
     this.topY = this.y; // off the roof: the drop is from this bounce
     this.jumps = this.maxJumps;
-    this.flipped = false;
     this.nose = false;
     this.mode = 'air';
     this.events.push({ type: 'hop' });
@@ -1059,9 +1019,6 @@ export class Skater {
     this.feel.railEntry(Math.abs(this.vsp * t.tx - this.hsp * t.ty), rail.material, this.looseTrucks);
     this.trickCatch = 0;
     this.mode = 'rail';
-    this.onRailT = 0;
-    this.flipped = false;
-    this.floatT = 0;
     this.bankSpare();
     this.jumps = this.maxJumps;
     this.vsp = 0;
@@ -1078,9 +1035,6 @@ export class Skater {
     //and friction under the trucks, from how hard the rail pushes back (the cos of its angle)
     //(Ledge Butter and anything else that grinds faster cuts it; Moon Shoes adds to it)
     this.railV -= (this.grav * MATERIALS[rail.material].mu * t.tx) / this.mods.grindScale;
-    //More Wax: a little more speed every 30 frames on the same rail, where it runs flat (a power line, the L), not down a
-    //handrail (zack, 2026-10-26)
-    if (this.mods.feebleFrenzy && ++this.onRailT % 30 === 0 && Math.abs(t.ty) < PHYS.frenzyFlat) this.railV *= 1 + PHYS.frenzyStep;
     this.railV = Math.min(PHYS.railMax, Math.max(this.railMin(), this.railV));
     this.railD += this.railV;
 
@@ -1096,7 +1050,6 @@ export class Skater {
       this.carry = Math.abs(this.hsp);
       this.jumps = this.maxJumps;
       this.spawnGhost(e.y);
-      this.onRailT = 0;
       this.railIgnore = rail;
       this.railIgnoreT = PHYS.railIgnoreFrames;
       this.rail = null;
@@ -1160,12 +1113,11 @@ export class Skater {
     this.feel.bounce(this.hsp, 0);
     this.leaveGround();
     this.y = this.level.streetY - PHYS.tailgateLip;
-    this.vsp = PHYS.kickerPop * this.mods.kickerScale;
+    this.vsp = PHYS.kickerPop;
     this.kicked = true;
-    this.hsp = Math.max(this.hsp, PHYS.bombSpeed * this.mods.kickerScale);
-    this.carry = Math.max(this.carry, PHYS.bombSpeed * this.mods.kickerScale);
+    this.hsp = Math.max(this.hsp, PHYS.bombSpeed);
+    this.carry = Math.max(this.carry, PHYS.bombSpeed);
     this.jumps = this.maxJumps;
-    this.flipped = false;
     this.nose = false;
     this.events.push({ type: 'kicker' });
   }

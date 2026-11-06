@@ -10,6 +10,7 @@
 //   ?fliplines=swoosh    the comic lines round a flipping board: ink (default), swoosh, or pixels (the old trail)
 // Add =0 to turn one back off (?calm=0). The device's "reduce motion" setting turns reduce motion on.
 import { FLIP_LINE_STYLES, type FlipLineStyle } from './flip-lines';
+import { store } from '../net/portal';
 
 const KEY = 'gnar-run-fx';
 
@@ -49,7 +50,7 @@ export const FX: FxSettings & { tier: Tier } = {
 export function initFx(params: URLSearchParams, prefersReducedMotion = false): void {
   let saved: Partial<FxSettings> = {};
   try {
-    saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<FxSettings>;
+    saved = JSON.parse(store.getItem(KEY) ?? '{}') as Partial<FxSettings>;
   } catch {
     //blocked storage: defaults
   }
@@ -62,7 +63,7 @@ export function initFx(params: URLSearchParams, prefersReducedMotion = false): v
 export function saveFx(): void {
   try {
     const { quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost, flipLines, fps } = FX;
-    localStorage.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost, flipLines, fps }));
+    store.setItem(KEY, JSON.stringify({ quality, reduceMotion, reduceFlashing, heatCue, pixel, ghost, flipLines, fps }));
   } catch {
     //not remembered in a private window
   }

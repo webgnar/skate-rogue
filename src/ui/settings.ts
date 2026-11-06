@@ -3,6 +3,7 @@
 // src/render/fx-settings.ts; the pause card edits both.
 // Saved in browser storage, guarded like the save.
 import { clampUserZoom } from '../render/camera';
+import { store } from '../net/portal';
 
 const KEY = 'gnar-run-settings';
 // bumped when the default mix changes: volumes saved under an older mix are dropped once for the new defaults
@@ -25,7 +26,7 @@ const unit = (v: unknown, d: number) => (typeof v === 'number' && v >= 0 && v <=
 
 export function loadSettings(): void {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Settings> & { mix?: number };
+    const s = JSON.parse(store.getItem(KEY) ?? '{}') as Partial<Settings> & { mix?: number };
     if (s.mix === MIX) {
       SETTINGS.sound = unit(s.sound, SETTINGS.sound);
       SETTINGS.music = unit(s.music, SETTINGS.music);
@@ -42,7 +43,7 @@ export function loadSettings(): void {
 
 export function saveSettings(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...SETTINGS, mix: MIX }));
+    store.setItem(KEY, JSON.stringify({ ...SETTINGS, mix: MIX }));
   } catch {
     //not remembered in a private window
   }

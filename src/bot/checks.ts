@@ -78,7 +78,7 @@ export class FloorChecks {
       this.add('through-street', `dropped through the street (mode ${this.mode} to ${sk.mode})`);
     }
     //through the top of something solid, in the air from the start of the step to its end
-    const air = this.mode === 'air' && sk.mode === 'air' && !sim.events.some((e) => e.type === 'hop' || e.type === 'tuck' || e.type === 'kicker');
+    const air = this.mode === 'air' && sk.mode === 'air' && !sim.events.some((e) => e.type === 'hop' || e.type === 'kicker');
     if (air) {
       for (const s of level.surfaces) {
         if (sk.gone.has(s)) continue; // Greece's ruins fall away

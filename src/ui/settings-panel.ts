@@ -5,6 +5,7 @@ import { SETTINGS, saveSettings, buzz } from './settings';
 import { tilt } from '../render/tilt';
 import { USER_ZOOM, clampUserZoom } from '../render/camera';
 import { canFullscreen, isApp, isFull, isIPhone, setFullscreen, watchFullscreen } from './fullscreen';
+import { ON_CRAZYGAMES } from '../net/portal';
 
 type Toggle = 'haptics' | 'reduceMotion' | 'reduceFlashing' | 'heatCue';
 
@@ -97,7 +98,7 @@ export class SettingsPanel {
   render(): void {
     //the switch shows where the page can go full screen, or on an iPhone tab, where it explains the home screen icon
     const fs = this.el.querySelector<HTMLElement>('[data-fullscreen]')!;
-    fs.hidden = isApp() || !(canFullscreen() || isIPhone());
+    fs.hidden = ON_CRAZYGAMES || isApp() || !(canFullscreen() || isIPhone());
     fs.classList.toggle('on', isFull());
     fs.querySelector('b')!.textContent = canFullscreen() ? (isFull() ? 'ON' : 'OFF') : 'HOW?';
     //gyro tilt: on phones and tablets, where there's a gyro to read

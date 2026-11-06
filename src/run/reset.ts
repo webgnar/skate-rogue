@@ -2,13 +2,14 @@
 // and deck, grip tape, Skater Rank and missions, the slot machine's head start, the Gnar level, the tutorial, the
 // leaderboard name). ?reset does it on load; ?reset=all also drops the settings, the effect settings and the dev
 // switches. The animation and level editors' drafts are never touched. The pause card's DEV TOOLS has a button.
+import { store } from '../net/portal';
 const PROGRESS = ['gnar-run-save'];
 const EVERYTHING = [...PROGRESS, 'gnar-run-settings', 'gnar-run-fx', 'gnar-run-dev'];
 
 export function wipe(all: boolean): void {
   for (const key of all ? EVERYTHING : PROGRESS) {
     try {
-      localStorage.removeItem(key);
+      store.removeItem(key);
     } catch {
       //storage blocked: there is nothing saved to wipe
     }

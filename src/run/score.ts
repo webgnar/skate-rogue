@@ -41,7 +41,6 @@ export const SCORE = {
   stokeIdle: 3, // seconds after a bank before it drains
   gnarSecs: 8,
   gnarBoost: 1.2, // cruising speed in the gnar state
-  slamStoke: 0.25, // Slam Stoke: a slam adds this much to the meter (without it, a slam empties the meter)
   sketchy: 0.5, // share of the combo a sketchy landing banks
   bigDrop: 100, // a heavy landing: a big drop, landed
   lip: 30, // an ollie popped right at the edge
@@ -67,9 +66,7 @@ export class RunScore {
   gnarT = 0; // seconds of gnar state left
   private idle = 0;
   scoreScale = 1; // New Wheels: banked points
-  slamStoke = false; // Slam Stoke: a slam keeps the combo and adds stoke
   stokenScale = 1; // Double Stoken
-  nearScale = 1; // Jaywalker: close calls score double
   cashScale = 1; // Goldie: more cash from every source
   private cashPart = 0; // the share of a dollar Goldie's cut has banked so far
 
@@ -124,7 +121,7 @@ export class RunScore {
         this.add(SCORE.clack);
         break;
       case 'near':
-        this.add(SCORE.nearMiss * this.nearScale);
+        this.add(SCORE.nearMiss);
         break;
       case 'dodge':
         this.add(SCORE.dodge);
@@ -141,11 +138,6 @@ export class RunScore {
         if (e.perfect) this.add(SCORE.perfect);
         return this.bank(hsp, e.quality === 'sketchy' ? 'sketchy' : e.quality === 'heavy' ? 'big' : undefined);
       case 'slam':
-      case 'tuck':
-        if (this.slamStoke) {
-          this.fill(SCORE.slamStoke);
-          break;
-        }
         //a slam kills the stoke meter (zack, Nov 3): the meter empties and the gnar state ends
         this.combo = 0;
         this.comboPoints = 0;

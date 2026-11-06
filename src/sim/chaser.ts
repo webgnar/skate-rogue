@@ -28,7 +28,7 @@ export class Chaser {
 
   step(sk: Skater, events: readonly SkaterEvent[]): void {
     if (sk.x >= this.from && !this.caught) {
-      const hits = events.filter((e) => e.type === 'slam' || e.type === 'tuck').length;
+      const hits = events.filter((e) => e.type === 'slam').length;
       this.gap = hits ? this.gap - hits * CHASER.slam : Math.min(CHASER.maxGap, this.gap + CHASER.recover / 60);
       if (this.gap <= CHASER.catchAt) this.caught = true;
     }

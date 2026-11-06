@@ -58,6 +58,7 @@ import { bindMissions } from './ui/missions-panel';
 import { DicePanel } from './ui/dice-panel';
 import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 import { TitleScene } from './title/title-scene';
+import { ON_CRAZYGAMES, breakAd, happyTime, initPortal, loadingDone, setPlaying, watchPortalMute } from './net/portal';
 
 const base = import.meta.env.BASE_URL;
 
@@ -413,6 +414,8 @@ function makeHud(): Hud {
 const loading = new Loading(document.getElementById('loading')!);
 
 async function start() {
+  //the CrazyGames build (src/net/portal.ts) starts their SDK before anything reads the save; elsewhere a no-op
+  await initPortal();
   //?reset wipes the saved progress and reloads without it (src/run/reset.ts)
   if (resetFromLink()) return;
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -502,7 +505,10 @@ async function start() {
   const showOver = hud.over;
   hud.over = (result) => {
     showOver(result);
-    if (result) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
+    if (result && (result.won || (result.newBest && result.act > 1))) happyTime();
+    if (result) void breakAd((on) => sound.sleep(on)); // between runs; a no-op while ads are paused
+    //the leaderboard lives on our own server, so it stays off on the portal (docs/CRAZYGAMES.md)
+    if (result && !ON_CRAZYGAMES) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
   skipMission = (i) => game.skipMission(i);
@@ -573,6 +579,7 @@ async function start() {
   //sound starts on the first press (browsers need a tap first); the pause card's settings change it live
   const sound = new Sound(base);
   game.sound = sound;
+  watchPortalMute(() => sound.applyVolumes()); // the site's mute switch, on the portal
   const unlock = () => sound.unlock();
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
@@ -619,6 +626,8 @@ async function start() {
     ...Array.from({ length: ACTS * FLOORS_PER_ACT }, (_, i) => `floor ${i + 1}`),
     ...Array.from({ length: ACTS }, (_, i) => `escape ${i + 1}`),
   ];
+  //no dev tools in the portal build: players there get the plain game
+  if (ON_CRAZYGAMES) document.getElementById('devhead')!.hidden = true;
   const dev = new DevPanel(document.getElementById('devhead')!, {
     collision: (on) => game.toggleCollision(on),
     fps: showFps,
@@ -729,7 +738,12 @@ async function start() {
     screen.show();
   }
   loading.finish();
+  loadingDone();
 
+  //the portal hears when skating starts and stops (src/net/portal.ts): skating is no title and no card up
+  const cards = ['title', 'paused', 'pick', 'under', 'shop', 'cont', 'dice', 'over', 'scores', 'meta']
+    .map((id) => document.getElementById(id))
+    .filter((el): el is HTMLElement => !!el);
   //(held to 30 a second with the 30 fps setting: frame-cap.ts)
   let ran = -Infinity;
   const tick = (now: number) => {
@@ -737,6 +751,7 @@ async function start() {
     if (!frameDue(now, ran, FX.fps)) return;
     ran = now;
     game.frame(now);
+    if (ON_CRAZYGAMES) setPlaying(!game.titled && !game.paused && cards.every((el) => el.hidden || !el.isConnected));
   };
   requestAnimationFrame(tick);
 }

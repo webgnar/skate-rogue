@@ -39,11 +39,4 @@ describe('slams and the stoke meter', () => {
     expect(r.gnar).toBe(false);
     expect(r.stoke).toBe(0);
   });
-  it('Slam Stoke still fills the meter on a slam', () => {
-    const r = new RunScore();
-    r.slamStoke = true;
-    r.stoke = 0.5;
-    r.onEvent({ type: 'slam' }, PHYS.baseSpeed);
-    expect(r.stoke).toBeCloseTo(0.5 + SCORE.slamStoke);
-  });
 });

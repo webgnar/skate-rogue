@@ -24,22 +24,6 @@ function onRail(drop: number, ids: BoonId[], at = 3 * TILE + 4): Skater {
   return sk;
 }
 
-describe('More Wax (feebleFrenzy) only on flat grinds (zack, 2026-10-26)', () => {
-  const v = (drop: number, ...ids: BoonId[]) => {
-    const sk = onRail(drop, ids);
-    for (let f = 0; f < (drop ? 32 : 70); f++) sk.step(idle); // past the first 30-frame step, still on the rail
-    expect(sk.mode).toBe('rail');
-    return sk.railV;
-  };
-  it('builds speed along a flat power line', () => {
-    expect(v(0, 'feebleFrenzy')).toBeGreaterThan(v(0) * 1.1);
-  });
-  it('adds nothing down a stairway handrail', () => {
-    //a real handrail: half a tile down for every tile along
-    expect(v(272, 'feebleFrenzy')).toBeCloseTo(v(272), 5);
-  });
-});
-
 describe('GRIND boons on curved rails', () => {
   for (const drop of [0, 60]) {
     const kind = drop ? 'a handrail' : 'a power line';
@@ -82,24 +66,6 @@ describe('GRIND boons on curved rails', () => {
         return sk.vsp;
       };
       expect(pop('railLaunch')).toBeLessThan(pop() - 1);
-    });
-
-    it(`Spare Change: catching ${kind} banks part of a bonus jump`, () => {
-      const sk = onRail(drop, ['spareChange', 'spareChange', 'spareChange']);
-      expect(sk.mode).toBe('rail');
-      expect(sk.spare).toBeCloseTo(0.75);
-      expect(onRail(drop, []).spare).toBe(0);
-    });
-
-    it(`Speed Cream: the speed off the end of ${kind} lasts longer`, () => {
-      const carryAfter = (...ids: BoonId[]) => {
-        const sk = onRail(drop, ids);
-        while (sk.mode === 'rail' || sk.mode === 'air') sk.step(idle);
-        sk.carry = 8; // the same rail speed off the end either way
-        for (let f = 0; f < 90; f++) sk.step(idle);
-        return sk.carry;
-      };
-      expect(carryAfter('exitWax')).toBeGreaterThan(carryAfter() + 1);
     });
 
     it(`Slingshot: riding off the end of ${kind} launches harder`, () => {

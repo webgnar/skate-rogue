@@ -2,10 +2,12 @@
 // dedicated Loading screen at the begining of the game, so be it"). Everything a run draws is loaded, built and
 // compiled behind it: the models (the car-hop damage too), the city's tiles, the skater, the first floor and every
 // shader. The meter fills as each piece comes in. Its look is inline in index.html so it shows at once.
+import { ON_CRAZYGAMES } from '../net/portal';
+
 const TIPS = [
   'TAP / HOLD = OLLIE · TAP IN THE AIR = FLIP',
   'Add Skate Escape to your Home Screen to play it fullscreen',
-];
+].filter((t) => !ON_CRAZYGAMES || !t.includes('Home Screen')); // the portal has its own full screen
 
 export class Loading {
   private total = 0;

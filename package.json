@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
+    "build:crazygames": "tsc --noEmit && vite build --mode crazygames && node scripts/crazygames/pack.mjs",
     "preview": "vite preview --host",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
