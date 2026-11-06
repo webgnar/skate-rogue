@@ -208,7 +208,7 @@ export async function startEditor(base: string): Promise<void> {
   let speed = 0.5;
   let hold = 0; // pause at the end of a one-shot clip before it plays again
   let selected = 0; // key index, -1 when the playhead is between keys
-  let copied: Pose | null = null;
+  let copied: { pose: Partial<Pose>; what: string } | null = null; // the whole pose, or just one dot's values
   let roll = false;
   let rolled = 0;
   let ghostOn = false;
@@ -446,6 +446,7 @@ export async function startEditor(base: string): Promise<void> {
     } else gizmo.detach();
     for (const [id, m] of handles) (m.material as THREE.MeshBasicMaterial).opacity = id === h ? 1 : 0.75;
     lightPanel(h);
+    labelCopy();
     updateHint();
   };
   const ray = new THREE.Raycaster();
@@ -708,6 +709,14 @@ export async function startEditor(base: string): Promise<void> {
     }
   }
 
+  // the copy button names what it will copy: the picked dot, or the whole pose
+  function labelCopy(): void {
+    const h = HANDLES.find((x) => x.id === active);
+    copyBtn.textContent = h ? `copy ${h.label}` : 'copy pose';
+    copyBtn.title = `Copy ${h ? `just the ${h.label}` : 'the whole pose'} at the playhead (ctrl+c)`;
+    pasteBtn.textContent = copied && copied.what !== 'the pose' ? `paste ${copied.what.slice(4)}` : 'paste pose';
+  }
+
   function updateHint(): void {
     const h = HANDLES.find((x) => x.id === active);
     hint.innerHTML = h
@@ -763,12 +772,18 @@ export async function startEditor(base: string): Promise<void> {
     deleteKey(clip, selected);
     changed();
   };
+  // with a dot picked, copy and paste carry just that dot's values; with none, the whole pose
   copyBtn.onclick = () => {
-    copied = sampleNow();
-    flash(`copied the pose at ${t.toFixed(3)} s`);
+    const now = sampleNow();
+    const h = HANDLES.find((x) => x.id === active);
+    copied = h
+      ? { pose: Object.fromEntries(HANDLE_FIELDS[h.id].map((f) => [f, now[f]])) as Partial<Pose>, what: `the ${h.label}` }
+      : { pose: now, what: 'the pose' };
+    flash(`copied ${copied.what} at ${t.toFixed(3)} s`);
+    labelCopy();
     refresh();
   };
-  pasteBtn.onclick = () => copied && edit('paste', { ...copied });
+  pasteBtn.onclick = () => copied && edit('paste', { ...copied.pose });
 
   function jumpKey(dir: 1 | -1): void {
     playing = false;
