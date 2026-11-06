@@ -1970,3 +1970,13 @@ html, body {
 @media (orientation: landscape) {
   #title .foot { align-self: flex-end; margin-right: max(5vw, env(safe-area-inset-right)); }
 }
+
+/* a new deck's graphic: three to pick from over the shop (zack, 2026-11-06) */
+#shop .deckpick { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.2vh; background: rgba(10, 6, 20, 0.84); }
+#shop .deckpick[hidden] { display: none; }
+#shop .deckpick .ttl { font: 400 clamp(28px, 6vmin, 52px)/1 Bangers, sans-serif; color: #ffd23f; letter-spacing: 1px; text-shadow: 3px 3px 0 #000; }
+#shop .deckpick .row { display: flex; gap: 3vmin; }
+#shop .deckpick .card-shop { width: clamp(104px, 26vmin, 190px); height: clamp(210px, 52vmin, 380px); animation: deckpick-in 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) both; animation-delay: calc(var(--i) * 70ms); }
+#shop .deckpick .sub { font: 400 clamp(15px, 3vmin, 22px)/1 Bangers, sans-serif; color: #7df0a0; text-shadow: 2px 2px 0 #000; text-align: center; padding: 0 12px; }
+@keyframes deckpick-in { from { transform: translateY(40px) scale(0.85); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #shop .deckpick .card-shop { animation: none; } }

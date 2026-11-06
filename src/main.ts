@@ -179,7 +179,7 @@ function shopHtml(v: ShopView): { slots: string; parts: string; hand: string; hi
     if (c >= 100) continue; // only worn parts are for sale
     cards.push(`<button class="card-shop gearcard ${shop.cash < GEAR.price[p] ? 'poor' : ''}" data-gear="${p}">
       <span class="kind">GEAR</span><b>NEW ${GEAR.names[p].toUpperCase()}</b>${p === 'deck' ? deckCardArt(v.deckArt) : gearArt(p)}
-      <span class="text">${p === 'deck' ? `${esc(v.deckArt.name)} graphic · yours ${c}%` : `Yours: ${c}%`}</span><span class="price">$${GEAR.price[p]}</span>
+      <span class="text">${p === 'deck' ? `Pick 1 of 3 graphics · yours ${c}%` : `Yours: ${c}%`}</span><span class="price">$${GEAR.price[p]}</span>
     </button>`);
   }
   const hint = !picked
@@ -318,6 +318,17 @@ function makeHud(): Hud {
       shopCash = v.shop.cash;
       shopEl.querySelector('.hand')!.innerHTML = h.hand;
       shopEl.querySelector('.hint')!.textContent = h.hint;
+      //a new deck just bought: its three graphics over the shop, tap the one to ride
+      const deckPickEl = shopEl.querySelector<HTMLElement>('.deckpick')!;
+      const wasOpen = !deckPickEl.hidden;
+      deckPickEl.hidden = !v.deckPick;
+      if (v.deckPick && !wasOpen) {
+        deckPickEl.querySelector('.row')!.innerHTML = v.deckPick
+          .map((a, i) => `<button class="card-shop gearcard pickdeck" data-deckart="${i}" style="--i:${i}">
+            <span class="kind">DECK</span><b>${esc(a.name.toUpperCase())}</b>${deckCardArt(a)}<span class="text">Tap to ride it</span>
+          </button>`)
+          .join('');
+      }
       shopEl.querySelector('.cash')!.textContent = `$${v.shop.cash}`;
       const re = shopEl.querySelector<HTMLButtonElement>('.restock')!;
       re.textContent = `RESTOCK $${v.restockPrice}`;
