@@ -270,11 +270,16 @@ crossing, flipping or creasing it loop cuts the band either side and swells
 the joint ring the least that helps. It must print `JOINTS left 0`.
 
 **Keep the motion full** (zack: "turn down the slop detector to let the
-animations be more free"). A big swing that reads is the point of the
-animation; never tone a pose down to pass the check. The detector lets a
-joint fold hard (a crease only counts past 90 degrees sharper than rest,
-`SLOP_CREASE_DEG`), and stays strict on holes: skin through skin and
-inside-out faces. In order: share the bend along the chain, give the joint
+animations be more free", and 2026-11-06: "loosen the slop detection, its
+making all our animations weak"). A big swing that reads is the point of the
+animation; never tone a pose down to pass the check. The posed check lets a
+joint fold hard: a crease only counts past 120 degrees sharper than rest
+(`SLOP_CREASE_DEG`), skin pinching into skin within two edges of itself is a
+fold, not a hole (`SLOP_NEAR`: the back of a knee, an armpit), and a face is
+only inside out once it turns more than 120 degrees off its bone
+(`SLOP_FLIP_DEG`). It stays strict on real holes: skin through skin further
+off (a leg through the belly, an ear through the skull) and faces turned
+right round. The rest pose is checked as strictly as ever. In order: share the bend along the chain, give the joint
 more rings (more, shorter steps in that run), let `fix_joints` cut and
 swell. Anything left is a geometry problem in the block-out, fixed there.
 `G.soften()` exists but is not part of a build: use it only if zack asks.
@@ -294,8 +299,9 @@ $B $T/slop_check.py -- $OUT/<name>.blend $OUT/slop 480     # HUGE RED slop sheet
 `slop_check.py` paints every bad face red on plain matte clay: skin through
 skin, an accent in and out of the body, a face inside out (in Godot that is a
 hole you see the far wall through), for the rest pose from three views and
-for the worst frame of every action, plus creases a pose folds more than 90
-degrees sharper than rest (`SLOP_CREASE_DEG`). It exits 1 until every count is zero. Ship nothing red.
+for the worst frame of every action, plus creases a pose folds more than 120
+degrees sharper than rest (`SLOP_CREASE_DEG`; `SLOP_NEAR` and `SLOP_FLIP_DEG`
+in section 4). It exits 1 until every count is zero. Ship nothing red.
 
 Look at every image before sending, the slop sheet first. Then:
 - Copy the sheet, the slop sheet, the head close-up and the GIFs to

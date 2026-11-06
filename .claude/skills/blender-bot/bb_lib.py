@@ -1143,7 +1143,33 @@ def rest_crossings(me):
 # be more free"): a joint may fold hard; only a fold past a right angle beyond
 # rest counts. Holes stay strict: skin through skin and inside-out faces are
 # caught at any angle. SLOP_CREASE_DEG overrides it for a run.
-CREASE_DEG = float(os.environ.get("SLOP_CREASE_DEG", 90))
+# loosened again (zack, 2026-11-06: "loosen the slop detection, its making all our animations weak"):
+# - a joint folds past rest by up to 120 degrees before it is a crease (was 90)
+# - skin pinching into skin a face or two away is a fold, not a hole: faces within SLOP_NEAR edge
+#   hops of each other may touch in a pose (a knee's back, an armpit); skin through skin further
+#   off (a leg through the belly, an ear through the skull) is still slop
+# - a face only counts as inside out once it has turned more than SLOP_FLIP_DEG (120) off its bone
+#   (a joint ring weighted between two bones legitimately turns away from either one)
+CREASE_DEG = float(os.environ.get("SLOP_CREASE_DEG", 120))
+NEAR_HOPS = int(os.environ.get("SLOP_NEAR", 2))
+FLIP_DOT = math.cos(math.radians(float(os.environ.get("SLOP_FLIP_DEG", 120))))
+
+
+def _near_sets(polys, body, nverts, hops):
+    """for every body face, the verts within `hops` edges of its own: a face whose verts touch
+    that set is its neighbour for the posed checks"""
+    adj = [set() for _ in range(nverts)]
+    for p in polys:
+        for k in range(len(p)):
+            a, b = p[k], p[(k + 1) % len(p)]
+            adj[a].add(b); adj[b].add(a)
+    out = {}
+    for i in body:
+        s = set(polys[i])
+        for _ in range(hops):
+            s |= {n for v in s for n in adj[v]}
+        out[i] = s
+    return out
 
 
 def posed_slop(ob, ao, step=1):
@@ -1157,6 +1183,7 @@ def posed_slop(ob, ao, step=1):
     polys = [list(p.vertices) for p in me.polygons]
     body = [i for i, p in enumerate(polys) if not any(accd[v] for v in p)]
     vsets = [set(p) for p in polys]
+    near = _near_sets(polys, body, len(me.vertices), NEAR_HOPS)
     gname = {g.index: g.name for g in ob.vertex_groups}
     vbone = [gname[max(v.groups, key=lambda g: g.weight).group] if v.groups else None for v in me.vertices]
     rest_n = [p.normal.copy() for p in me.polygons]
@@ -1190,13 +1217,14 @@ def posed_slop(ob, ao, step=1):
             tree = BVHTree.FromPolygons(co, [polys[i] for i in body])
             for i, j in tree.overlap(tree):
                 a, b = body[i], body[j]
-                if a < b and not (vsets[a] & vsets[b]): bad.add(a); bad.add(b)
+                if a < b and not (near[a] & vsets[b]): bad.add(a); bad.add(b)
             for i in body:                                # inside out against its own bone
                 bn = vbone[polys[i][0]]
                 if bn is None: continue
                 pb = ao.pose.bones[bn]
                 m = (pb.matrix @ rest[bn].inverted()).to_3x3()
-                if (m @ rest_n[i]).dot(pn[i]) < 0: bad.add(i)
+                rn, n = m @ rest_n[i], pn[i]
+                if rn.length > 0 and n.length > 0 and rn.normalized().dot(n.normalized()) < FLIP_DOT: bad.add(i)
             for (a, b), r0 in zip(pairs, rest_fold):
                 if pn[a].length > 0 and pn[b].length > 0 and pn[a].angle(pn[b], 0.0) - r0 > math.radians(CREASE_DEG):
                     bad.add(a); bad.add(b)
