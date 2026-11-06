@@ -85,9 +85,14 @@ export function bridgeSky(level: Level): void {
   if (!spans?.length) return;
   const inReach = (from: Piece, to: Piece) => (to.x0 - from.x1) / TILE <= maxGap((to.y0 - from.y1) / TILE) && to.y0 - from.y1 >= -REACH.rise * TILE;
   for (const line of skyLines(level)) {
+    //the decks this has laid on the line so far: they count as somewhere to leave from too, or a piece that starts
+    //under the end of the one before it (a split's roof under its first girder) gets a second set of decks laid
+    //over the same gap from the same place, each with its skyscraper under it, flush and flickering
+    //(zack, 2026-11-06: z-fighting on one of the glass towers)
+    const bridges: Piece[] = [];
     for (let i = 1; i < line.length; i++) {
       //the furthest along you could be leaving from: the piece that ends last before this one starts
-      let from = line.slice(0, i).filter((p) => p.x1 <= line[i].x0 + 1).sort((p, q) => q.x1 - p.x1)[0];
+      let from = [...line.slice(0, i), ...bridges].filter((p) => p.x1 <= line[i].x0 + 1).sort((p, q) => q.x1 - p.x1)[0];
       if (!from) continue;
       const to = line[i];
       let laid = false;
@@ -113,7 +118,7 @@ export function bridgeSky(level: Level): void {
           const last = level.surfaces.at(-1)!;
           if (laid && last.y === from.y1) {
             const x1 = to.x0 - maxGap((to.y0 - last.y) / TILE) * TILE;
-            if (x1 > last.x1 && openAt(level, last.x1 + 1, x1, last.y)) last.x1 = x1;
+            if (x1 > last.x1 && openAt(level, last.x1 + 1, x1, last.y)) last.x1 = from.x1 = x1;
           }
           break;
         }
@@ -124,6 +129,7 @@ export function bridgeSky(level: Level): void {
         level.surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky });
         for (let c = x + TILE; c < x + w - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y - PICKUPS.ride });
         from = { x0: x, x1: x + w, y0: y, y1: y, cloud: from.cloud };
+        bridges.push(from);
       }
     }
   }

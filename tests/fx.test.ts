@@ -190,9 +190,9 @@ describe('boon and board mod looks', () => {
     //Big Pop's ollie burst, then the float's updraft (Mad Pop's, merged into Big Pop)
     expect(calls).toEqual(['spray', 'pressure']);
   });
-  it('every board mod effect except sparks has a look', () => {
+  it('every board mod effect has a look', () => {
     const fx = new BoonFx(fake);
-    for (const e of ['doublePop', 'speedKick', 'cashBurst', 'slowMo', 'gravFlip', 'shockwave'] as const) {
+    for (const e of ['doublePop', 'speedKick', 'cashBurst', 'shockwave', 'patchJob'] as const) {
       calls.length = 0;
       fx.mod(e, 0, 0);
       expect(calls.length, e).toBeGreaterThan(0);

@@ -54,6 +54,15 @@ describe('the sky line', () => {
     }
   });
 
+  it('never stacks two rooftops over the same stretch (their glass towers would z-fight)', () => {
+    //(seed 106 floor 6 laid a second set of bridging decks under the first, toward a split's roof)
+    for (const seed of [106, 159, 212, 477, 1219])
+      for (const f of [4, 5, 6, 10]) {
+        const roofs = buildFloor(seed, f, undefined, { hills: true }).surfaces.filter((s) => s.sky === 'roofs').sort((a, b) => a.x0 - b.x0);
+        for (let i = 1; i < roofs.length; i++) expect(roofs[i].x0, `seed ${seed} floor ${f}`).toBeGreaterThanOrEqual(roofs[i - 1].x1 + 0.25 * TILE);
+      }
+  });
+
   it('the long first stretch climbs into the clouds; the ones after stay in the city sky (act 4: act 3 is all clouds)', () => {
     for (let seed = 1; seed <= 6; seed++) {
       const l = chicago(seed * 53, 10);

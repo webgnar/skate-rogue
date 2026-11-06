@@ -5,45 +5,44 @@ import { buildFloor } from '../src/gen/descent';
 import { floorRoad, rollFork, ROADS } from '../src/gen/roads';
 import { PHYS } from '../src/physics/constants';
 import { isStreetAt } from '../src/physics/level';
-import { RunScore } from '../src/run/score';
 import { FloorSim } from '../src/sim/floor';
 
 const still = { pressed: false, held: false };
 
 describe('board mods', () => {
-  it('has 6 triggers and 7 effects (Jump Refill cut, 2026-11-06), starting with 3 empty slots', () => {
-    expect(MOD_DEFS.filter((m) => m.kind === 'trigger')).toHaveLength(6);
-    expect(MOD_DEFS.filter((m) => m.kind === 'effect')).toHaveLength(7);
-    expect(MOD_DEFS.filter((m) => m.kind === 'modifier')).toHaveLength(4);
+  it('has 4 triggers, 5 effects and 3 modifiers (trimmed 2026-11-06), starting with 3 empty slots', () => {
+    expect(MOD_DEFS.filter((m) => m.kind === 'trigger')).toHaveLength(4);
+    expect(MOD_DEFS.filter((m) => m.kind === 'effect')).toHaveLength(5);
+    expect(MOD_DEFS.filter((m) => m.kind === 'modifier')).toHaveLength(3);
     expect(newBoard()).toEqual([null, null, null]);
   });
 
   it('a trigger fires the effects to its right, in order, until the next trigger', () => {
-    const b: Slots = ['onGrindEnd', 'speedKick', 'cashBurst', 'onLand', 'sparks'];
-    const plain = { times: 1, delay: 0, comboOnly: false, coinFlip: false };
-    expect(fires(b, 'onGrindEnd')).toEqual([
+    const b: Slots = ['onGrind', 'speedKick', 'cashBurst', 'onLand', 'doublePop'];
+    const plain = { times: 1, comboOnly: false, coinFlip: false };
+    expect(fires(b, 'onGrind')).toEqual([
       { slot: 1, effect: 'speedKick', ...plain },
       { slot: 2, effect: 'cashBurst', ...plain },
     ]);
-    expect(fires(b, 'onLand')).toEqual([{ slot: 4, effect: 'sparks', ...plain }]);
+    expect(fires(b, 'onLand')).toEqual([{ slot: 4, effect: 'doublePop', ...plain }]);
     expect(fires(b, 'onTrick')).toEqual([]);
     //effects with no trigger before them never fire
-    expect(fires(['cashBurst', 'onOllie', null, 'sparks'], 'onOllie')).toEqual([{ slot: 3, effect: 'sparks', ...plain }]);
+    expect(fires(['cashBurst', 'onOllie', null, 'doublePop'], 'onOllie')).toEqual([{ slot: 3, effect: 'doublePop', ...plain }]);
   });
 
   it('a modifier shapes the next effect only, and they stack', () => {
-    const f = fires(['onLand', 'twice', 'twice', 'cashBurst', 'sparks', 'delay', 'comboOnly', 'speedKick'], 'onLand');
-    expect(f.map((x) => [x.effect, x.times, x.delay, x.comboOnly])).toEqual([
-      ['cashBurst', 4, 0, false],
-      ['sparks', 1, 0, false],
-      ['speedKick', 2, BOARD.delayFrames, true],
+    const f = fires(['onLand', 'twice', 'twice', 'cashBurst', 'doublePop', 'twice', 'comboOnly', 'speedKick'], 'onLand');
+    expect(f.map((x) => [x.effect, x.times, x.comboOnly])).toEqual([
+      ['cashBurst', 4, false],
+      ['doublePop', 1, false],
+      ['speedKick', 4, true],
     ]);
     //a modifier before the trigger, or under another trigger, does nothing here
-    expect(fires(['twice', 'onLand', 'sparks'], 'onLand')[0].times).toBe(1);
-    expect(fires(['onOllie', 'twice', 'onLand', 'sparks'], 'onLand')[0].times).toBe(1);
+    expect(fires(['twice', 'onLand', 'doublePop'], 'onLand')[0].times).toBe(1);
+    expect(fires(['onOllie', 'twice', 'onLand', 'doublePop'], 'onLand')[0].times).toBe(1);
   });
 
-  it('in the sim: ×2 pays twice, Delay waits half a second, Combo Only needs a combo', () => {
+  it('in the sim: ×2 pays twice, Combo Only needs a combo', () => {
     const run = (board: Slots, combo = 0) => {
       const sim = new FloorSim(buildFloor(5, 1), undefined, 0, board);
       sim.combo = combo;
@@ -57,7 +56,6 @@ describe('board mods', () => {
     const once = run(['onOllie', 'cashBurst']);
     expect(once).toHaveLength(1);
     expect(run(['onOllie', 'twice', 'cashBurst'])).toEqual([once[0], once[0]]);
-    expect(run(['onOllie', 'delay', 'cashBurst'])).toEqual([once[0] + BOARD.delayFrames]);
     expect(run(['onOllie', 'comboOnly', 'cashBurst'])).toEqual([]);
     expect(run(['onOllie', 'comboOnly', 'cashBurst'], 5)).toHaveLength(2);
     expect([0, 3]).toContain(run(['onOllie', 'coinFlip', 'cashBurst']).length);
@@ -83,37 +81,6 @@ describe('board mods', () => {
     sim.step(still);
     expect(before).toBeGreaterThan(PHYS.ollie * BOARD.doublePop);
     expect(sim.skater.vsp).toBeLessThanOrEqual(PHYS.ollie * BOARD.doublePop + PHYS.grav + 1e-6);
-  });
-
-  it('Gravity Flip stops a fall and pulls up', () => {
-    const l = buildFloor(9, 1);
-    const sim = new FloorSim(l, undefined, 0, ['onTrick', 'gravFlip']);
-    sim.traffic.vehicles.length = 0;
-    sim.step({ pressed: true, held: true });
-    for (let f = 0; f < 30; f++) sim.step({ pressed: false, held: true });
-    sim.step({ pressed: true, held: true }); // the flip
-    expect(sim.skater.gravFlipT).toBeGreaterThan(0);
-    for (let f = 0; f < 10; f++) sim.step({ pressed: false, held: false });
-    expect(sim.skater.vsp).toBeLessThan(PHYS.trick);
-  });
-
-  it('On Grind End fires when the skater leaves a ledge or rail', () => {
-    const l = buildFloor(9, 1);
-    const ledge = l.surfaces.find((s) => s.kind === 'rail' && s.y1 === undefined)!;
-    expect(ledge).toBeDefined();
-    const sim = new FloorSim(l, undefined, 0, ['onGrindEnd', 'cashBurst']);
-    sim.traffic.vehicles.length = 0;
-    const sk = sim.skater;
-    sk.x = ledge.x1 - 10;
-    sk.y = ledge.y;
-    sk.surface = ledge;
-    sk.mode = 'grind';
-    let fired = 0;
-    for (let f = 0; f < 20; f++) {
-      sim.step(still);
-      fired += sim.events.filter((e) => e.type === 'mod' && e.effect === 'cashBurst').length;
-    }
-    expect(fired).toBe(1);
   });
 
   it('Shockwave pulls nearby cars out of the skate lane, not far ones', () => {
@@ -146,13 +113,19 @@ describe('board mods', () => {
     for (const x of far) expect(leaves(x, wave)).toBe(false);
   });
 
-  it('Spark Trail style goes into the combo, or to the score with no combo', () => {
-    const s = new RunScore();
-    s.addStyle(BOARD.sparkStyle);
-    expect(s.score).toBe(BOARD.sparkStyle);
-    s.onEvent({ type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false }, 0);
-    s.addStyle(BOARD.sparkStyle);
-    expect(s.comboPoints).toBe(100 + BOARD.sparkStyle);
+  it('Patch Job puts 5 back on the most worn part, 6 times a floor at most', () => {
+    const sim = new FloorSim(buildFloor(9, 1), undefined, 0, ['onOllie', 'twice', 'patchJob'], { deck: 40, trucks: 80, wheels: 20, shoes: 90, bearings: 70 });
+    sim.traffic.vehicles.length = 0;
+    sim.step({ pressed: true, held: true });
+    expect(sim.gear.wheels).toBe(20 + 2 * BOARD.patchJob);
+    expect(sim.events.filter((e) => e.type === 'patch')).toHaveLength(2);
+    //land, pop again until the floor's patches run out
+    let total = 2;
+    for (let f = 0; f < 1200 && total < 10; f++) {
+      sim.step({ pressed: f % 40 === 0, held: f % 40 < 4 });
+      total += sim.events.filter((e) => e.type === 'patch').length;
+    }
+    expect(total).toBe(BOARD.patchJobPerFloor);
   });
 });
 
