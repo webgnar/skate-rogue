@@ -5,6 +5,7 @@ import { PHYS, TILE } from '../src/physics/constants';
 import { freshGear, GEAR } from '../src/run/gear';
 import { FloorSim } from '../src/sim/floor';
 import { FLAT, levelOf } from './helpers';
+import { GRASS } from '../src/gen/grass';
 
 describe('grass strips', () => {
   it('a floor has a few strips on flat street, clear of glass and parked cars', () => {
@@ -22,6 +23,16 @@ describe('grass strips', () => {
     expect(total / 6).toBeGreaterThanOrEqual(1);
     expect(buildFloor(3, 1).grass).toEqual(buildFloor(3, 1).grass); // the same for a seed
   });
+
+  it('the game\'s hill floors get a few strips too, though the sewer runs under them (it used to leave none)', () => {
+    let floors = 0;
+    for (const seed of [1201, 2026]) for (const f of [1, 2, 5, 10, 12]) {
+      const grass = validatedFloor(seed, f, { hills: true }).level.grass ?? [];
+      expect(grass.length).toBeLessThanOrEqual(GRASS.max);
+      if (grass.length) floors++;
+    }
+    expect(floors).toBeGreaterThanOrEqual(7);
+  }, 60000);
 
   it('good wheels roll right over grass; worn wheels bog down on it', () => {
     const speedOn = (wheels: number) => {
