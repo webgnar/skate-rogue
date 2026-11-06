@@ -16,45 +16,40 @@ import { buildStreet, DUSK, skyDome } from './city';
 import { buildCity } from './grid';
 import { BEAT, buildLife, GROOVE } from './life';
 
-// the camera's way down: where it is and what it looks at, at each stop (tiles; Webster stands at the origin)
-export const PATH: { at: [number, number, number]; look: [number, number, number] }[] = [
-  { at: [0, 260, 95], look: [12, 215, -420] }, // high over the towers, the sun going down behind them
-  { at: [-8, 196, 72], look: [6, 150, -200] }, // into the clouds, the birds wheeling past
-  { at: [6, 130, 56], look: [-4, 92, -120] }, // the trash on the wind, the chopper's light below
-  { at: [22, 78, 48], look: [26, 6, -150] }, // over an avenue, looking down the canyon: the traffic, the crossings, the drones
-  { at: [10, 28, 34], look: [0, 6, -20] }, // swinging round onto Webster's street, the cruiser on its jets over it
-  { at: [3, 7, 24], look: [0, 6, -6] }, // dropping to the street
-  { at: [3.6, 1.5, 17], look: [3.2, 5.5, 0] }, // down at Webster from across the street, looking up at him, the store and
-  // the sky over the roofs; he's left of the middle so SKATE can sit off to his right (zack: not on top of him)
-];
+// the camera's way down (zack 2026-11-06: "just one smooth motion no weaving through drones"): one glide from high
+// over the towers to Webster, on a gentle curve with no swings left or right, the view turning steadily from the
+// skyline to Webster while it tips down over the city on the way (tiles; Webster stands at the origin)
+type Shot = { at: [number, number, number]; look: [number, number, number] };
+const TOP: Shot = { at: [0, 260, 95], look: [12, 215, -420] }; // high over the towers, the sun going down behind them
+// down at Webster from across the street, looking up at him, the store and the sky over the roofs; he's left of the
+// middle so SKATE can sit off to his right (zack: not on top of him)
+const WIDE_END: Shot = { at: [3.6, 1.5, 17], look: [3.2, 5.5, 0] };
 // the last stop on an upright phone: in closer, so Webster's big in the narrow frame, looking up past the cat on the
 // shop signs and the flag to the sky over the roofs
-const TALL_END = { at: [1.4, 1.2, 12] as [number, number, number], look: [0.5, 5.2, 0] as [number, number, number] };
+const TALL_END: Shot = { at: [1.4, 1.2, 12], look: [0.5, 5.2, 0] };
+// the curve's pull: it leaves the top falling mostly straight down, and comes in to the street from above and behind
+const LEAVE = new THREE.Vector3(0, -110, -12);
+const ARRIVE = new THREE.Vector3(0.4, 16, 14);
 export const DESCENT = 12; // seconds from the sky to Webster
 
 // a smooth step that eases in and out but doesn't stall in the middle
 const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
-// the way down's pace (zack 2026-11-06: "pan past the drones a little slower"): eased time to how far along the
-// path, held back through the stretch where the drones patrol (the path's middle stop, at 0.5)
-const PACE: [number, number][] = [[0, 0], [0.38, 0.41], [0.64, 0.58], [1, 1]];
-function paced(e: number): number {
-  for (let i = 1; i < PACE.length; i++) {
-    const [t1, v1] = PACE[i];
-    if (e <= t1) {
-      const [t0, v0] = PACE[i - 1];
-      return v0 + ((e - t0) / (t1 - t0)) * (v1 - v0);
-    }
-  }
-  return 1;
-}
 const smooth = (a: number, b: number, x: number) => {
   const u = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return u * u * (3 - 2 * u);
 };
-// the camera tips down a little on the way (zack: "look the camera down a little bit, then level it back out at the
-// end"), radians, by how far along it is
-const TILT = 0.16;
-const tilt = (e: number) => TILT * smooth(0.08, 0.3, e) * (1 - smooth(0.72, 0.97, e));
+// the camera tips down over the city on the way, then levels back out onto Webster, radians, by how far along it is
+const TILT = 0.3;
+const tilt = (e: number) => TILT * smooth(0.05, 0.4, e) * (1 - smooth(0.6, 0.97, e));
+
+function glide(end: Shot) {
+  const v = (p: [number, number, number]) => new THREE.Vector3(...p);
+  const at0 = v(TOP.at);
+  const at3 = v(end.at);
+  const curve = new THREE.CubicBezierCurve3(at0, at0.clone().add(LEAVE), at3.clone().add(ARRIVE), at3);
+  const facing = (s: Shot) => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(v(s.at), v(s.look), new THREE.Vector3(0, 1, 0)));
+  return { curve, from: facing(TOP), to: facing(end) };
+}
 
 const HAND_ARM = 0; // the lead (left, +x) arm twirls the board
 const SPIN = 8; // the board's twirl, radians a second (zack's sprite: a turn in 0.75 s)
@@ -67,10 +62,7 @@ export class TitleScene {
   private readonly city = buildCity();
   private readonly street = buildStreet();
   private readonly life = buildLife();
-  private readonly curves = [PATH, [...PATH.slice(0, -1), TALL_END]].map((path) => ({
-    at: new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(...p.at)), false, 'centripetal'),
-    look: new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(...p.look)), false, 'centripetal'),
-  }));
+  private readonly glides = [glide(WIDE_END), glide(TALL_END)];
   private t = 0;
   private k = 0; // how far down, 0 (the sky) to 1 (Webster)
   private going = false;
@@ -186,13 +178,13 @@ export class TitleScene {
   private place(): void {
     const css = this.renderer.domElement;
     this.camera.aspect = css.clientWidth / Math.max(1, css.clientHeight);
-    const e = paced(ease(this.k));
+    const e = ease(this.k);
     const tall = this.camera.aspect < 1;
-    const path = this.curves[tall ? 1 : 0];
-    this.camera.position.copy(path.at.getPoint(e));
+    const g = this.glides[tall ? 1 : 0];
+    this.camera.position.copy(g.curve.getPoint(e));
     //waiting at the top: a slow drift so the sky isn't a still
     if (!this.going) this.camera.position.x += Math.sin(this.t * 0.25) * 6;
-    this.camera.lookAt(path.look.getPoint(e));
+    this.camera.quaternion.slerpQuaternions(g.from, g.to, e);
     this.camera.rotateX(-tilt(e));
     //the lens narrows on the way down: wide over the city, tighter on Webster (wider upright, so the street still fits)
     this.camera.fov = (tall ? 66 : 50) - (tall ? 10 : 8) * e;
