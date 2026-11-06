@@ -118,6 +118,21 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
     ],
   },
 ];
+// the values each drag dot moves, lit up in the panel while it's picked
+const HANDLE_FIELDS: Record<Handle, Field[]> = {
+  hips: ['hipX', 'hipY', 'hipZ'],
+  head: ['head', 'nod', 'headTilt'],
+  handL: ['armLRaise', 'armLFwd', 'armLElbow'],
+  handR: ['armRRaise', 'armRFwd', 'armRElbow'],
+  elbowL: ['armLTwist'],
+  elbowR: ['armRTwist'],
+  footF: ['footFOn', 'footFX', 'footFY', 'footFZ', 'footFTurn', 'footFPitch', 'footFToe', 'footFRoll'],
+  footB: ['footBOn', 'footBX', 'footBY', 'footBZ', 'footBTurn', 'footBPitch', 'footBToe', 'footBRoll'],
+  kneeF: ['kneeFX', 'kneeFY', 'kneeFZ'],
+  kneeB: ['kneeBX', 'kneeBY', 'kneeBZ'],
+  board: ['boardX', 'boardY', 'boardZ', 'boardPivot', 'boardPitch', 'boardRoll', 'boardYaw'],
+};
+
 const DEFS = new Map(GROUPS.flatMap((g) => g.fields).map((d) => [d.f, d]));
 const DEG = 180 / PI;
 const ROLL_SPEED = 6; // tiles a second the ground scrolls by with "roll" on
@@ -174,7 +189,9 @@ export async function startEditor(base: string): Promise<void> {
   document.getElementById('app')?.remove();
   document.title = 'Skate Escape · animation editor';
   const params = new URLSearchParams(location.search);
-  const skater = params.get('skater');
+  // Webster (the hero, the one on the title screen) unless ?skater= picks another
+  const urlSkater = params.get('skater');
+  const skater = isSkater(urlSkater) ? urlSkater : 'webster';
 
   // ---------- state ----------
   let saved = { ...(savedEdits as Record<string, Clip>) }; // what clip-edits.json holds
@@ -191,7 +208,7 @@ export async function startEditor(base: string): Promise<void> {
   let speed = 0.5;
   let hold = 0; // pause at the end of a one-shot clip before it plays again
   let selected = 0; // key index, -1 when the playhead is between keys
-  let copied: Pose | null = null;
+  let copied: { pose: Partial<Pose>; what: string } | null = null; // the whole pose, or just one dot's values
   let roll = false;
   let rolled = 0;
   let ghostOn = false;
@@ -277,6 +294,7 @@ export async function startEditor(base: string): Promise<void> {
 
   // panel: one row per pose value
   const rows = new Map<Field, { row: HTMLElement; range: HTMLInputElement; num: HTMLInputElement }>();
+  const boxOf = new Map<Field, HTMLDetailsElement>(); // each value's section, to light up the picked dot's
   const panelHead = el('div', { class: 'keyinfo' });
   panel.append(panelHead);
   for (const g of GROUPS) {
@@ -290,6 +308,7 @@ export async function startEditor(base: string): Promise<void> {
       row.append(label, range, num);
       box.append(row);
       rows.set(d.f, { row, range, num });
+      boxOf.set(d.f, box as HTMLDetailsElement);
       range.oninput = () => setField(d.f, stored(d, Number(range.value)));
       num.onchange = () => Number.isFinite(Number(num.value)) && setField(d.f, stored(d, Number(num.value)));
       label.ondblclick = () => setField(d.f, BASE[d.f]);
@@ -329,12 +348,12 @@ export async function startEditor(base: string): Promise<void> {
   // the same models as the game (?models=new / old, else the DEV TOOLS switch)
   loadDev();
   const meshy = meshyModels(params);
-  const rig = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar', meshy);
+  const rig = await SkaterRig.create(base, skater, meshy);
   inkify(rig.mesh, { toon: false });
   if (params.has('debug')) Object.assign(window, { editorRig: rig });
   scene.add(rig.mesh);
   // the ghost: the same rig, see-through, showing the key before the playhead
-  const ghost = await SkaterRig.create(base, isSkater(skater) ? skater : 'lou-gnar', meshy);
+  const ghost = await SkaterRig.create(base, skater, meshy);
   ghost.mesh.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return;
     const mats = [o.material].flat().map((m: THREE.Material) => {
@@ -426,6 +445,8 @@ export async function startEditor(base: string): Promise<void> {
       gizmo.attach(handles.get(h)!);
     } else gizmo.detach();
     for (const [id, m] of handles) (m.material as THREE.MeshBasicMaterial).opacity = id === h ? 1 : 0.75;
+    lightPanel(h);
+    labelCopy();
     updateHint();
   };
   const ray = new THREE.Raycaster();
@@ -666,6 +687,36 @@ export async function startEditor(base: string): Promise<void> {
     });
   }
 
+  // the picked dot's values light up in its colour on the right, their section opened and scrolled into view
+  function lightPanel(h: Handle | null): void {
+    const fields = new Set(h ? HANDLE_FIELDS[h] : []);
+    const color = h ? `#${HANDLES.find((x) => x.id === h)!.color.toString(16).padStart(6, '0')}` : '';
+    const boxes = new Set<HTMLDetailsElement>();
+    for (const [f, { row }] of rows) {
+      const on = fields.has(f);
+      row.classList.toggle('picked', on);
+      row.style.setProperty('--pick', color);
+      if (on) boxes.add(boxOf.get(f)!);
+    }
+    for (const box of new Set(boxOf.values())) {
+      box.classList.toggle('picked', boxes.has(box));
+      box.style.setProperty('--pick', color);
+    }
+    const first = [...boxes][0];
+    if (first) {
+      for (const b of boxes) b.open = true;
+      first.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  // the copy button names what it will copy: the picked dot, or the whole pose
+  function labelCopy(): void {
+    const h = HANDLES.find((x) => x.id === active);
+    copyBtn.textContent = h ? `copy ${h.label}` : 'copy pose';
+    copyBtn.title = `Copy ${h ? `just the ${h.label}` : 'the whole pose'} at the playhead (ctrl+c)`;
+    pasteBtn.textContent = copied && copied.what !== 'the pose' ? `paste ${copied.what.slice(4)}` : 'paste pose';
+  }
+
   function updateHint(): void {
     const h = HANDLES.find((x) => x.id === active);
     hint.innerHTML = h
@@ -721,12 +772,18 @@ export async function startEditor(base: string): Promise<void> {
     deleteKey(clip, selected);
     changed();
   };
+  // with a dot picked, copy and paste carry just that dot's values; with none, the whole pose
   copyBtn.onclick = () => {
-    copied = sampleNow();
-    flash(`copied the pose at ${t.toFixed(3)} s`);
+    const now = sampleNow();
+    const h = HANDLES.find((x) => x.id === active);
+    copied = h
+      ? { pose: Object.fromEntries(HANDLE_FIELDS[h.id].map((f) => [f, now[f]])) as Partial<Pose>, what: `the ${h.label}` }
+      : { pose: now, what: 'the pose' };
+    flash(`copied ${copied.what} at ${t.toFixed(3)} s`);
+    labelCopy();
     refresh();
   };
-  pasteBtn.onclick = () => copied && edit('paste', { ...copied });
+  pasteBtn.onclick = () => copied && edit('paste', { ...copied.pose });
 
   function jumpKey(dir: 1 | -1): void {
     playing = false;
@@ -741,6 +798,19 @@ export async function startEditor(base: string): Promise<void> {
     const r = track.getBoundingClientRect();
     return Math.max(0, Math.min(range, ((x - r.left) / r.width) * range));
   };
+  // scrubbing lands on whole frames, and on a key whenever the pointer is within a few pixels of one (keys from the
+  // code clips sit between frames, so frame steps alone would hop over them)
+  const KEY_PULL_PX = 8;
+  const scrubTo = (x: number) => {
+    const r = track.getBoundingClientRect();
+    const raw = timeAt(x);
+    const pull = (KEY_PULL_PX / r.width) * range;
+    let best: number | null = null;
+    for (const k of clip.keys) if (Math.abs(k.t - raw) <= pull && (best === null || Math.abs(k.t - raw) < Math.abs(best - raw))) best = k.t;
+    const end = clipLength(clip as Clip);
+    if (best === null && Math.abs(end - raw) <= pull) best = end;
+    return best ?? Math.min(snapT(raw), end);
+  };
   track.addEventListener('pointerdown', (e) => {
     playing = false;
     track.setPointerCapture(e.pointerId);
@@ -750,7 +820,7 @@ export async function startEditor(base: string): Promise<void> {
       t = clip.keys[draggingKey].t;
       if (draggingKey > 0) remember(`move:${draggingKey}:${performance.now()}`);
     } else {
-      t = Math.min(snapT(timeAt(e.clientX)), clipLength(clip as Clip));
+      t = scrubTo(e.clientX);
     }
     changed();
   });
@@ -759,7 +829,7 @@ export async function startEditor(base: string): Promise<void> {
     if (draggingKey > 0) {
       t = moveKey(clip, draggingKey, timeAt(e.clientX));
     } else if (draggingKey < 0) {
-      t = Math.min(snapT(timeAt(e.clientX)), clipLength(clip as Clip));
+      t = scrubTo(e.clientX);
     }
     changed();
   });
@@ -817,7 +887,13 @@ export async function startEditor(base: string): Promise<void> {
     else if (e.key === '.') jumpKey(1);
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       playing = false;
-      t = Math.min(clipLength(clip as Clip), snapT(t + (e.key === 'ArrowLeft' ? -SNAP : SNAP)));
+      // one frame, stopping on any key (or the end) in between
+      const dir = e.key === 'ArrowLeft' ? -1 : 1;
+      const end = clipLength(clip as Clip);
+      let to = Math.max(0, Math.min(end, snapT(t + dir * SNAP)));
+      if (Math.abs(to - t) < 1e-6) to = Math.max(0, Math.min(end, t + dir * SNAP));
+      for (const k of [...clip.keys.map((k) => k.t), end]) if (dir * (k - t) > 1e-6 && dir * (to - k) > 1e-6) to = k;
+      t = to;
       changed();
     } else if (e.key === 'Escape') pick(null);
     else if (e.key === 'h') {
