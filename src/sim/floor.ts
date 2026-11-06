@@ -563,7 +563,7 @@ export class FloorSim {
     for (const part of GEAR_PARTS) {
       if (!use[part]) continue;
       const before = this.gear[part];
-      const boon = part === 'deck' || part === 'wheels' || part === 'bearings' ? (sk.mods.partWear?.[part] ?? 1) : 1;
+      const boon = part === 'trucks' ? 1 : (sk.mods.partWear?.[part] ?? 1);
       this.gear[part] = Math.max(0, before - use[part] * sk.mods.wearScale * boon);
       const line = crossed(before, this.gear[part]);
       if (line) this.events.push({ type: 'wear', part, level: line });

@@ -27,6 +27,7 @@ const BOON_ART: Partial<Record<BoonId, [Pic, Glyph?]>> = {
   skyLine: ['grind', 'ghost'],
   perpetualMotion: ['wheel', '∞'],
   fiberglassCore: ['deck', 'shield'],
+  shoeSponsor: ['shoe', 'shield'],
   ceramicBearings: ['bearing', 'shield'],
   classifiedUrethane: ['wheel', 'shield'],
 };

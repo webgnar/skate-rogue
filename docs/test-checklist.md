@@ -81,7 +81,7 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 ## Boons
 
 - [ ] **FLOW** (New Wheels, Butter: keeps air speed and extra speed fades half as fast, Firecracker) and **COOL** (Low Profile, Bubble Pads): each card does what it says.
-- [ ] **Gear boons** (from floor 2): Fiberglass Core, Ceramic Bearings and Classified Urethane each make the deck, bearings or wheels wear half as fast (watch the GEAR WEAR bars).
+- [ ] **Gear boons** (from floor 2): Fiberglass Core, Shoe Sponsor, Ceramic Bearings and Classified Urethane each make the deck, shoes, bearings or wheels wear half as fast (watch the GEAR WEAR bars).
 - [ ] **LUCK:** Double Stoken (counts twice and picks up from further away), Hustler (a 4th card on every pick).
 - [ ] **Roof Rider** (GRIND): grind parked car roofs. A COOL or LUCK boon street fills its offer from other types.
 - [ ] **Curses (from floor 6, about one offer in three):** a dashed purple card marked CURSED. Moon Shoes (ollies 60% higher, grinds 30% slower), Wanted (double Stoken, Heat rises twice as fast), Speed Wobbles (40% faster cruising, but landing well over cruising speed, e.g. off a kicker, slams you). *Tuning:* is Speed Wobbles too harsh?

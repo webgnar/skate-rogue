@@ -14,10 +14,10 @@ import { buildFloor } from '../src/gen/descent';
 describe('meta progression', () => {
   const fresh = libraryOf([]);
 
-  it('a new phone draws from POP and GRIND only: 8 boons (Fiberglass Core among them) plus the other 2 gear boons, no curses or duos', () => {
+  it('a new phone draws from POP and GRIND only: 9 boons (Fiberglass Core and Shoe Sponsor among them) plus the other 2 gear boons, no curses or duos', () => {
     expect(fresh.types).toEqual(START_TYPES);
-    expect(BOONS.filter((b) => !b.cursed && !b.duo && fresh.types.includes(b.type))).toHaveLength(8);
-    expect(BOONS.filter((b) => b.gear)).toHaveLength(3);
+    expect(BOONS.filter((b) => !b.cursed && !b.duo && fresh.types.includes(b.type))).toHaveLength(9);
+    expect(BOONS.filter((b) => b.gear)).toHaveLength(4);
     for (let seed = 1; seed < 60; seed++) {
       const run = { floor: 8, boons: [{ id: 'tripleThreat' as const, stacks: 1 }, { id: 'grease' as const, stacks: 1 }], library: fresh };
       for (const b of offerBoons(seed, run, 4)) {
