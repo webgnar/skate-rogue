@@ -6,7 +6,7 @@ import type { Mods } from '../boons/mods';
 import type { SkaterId } from '../render/skater-rig';
 
 export type DeckId = 'popsicle' | 'cruiser' | 'slab' | 'bombhill';
-export type PackId = 'FLOW' | 'COOL' | 'LUCK' | 'STREET' | 'curses' | 'duos';
+export type PackId = 'FLOW' | 'COOL' | 'LUCK' | 'curses' | 'duos';
 export type UnlockId = SkaterId | DeckId | PackId | 'daily';
 export type Branch = 'skater' | 'deck' | 'library' | 'spot';
 
@@ -21,7 +21,7 @@ export interface Unlock {
 export const UNLOCKS: Unlock[] = [
   { id: 'lou-gnar', branch: 'skater', name: 'Lou Gnar', line: 'The baseline. First pick: POP', cost: 0 },
   { id: 'webster', branch: 'skater', name: 'Webster', line: 'Grinds 15% faster. First pick: GRIND', cost: 30 },
-  { id: 'roxy', branch: 'skater', name: 'Roxy', line: 'Car-hops bounce 20% higher. First pick: STREET', cost: 40 },
+  { id: 'roxy', branch: 'skater', name: 'Roxy', line: 'Car-hops bounce 20% higher. First pick: GRIND', cost: 40 },
   { id: 'keanu', branch: 'skater', name: 'Keanu', line: 'Heat cools 15% faster in the air. First pick: COOL', cost: 50 },
   { id: 'goldie', branch: 'skater', name: 'Goldie', line: '+25% cash from everything. First pick: LUCK', cost: 60 },
   { id: 'popsicle', branch: 'deck', name: 'Popsicle', line: 'The stock deck: 3 slots', cost: 0 },
@@ -30,7 +30,6 @@ export const UNLOCKS: Unlock[] = [
   { id: 'slab', branch: 'deck', name: 'Slab', line: '4 slots, ollies 8% lower', cost: 45 },
   { id: 'FLOW', branch: 'library', name: 'FLOW pack', line: 'Speed boons join the pool', cost: 15 },
   { id: 'COOL', branch: 'library', name: 'COOL pack', line: 'Heat boons join the pool', cost: 20 },
-  { id: 'STREET', branch: 'library', name: 'STREET pack', line: 'Traffic boons join the pool', cost: 25 },
   { id: 'LUCK', branch: 'library', name: 'LUCK pack', line: 'Pickup and cash boons join the pool', cost: 25 },
   { id: 'curses', branch: 'library', name: 'Curses', line: 'Strong boons with a cost, from floor 6', cost: 35 },
   { id: 'duos', branch: 'library', name: 'Duos', line: 'Hold both halves to fuse them', cost: 40 },
@@ -41,7 +40,7 @@ export const BRANCH_NAMES: Record<Branch, string> = { skater: 'SKATERS', deck: '
 
 // what a run starts with: always POP and GRIND (12 boons), plus the packs bought
 export const START_TYPES: BoonType[] = ['POP', 'GRIND'];
-const PACK_TYPES: (BoonType & PackId)[] = ['FLOW', 'COOL', 'LUCK', 'STREET'];
+const PACK_TYPES: (BoonType & PackId)[] = ['FLOW', 'COOL', 'LUCK'];
 
 export function unlockDef(id: UnlockId): Unlock {
   return UNLOCKS.find((u) => u.id === id)!;
@@ -87,7 +86,7 @@ export interface Loadout {
 
 export const STOCK: Loadout = { skater: 'lou-gnar', deck: 'popsicle' };
 
-export const LEAN: Record<SkaterId, BoonType> = { 'lou-gnar': 'POP', webster: 'GRIND', roxy: 'STREET', keanu: 'COOL', goldie: 'LUCK' };
+export const LEAN: Record<SkaterId, BoonType> = { 'lou-gnar': 'POP', webster: 'GRIND', roxy: 'GRIND', keanu: 'COOL', goldie: 'LUCK' };
 
 // the first boon street of a run is your skater's type, if that type is in your library
 export function firstPick(loadout: Loadout, library: Library): BoonType {

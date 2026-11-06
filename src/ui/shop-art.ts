@@ -21,7 +21,6 @@ const MOD_ART: Record<ModId, [Pic, Glyph?]> = {
   sparks: ['grind', 'sparks'],
   doublePop: ['pop', '2X'],
   speedKick: ['board', 'speed'],
-  jumpRefill: ['pop', '+½'],
   cashBurst: ['coin', 'sparks'],
   slowMo: ['board', 'clock'],
   gravFlip: ['flip', 'flipv'],

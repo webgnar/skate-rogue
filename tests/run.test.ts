@@ -108,9 +108,9 @@ describe('the fork', () => {
   });
 
   it('a boon street with fewer cards of its type than the offer fills up from the other types', () => {
-    const offer = offerBoons(3, { floor: 2, boons: [] }, 3, 'STREET');
+    const offer = offerBoons(3, { floor: 2, boons: [] }, 3, 'LUCK');
     expect(offer).toHaveLength(3);
-    expect(offer[0].type).toBe('STREET');
+    expect(offer[0].type).toBe('LUCK');
   });
 });
 

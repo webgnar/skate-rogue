@@ -68,13 +68,13 @@ describe('GRIND boons on curved rails', () => {
       expect(pop('railLaunch')).toBeLessThan(pop() - 1);
     });
 
-    it(`Slingshot: riding off the end of ${kind} launches harder`, () => {
+    it(`Full Sail (it took in Slingshot): riding off the end of ${kind} launches harder`, () => {
       const launch = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);
         while (sk.mode === 'rail') sk.step(idle);
         return sk.hsp;
       };
-      expect(launch('slingshot')).toBeGreaterThan(launch() * 1.3);
+      expect(launch('railLaunch')).toBeGreaterThan(launch() * 1.3);
     });
 
     it(`Rocket Grind: an ollie off fast ${kind} gives every jump back at the top`, () => {

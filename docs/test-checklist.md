@@ -46,7 +46,7 @@ Flags combine, for example `?seed=77&floor=5&skater=roxy`.
 
 - [ ] **Underground spot** (a green road sign from floor 3, about 1 fork in 7). Taking it shows three choices: Lay low (the next floor starts at 0 Heat), Swap a boon, Remove a curse. *Check:* the swap only offers boons other than the one you dropped.
 - [ ] **Heat carries between floors at half.** Leave a floor with high Heat and the next one starts warmer (see it on the Heat bar).
-- [ ] **Boon streets only lead to types you've unlocked:** a new phone sees POP and GRIND signs only; with `?unlockall` you see all six (POP, GRIND, FLOW, COOL, LUCK, STREET).
+- [ ] **Boon streets only lead to types you've unlocked:** a new phone sees POP and GRIND signs only; with `?unlockall` you see all five (POP, GRIND, FLOW, COOL, LUCK).
 - [ ] **Each act is its own district:** act 1 Chicago, act 2 Clemente Park, act 3 Greece, Atlantis or the museum (it changes run to run), act 4 High-Tech City, act 5 the Hive. The look switches when an act's first floor starts. Quickest check: `?floor=4`, then `?floor=7`, `?floor=10`, `?floor=13`. A `?biome=` in the link pins one look for the whole run. In Atlantis gravity is 0.8: you float higher and longer on every floor of that act (the floors are built and checked in it). `?biome=atlantis` shows it from floor 1.
 - [ ] **Fork signs light up** for the road you're on as you reach the overpass.
 - [ ] **Escapes:** act 1's roadblock, act 2's helicopter, and act 4's drone swarm (stomp the drones to car-hop).
@@ -61,7 +61,7 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 - [ ] UNLOCKS opens a screen with four columns: Skaters, Decks, Boon library, Spots. Your bank shows at the top. Tapping it never starts a run behind it.
 - [ ] Tapping a locked item you can afford buys it (the bank drops, the tag turns to RIDE or OWNED). One you can't afford is greyed out and says how much more you need.
 - [ ] Tapping an owned skater or deck makes it RIDING. BACK reloads the game with your new setup.
-- [ ] **Skaters:** Webster (grinds 15% faster, first pick GRIND), Roxy (car-hops 20% higher, first pick STREET), Keanu (Heat cools 15% faster in the air, first pick COOL), Goldie (+25% cash from everything, first pick LUCK). The first floor's sign shows that type, as long as its pack is unlocked; otherwise POP.
+- [ ] **Skaters:** Webster (grinds 15% faster, first pick GRIND), Roxy (car-hops 20% higher, first pick GRIND), Keanu (Heat cools 15% faster in the air, first pick COOL), Goldie (+25% cash from everything, first pick LUCK). The first floor's sign shows that type, as long as its pack is unlocked; otherwise POP.
 - [ ] **Decks:** Cruiser (+10% speed, ollies 5% lower), Bombhill (+15% speed, gear wears 30% faster), Slab (4 board slots from the start, ollies 8% lower). Feel the difference in a run.
 - [ ] **Boon library:** a new phone only gets POP and GRIND boons (12 cards). Each pack adds its type to the cards and the road signs. Curses and Duos are their own unlocks.
 - [ ] **Daily run:** once unlocked, the run-over screen shows DAILY RUN. It reloads into today's seed (the seed line says "daily"), the run-over screen shows today's daily best, and NORMAL RUN goes back.
@@ -80,12 +80,12 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 
 ## Boons
 
-- [ ] **FLOW** (New Wheels, Bomb Hill, Butter, Slingshot, Firecracker) and **COOL** (Low Profile, Bubble Pads): each card does what it says.
+- [ ] **FLOW** (New Wheels, Butter: keeps air speed and extra speed fades half as fast, Firecracker) and **COOL** (Low Profile, Bubble Pads): each card does what it says.
 - [ ] **Gear boons** (from floor 2): Fiberglass Core, Ceramic Bearings and Classified Urethane each make the deck, bearings or wheels wear half as fast (watch the GEAR WEAR bars).
-- [ ] **LUCK:** Stoken Magnet (picks up from further away), Double Stoken, Hustler (a 4th card on every pick).
-- [ ] **STREET:** Roof Rider (grind parked car roofs). A STREET or COOL boon street fills its offer from other types.
+- [ ] **LUCK:** Double Stoken (counts twice and picks up from further away), Hustler (a 4th card on every pick).
+- [ ] **Roof Rider** (GRIND): grind parked car roofs. A COOL or LUCK boon street fills its offer from other types.
 - [ ] **Curses (from floor 6, about one offer in three):** a dashed purple card marked CURSED. Moon Shoes (ollies 60% higher, grinds 30% slower), Wanted (double Stoken, Heat rises twice as fast), Speed Wobbles (40% faster cruising, but landing well over cruising speed, e.g. off a kicker, slams you). *Tuning:* is Speed Wobbles too harsh?
-- [ ] **Duos:** pink cards that show up once you hold both halves. Rocket Grind (Rail Launch + Big Pop: ollie off a full-speed grind launches higher and gives every jump back at the top), Sky Line (Ghost Rail + Triple Threat: each flip leaves a rail under you), Perpetual Motion (Butter + Slingshot: extra speed never bleeds off).
+- [ ] **Duos:** pink cards that show up once you hold both halves. Rocket Grind (Rail Launch + Big Pop: ollie off a full-speed grind launches higher and gives every jump back at the top), Sky Line (Ghost Rail + Triple Threat: each flip leaves a rail under you), Perpetual Motion (Butter + Full Sail: extra speed never bleeds off).
 - [ ] **Remove a curse** at the underground spot lifts it off whole.
 - [ ] **Card look (openspec ui4-boon-look):** every boon card has a picture from the game (board, wheels, cruiser, bus, drone, chopper, rocket...) with a white or yellow glyph over a burst in its type colour. Tell me any picture that doesn't fit its boon.
 - [ ] A curse is a dashed purple card; a duo has a pink double edge, says DUO, and names both halves on a line under its name.
@@ -177,7 +177,7 @@ starts at least 12 tiles up, so it's the quickest place to try them.
 
 - [ ] Clip the near corner of a roof, ledge, bar or car roof as you come down: you land on it rather than slipping
       past. Drop off the far end of something at speed with your feet still over it: you land on the edge, then roll off.
-- [ ] With fast builds (New Wheels, Slingshot) you never fall through a roof, bar, bank or car roof.
+- [ ] With fast builds (New Wheels, Full Sail) you never fall through a roof, bar, bank or car roof.
 - [ ] Drop onto a robotaxi's roof just as it starts pulling out of the lane (it slides to the back). You land on it
       and ride or hop off; you never fall through it. Same for a drone bobbing up under you on the act 4 escape.
 
@@ -410,9 +410,9 @@ downpour at golden hour. `?biome=hightech` (or `hive`, `atlantis`) gives a distr
 
 **Boon, curse and duo looks** (each shows only when that boon is held)
 
-- [ ] Slingshot: streaks ahead off a rail's end. Butter: a yellow smear on a fast landing.
+- [ ] Full Sail: streaks ahead off a rail's end. Butter: a yellow smear on a fast landing.
 - [ ] Bubble Pads: the free slam pops into soap bubbles.
-- [ ] Bomb Hill: a cyan trail while extra speed lasts. Perpetual Motion: a pink trail.
+- [ ] Butter: a cyan trail while extra speed lasts. Perpetual Motion: a pink trail.
 - [ ] Curses are purple. Moon Shoes leaves a slow moon-dust puff on each ollie. Speed Wobbles sheds wisps when
       you're airborne too fast. Wanted sends a bounty pixel up now and then.
 - [ ] Duos are pink. Rocket Grind blasts a column off a fast grind. Sky Line draws a pink line under each trick.

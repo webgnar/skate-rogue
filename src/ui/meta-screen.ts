@@ -13,7 +13,6 @@ const BRANCHES: Branch[] = ['skater', 'deck', 'library', 'spot'];
 const ART: Partial<Record<UnlockId, [string, string?]>> = {
   FLOW: ['wheel'],
   COOL: ['cruiser'],
-  STREET: ['cone'],
   LUCK: ['coin'],
   curses: ['stoken', 'skull'],
   duos: ['rocket'],

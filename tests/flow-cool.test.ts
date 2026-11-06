@@ -44,12 +44,13 @@ describe('FLOW boons', () => {
     }
   });
 
-  it('Bomb Hill: extra speed bleeds off half as fast', () => {
-    expect(skaterMods(held('bombHill')).carryBleedScale).toBe(0.5);
+  it('Butter (it took in Bomb Hill): extra speed bleeds off half as fast', () => {
+    expect(skaterMods(held('butter')).carryBleedScale).toBe(0.5);
   });
 
-  it('Slingshot scales its launch', () => {
-    expect(skaterMods(held('slingshot', 'slingshot')).slingshot).toBe(2);
+  it('Full Sail (it took in Slingshot) scales the rail-end launch', () => {
+    expect(skaterMods(held('railLaunch')).slingshot).toBe(1.5);
+    expect(skaterMods([]).slingshot).toBe(1);
   });
 });
 
