@@ -73,8 +73,9 @@ describe('the sky route', () => {
   });
 
   it("the window washer's rig drops once you land on it", () => {
-    const l = find((x) => !!x.skyMovers?.some((m) => m.kind === 'rig'));
-    const m = l.skyMovers!.find((k) => k.kind === 'rig')!;
+    //(a city rig: act 3's up in the clouds are tests/cloud-act.test.ts)
+    const l = find((x) => !!x.skyMovers?.some((m) => m.kind === 'rig' && !m.cloud));
+    const m = l.skyMovers!.find((k) => k.kind === 'rig' && !k.cloud)!;
     const sim = new FloorSim({ ...l, startX: m.x0 + 8, startY: m.y - 4 });
     const rig = sim.sky.pieces.find((p) => p.site === m)!;
     run(sim, 10);
