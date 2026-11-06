@@ -237,6 +237,7 @@ export interface SkyMover {
   floor?: number; // rig: the lowest its deck sinks to
   phase?: number; // swing, beam: frames into its swing at the start of the floor
   mast?: number; // swing: the mast's x, what the jib slews round
+  cloud?: boolean; // a set piece up in act 3's cloud layer, part of its line (src/gen/clouds.ts CLOUD_ACT)
 }
 
 // a paper billboard standing across the lane between two sky decks: top (y0) to bottom (y1), px

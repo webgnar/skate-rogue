@@ -55,7 +55,7 @@ export function piecesOf(level: Level, a: number, b: number): Piece[] {
     if (m.x1 < a || m.x0 > b) continue;
     //a drifting cloud or a swinging I-beam: at the far end of its wander when you come to it, at the near end when you leave it
     const d = m.kind === 'cloud' ? REACH.drift : m.kind === 'beam' ? SKY_SWAY * TILE : 0;
-    out.push({ x0: m.x0 + d, x1: m.x1 - d, y0: m.y, y1: m.y, cloud: m.kind === 'cloud' || m.kind === 'balloon' });
+    out.push({ x0: m.x0 + d, x1: m.x1 - d, y0: m.y, y1: m.y, cloud: m.kind === 'cloud' || m.kind === 'balloon' || !!m.cloud });
   }
   return out.sort((p, q) => p.x0 - q.x0);
 }

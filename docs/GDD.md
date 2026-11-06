@@ -426,8 +426,12 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   physics; `CLOUD_ACT` in src/gen/clouds.ts). Floors 7-9 start on a big cloud 2.5 tiles over the hill's run-up, and
   the cloud layer is the floor: it climbs from there a flip at a time, then runs on over the hills, the chases and the
   cross streets to just before the gate, so a good player stays up in the clouds the whole floor (the sky bot: up there
-  more than three quarters of it). There's no city sky in act 3 (no roofs, cranes, water towers, billboards or set
-  pieces: those are acts 2 and 4); between the clouds and the street are the power lines and the girders. Fall off and
+  more than three quarters of it). There's no city sky in act 3 (no roofs, water towers or billboards: those are
+  acts 2 and 4); between the clouds and the street are the power lines and the girders. The set pieces come up into
+  the clouds instead (zack, Nov 6, 2026): one a floor, about a third of the way along the layer, out of the **blimp**
+  (a long back to cruise), the **crane's jib** (its mast up from the street through the clouds, slewing out of the
+  lane and back) and the **window washer's rig** (it drops under you, all the way down to the street if you ride it,
+  so pop off onto the cloud ahead). Fall off and
   every later stretch has a **girder staircase** off its lip: a big ollie and a flip onto the first, a flip a step, up
   through the layer until a cloud ahead is in reach (the sky bot climbs back up about 9 times in 10). The hill road
   and the sewer under it are unchanged; where the layer ends, just before the gate, you drop onto the top route's roofs
@@ -1449,8 +1453,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   stretch's roof is half a tile over its crest (an ollie, never a flip); and the rooftops stay optional,
   so a player who never ollies off a roof's end skates the hill road as in act 1. Act 3's cloud floors (built Nov 6,
   2026) left these defaults: you start 2.5 tiles up on a cloud; the layer ends 10 tiles before the gate and you drop
-  onto the top route's roofs for it; act 3 has no city sky beats, so the blimp, crane, billboard
-  and window-washer set pieces and the water tower's stash crate skip it; each girder staircase's first step is a big
+  onto the top route's roofs for it; act 3 has no city sky beats, so the billboard bust and the water tower's stash crate
+  skip it (its blimp, crane jib and rig are up in the clouds, one a floor); each girder staircase's first step is a big
   ollie and a flip off the lip (act 2's roofs are an ollie); and the escape after act 3 is unchanged (matching the
   escapes to the new act heights is its own step).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,

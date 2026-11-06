@@ -66,6 +66,36 @@ describe('act 3, the cloud act', () => {
     }
   }, 60000);
 
+  it("one set piece a floor up in the clouds: the blimp, the crane's jib or the window washer's rig", () => {
+    const kinds = new Set<string>();
+    for (let seed = 1; seed <= 6; seed++) for (const f of [7, 8, 9]) {
+      const l = floorOf(seed * 53, f);
+      const up = (l.skyMovers ?? []).filter((m) => m.cloud);
+      expect(up).toHaveLength(1);
+      kinds.add(up[0].kind);
+      //(on the layer's line, in reach of the cloud before it)
+      const line = piecesOf(l, 0, l.width).filter((p) => p.cloud).sort((p, q) => p.x0 - q.x0);
+      const at = line.findIndex((p) => p.x0 >= up[0].x0 - 2 * TILE && p.x1 <= up[0].x1 + 2 * TILE);
+      expect(at).toBeGreaterThan(0);
+      const from = line.slice(0, at).sort((p, q) => q.x1 - p.x1)[0];
+      expect(line[at].x0 - from.x1).toBeLessThanOrEqual(maxGap((line[at].y0 - from.y1) / TILE) * TILE + 1);
+    }
+    expect([...kinds].sort()).toEqual(['blimp', 'rig', 'swing']);
+    //the rig drops under you up there too
+    const l = floorOf(53, 7);
+    const m = l.skyMovers!.find((k) => k.cloud && k.kind === 'rig')!;
+    const sim = new FloorSim({ ...l, startX: m.x0 + 8, startY: m.y - 4 });
+    const rig = sim.sky.pieces.find((p) => p.site === m)!;
+    sim.skater.mode = 'air'; // (dropped onto it: a floor's start would roll on at startY)
+    let landed = false;
+    for (let k = 0; k < 40; k++) {
+      sim.step({ pressed: false, held: false });
+      landed ||= sim.skater.surface === rig.ledge;
+    }
+    expect(landed).toBe(true);
+    expect(rig.y).toBeGreaterThan(m.y + TILE);
+  }, 60000);
+
   it('a good player who falls climbs the girders back up into the clouds', () => {
     let made = 0;
     let n = 0;
