@@ -1635,12 +1635,14 @@ export class Game {
     }
   }
 
-  // rolling through puddles: spray off the wheels and a wake in the reflection
+  // rolling through puddles or the sewer's runoff: spray off the wheels (and a wake in a puddle's reflection)
   private water(dt: number): void {
     const sk = this.skater;
     const p = this.sprite.mesh.position;
-    const wading = this.state === 'skate' && sk.mode === 'roll' && this.view.puddles.at(p.x, p.y) !== null;
-    if (wading) this.particles.wade(p.x, p.y, Math.abs(sk.hsp) / PHYS.baseSpeed, dt);
+    const rolling = this.state === 'skate' && sk.mode === 'roll';
+    const wading = rolling && this.view.puddles.at(p.x, p.y) !== null;
+    const runoff = rolling && !wading && this.sim.runoffAt(sk.x, sk.y) !== null;
+    if (wading || runoff) this.particles.wade(p.x, p.y, Math.abs(sk.hsp) / PHYS.baseSpeed, dt, runoff);
     //in the rain, water drips off the roof edges round the view
     const rain = this.view.rain.amount;
     if (rain > 0 && this.dripEdges.length) {
@@ -2055,8 +2057,14 @@ export class Game {
     if (e.type === 'dodge') this.shotFx(e);
     if (e.type === 'puddle') {
       //rolled through a puddle: a sheet of water off the wheels, and the bearings' bar ticks down blue
+      //(into the sewer's runoff: a smaller sheet of slime, and only the deck soaks; no word, the tunnel has a lot of it)
       const x = toX(e.x);
       const y = toY(this.level, e.y);
+      if (e.runoff) {
+        this.particles.splash(x, y, 0.6, true);
+        this.hud.gearTick('deck');
+        return;
+      }
       this.particles.splash(x, y, 0.9);
       this.words.spawn(x, y + 0.3, 'SPLSH!');
       this.hud.gearTick('bearings');
