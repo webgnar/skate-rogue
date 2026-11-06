@@ -118,6 +118,21 @@ const GROUPS: { name: string; fields: FieldDef[] }[] = [
     ],
   },
 ];
+// the values each drag dot moves, lit up in the panel while it's picked
+const HANDLE_FIELDS: Record<Handle, Field[]> = {
+  hips: ['hipX', 'hipY', 'hipZ'],
+  head: ['head', 'nod', 'headTilt'],
+  handL: ['armLRaise', 'armLFwd', 'armLElbow'],
+  handR: ['armRRaise', 'armRFwd', 'armRElbow'],
+  elbowL: ['armLTwist'],
+  elbowR: ['armRTwist'],
+  footF: ['footFOn', 'footFX', 'footFY', 'footFZ', 'footFTurn', 'footFPitch', 'footFToe', 'footFRoll'],
+  footB: ['footBOn', 'footBX', 'footBY', 'footBZ', 'footBTurn', 'footBPitch', 'footBToe', 'footBRoll'],
+  kneeF: ['kneeFX', 'kneeFY', 'kneeFZ'],
+  kneeB: ['kneeBX', 'kneeBY', 'kneeBZ'],
+  board: ['boardX', 'boardY', 'boardZ', 'boardPivot', 'boardPitch', 'boardRoll', 'boardYaw'],
+};
+
 const DEFS = new Map(GROUPS.flatMap((g) => g.fields).map((d) => [d.f, d]));
 const DEG = 180 / PI;
 const ROLL_SPEED = 6; // tiles a second the ground scrolls by with "roll" on
@@ -279,6 +294,7 @@ export async function startEditor(base: string): Promise<void> {
 
   // panel: one row per pose value
   const rows = new Map<Field, { row: HTMLElement; range: HTMLInputElement; num: HTMLInputElement }>();
+  const boxOf = new Map<Field, HTMLDetailsElement>(); // each value's section, to light up the picked dot's
   const panelHead = el('div', { class: 'keyinfo' });
   panel.append(panelHead);
   for (const g of GROUPS) {
@@ -292,6 +308,7 @@ export async function startEditor(base: string): Promise<void> {
       row.append(label, range, num);
       box.append(row);
       rows.set(d.f, { row, range, num });
+      boxOf.set(d.f, box as HTMLDetailsElement);
       range.oninput = () => setField(d.f, stored(d, Number(range.value)));
       num.onchange = () => Number.isFinite(Number(num.value)) && setField(d.f, stored(d, Number(num.value)));
       label.ondblclick = () => setField(d.f, BASE[d.f]);
@@ -428,6 +445,7 @@ export async function startEditor(base: string): Promise<void> {
       gizmo.attach(handles.get(h)!);
     } else gizmo.detach();
     for (const [id, m] of handles) (m.material as THREE.MeshBasicMaterial).opacity = id === h ? 1 : 0.75;
+    lightPanel(h);
     updateHint();
   };
   const ray = new THREE.Raycaster();
@@ -666,6 +684,28 @@ export async function startEditor(base: string): Promise<void> {
       line.geometry.setFromPoints([joint, handles.get(id)!.position]);
       line.computeLineDistances();
     });
+  }
+
+  // the picked dot's values light up in its colour on the right, their section opened and scrolled into view
+  function lightPanel(h: Handle | null): void {
+    const fields = new Set(h ? HANDLE_FIELDS[h] : []);
+    const color = h ? `#${HANDLES.find((x) => x.id === h)!.color.toString(16).padStart(6, '0')}` : '';
+    const boxes = new Set<HTMLDetailsElement>();
+    for (const [f, { row }] of rows) {
+      const on = fields.has(f);
+      row.classList.toggle('picked', on);
+      row.style.setProperty('--pick', color);
+      if (on) boxes.add(boxOf.get(f)!);
+    }
+    for (const box of new Set(boxOf.values())) {
+      box.classList.toggle('picked', boxes.has(box));
+      box.style.setProperty('--pick', color);
+    }
+    const first = [...boxes][0];
+    if (first) {
+      for (const b of boxes) b.open = true;
+      first.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   }
 
   function updateHint(): void {

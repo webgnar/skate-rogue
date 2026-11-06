@@ -70,6 +70,10 @@
 #editor .props .row .label { color: var(--dim); cursor: default; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #editor .props .row.changed .label { color: var(--text); }
 #editor .props .row input[type='range'] { width: 100%; }
+#editor .props details.picked > summary { color: var(--pick); }
+#editor .props .row.picked { background: color-mix(in srgb, var(--pick) 16%, transparent); box-shadow: inset 3px 0 0 var(--pick); border-radius: 3px; padding-left: 6px; }
+#editor .props .row.picked .label { color: var(--pick); }
+#editor .props .row.picked input[type='range'] { accent-color: var(--pick); }
 #editor .props .row input[type='number'] { width: 100%; padding: 2px 4px; }
 #editor .timeline { border-top: 1px solid var(--line); padding: 6px 8px 10px; }
 #editor .timeline .tools { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
