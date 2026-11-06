@@ -11,7 +11,7 @@ const at = (x: number) => ({ x }) as Skater;
 
 describe("act 3's chaser", () => {
   it('act 3 is the chase; the others keep their set pieces', () => {
-    expect([1, 2, 3, 4, 5].map(escapeKind)).toEqual(['roadblock', 'chopper', 'chase', 'drones', 'finale']);
+    expect([1, 2, 3, 4, 5].map(escapeKind)).toEqual(['roadblock', 'chopper', 'chase', 'ceiling', 'finale']);
   });
 
   it('waits behind until the chase starts, then each slam lets it close in', () => {

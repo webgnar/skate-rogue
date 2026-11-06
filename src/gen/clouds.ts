@@ -7,16 +7,19 @@
 // of sky pieces"): partway down each stretch the sky beats give way to a staircase, scaffold decks and then wisps
 // of cloud each a little higher than the last, an ollie apart, up into the layer.
 import { TILE } from '../physics/constants';
-import { CurvedRail, type Level, type SkyMover, type Surface } from '../physics/level';
+import { CurvedRail, type Level, type SkyBust, type SkyMover, type Surface } from '../physics/level';
+import { SKY_SWAY } from '../sim/sky';
 import { PICKUPS } from './descent';
 import { editFloor } from './hills';
 import { makeRng, type Rng } from './rng';
 import { busy, clearAt, groundAt, TOP } from './top-route';
 import { CLOUDY, maxGap, openAt, piecesOf, REACH } from './sky-line';
+import { actGravity } from '../physics/feel';
 
-export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb';
+// spire, blimp: acts 4 and 5's own beats (HIGH): a skyscraper's crown up through the clouds, and a blimp of the fleet
+export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb' | 'spire' | 'blimp' | 'beam';
 // act 3's set pieces, one a floor up in the layer (CLOUD_ACT): the sky route's blimp, crane jib and window washer's rig
-export type CloudPiece = 'blimp' | 'swing' | 'rig';
+export type CloudPiece = 'blimp' | 'swing' | 'rig' | 'bust';
 
 export const CLOUDS = {
   from: 7, // first floor with a cloud layer: act 3's (CLOUD_ACT), so act 2's floors are all rooftops
@@ -88,6 +91,99 @@ export const CLOUD_ACT = {
   runOn: 4, // tiles a step may run on toward a layer piece just out of its reach
 };
 
+// Acts 4 and 5 (GDD: How a run ends, and the Roadmap's climb, step d; zack, 2026-11-06): the same floor as act 3's,
+// the layer the whole way from a start up over the run-up, built higher and spread out for the act's gravity. Every
+// gap and rise is scaled by 1 / gravity (an ollie and a flip carry you that much further and higher), so the line asks
+// the same of you as act 3's does, only in jumps 1.4x (act 4) and 3.3x (act 5) as big.
+// - Act 4, above the clouds: puffs of cloud with a fleet of blimps cruising among them and the crowns of the tallest
+//   skyscrapers poking up through them (spires), the stars coming out. Its set piece is the crane jib or the rig.
+// - Act 5, space: the same beats drawn as space (src/render/sky-pieces-view.ts): a cloud is a station's deck, a thin
+//   one a panel of junk that breaks off, a wisp a solar panel, a rainbow a ring of station hull to grind, a balloon a
+//   satellite, a drifting cloud a tumbling piece of debris, the blimp a shuttle's back, the jib a station's robot arm
+//   and the rig a capsule that drops away under you
+export const HIGH = {
+  4: {
+    floors: [10, 11, 12],
+    over: 16, // tiles the line stands over the ground ahead (act 3's: CLOUDS.over)
+    //its set piece, one a floor, out of the sky route's (the blimps are beats of their own up here, a fleet of them,
+    //and so are the swinging I-beams, hung off cranes on the towers' tops)
+    pieces: ['swing', 'rig', 'bust'] as CloudPiece[],
+    beats: [['puff', 3], ['thin', 1.5], ['drift', 1.5], ['rainbow', 1], ['balloon', 1], ['blimp', 3], ['spire', 3], ['beam', 1.5], ['gap', 1.5], ['fork', 2], ['hops', 1], ['climb', 1.5]] as [CloudBeat, number][],
+  },
+  5: {
+    floors: [13, 14, 15],
+    over: 26,
+    pieces: ['blimp', 'swing', 'rig'] as CloudPiece[],
+    beats: [['puff', 4], ['thin', 2], ['drift', 3], ['rainbow', 2], ['balloon', 3], ['gap', 2], ['fork', 2], ['hops', 1.5], ['climb', 1.5]] as [CloudBeat, number][],
+  },
+  spire: [5, 7], // tiles: a skyscraper's crown, a deck to land on
+  beam: [5, 7], // tiles: a swinging I-beam (src/gen/sky-beats.ts SKY.beam), its sway either side kept clear
+  bustDeck: [7, 9], // tiles: the crown either side of a paper billboard (SKY.bustRoof)
+  bustGap: 3, // tiles between them, the billboard in the middle (times the act's scale)
+  bustUp: 3, // tiles it stands over the decks, and under them (times the act's scale)
+  bustDown: 1.5,
+  spireUp: 1, // tiles over the layer (times the act's scale)
+  spread: 1, // share of 1 / gravity the gaps and rises grow by (1: exactly as far as the jumps carry)
+  long: 1, // and the share of it the pieces grow by
+};
+
+// which act's layer floor this is (3 the cloud act, 4 above the clouds, 5 space), or 0 (Endless never)
+export function layerAct(floor: number): 0 | 3 | 4 | 5 {
+  if (floor > 15) return 0;
+  const f = editFloor(floor);
+  if (CLOUD_ACT.floors.includes(f)) return 3;
+  if (HIGH[4].floors.includes(f)) return 4;
+  if (HIGH[5].floors.includes(f)) return 5;
+  return 0;
+}
+
+// how much bigger than act 3's a layer floor's gaps and rises are: 1 / its act's gravity
+export function layerScale(floor: number): number {
+  const act = layerAct(floor);
+  return act >= 4 ? 1 + HIGH.spread * (1 / actGravity(act) - 1) : 1;
+}
+
+// run fn with the cloud layer's and the sky line's dials grown for a high act's floor (HIGH): every gap and rise
+// times its scale, the line `over` higher. Nothing changes on other floors
+export function highDials<R>(floor: number, fn: () => R): R {
+  const act = layerAct(floor);
+  if (act < 4) return fn();
+  const k = layerScale(floor);
+  const saved: [Record<string, unknown>, string, unknown][] = [];
+  const set = (d: Record<string, unknown>, key: string, v: unknown) => {
+    saved.push([d, key, d[key]]);
+    d[key] = v;
+  };
+  const grow = (d: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const v = d[key];
+      set(d, key, Array.isArray(v) ? v.map((n: number) => Math.round(n * k)) : (v as number) * k);
+    }
+  };
+  grow(CLOUDS as unknown as Record<string, unknown>, ['between', 'gap', 'stairRise', 'stairGap', 'stairHeight', 'step', 'forkUp', 'forkLow', 'forkHigh', 'hopGap', 'hopDrop', 'climbUp', 'climbMax', 'ahead']);
+  //(and the pieces longer, by `long` of that: a jump's longer up here, so is the run between two)
+  const w = 1 + HIGH.long * (k - 1);
+  const widen = (d: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const v = d[key];
+      set(d, key, Array.isArray(v) ? v.map((n: number) => Math.round(n * w)) : (v as number) * w);
+    }
+  };
+  //(a thin cloud's time to break up with it: it's that much longer to ride across)
+  widen(CLOUDS as unknown as Record<string, unknown>, ['stair', 'puff', 'thin', 'thinFrames', 'drift', 'rainbow', 'balloon', 'fork', 'forkWisp', 'forkPiece', 'hop', 'climb1']);
+  widen(CLOUD_ACT as unknown as Record<string, unknown>, ['blimp', 'swing', 'rigCloud', 'meetRoom']); // (not the rig: it drops under you, so it stays short)
+  widen(REACH as unknown as Record<string, unknown>, ['deck']);
+  widen(HIGH as unknown as Record<string, unknown>, ['spire', 'beam', 'bustDeck']);
+  set(CLOUDS as unknown as Record<string, unknown>, 'over', HIGH[act as 4 | 5].over);
+  grow(CLOUD_ACT as unknown as Record<string, unknown>, ['startUp', 'entryUp', 'entryIn', 'meetUp', 'runOn', 'rigGap', 'blimpUp', 'swingUp']);
+  grow(REACH as unknown as Record<string, unknown>, ['gap', 'min', 'max', 'rise']);
+  try {
+    return fn();
+  } finally {
+    for (const [d, key, v] of saved.reverse()) d[key] = v;
+  }
+}
+
 // filter an array in place (other parts of the level may hold it)
 function keep<T>(xs: T[], ok: (x: T) => boolean): void {
   const kept = xs.filter(ok);
@@ -107,7 +203,12 @@ function clearOver(level: Level, x0: number, x1: number, y: number): number | nu
 
 // is this floor one of act 3's cloud floors?
 export function cloudFloor(floor: number): boolean {
-  return CLOUD_ACT.floors.includes(editFloor(floor)) && floor <= 15;
+  return layerAct(floor) === 3;
+}
+
+// is this floor one the layer runs the whole of (acts 3, 4 and 5: no city sky under it)?
+export function layerFloor(floor: number): boolean {
+  return layerAct(floor) > 0;
 }
 
 // where a stretch of hill [a, b] crests: the highest ground on it (its first stretch starts on top; the later ones
@@ -132,7 +233,7 @@ export function cloudy(level: Level, stretch: number): boolean {
   const span = level.hillSpans?.[stretch];
   if (!span || level.layout.floor < CLOUDS.from) return false;
   //(act 3: every stretch, the first under the layer it starts in, the later ones with a staircase up off the lip)
-  if (cloudFloor(level.layout.floor)) return true;
+  if (layerFloor(level.layout.floor)) return true;
   if (stretch % 2) return false;
   const [a, b] = span;
   return b - crestOf(level, a, b) >= CLOUDS.room * TILE;
@@ -182,8 +283,8 @@ export function cloudMix<R>(only: CloudBeat[] | undefined, fn: () => R): R {
   }
 }
 
-function pick(rng: Rng): CloudBeat {
-  const beats = mix ? BEATS.filter(([b]) => mix!.includes(b)) : BEATS;
+function pick(rng: Rng, weights = BEATS): CloudBeat {
+  const beats = mix ? weights.filter(([b]) => mix!.includes(b)) : weights;
   const total = beats.reduce((s, [, w]) => s + w, 0);
   let r = rng() * total;
   for (const [b, w] of beats) if ((r -= w) < 0) return b;
@@ -195,9 +296,13 @@ export function addClouds(level: Level, seed: number): void {
   const floor = level.layout.floor;
   if (!spans?.length || floor < CLOUDS.from) return;
   const rng = makeRng(seed * 113 + floor * 7177 + 3);
+  const act = layerAct(floor);
+  const weights = act >= 4 ? HIGH[act as 4 | 5].beats : BEATS;
+  const k = layerScale(floor);
   const surfaces: Surface[] = [];
   const rails: CurvedRail[] = [];
   const movers: SkyMover[] = [];
+  const busts: SkyBust[] = [];
   let spin = rng() < CLOUDS.spin;
   const coins = (x0: number, x1: number, y: (x: number) => number) => {
     for (let c = x0 + TILE; c < x1 - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y(c) - PICKUPS.ride });
@@ -218,7 +323,7 @@ export function addClouds(level: Level, seed: number): void {
     let last: CloudBeat | CloudPiece = 'gap';
     const pieceX = x + CLOUD_ACT.pieceAt * (end - x);
     while (x < end - 6 * TILE) {
-      let beat: CloudBeat | CloudPiece = pick(rng);
+      let beat: CloudBeat | CloudPiece = pick(rng, weights);
       //never two gaps or two rainbows running, and open with a cloud to land on
       if (last === 'gap' && beat === 'gap') beat = 'puff';
       if (last === 'rainbow' && beat === 'rainbow') beat = 'puff';
@@ -234,6 +339,42 @@ export function addClouds(level: Level, seed: number): void {
           movers.push({ kind: beat, x0: x, x1: x + w, y: by, cloud: true, ...(beat === 'swing' ? { mast: x + w * 0.25, phase: Math.floor(rng() * 300) } : {}) });
           coins(x, x + w, () => by);
           x += w;
+          if (beat === piece) piece = null;
+        } else beat = 'puff';
+      }
+      if (beat === 'spire') {
+        //a skyscraper's crown up through the clouds (act 4): a deck on top of it a little over the layer
+        const w = range(rng, HIGH.spire) * TILE;
+        const sy = y - HIGH.spireUp * k * TILE;
+        if (fits(w) && !busy(level, x, x + w, sy)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y: sy, row: -1, sky: 'spire' });
+          coins(x, x + w, () => sy);
+          x += w;
+        } else beat = 'puff';
+      }
+      if (beat === 'beam') {
+        //a steel I-beam on a crane's cable, swinging slowly along the lane (the sky route's, src/sim/sky.ts), with room
+        //either side for its swing
+        const w = range(rng, HIGH.beam) * TILE;
+        const sway = SKY_SWAY * TILE;
+        if (fits(w + 2 * sway) && !busy(level, x, x + w + 2 * sway, y)) {
+          movers.push({ kind: 'beam', x0: x + sway, x1: x + sway + w, y, cloud: true, phase: Math.floor(rng() * 600) });
+          coins(x + sway, x + sway + w, () => y);
+          x += w + 2 * sway;
+        } else beat = 'puff';
+      }
+      if (beat === 'bust') {
+        //two crowns, a paper billboard across the gap between them: jump the gap and burst through it
+        const w1 = range(rng, HIGH.bustDeck) * TILE;
+        const w2 = range(rng, HIGH.bustDeck) * TILE;
+        const gap = HIGH.bustGap * k * TILE;
+        if (fits(w1 + gap + w2) && !busy(level, x, x + w1 + gap + w2, y)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + w1, y, row: -1, sky: 'spire' });
+          surfaces.push({ kind: 'ledge', x0: x + w1 + gap, x1: x + w1 + gap + w2, y, row: -1, sky: 'spire' });
+          busts.push({ x: x + w1 + gap / 2, y0: y - HIGH.bustUp * k * TILE, y1: y + HIGH.bustDown * k * TILE });
+          coins(x, x + w1, () => y);
+          coins(x + w1 + gap, x + w1 + gap + w2, () => y);
+          x += w1 + gap + w2;
           piece = null;
         } else beat = 'puff';
       }
@@ -397,7 +538,7 @@ export function addClouds(level: Level, seed: number): void {
     }
     return [x, y];
   };
-  if (cloudFloor(floor)) {
+  if (act) {
     //act 3 (CLOUD_ACT): the floor starts on a cloud over the hill's run-up, and the layer runs on from there
     const [a, b] = spans[0];
     const [lip] = lipOf(level, a, b);
@@ -406,12 +547,13 @@ export function addClouds(level: Level, seed: number): void {
     surfaces.push({ kind: 'ledge', x0: a - 2 * TILE, x1, y: y0, row: -1, sky: 'cloud' });
     coins(Math.max(a, level.startX + TILE), x1, () => y0);
     level.startY = y0;
-    const pieces: CloudPiece[] = ['blimp', 'swing', 'rig'];
+    const pieces: CloudPiece[] = act >= 4 ? HIGH[act as 4 | 5].pieces : ['blimp', 'swing', 'rig'];
     lay(x1 + range(rng, CLOUDS.between) * TILE, y0, false, pieces[Math.floor(rng() * pieces.length)]);
     //(laid, so the staircases keep clear of it)
     level.surfaces.push(...surfaces.splice(0));
     level.rails.push(...rails.splice(0));
     if (movers.length) level.skyMovers = [...(level.skyMovers ?? []), ...movers.splice(0)];
+    if (busts.length) level.busts = [...(level.busts ?? []), ...busts.splice(0)];
     let layer = piecesOf(level, a, level.width).filter((p) => p.cloud);
     //where a staircase climbs up into the layer, the clouds in its way go (and their coins), so it rises on through
     //the layer to its height instead of flattening out under it with nowhere to go

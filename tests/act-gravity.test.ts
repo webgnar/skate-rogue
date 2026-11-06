@@ -45,8 +45,9 @@ describe('act gravity', () => {
     for (const floor of [1, 5, 9]) expect(floorLevel({ seed: 3, floor, road, library: FULL_LIBRARY, gnar: 0 }).gravity).toBeUndefined();
     expect(floorLevel({ seed: 3, floor: 11, road, library: FULL_LIBRARY, gnar: 0 }).gravity).toBe(0.7);
     expect(floorLevel({ seed: 3, floor: 14, road, library: FULL_LIBRARY, gnar: 0 }).gravity).toBe(0.3);
-    //escapes keep street gravity for now
-    expect(floorLevel({ seed: 3, floor: 12, road: { kind: 'escape', act: 4, danger: 3 }, library: FULL_LIBRARY, gnar: 0 }).gravity).toBeUndefined();
+    //acts 1-3's escapes keep street gravity; the ceiling and the beam-up skate in their act's (climb step d)
+    expect(floorLevel({ seed: 3, floor: 9, road: { kind: 'escape', act: 3, danger: 3 }, library: FULL_LIBRARY, gnar: 0 }).gravity).toBeUndefined();
+    expect(floorLevel({ seed: 3, floor: 12, road: { kind: 'escape', act: 4, danger: 3 }, library: FULL_LIBRARY, gnar: 0 }).gravity).toBe(0.7);
   }, 60000);
 
   it('jumps grow about 1/g high and 1/g long', () => {

@@ -50,7 +50,45 @@ function parkedGroup(level: Level, i: number, stage: Stage): THREE.Group {
   const v = STAGE_MODEL[stage];
   if (car.model === 'bus') return makeBus(x0, x1, bottom, roof, v);
   if (car.model === 'cruiser') return makeParkedCruiser(x0, x1, bottom, roof, i, v);
+  if (car.model === 'gunship') return makeGunship(x0, x1, bottom, roof, stage);
   return makeCar(x0, x1, bottom, roof, parkedPaint(level, i), parkedModel(level, i), v);
+}
+
+// act 4's ceiling (src/gen/escape.ts): one of the AI's gunships hanging in the line across the sky. A gunmetal
+// hull filling its box (you land on its back or slam into its nose), a red eye, cannon pods, rotor discs on stubs
+// over each end; a stomped one sags, its eye going dark
+function makeGunship(x0: number, x1: number, bottom: number, roof: number, stage: Stage): THREE.Group {
+  const g = new THREE.Group();
+  const w = x1 - x0;
+  const h = roof - bottom;
+  const mid = (x0 + x1) / 2;
+  const hull = new THREE.MeshLambertMaterial({ color: stage > 1 ? 0x3a3e46 : 0x6a7482 });
+  const plate = new THREE.MeshLambertMaterial({ color: 0x3a4250 });
+  const eye = new THREE.MeshBasicMaterial({ color: stage > 1 ? 0x401010 : 0xff2a2a });
+  const rotor = new THREE.MeshLambertMaterial({ color: 0x8a9098 });
+  const add = (bw: number, bh: number, bd: number, mat: THREE.Material, x: number, y: number, z: number) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
+    m.position.set(x, y, z);
+    g.add(m);
+  };
+  const cy = bottom + h * 0.5;
+  add(w * 0.92, h * 0.62, 1.6, hull, mid, cy, 0);
+  add(w * 0.6, h * 0.2, 1.2, plate, mid - w * 0.05, roof - h * 0.12, 0); // the back's armour plate (its deck)
+  add(w * 0.18, h * 0.42, 1.3, plate, x1 - w * 0.12, cy - h * 0.04, 0); // the nose
+  add(0.08, h * 0.16, 0.5, eye, x1 + 0.0, cy + h * 0.06, 0.2);
+  add(0.08, h * 0.16, 0.5, eye, x0 + w * 0.04, cy + h * 0.06, 0.2); // a tail light so it reads from behind
+  for (const z of [-0.95, 0.95]) {
+    add(w * 0.35, h * 0.16, 0.25, plate, mid + w * 0.12, bottom + h * 0.18, z); // cannon pods under its flanks
+    add(w * 0.2, 0.08, 0.08, plate, mid + w * 0.38, bottom + h * 0.18, z);
+  }
+  for (const x of [x0 + w * 0.15, x1 - w * 0.2]) {
+    add(0.12, h * 0.25, 0.12, plate, x, bottom + h * 0.12, -0.6); // a stub down to its rotor (behind, below the hull)
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.2, w * 0.2, 0.05, 16), rotor);
+    disc.position.set(x, bottom + 0.02, -0.6);
+    g.add(disc);
+  }
+  if (stage >= 2) g.rotation.z = -0.06 * (stage - 1); // stomped: it noses down
+  return g;
 }
 
 // which body a parked car is (a bus and a cruiser aside): the Prius or one of the blender bot's cars
@@ -149,7 +187,7 @@ export function damageParked(kit: THREE.Object3D | null, level: Level, i: number
     hideRange(state.lit, state.ranges[i].lit);
   }
   const mesh = parkedGroup(level, i, stage);
-  damagedLook(mesh, level.cars[i].model === 'bus' ? 'Bus' : level.cars[i].model === 'cruiser' ? 'Cruiser' : parkedModel(level, i), stage, i);
+  if (level.cars[i].model !== 'gunship') damagedLook(mesh, level.cars[i].model === 'bus' ? 'Bus' : level.cars[i].model === 'cruiser' ? 'Cruiser' : parkedModel(level, i), stage, i);
   inkify(mesh);
   root.add(mesh);
   state.shown.set(i, { mesh, stage, slide: stage === 3 ? 0 : -1 });

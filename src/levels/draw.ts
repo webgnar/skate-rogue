@@ -50,7 +50,7 @@ export interface Layers {
 export const ALL_LAYERS: Layers = { sky: true, clouds: true, sewer: true };
 
 // which layer a sky piece is in: the cloud layer (src/gen/clouds.ts) or the sky beats under it (src/gen/sky-beats.ts)
-const CLOUD_KINDS = ['step', 'wisp', 'cloud', 'thin', 'rainbow', 'balloon'];
+const CLOUD_KINDS = ['step', 'wisp', 'cloud', 'thin', 'rainbow', 'balloon', 'spire'];
 export const inClouds = (kind: string | undefined) => !!kind && CLOUD_KINDS.includes(kind);
 
 const MONO = 'font-family="JetBrains Mono, ui-monospace, Menlo, monospace"';

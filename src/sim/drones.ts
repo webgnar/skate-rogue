@@ -11,6 +11,7 @@ import type { Skater, SkaterEvent } from '../physics/skater';
 export interface DroneSpot {
   x: number; // where it hovers (its left edge)
   h: number; // its roof above the street, px
+  base?: number; // or above this (px, y down): a blimp's back it hovers over, up in act 4's ceiling (src/gen/escape.ts)
 }
 
 export const DRONE = {
@@ -64,7 +65,7 @@ export class Swarm {
   private t = 0;
 
   constructor(spots: DroneSpot[], streetY: number) {
-    this.drones = spots.map((s) => new Drone(s, streetY));
+    this.drones = spots.map((s) => new Drone(s, s.base ?? streetY));
   }
 
   // the drones that are solid this step, as car boxes for the skater

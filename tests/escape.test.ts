@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ACTS, actOf, buildEscape, endsAct, ESCAPE, escapeKind, validatedEscape } from '../src/gen/escape';
+import { ACTS, actOf, buildEscape, endsAct, ESCAPE, escapeKind, UP_HIGH, validatedEscape } from '../src/gen/escape';
+import { Pilot } from '../src/bot/pilot';
 import { label } from '../src/gen/roads';
 import { botRun } from '../src/gen/validate';
 import { PHYS, TILE } from '../src/physics/constants';
@@ -12,7 +13,8 @@ describe('acts and escapes', () => {
     expect([1, 2, 4, 5, 13, 14].some(endsAct)).toBe(false);
     expect(escapeKind(1)).toBe('roadblock');
     expect(escapeKind(ACTS)).toBe('finale');
-    expect(label({ kind: 'escape', act: 5, danger: 3 })).toBe('THE LAST ROADBLOCK');
+    expect(label({ kind: 'escape', act: 5, danger: 3 })).toBe('THE BEAM-UP');
+    expect(label({ kind: 'escape', act: 4, danger: 3 })).toBe('THE CEILING');
   });
 
   it('the roadblock: a car, a bus past a plain ollie, cruisers, a bus; the finale has two', () => {
@@ -94,17 +96,16 @@ describe('the helicopter', () => {
 
 describe('the drone swarm', () => {
   const setup = (seed = 9) => {
-    const l = buildEscape(seed, 4);
+    const l = buildEscape(seed, 4, 'drones');
     const sim = new FloorSim(l, undefined, 0);
     sim.traffic.vehicles.length = 0;
     return { l, sim };
   };
   const roll = (sim: FloorSim, x: number) => Object.assign(sim.skater, { x, y: sim.level.streetY, surface: null, mode: 'roll' });
 
-  it('act 4 is the drone swarm: waves over flat street, a single and a pair first', () => {
+  it('the street swarm (no act has it since the ceiling): waves over flat street, a single and a pair first', () => {
     const { l } = setup();
-    expect(escapeKind(4)).toBe('drones');
-    expect(label({ kind: 'escape', act: 4, danger: 3 })).toBe('DRONE SWARM');
+    expect(escapeKind(4)).toBe('ceiling');
     const d = l.escape!.drones!;
     expect(d.length).toBeGreaterThan(5);
     expect(d.slice(0, 3).map((s) => s.h)).toEqual([40, 40, 40]);
@@ -157,4 +158,50 @@ describe('the drone swarm', () => {
     expect(b.sim.swarm!.drones[0].state).toBe('down');
     expect(b.sim.swarm!.boxes).not.toContain(b.sim.swarm!.drones[0].box);
   });
+});
+
+// climb step d (GDD: How a run ends): act 4's ceiling and act 5's beam-up go up over the street, in their act's gravity
+describe('the ceiling and the beam-up', () => {
+  const skyRun = (l: ReturnType<typeof buildEscape>) => {
+    const sim = new FloorSim(l);
+    const pilot = new Pilot('sky');
+    for (let k = 0; k < 60 * 120 && sim.state === 'skate'; k++) sim.step(pilot.input(sim));
+    return sim;
+  };
+
+  it('the ceiling: a blimp convoy rising to the cruise, drones on their backs, then the gunship line', () => {
+    const l = buildEscape(3, 4);
+    expect(l.escape!.kind).toBe('ceiling');
+    expect(l.gravity).toBe(0.7);
+    const blimps = (l.skyMovers ?? []).filter((m) => m.kind === 'blimp');
+    expect(blimps.length).toBeGreaterThan(3);
+    expect(Math.min(...blimps.map((b) => b.y))).toBeLessThan(l.streetY - 8 * TILE);
+    const drones = l.escape!.drones!;
+    expect(drones.length).toBeGreaterThan(3);
+    expect(drones.every((d) => d.base !== undefined && d.base < l.streetY)).toBe(true);
+    const guns = l.cars.filter((c) => c.model === 'gunship');
+    expect(guns).toHaveLength(UP_HIGH.gunships);
+    //hanging in the sky over the last stretch, not parked on the street
+    for (const g of guns) expect(g.bottom).toBeLessThan(l.streetY - 4 * TILE);
+  });
+
+  it('the beam-up: a rocket after you at your height, the ship and its beam over the gate', () => {
+    const l = buildEscape(3, 5);
+    expect(l.escape!.kind).toBe('finale');
+    expect(l.gravity).toBe(0.3);
+    expect(l.escape!.rocket).toBe(true);
+    expect(l.escape!.beam!.x).toBe(l.exitX);
+    expect(l.escape!.beam!.y).toBeLessThan(l.streetY - 10 * TILE);
+    const sim = new FloorSim(l);
+    expect(sim.chaser?.flies).toBe(true);
+    expect(sim.shooter).toBeFalsy();
+  });
+
+  it('the sky bot gets through both up top', () => {
+    for (const act of [4, 5])
+      for (const seed of [1, 2, 3]) {
+        const sim = skyRun(validatedEscape(seed * 911, act));
+        expect(sim.state).toBe('exit');
+      }
+  }, 60000);
 });

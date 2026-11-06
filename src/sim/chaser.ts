@@ -14,14 +14,18 @@ export const CHASER = {
   warnAt: 3.5 * TILE, // the HUD warns from this close
 };
 
+// Act 5's finale (src/gen/escape.ts) sends the AI's last launch after you instead: a rocket, the same rules, flying
+// at your height wherever you are (y), easing after you as you climb or drop
 export class Chaser {
   gap: number = CHASER.startGap; // px behind the skater
   x: number;
+  y = 0; // a rocket's height (px, y down); the guards run along the street
   caught = false;
 
   constructor(
     readonly from: number, // it joins the chase when the skater passes this x
     startX: number,
+    readonly flies = false,
   ) {
     this.x = startX - CHASER.startGap;
   }
@@ -33,5 +37,6 @@ export class Chaser {
       if (this.gap <= CHASER.catchAt) this.caught = true;
     }
     this.x = sk.x - this.gap;
+    if (this.flies) this.y = this.y === 0 ? sk.y - TILE : this.y + (sk.y - TILE - this.y) * 0.05;
   }
 }

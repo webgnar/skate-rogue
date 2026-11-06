@@ -14,7 +14,7 @@ import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { deckChoices, STOCK_DECK, type DeckArt } from '../board/deck-art';
 import { RunScore, SCORE } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
-import { firstCloud } from '../gen/clouds';
+import { firstCloud, layerAct } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { noBustedTime } from '../sim/supply';
 import { SupplyView } from '../render/supply-view';
@@ -667,9 +667,10 @@ export class Game {
   //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level.
   //`blend`: ease into it from what's on screen (rolling on from the last floor) rather than switch
   private applyMood(blend = false): number {
-    const rain = WEATHER.rain ?? (BIOMES[this.biome].dry ? 0 : rainLevel(this.seed, this.floor)); // no rain under the sea, indoors or in space
+    const biome = this.skyBiome();
+    const rain = WEATHER.rain ?? (BIOMES[biome].dry ? 0 : rainLevel(this.seed, this.floor)); // no rain under the sea, indoors or in space
     const mood = moodAt(WEATHER.clock ?? clockFor(this.floor));
-    const look = biomeMood(rain > 0 ? rainy(mood) : mood, this.biome);
+    const look = biomeMood(rain > 0 ? rainy(mood) : mood, biome);
     if (blend && this.shown) this.moodBlend = { from: this.shown.mood, fromRain: this.shown.rain, to: look, toRain: rain, t: 0 };
     else {
       this.moodBlend = null;
@@ -678,10 +679,18 @@ export class Game {
     return rain;
   }
 
+  // the sky the floor's graded to: act 5 is up in space (black, full of stars, no rain: src/gen/clouds.ts HIGH),
+  // and its escape with it; everywhere else the run's one city
+  private skyBiome(): BiomeId {
+    const space = layerAct(this.floor) === 5 || (this.road.kind === 'escape' && this.road.act >= ACTS);
+    return space && this.biome === 'chicago' ? 'space' : this.biome;
+  }
+
   private setLook(look: Mood, rain: number): void {
     this.shown = { mood: look, rain };
     this.view.setMood(look, rain);
-    this.view.ambience.set(this.biome);
+    this.view.ambience.set(this.skyBiome());
+    void this.view.setCards(this.skyBiome() === 'space' ? 'space' : this.biome);
     this.trafficView.beams.setNight(look.neon);
     this.visor.setNight(look.neon, VISOR_TINT[this.biome]);
     this.phoneFx.setNight(look.neon);
@@ -779,7 +788,7 @@ export class Game {
     this.hud.money(this.run.cash, this.run.stoken);
     if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
     if (this.road.kind === 'escape') {
-      this.hud.callout(this.sim.chaser ? CHASER_CALLS[chaserLook()].start : `ESCAPE: ${label(this.road)}`, 'bad');
+      this.hud.callout(this.sim.chaser ? CHASER_CALLS[chaserLook(this.level)].start : `ESCAPE: ${label(this.road)}`, 'bad');
     }
   }
 
@@ -1346,7 +1355,7 @@ export class Game {
       keep(t, 't');
       for (const b of t.boxes) keep(b, 'x0', 'x1');
     }
-    if (sim.chaser) keep(sim.chaser, 'x');
+    if (sim.chaser) keep(sim.chaser, 'x', 'y');
     if (sim.chopper) keep(sim.chopper, 'x');
     keep(sim.sky.chopper, 'x');
     for (const f of sim.sky.flocks) keep(f, 'x', 'y');
@@ -1463,7 +1472,7 @@ export class Game {
     } else if (this.state === 'skate' && this.sim.state === 'caught') {
       this.state = 'caught';
       this.menuAt = now;
-      this.hud.callout(this.sim.chaser?.caught ? CHASER_CALLS[chaserLook()].caught : 'BUSTED!', 'bad');
+      this.hud.callout(this.sim.chaser?.caught ? CHASER_CALLS[chaserLook(this.level)].caught : 'BUSTED!', 'bad');
       buzz(200);
       this.sound?.play(MOMENT.busted);
     }
@@ -1541,7 +1550,7 @@ export class Game {
       const street = toY(this.level, this.level.streetY);
       const ch = this.sim.chopper;
       if (ch) this.escapeFx.chopper(toX(at(ch, 'x')), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
-      if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, street, this.chaserView.surging, dt);
+      if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, this.chaserView.look === 'rocket' ? this.chaserView.group.position.y : street, this.chaserView.surging, dt);
     }
     this.pedView.update(this.level, this.skater, dt, toX(this.skater.x), this.biome);
     this.phoneFx.update(this.pedView.phones());
