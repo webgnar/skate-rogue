@@ -250,7 +250,7 @@
     "keys": [
       {"t":0,"pose":{"yaw":1,"hipY":0.9934,"lean":0.12,"head":0.2,"footFX":0.038,"footFTurn":1.4,"footBX":0.3699,"footBY":0.1987,"footBZ":0.12,"footBOn":0,"footBTurn":1.2968,"footBPitch":-0.0489,"kneeFZ":-0.4472,"kneeBZ":-0.4191}},
       {"t":0.1667,"pose":{"yaw":1.1,"hipY":0.8098,"lean":0.22,"head":0.1,"armLFwd":0.4,"armRFwd":-0.3,"footFX":0.038,"footFTurn":1.4,"footBX":-0.3236,"footBY":0,"footBZ":0.26,"footBOn":0,"footBTurn":1.4713,"footBPitch":0.7714,"footBToe":0.7016,"kneeFX":-0.0003,"kneeFZ":-0.3726,"kneeBY":0.0291,"kneeBZ":-0.4879}},
-      {"t":0.3,"pose":{"yaw":1.1,"hipY":0.7,"hipZ":-0.0187,"lean":0.3,"bend":0.25,"head":0.1,"armLFwd":-0.3,"armRRaise":-0.2366,"armRFwd":1.1292,"armRElbow":0.7319,"footFX":0.2,"footFTurn":1.4,"footBX":-0.8035,"footBY":0.1969,"footBZ":0.14,"footBOn":0,"footBTurn":1.384,"footBPitch":1.3998,"footBToe":-0.1885,"kneeBZ":-0.4253}},
+      {"t":0.3,"pose":{"yaw":1.1,"hipY":0.7,"hipZ":-0.0187,"lean":0.3,"bend":0.25,"head":0.1,"armLFwd":-0.3,"armRRaise":-0.2366,"armRFwd":1.1292,"armRElbow":0.7319,"footFX":0.2,"footFTurn":1.4,"footBX":-0.775,"footBY":0.1969,"footBZ":0.14,"footBOn":0,"footBTurn":1.384,"footBPitch":1.3998,"footBToe":-0.1885,"kneeBZ":-0.4253}},
       {"t":0.4667,"pose":{"yaw":1,"hipY":0.84,"lean":0.18,"head":0.2,"armRRaise":-0.4909,"armRFwd":0.7065,"armRElbow":0.7961,"footFX":0.2,"footFTurn":1.4,"footBX":-0.265,"footBY":0.3,"footBZ":0.12,"footBOn":0,"footBTurn":1.3666,"footBPitch":1.1205,"kneeBZ":-0.3571}},
       {"t":1,"pose":{"yaw":1,"hipY":0.9934,"lean":0.12,"head":0.2,"footFX":0.038,"footFTurn":1.4,"footBX":0.3699,"footBY":0.1987,"footBZ":0.12,"footBOn":0,"footBTurn":1.2968,"footBPitch":-0.0489,"kneeFZ":-0.4472,"kneeBZ":-0.4191}}
     ]

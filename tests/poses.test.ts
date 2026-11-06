@@ -127,10 +127,10 @@ describe('rig poses', () => {
     const smith = sample(CLIPS.smith, 0);
     expect(deckPoint(smith, BOARD.tail).z).toBeGreaterThan(0.1);
     expect(deckPoint(smith, BOARD.tail).y).toBeLessThan(deckPoint(smith, -BOARD.bolts).y);
-    expect(Math.abs(deckPoint(smith, -BOARD.bolts).z)).toBeLessThan(1e-6); // back truck on the rail
+    expect(Math.abs(deckPoint(smith, -BOARD.bolts).z)).toBeLessThan(1e-4); // back truck on the rail (the editor saves 4 decimals)
     const feeble = sample(CLIPS.feeble, 0);
     expect(deckPoint(feeble, BOARD.tail).z).toBeLessThan(-0.1);
-    expect(Math.abs(deckPoint(feeble, -BOARD.bolts).z)).toBeLessThan(1e-6);
+    expect(Math.abs(deckPoint(feeble, -BOARD.bolts).z)).toBeLessThan(1e-4);
     const fiveO = sample(CLIPS.fiveO, 0);
     expect(deckPoint(fiveO, BOARD.tail).y).toBeGreaterThan(deckPoint(fiveO, -BOARD.bolts).y); // nose up
   });
@@ -157,7 +157,7 @@ describe('rig poses', () => {
   it('boneless (car hops): front foot steps off the board onto the roof, then back on, with a switch twin', () => {
     expect(CLIPS.boneless.loop).toBe(false);
     expect(sample(CLIPS.boneless, 0.12).footFOn).toBe(0);
-    expect(sample(CLIPS.boneless, 0.36).footFOn).toBe(1);
+    expect(sample(CLIPS.boneless, 0.3667).footFOn).toBe(1);
     expect(CLIPS.switchBoneless).toBeTruthy();
   });
 
@@ -192,8 +192,8 @@ describe('rig poses', () => {
     expect(footTarget(sw, true).x).toBeGreaterThan(footTarget(sw, false).x);
     expect(sw.yaw).toBeCloseTo(-p.yaw);
     // the pushing foot strokes the other way: toward +x, behind you when the rig is turned round
-    const a = sample(CLIPS.switchPush, 0.21);
-    const b = sample(CLIPS.switchPush, 0.56);
+    const a = sample(CLIPS.switchPush, 0.05); // the foot set down ahead (zack's push keys)
+    const b = sample(CLIPS.switchPush, 0.3); // the end of the stroke
     expect(a.footFOn).toBeLessThan(0.5);
     expect(b.footFX).toBeGreaterThan(a.footFX);
   });
