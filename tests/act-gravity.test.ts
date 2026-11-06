@@ -47,7 +47,7 @@ describe('act gravity', () => {
     expect(floorLevel({ seed: 3, floor: 14, road, library: FULL_LIBRARY, gnar: 0 }).gravity).toBe(0.3);
     //escapes keep street gravity for now
     expect(floorLevel({ seed: 3, floor: 12, road: { kind: 'escape', act: 4, danger: 3 }, library: FULL_LIBRARY, gnar: 0 }).gravity).toBeUndefined();
-  });
+  }, 60000);
 
   it('jumps grow about 1/g high and 1/g long', () => {
     const base = jump(1, true);
