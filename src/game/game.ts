@@ -196,16 +196,15 @@ export interface Hud {
   missionTick?(t: MissionTick): void; // a mission moved on mid-run: the popup above the gear wear
   missionDone?(t: MissionTick): void; // a mission finished mid-run: the popup goes gold
   dice(view: DiceView | null): void; // the end-of-run street dice, before the summary; null hides them
-  diceThrow(): void; // throw the dice (the first tap)
-  diceSkip(): void; // land every die where it stops
+  diceTap(): boolean; // a tap on the dice: throw, land, claim, next pair; true once the last prize is claimed
 }
 
-// the street dice: a pair per roll (one free, one per chip found), all thrown at once
+// the street dice: a pair per roll (one free, one per chip found), thrown one at a time
 export interface DiceView {
   rolls: { dice: Roll['dice']; name: string; prize: PrizeLabel; big: boolean; match: boolean }[];
 }
 
-export const DICE_MS = 1300; // the dice tumble this long before the last pair lands (src/ui/dice-panel.ts)
+export const DICE_MS = 1300; // a pair of dice tumbles this long before it lands (src/ui/dice-panel.ts)
 
 type State = 'skate' | 'caught' | 'cont' | 'pick' | 'shop' | 'under' | 'dice' | 'over';
 
@@ -421,7 +420,6 @@ export class Game {
   private grindPx = 0;
   private floorBusted = false; // a part busted this floor
   private overResult: RunResult | null = null; // the summary, shown once the dice are done
-  private diceEnd = 0; // when the last pair of dice lands; 0: not thrown yet
   // one street (zack: no stop or cut between floors): through the gate you roll on, and at the end of the floor the
   // next one is already there, built in the background while you skated this one
   private readonly prefetch = new FloorPrefetch();
@@ -1177,7 +1175,6 @@ export class Game {
     if (!rolls.length) return this.hud.over(result);
     this.overResult = result;
     this.openMenu('dice', now);
-    this.diceEnd = 0;
     this.hud.dice({
       rolls: rolls.map((r) => ({
         dice: r.dice,
@@ -1203,29 +1200,11 @@ export class Game {
     return won.rolls;
   }
 
-  // a shake of the phone: throws the dice, like the first tap (src/ui/dice-panel.ts listens for it)
-  shakeDice(): void {
-    if (this.state !== 'dice' || this.diceEnd) return;
-    const now = performance.now();
-    this.hud.diceThrow();
-    this.diceEnd = now + DICE_MS;
-    this.menuAt = now;
-  }
-
-  // the dice's taps: the first throws them, one while they tumble lands them, the next goes on to the summary
+  // the dice's taps go to the dice screen (src/ui/dice-panel.ts), one pair at a time; once the last prize is
+  // claimed, on to the summary (a shake of the phone throws a pair there too)
   private diceTap(now: number): void {
-    if (!this.diceEnd) {
-      this.hud.diceThrow();
-      this.diceEnd = now + DICE_MS;
-      this.menuAt = now;
-      return;
-    }
-    if (now < this.diceEnd) {
-      this.hud.diceSkip();
-      this.diceEnd = now;
-      this.menuAt = now;
-      return;
-    }
+    this.menuAt = now;
+    if (!this.hud.diceTap()) return;
     this.hud.dice(null);
     this.openMenu('over', now);
     if (this.overResult) this.hud.over(this.overResult);
