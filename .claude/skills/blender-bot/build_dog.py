@@ -41,20 +41,20 @@ bm = C.bm
 JAW = 1
 
 # ---------- 1. block out ----------
-HIP = Vector((0, 0, 9.5))
-C.start_cube((5.0, 8.6, 5.4), HIP, round_long=1.6)        # the ribcage and loins
+HIP = Vector((0, 0, E('HZ', 9.8)))
+C.start_cube((5.0, E('BL', 12.0), E('BD', 6.4)), HIP, round_long=1.6)        # the ribcage and loins
 
 front = C.run(C.face_where((0, -1, 0)), [
     ((0, -1, E('CZ', 0.05)), 0.6, 1.0, 1.15),    # the deep chest, dropping to the front legs
-    ((0, -0.6, 0.8), 0.5, 0.95, 1.0),      # the shoulders, rounding up
+    ((0, -0.6, E('SZ', 0.4)), 0.5, 0.95, 1.0),      # the shoulders, rounding up
 ], name='chest', region='chest')
 front = C.run(front, [
-    ((0, 0.15, 1), 0.8, 1.0, 1.05),   # the neck, thick with coat, held up
-    ((0, 0.0, 1), 0.5, 1.0, 1.0),
+    ((0, E('NY', -0.25), 1), E('N1', 0.4), 1.0, 1.0),   # the neck, thick, reaching forward and up
+    ((0, E('NY', -0.25) * 0.6, 1), E('N2', 0.3), 1.0, 1.0),
 ], name='neck', region='neck')
 front = C.run(front, [
-    ((0, -1, 0.1), 1.0, 1.25, 1.0),      # the back of the skull swells: a big round doodle head
-    ((0, -1, 0.0), 1.6, 1.0, 0.9),       # the skull, to the stop
+    ((0, -1, 0.1), 1.0, E('HS', 1.0), 1.0),      # the back of the skull swells: a big round doodle head
+    ((0, -1, 0.0), E('SK', 1.3), 1.0, 0.9),       # the skull, to the stop
 ], name='head', region='head')
 nc = front.calc_center_median()
 hh = max(v.co.z for v in front.verts) - min(v.co.z for v in front.verts)
@@ -71,17 +71,17 @@ C.run(low, [
 
 tail = C.run(C.face_where((0, 1, 0)), [
     ((0, 1, 0.0), 0.4, 0.95, 0.95),      # the rump
-    ((0, 1, 0.3), 0.8, 0.6, 0.6),        # the tail's root
+    ((0, 1, E('TR', -0.5)), 0.7, 0.6, 0.6),      # the tail's root
 ], name='rump', region='body')
 tip = C.run(tail, [
-    ((0, 0.6, 0.8), 1.2, 1.0, 1.0),      # the tail: a short curly plume, carried up
-    ((0, 0.1, 1), 1.1, 1.05, 1.05),
-    ((0, 0.0, 1), 0.8, 0.8, 0.8),
+    ((0, E('TY', 0.35), -0.6), 1.6, 0.9, 0.9),     # the tail, an otter tail hanging down behind
+    ((0, 0.5, -1), 1.8, 0.85, 0.85),
+    ((0, 0.3, -1), 1.4, 0.7, 0.7),
 ], name='tail', region='tail')
 C.end_point(tip, tip.calc_center_median() + Vector((0, -0.2, 0.6)))
 
 
-OPEN = (0, C.regions['chest'])   # a leg may grow out of the body or the chest
+OPEN = (0, C.regions['chest'], C.regions['neck'])   # a leg may grow out of the body or the chest
 
 
 def belly_pair(y0, y1, x_cut, below=1.0):
@@ -89,7 +89,7 @@ def belly_pair(y0, y1, x_cut, below=1.0):
     bm.normal_update()
     faces = [f for f in bm.faces if f.normal.z < -0.3 and f.calc_center_median().z < HIP.z - below
              and min(v.co.y for v in f.verts) < y1 and max(v.co.y for v in f.verts) > y0
-             and all(v[C.LIMB] == 0 and v[C.REG] in OPEN for v in f.verts)]
+             and all(v[C.LIMB] in (0, C.limbs['chest']) and v[C.REG] in OPEN for v in f.verts)]
     pats = C.knife_pair(faces, [((0, y1, 0), (0, 1, 0)), ((0, y0, 0), (0, -1, 0))], x_cut)
     for side in (-1, 1):
         fs = pats[side]
@@ -99,24 +99,24 @@ def belly_pair(y0, y1, x_cut, below=1.0):
 
 
 LEGS = {}
-fp = belly_pair(-5.4, -2.9, E('FX', 0.6))
+fp = belly_pair(E('F0', -9.4), E('F1', -7.2), E('FX', 0.6))
 for side in (-1, 1):
     key = 'front_l' if side < 0 else 'front_r'
     C.run(fp[side], [
         (tuple(fp[side].normal), 0.5, 1.0, 1.0, (1.1, 1.0, 1.0), (side * 0.15, 0, 0)),   # the shoulder
-        ((side * 0.05, -0.2, -1), 1.4, 1.05, 1.0),       # the upper arm, forward under the chest, thick with coat
-        ((0, -0.05, -1), 2.05, 1.05, 1.0),               # the forearm, fluffing out to the paw
-        ((0, -0.12, -1), 1.0, 1.05, 1.0),                # the pastern
+        ((side * 0.05, E('UA', 0.05), -1), 1.4, 1.05, 1.0),       # the upper arm, forward under the chest, thick with coat
+        ((0, -0.05, -1), E('FA', 2.6), 1.05, 1.0),               # the forearm, fluffing out to the paw
+        ((0, E('PA', 0.0), -1), 1.0, 1.05, 1.0),                # the pastern
         ((0, -1, -0.2), 0.9, 1.0, 0.55),                 # the paw
     ], name=key, region='leg')
     LEGS[key] = side
-hp = belly_pair(1.9, 4.3, 0.3)
+hp = belly_pair(E('H0', 3.4), E('H1', 5.8), 0.3)
 for side in (-1, 1):
     key = 'hind_l' if side < 0 else 'hind_r'
     C.run(hp[side], [
         (tuple(hp[side].normal), 0.5, 1.0, 1.0, (1.15, 1.0, 1.0), (side * 0.15, 0, 0)),  # the haunch
-        ((side * 0.05, -0.1, -1), 1.6, 1.05, 1.0),       # the thigh
-        ((0, 0.4, -1), 1.6, 1.0, 1.0),                   # the shin, back to the hock
+        ((side * 0.05, -0.1, -1), E('TH', 1.9), 1.05, 1.0),       # the thigh
+        ((0, 0.4, -1), E('SH', 1.9), 1.0, 1.0),                   # the shin, back to the hock
         ((0, -0.08, -1), 1.0, 1.05, 1.0),                # below the hock
         ((0, -1, -0.2), 0.9, 1.0, 0.55),                 # the paw
     ], name=key, region='leg')
@@ -287,7 +287,7 @@ def run(n, ph):
     return ZERO
 
 
-SIT_BODY = float(os.environ.get("SIT_BODY", -35))     # the back tipped up on its haunches
+SIT_BODY = float(os.environ.get("SIT_BODY", -28))     # the back tipped up on its haunches
 SIT_DROP = float(os.environ.get("SIT_DROP", 4.6))
 
 
@@ -297,7 +297,7 @@ SH_LX, SH_LZ, SH_SH, SH_AH = E("SH_LX", 0), E("SH_LZ", 38), E("SH_SH", 40), E("S
 def sat(n):
     """the sitting pose, to lay the sit over"""
     if n == "Body": return [SIT_BODY, 0, 0], [0, 0, SIT_DROP]
-    if n.startswith("LegFront"): return [-SIT_BODY - 6, 0, 0], [0, 0, 0]
+    if n.startswith("LegFront"): return [-SIT_BODY - E("SIT_FL", 15), 0, 0], [0, 0, 0]
     if n.startswith("FootFront"): return [-6, 0, 0], [0, 0, 0]
     if n.startswith("LegHind"): return [SH_LX, 0, -SH_LZ if n.endswith("Right") else SH_LZ], [0, 0, 0]   # splayed, outside the front legs
     if n.startswith("ShinHind"): return [SH_SH, 0, 0], [0, 0, 0]
