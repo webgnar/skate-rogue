@@ -451,7 +451,7 @@ describe('the sewer route, built out', { timeout: 60000 }, () => {
   it('the tunnel to the gate is the sewer road: up out of it at the gate, on to the underground spot', () => {
     let roads = 0;
     for (let seed = 1; seed <= 40 && roads < 2; seed++) {
-      const level = floorLevel({ seed: seed * 7919, floor: 2, road: FIRST_ROAD, library: { types: ['POP', 'GRIND', 'FLOW', 'COOL', 'LUCK', 'STREET'] } as never, gnar: 0 });
+      const level = floorLevel({ seed: seed * 7919, floor: 2, road: FIRST_ROAD, library: { types: ['POP', 'GRIND', 'FLOW', 'COOL', 'LUCK'] } as never, gnar: 0 });
       const s = level.sewers?.find((w) => w.gate && w.entry === 'dig' && !w.kicks?.length && !w.piece);
       if (!s) continue;
       expect(level.fork?.sewer?.kind).toBe('spot');
