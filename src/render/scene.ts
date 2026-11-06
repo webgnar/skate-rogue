@@ -4,6 +4,7 @@ import type { Level } from '../physics/level';
 import { CAM, CLOSE_CAM, CamDrift, CloseUp, DYN_CAM, LouZoom, Rhythm, SMOOTH, Spring, framing, softFloor, type Framing } from './camera';
 import { SETTINGS } from '../ui/settings';
 import { LENS, Lens, lensSource, lensWiden } from './lens';
+import { LAYER, solidAlpha, type Box, type SkaterLayer } from './skater-layer';
 import { updateShown } from './shown';
 import { tilt } from './tilt';
 import { buildKitSteps, LEAD, toX, toY } from './kit';
@@ -190,7 +191,8 @@ export class StreetView {
     readonly canvas: HTMLCanvasElement,
     private level: Level,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: true, alpha: true });
+    this.renderer.setClearAlpha(1); // alpha only for the skater's pass over the HUD (skater-layer.ts)
     //checking a shader for errors waits for it to finish compiling: only in development
     this.renderer.debug.checkShaderErrors = !import.meta.env.PROD;
     this.keep = new ShaderKeep(this.renderer);
@@ -739,6 +741,71 @@ export class StreetView {
     this.compiled = 0;
   }
 
+  // the canvas over the HUD that holds the skater where he crosses it (skater-layer.ts); main.ts hands it over
+  layer: SkaterLayer | null = null;
+  private readonly layerBox = new THREE.Box3();
+  private readonly layerPt = new THREE.Vector3();
+
+  // the box the skater takes on screen (css px), bent by the fisheye like the picture, or null when he isn't shown
+  private skaterBox(): Box | null {
+    if (!this.actor.visible || this.actor.children.length === 0) return null;
+    const b = this.layerBox.setFromObject(this.actor);
+    if (b.isEmpty()) return null;
+    const tanY = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
+    const tanX = tanY * this.camera.aspect;
+    const k = this.lensK > 0.001 ? Math.min(1, this.lensK) : 0;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < 8; i++) {
+      const p = this.layerPt.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z);
+      p.applyMatrix4(this.camera.matrixWorldInverse);
+      if (p.z > -0.05) return null; // a corner behind the lens: too close to box sensibly
+      p.applyMatrix4(this.camera.projectionMatrix);
+      let nx = p.x, ny = p.y;
+      if (k > 0) {
+        //where the lens puts this flat point: walk the screen point until the lens's source lands on it
+        const fx = p.x, fy = p.y;
+        for (let n = 0; n < 6; n++) {
+          const [sx, sy] = lensSource(k, tanX, tanY, nx, ny);
+          nx += fx - sx / tanX;
+          ny += fy - sy / tanY;
+        }
+      }
+      x0 = Math.min(x0, nx); x1 = Math.max(x1, nx); y0 = Math.min(y0, ny); y1 = Math.max(y1, ny);
+    }
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    const px = ((x1 - x0) * LAYER.pad) / 2, py = ((y1 - y0) * LAYER.pad) / 2;
+    const left = Math.max(0, ((x0 - px + 1) / 2) * w), right = Math.min(w, ((x1 + px + 1) / 2) * w);
+    const top = Math.max(0, ((1 - (y1 + py)) / 2) * h), bottom = Math.min(h, ((1 - (y0 - py)) / 2) * h);
+    if (right - left < 1 || bottom - top < 1) return null;
+    return { x: left, y: top, w: right - left, h: bottom - top };
+  }
+
+  // the skater alone in his box on a clear background, copied up over the HUD; before the frame proper, which then
+  // draws over it
+  private drawLayer(): void {
+    const layer = this.layer;
+    if (!layer) return;
+    const box = this.skaterBox();
+    if (!box || !layer.wants(box)) {
+      layer.clear();
+      return;
+    }
+    const r = this.renderer;
+    const h = this.canvas.clientHeight;
+    r.setScissor(box.x, h - box.y - box.h, box.w, box.h);
+    r.setScissorTest(true);
+    r.setClearAlpha(0);
+    this.over.visible = this.withActor.visible = false;
+    this.lens.render(r, this.camera, this.lensK, FX.pixel > 1, this.lensLevel > 1, () => {
+      r.clear();
+      r.render(this.front, this.camera);
+    });
+    this.over.visible = this.withActor.visible = true;
+    r.setClearAlpha(1);
+    r.setScissorTest(false);
+    layer.copy(this.canvas, box);
+  }
+
   get resolution(): number {
     return this.pixelRatio;
   }
@@ -753,6 +820,7 @@ export class StreetView {
     //the ink pre-corrects for the fisheye's bend (toon.ts inkLens), with the same strength and angles the lens uses
     const tanY = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
     setInkLens(this.lensK > 0.001 ? Math.min(1, this.lensK) : 0, tanY * this.camera.aspect, tanY);
+    this.drawLayer();
     this.lens.render(this.renderer, this.camera, this.lensK, FX.pixel > 1, this.lensLevel > 1, () => {
       const r = this.renderer;
       r.clear();
@@ -790,6 +858,7 @@ export class StreetView {
       r.render(this.front, this.camera);
       this.actor.visible = this.withActor.visible = true;
     });
+    if (this.layer) solidAlpha(this.renderer);
     this.scene.matrixWorldAutoUpdate = this.front.matrixWorldAutoUpdate = true;
     this.compiled += this.keep.pin();
   }
