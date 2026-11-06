@@ -809,6 +809,7 @@ less art too (NO BLOAT).
 | Boon | Type | Effect |
 | --- | --- | --- |
 | Fiberglass Core | POP | Your deck wears half as fast, and every new deck you buy |
+| Shoe Sponsor | POP | Your shoes wear half as fast, and every new pair you buy (zack, Nov 6: the shoes' card) |
 | Ceramic Bearings | FLOW | Your bearings wear half as fast, and every new set you buy |
 | Classified Urethane | FLOW | Your wheels wear half as fast, and every new set you buy |
 
@@ -830,7 +831,7 @@ idea now lives on one card:
   landings keep the 350 ms impact for everyone.
 - The duos re-pair: **Perpetual Motion** is Butter + Full Sail. The board mod **Jump Refill** went (Double Pop is
   the extra-jump effect).
-- **Left:** 17 boons (POP 3, GRIND 5, FLOW 5, COOL 2, LUCK 2, counting the gear boons), 3 curses, 3 duos: 23 cards. The curses echo Big
+- **Left:** 18 boons (POP 4, GRIND 5, FLOW 5, COOL 2, LUCK 2, counting the four gear boons with Shoe Sponsor), 3 curses, 3 duos: 24 cards. The curses echo Big
   Pop, New Wheels and Double Stoken on purpose: a curse is a strong version with a catch.
 
 ### Combos (duo boons)
@@ -886,6 +887,11 @@ and a slot flashes when it fires. No Heat cool-down or boon reroll in the shop y
 
 ## Gear and wear
 
+**Gear comes first** (zack, Nov 6, 2026): keeping your setup rolling should matter MORE than the other upgrades
+(boons and board mods). A worn-out board is the run's main pressure, the gear boons (Fiberglass Core, Shoe Sponsor,
+Ceramic Bearings, Classified Urethane) are the strongest picks for a long run, and shop cash should mostly go on
+parts. When a choice between gear and another upgrade comes up in tuning, gear wins.
+
 zack, Oct 24, 2026: your gear wears out with use and has to be replaced at the shop. Five parts (bearings added
 Oct 30), each worn by the thing it takes the beating from:
 
@@ -919,7 +925,15 @@ Oct 30), each worn by the thing it takes the beating from:
 - **Acts 3-4 (measured Nov 6, 2026):** a floor wears gear about twice as hard late in the run as in act 1 (the
   deck and wheels lose 35 to 45 a floor by acts 3-4, against about 20). Buying every part at every shop, the bot
   still reached the floor 9 shop with the deck at 4, wheels 12 and shoes 16. The gear boons (see Boons) halve the
-  deck, bearings and wheels, which puts them back near act 1's numbers at that shop (deck about 52, wheels about 56).
+  deck, bearings and wheels, which puts them back near act 1's numbers at that shop (deck about 52, wheels about 56),
+  and Shoe Sponsor does the same for the shoes (about 58).
+- **Supply pickups on long routes** (zack, Nov 6, 2026) **(not in the build yet):** once routes get longer, a
+  single-part replacement lies along the way now and then: a new deck, a pair of shoes, a set of wheels, bearings
+  or trucks, ridden through like a coin and fitted on the spot (that part back to 100). Defaults until tuned: from
+  act 3 on, at most one per floor, more likely on the longer routes (the sewer and sky routes, long hills), placed on
+  the harder line so reaching it is a choice, and the part is whichever of yours is most worn when you grab it
+  (the pickup shows a plain gear crate until then). Open: whether it's always the most-worn part or a fixed part
+  you can see from afar, and how rare.
 - **Later:** decks from the meta tree can wear slower (a "pro deck" stat), and boons can play with wear (a curse
   that wears gear twice as fast for a big effect, or a LUCK boon that repairs a part on each floor clear).
 
@@ -1378,8 +1392,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 ## Open questions
 
 - **After the boon cut and the overlap pass** (Nov 6, 2026, see Boons): COOL and LUCK are 2 cards each, so their boon streets mostly deal other types (default: fill from any type) and unlocking COOL or LUCK in
-  the meta tree buys little. Shoes still wear out by act 3 (16 at the floor 9 shop for the bot) with no gear boon
-  for them. Whether to add cards there, fold more types, or leave it lean is zack's call; default: leave it lean.
+  the meta tree buys little. Whether to add cards there, fold more types, or leave it lean is zack's call; default: leave it lean.
 - **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
   to each, and how each is designed for them.
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.

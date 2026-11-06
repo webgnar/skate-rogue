@@ -10,7 +10,7 @@ export type BoonId =
   | 'doubleStoken' | 'hustler'
   | 'moonShoes' | 'wanted' | 'speedWobbles'
   | 'rocketGrind' | 'skyLine' | 'perpetualMotion'
-  | 'ceramicBearings' | 'classifiedUrethane';
+  | 'ceramicBearings' | 'classifiedUrethane' | 'shoeSponsor';
 
 export interface Held {
   id: BoonId;
@@ -77,6 +77,10 @@ export const BOONS: Boon[] = [
   {
     id: 'fiberglassCore', type: 'POP', name: 'Fiberglass Core', effect: 'Your deck wears half as fast', note: 'and every new deck you buy',
     max: 1, when: (r) => r.floor >= 2, gear: true,
+  },
+  {
+    id: 'shoeSponsor', type: 'POP', name: 'Shoe Sponsor', effect: 'Your shoes wear half as fast', note: 'and every new pair you buy',
+    max: 1, when: (r) => r.floor >= 2, gear: true, // zack, 2026-11-06
   },
   {
     id: 'ceramicBearings', type: 'FLOW', name: 'Ceramic Bearings', effect: 'Your bearings wear half as fast', note: 'and every new set you buy',

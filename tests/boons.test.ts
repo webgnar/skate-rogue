@@ -30,9 +30,9 @@ function peak(sk: Skater, frames: number, script: (f: number) => StepInput): num
 }
 
 describe('boon data', () => {
-  it('has 3 POP, 5 GRIND, 5 FLOW, 2 COOL and 2 LUCK boons (counting the gear boons) (overlaps merged, zack 2026-11-06), plus curses and duos, with unique ids', () => {
+  it('has 4 POP, 5 GRIND, 5 FLOW, 2 COOL and 2 LUCK boons (counting the gear boons) (overlaps merged, zack 2026-11-06), plus curses and duos, with unique ids', () => {
     const plain = BOONS.filter((b) => !b.cursed && !b.duo);
-    expect(plain.filter((b) => b.type === 'POP')).toHaveLength(3);
+    expect(plain.filter((b) => b.type === 'POP')).toHaveLength(4);
     expect(plain.filter((b) => b.type === 'GRIND')).toHaveLength(5);
     expect(plain.filter((b) => b.type === 'FLOW')).toHaveLength(5);
     expect(plain.filter((b) => b.type === 'COOL')).toHaveLength(2);

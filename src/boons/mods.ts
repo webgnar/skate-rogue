@@ -34,10 +34,10 @@ export interface Mods {
   // the skater and deck (src/run/meta.ts)
   airCool: number; // multiplier on Heat cooling while airborne (Keanu)
   wearScale: number; // multiplier on gear wear (Bombhill deck)
-  partWear: { deck: number; wheels: number; bearings: number }; // per-part wear multipliers (the gear boons)
+  partWear: { deck: number; shoes: number; wheels: number; bearings: number }; // per-part wear multipliers (the gear boons)
 }
 
-// Fiberglass Core, Classified Urethane, Ceramic Bearings: their part wears this much as fast
+// Fiberglass Core, Shoe Sponsor, Classified Urethane, Ceramic Bearings: their part wears this much as fast
 export const GEAR_BOON_WEAR = 0.5;
 
 export const NO_MODS: Mods = {
@@ -67,7 +67,7 @@ export const NO_MODS: Mods = {
   skyLine: false,
   airCool: 1,
   wearScale: 1,
-  partWear: { deck: 1, wheels: 1, bearings: 1 },
+  partWear: { deck: 1, shoes: 1, wheels: 1, bearings: 1 },
 };
 
 export function skaterMods(boons: Held[]): Mods {
@@ -101,6 +101,7 @@ export function skaterMods(boons: Held[]): Mods {
     wearScale: 1,
     partWear: {
       deck: s('fiberglassCore') ? GEAR_BOON_WEAR : 1,
+      shoes: s('shoeSponsor') ? GEAR_BOON_WEAR : 1,
       wheels: s('classifiedUrethane') ? GEAR_BOON_WEAR : 1,
       bearings: s('ceramicBearings') ? GEAR_BOON_WEAR : 1,
     },
