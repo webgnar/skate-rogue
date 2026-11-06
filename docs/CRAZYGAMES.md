@@ -31,7 +31,7 @@ All of it is in `src/net/portal.ts`, read through `ON_CRAZYGAMES`.
 | Saves | `store` (save, settings, effect settings, `?reset`) writes the SDK's Data module and localStorage both, and reads the Data module first. The Data module only works with **Progress Save** ticked at submission. |
 | Full screen | The pause card's FULL SCREEN switch, the auto full screen on phones and the Add to Home Screen tip are off (CrazyGames forbids a game's own full screen button). The page loses its home screen app tags. |
 | Leaderboard | Off: no SCORES button, no posting. It lives on our Vercel server (`/api/leaderboard`), which the portal doesn't serve, and free-typed player tags would need moderation on a 13+ site. |
-| Dev tools | The pause card's DEV TOOLS button is hidden. |
+| Dev tools | The pause card's DEV TOOLS button is hidden, and the dev keys (C, [, ], .) do nothing. |
 | Ads | **Paused (zack, 2026-10-31).** `breakAd` (called on the game over card) and `rewardAd` exist, but `ADS_ENABLED` is `false`, so both resolve at once and never ask the SDK. Basic Launch forbids ads anyway. Turning them on is zack's call. |
 
 ## Limits (checked 2026-11-06, docs.crazygames.com/requirements/technical)

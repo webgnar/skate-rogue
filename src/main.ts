@@ -672,6 +672,7 @@ async function start() {
     });
   }
   window.addEventListener('keydown', (e) => {
+    if (ON_CRAZYGAMES) return; // the dev keys stay off on the portal, like the DEV TOOLS button
     if (e.code === 'KeyC') {
       game.toggleCollision();
       saveDev();
