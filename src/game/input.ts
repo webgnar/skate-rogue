@@ -2,9 +2,15 @@
 // and blocks scrolling, zooming, text selection and the long-press menu. Two fingers pinch the camera instead.
 import type { StepInput } from '../physics/skater';
 
+// a press waits this long (real ms) for a physics step to take it, then it's dropped, and no more than PRESS_QUEUE wait
+// at once. Taps made while the street didn't step (a slam's hit-stop, a long frame) used to queue and then fire one a
+// step afterwards: an ollie and a run of flips with no click at the time (zack, 2026-11-06)
+export const PRESS_TTL_MS = 200;
+export const PRESS_QUEUE = 2;
+
 export class OneButton {
   private down = 0; // pointers and keys currently holding the button
-  private presses = 0; // presses not yet handed to a physics step
+  private presses: number[] = []; // when each press not yet handed to a physics step was made (ms)
   lastTarget: Element | null = null; // what the last pointer press landed on (boon cards)
 
   // two fingers on the street pinch the camera: called with how much the gap between them grew since the last call
@@ -16,7 +22,8 @@ export class OneButton {
   constructor(target: HTMLElement) {
     const press = () => {
       this.down++;
-      this.presses++;
+      this.presses.push(performance.now());
+      if (this.presses.length > PRESS_QUEUE) this.presses.shift();
     };
     const release = () => {
       this.down = Math.max(0, this.down - 1);
@@ -98,21 +105,21 @@ export class OneButton {
   }
 
   // the input for one physics step: a press is handed out once
-  sample(): StepInput {
-    const pressed = this.presses > 0;
-    if (pressed) this.presses--;
+  sample(now = performance.now()): StepInput {
+    while (this.presses.length && now - this.presses[0] > PRESS_TTL_MS) this.presses.shift();
+    const pressed = this.presses.shift() !== undefined;
     return { pressed, held: this.down > 0 || pressed };
   }
 
   // drop presses made while the street was paused
   clear(): void {
-    this.presses = 0;
+    this.presses = [];
   }
 
   // a press the game used outside physics (menus and restarting)
   takePress(): boolean {
-    if (this.presses === 0) return false;
-    this.presses = 0;
+    if (!this.presses.length) return false;
+    this.presses = [];
     return true;
   }
 }
