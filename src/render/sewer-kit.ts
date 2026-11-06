@@ -319,20 +319,23 @@ export function buildSewers(level: Level): THREE.Group {
       }
       if (b > x) box(x, b, rock, fy - 0.3, STREET_BACK, FRONT, ground);
     };
+    //(not under a climb up from deeper: the bank's own wedge is the ground there, all the way down. Round it however
+    //the ground's split: a subway gap after the climb used to run the ground at the floor's height right over it, and
+    //the climb's ramp was buried in a block you skated up through, zack 2026-11-06)
+    const climb = s.climb ? [X(s.climb[0]), X(s.climb[1])] : null;
+    const solid = (a: number, b: number) => {
+      if (!climb || b <= climb[0] || a >= climb[1]) return groundRun(a, b);
+      if (a < climb[0]) groundRun(a, climb[0]);
+      if (b > climb[1]) groundRun(climb[1], b);
+    };
     let gx = before ? x0 : x0 - 0.5;
     for (const [a, b] of gaps) {
-      groundRun(gx, a);
+      solid(gx, a);
       gx = b;
     }
-    //(not under a climb up from deeper: the bank's own wedge is the ground there, all the way down)
     const gEnd = after ? x1 : x1 + 0.5;
-    if (s.climb) {
-      const [c0, c1] = [X(s.climb[0]), X(s.climb[1])];
-      if (c0 > gx) groundRun(gx, c0);
-      box(c0, c1, s.deep ? DEEP_ROCK : ROCK - 6, Math.min(fy, ...all.filter((o) => o.x1 === s.x0).map((o) => Y(o.y))) - 0.3, STREET_BACK, FRONT, ground);
-      gx = Math.max(gx, c1);
-    }
-    if (gEnd > gx) groundRun(gx, gEnd);
+    if (climb) box(climb[0], climb[1], s.deep ? DEEP_ROCK : ROCK - 6, Math.min(fy, ...all.filter((o) => o.x1 === s.x0).map((o) => Y(o.y))) - 0.3, STREET_BACK, FRONT, ground);
+    if (gEnd > gx) solid(gx, gEnd);
     if (!before) box(x0 - 6, x0 - 0.5, ROCK, -3, STREET_BACK, FRONT, ground);
     if (!after) box(x1 + 0.5, x1 + 6, ROCK, -3, STREET_BACK, FRONT, ground);
     //the tunnel's ends and back wall

@@ -116,6 +116,19 @@ describe('dead flips (zack, 2026-11-01: flip with no jumps left, land mid-flip a
     expect(sk.events.filter((e) => e.type === 'trick').length).toBe(n);
   });
 
+  //(zack, 2026-11-06: "its doing multiple flip tricks in the air without me clicking")
+  it('a tap in the last frames of a spin is not saved up into a dead flip once it is caught', () => {
+    const sk = spent();
+    sk.step({ pressed: true, held: true }); // a dead flip
+    while (sk.trickCatch - sk.trickT > 2) sk.step({ pressed: false, held: true });
+    sk.step({ pressed: true, held: true }); // two frames before the catch: inside the old 6-frame buffer
+    const n = sk.events.filter((e) => e.type === 'trick').length;
+    for (let i = 0; i < 8; i++) sk.step({ pressed: false, held: true });
+    expect(sk.events.filter((e) => e.type === 'trick').length).toBe(n);
+    sk.step({ pressed: true, held: true }); // a fresh tap after the catch still flips
+    expect(sk.events.at(-1)).toMatchObject({ type: 'trick', dead: true });
+  });
+
   //(zack, 2026-11-02: "if they are in the middle of a flip trick and land on a grindable they should fall")
   it('mid-flip, you fall past a bar instead of grinding it', () => {
     const level = withExtras([{ kind: 'rail', x0: 0, x1: 4000, y: FLAT_STREET - 90, row: 0 }]);
