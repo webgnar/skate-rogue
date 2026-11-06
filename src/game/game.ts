@@ -16,6 +16,8 @@ import { RunScore, SCORE } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
 import { firstCloud } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
+import { noBustedTime } from '../sim/supply';
+import { SupplyView } from '../render/supply-view';
 import { loadSave, whole, writeSave } from '../run/save';
 import { NO_HEAD_START, prizeLabel, rollAll, rollName, rollsFor, type PrizeLabel, type Roll } from '../run/dice';
 import { boonsOfType, Missions, PX_PER_M, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
@@ -331,6 +333,7 @@ export class Game {
   private road: Road = FIRST_ROAD; // what this floor is
   private rerolls = 0;
   private readonly pickups = new PickupView();
+  private readonly supplyView = new SupplyView();
   private nextRoad: Road = FIRST_ROAD;
   private smashChain = 0;
   private smashAt = -10;
@@ -360,7 +363,7 @@ export class Game {
   private continuesLeft = CONTINUES;
   private contCaught = false; // the continue card is up after a bust (not a bail)
   // the run as it was when this floor started: a continue puts it back
-  private floorStart: { run: RunScore; gear: Gear; carry: number } | null = null;
+  private floorStart: { run: RunScore; gear: Gear; busted: Gear; carry: number } | null = null;
   private bountySeen = false;
   private tutorial = false; // on the tutorial floor, before the run's first floor
   private tutorialOut = false; // through the tutorial's gate, rolling on to the run's first floor
@@ -418,6 +421,7 @@ export class Game {
   private shopDecks: DeckArt[] = []; // the graphics this shop's new deck comes in
   private deckPick: DeckArt[] | null = null; // open while you pick the new deck's graphic
   private gear: Gear = freshGear(); // worn down over the run, replaced at the shop
+  private bustedSec: Gear = noBustedTime(); // how long each part has sat busted: the supply pickups' clock (src/sim/supply.ts)
   private grip: GripId = loadSave().tape ?? GRIP.start; // the grip tape's colour, kept between runs (src/board/grips.ts)
   // the three missions and Skater Rank (src/run/missions.ts), kept between runs
   private readonly missions = new Missions(loadSave().missions);
@@ -488,7 +492,8 @@ export class Game {
     this.view.over.add(this.impacts.group, this.splashes.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.sewerView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
-    this.view.scene.add(this.pickups.group);
+    this.view.scene.add(this.pickups.group, this.supplyView.group);
+    if (typeof window !== 'undefined') void this.supplyView.load(import.meta.env.BASE_URL).catch(() => undefined);
     this.view.scene.add(this.particles.behind); // grind sparks: in the level's pass, so the skater draws over them
     this.ghostMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 0.12, 0.14),
@@ -601,6 +606,7 @@ export class Game {
     this.boons = this.meta.boons ?? [];
     this.board = newBoard(DECK_SLOTS[this.meta.loadout.deck]);
     this.gear = freshGear();
+    this.bustedSec = noBustedTime();
     this.shopVisits = 0;
     this.setDeckArt(STOCK_DECK);
     this.run = new RunScore();
@@ -621,6 +627,7 @@ export class Game {
     writeSave({ ...loadSave(), tutorialDone: true });
     this.run = new RunScore();
     this.gear = freshGear();
+    this.bustedSec = noBustedTime();
     this.carry = 0;
     this.headStart();
     this.goTo(this.startAt, this.firstRoad());
@@ -708,11 +715,12 @@ export class Game {
       this.input.clear();
     }
     this.boonFx.setBoons(this.boons);
-    this.floorStart = { run: Object.assign(new RunScore(), this.run), gear: { ...this.gear }, carry: this.carry };
+    this.floorStart = { run: Object.assign(new RunScore(), this.run), gear: { ...this.gear }, busted: { ...this.bustedSec }, carry: this.carry };
     const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
     const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);
+    this.sim.bustedSec = { ...this.bustedSec };
     this.skyView.reset(this.sim.sky);
     this.sewerView.reset(this.level, this.sim.sewer);
     if (from) this.sim.skater.carryOn(from.skater, from.dx, from.dy);
@@ -779,6 +787,7 @@ export class Game {
   private finishFloor(now: number): void {
     this.carry = carriedHeat(this.sim.heat.value, gnarCarry(this.gnar));
     this.gear = { ...this.sim.gear };
+    this.bustedSec = { ...this.sim.bustedSec };
     this.sound?.play(MOMENT.gate);
     if (this.tutorial) return this.endTutorial();
     if (!this.floorSlams) this.mission('cleanFloor');
@@ -1058,6 +1067,7 @@ export class Game {
       const got = replace(this.gear, s.cash, part);
       if (got) {
         this.gear = got.gear;
+        this.bustedSec[part] = 0;
         next = { ...s, cash: got.cash };
         this.hud.gear(this.gear);
         //a new deck: pick its graphic next (the pick shows over the shop)
@@ -1279,6 +1289,7 @@ export class Game {
     this.missions.reset('floor');
     this.run = Object.assign(new RunScore(), at.run);
     this.gear = { ...at.gear };
+    this.bustedSec = { ...at.busted };
     this.carry = at.carry;
     this.hud.cont(null);
     this.startFloor();
@@ -1550,6 +1561,9 @@ export class Game {
     }
     this.spotState = spot;
     this.pickups.update(dt);
+    const sup = this.sim.supply;
+    this.supplyView.set(sup ? { part: sup.part, x: toX(sup.x), y: toY(this.level, sup.y) } : null);
+    this.supplyView.update(dt);
     this.sparks(dt);
     this.water(dt);
     this.particles.update(dt, this.view.pointScale);
@@ -2104,6 +2118,14 @@ export class Game {
       this.run.spins++;
       this.hud.callout('GOLDEN PIGEON! CHIP +1 ROLL', 'trick');
       this.particles.coin(toX(e.x), toY(this.level, e.y) + 0.8, 0);
+      return;
+    }
+    if (e.type === 'supply') {
+      //a supply pickup: that part, fresh, fitted on the spot
+      this.hud.callout(`SUPPLY! NEW ${GEAR.names[e.part].toUpperCase()}`, 'good');
+      this.hud.gear(this.sim.gear);
+      this.supplyView.take(toX(e.x), toY(this.level, e.y));
+      this.particles.coin(toX(e.x), toY(this.level, e.y), 0);
       return;
     }
     if (e.type === 'repair') {

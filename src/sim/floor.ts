@@ -21,6 +21,7 @@ import { spawnPlan, Traffic, type Vehicle } from '../traffic/traffic';
 import { CAR_HEALTH, DAMAGE, parkedKind, stageOf, type CarRef, type DamageKind, type Stage } from '../traffic/damage';
 import { ElTrain } from '../traffic/el';
 import { Sky, SKY, skyMult } from './sky';
+import { noBustedTime, overdue, SUPPLY, supplyChance, supplySpot, type Supply } from './supply';
 import { crossed, freshGear, GEAR, GEAR_PARTS, gearScale, type Gear, type GearPart } from '../run/gear';
 
 export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
@@ -37,6 +38,7 @@ export type FloorEvent =
   | { type: 'bust'; index: number; x: number; y: number; mult: number } // burst through a sky billboard (level.busts)
   | { type: 'goldBird'; x: number; y: number } // cleared the golden pigeon: a spin token
   | { type: 'repair'; part: GearPart } // a sky stash's fresh gear part, fitted
+  | { type: 'supply'; part: GearPart; x: number; y: number } // grabbed a supply pickup: that part fresh (src/sim/supply.ts)
   | { type: 'sewer'; down: boolean; kicked?: boolean } // dropped into the sewer route, or came back up out of it (src/gen/sewer.ts); kicked: thrown up by a kick-out
   | { type: 'flowChain'; n: number; mult: number } // DOWNSTREAM: another sewer piece on the line, n pieces in
   | { type: 'flowBank'; n: number; mult: number } // and back up on the street, the line banked
@@ -139,6 +141,9 @@ export class FloorSim {
   readonly broken: boolean[]; // props smashed
   private fall = 0; // how fast we were falling before this step
   readonly gear: Gear; // worn down as you skate; the run takes it to the next floor
+  bustedSec: Gear = noBustedTime(); // seconds each part has sat busted (the run carries it too): the supply clock
+  supply: Supply | null = null; // the supply pickup floating ahead, if one has turned up (src/sim/supply.ts)
+  private readonly supplyRng: () => number;
   private near = new Map<Car, { gap: number; touched: boolean }>(); // vehicles we're over: the closest pass, and any contact
   private readonly hits = new Map<Car, number>(); // car hops each car has taken
 
@@ -151,6 +156,7 @@ export class FloorSim {
   ) {
     this.skater = new Skater(level, mods);
     this.flip = makeRng(level.layout.seed * 7 + 99);
+    this.supplyRng = makeRng(level.layout.seed * 13 + 7);
     this.gear = { ...gear };
     this.skater.gear = gearScale(this.gear);
     this.heat.value = startHeat;
@@ -214,6 +220,7 @@ export class FloorSim {
     this.dent(skaterEvents);
     this.runBoard(skaterEvents);
     this.collect();
+    this.resupply();
     this.closeCalls(skaterEvents);
     this.smash(skaterEvents);
     this.runOver();
@@ -570,6 +577,29 @@ export class FloorSim {
       changed = true;
     }
     if (changed) sk.gear = gearScale(this.gear);
+  }
+
+  // supply pickups: the clock for each busted part, a roll once a second for the one busted longest, and the grab
+  private resupply(): void {
+    const sk = this.skater;
+    for (const p of GEAR_PARTS) this.bustedSec[p] = this.gear[p] <= GEAR.busted ? this.bustedSec[p] + 1 / 60 : 0;
+    const s = this.supply;
+    if (s) {
+      const dy = s.y - (sk.y - BODY);
+      if ((s.x - sk.x) ** 2 + dy * dy <= SUPPLY.reach ** 2) {
+        this.gear[s.part] = 100;
+        this.bustedSec[s.part] = 0;
+        sk.gear = gearScale(this.gear);
+        this.events.push({ type: 'supply', part: s.part, x: s.x, y: s.y });
+        this.supply = null;
+      } else if (s.x < sk.x - SUPPLY.missBehind || this.gear[s.part] > GEAR.busted) this.supply = null; // missed (or fixed)
+      return;
+    }
+    if (this.level.tutorial || this.frames % 60 !== 0 || this.state !== 'skate') return;
+    const part = overdue(this.gear, this.bustedSec);
+    if (!part || this.supplyRng() >= supplyChance(this.bustedSec[part])) return;
+    const at = supplySpot(this.level.pickups, this.taken, sk.x);
+    if (at) this.supply = { part, ...at };
   }
 
   private collect(): void {

@@ -938,7 +938,7 @@ Oct 30), each worn by the thing it takes the beating from:
   still reached the floor 9 shop with the deck at 4, wheels 12 and shoes 16. The gear boons (see Boons) halve the
   deck, bearings and wheels, which puts them back near act 1's numbers at that shop (deck about 52, wheels about 56),
   and Shoe Sponsor does the same for the shoes (about 58).
-- **Supply pickups on long routes** (zack, Nov 6, 2026) **(not in the build yet):** once routes get longer, a
+- **Supply pickups on long routes** (zack, Nov 6, 2026): once routes get longer, a
   single-part replacement lies along the way now and then: a new deck, a pair of shoes, a set of wheels, bearings
   or trucks, ridden through like a coin and fitted on the spot (that part back to 100).
   - **A fixed part you can see:** each pickup is one part, shown from afar as that part's own model spinning in
@@ -947,9 +947,15 @@ Oct 30), each worn by the thing it takes the beating from:
     (at 0, or under the busted line of 15) and is none while it's in good shape, so good gear never sees one. The
     clock resets when the part is replaced (shop, pickup). A part you've ridden busted for a long time is the most
     likely to turn up.
-  - Defaults until tuned: the chance builds from 0 to about one pickup a floor over a floor's worth of riding busted
-    (~60 s), at most one pickup on screen at a time, placed on the harder line (more often on the longer routes:
-    sewer, sky, long hills) so reaching it takes some skating.
+  - **As built** (src/sim/supply.ts, SUPPLY): once a second the most overdue busted part rolls a chance that
+    ramps from 0 to 1 in 50 over its first 60 s busted (so about one pickup a minute once it's been busted that
+    long). One pickup at a time. It is put on the highest coin or pickup spot 12 to 26 tiles ahead, so the harder,
+    higher line is where it shows up. It's gone if you ride past it or the part stops being busted (a shop buy).
+    Grab it within 30 px: callout "SUPPLY! NEW DECK", that part back to 100, its clock reset. Not in the tutorial.
+    The busted clocks carry from floor to floor with the gear.
+  - **Look:** the shop's card models (shoe, truck, wheel; cut down into public/models/gear.glb), the game's board
+    for the deck, and a bearing built in code, spinning in a turning gold ring over a pale disc so a dark part
+    reads against a dark wall.
 - **Later:** decks from the meta tree can wear slower (a "pro deck" stat), and boons can play with wear (a curse
   that wears gear twice as fast for a big effect, or a LUCK boon that repairs a part on each floor clear).
 
