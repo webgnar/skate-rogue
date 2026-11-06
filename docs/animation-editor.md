@@ -17,7 +17,8 @@ Webster plays the same on all of them.
   `freefall` is the bail. Space plays it (0.5× by default; the speed menu goes down to 0.1×). The **roll**
   box scrolls the ground so pushes and rides read like they do in the game.
 - **Scrub** by dragging on the timeline. The arrow keys step one frame (1/30 s), `,` and `.` jump between keys.
-- **Drag in the view.** Click a dot, then drag it or its arrows:
+- **Drag in the view.** Click a dot, then drag it or its arrows. The values that dot moves light up in its colour
+  on the right, scrolled into view:
   - yellow: the hips (the legs follow with IK);
   - cyan: the front (left) foot; pink: the back (right) foot. A foot standing on the board slides along the deck.
     Set its **on board** to 0 to take it off, and it goes anywhere (flips, the push foot, slams);
