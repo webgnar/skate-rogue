@@ -2,7 +2,7 @@
 // and checks it against their limits (docs/CRAZYGAMES.md): at most 1,500 files, 250 MB in all, and no absolute
 // paths in the page (they serve the game from their own CDN folder, so every path must be relative).
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const DIR = 'dist-crazygames';
@@ -15,6 +15,21 @@ const MOBILE_HOME = 20 * 1024 * 1024; // their mobile homepage wants the initial
 // what the portal build never loads: the Meshy test skaters (DEV TOOLS only, off in this build), the home screen
 // app's icons and manifest (the page tags are stripped by vite.config.ts), and notes
 for (const p of ['models/meshy', 'icons', 'manifest.webmanifest', 'music/README.md']) rmSync(join(DIR, p), { recursive: true, force: true });
+
+// the music at 96 kbps for the portal (160 on Vercel): the two tracks drop from 5 to 3 MB, which brings the build under
+// CrazyGames' 20 MB mobile homepage mark. Needs ffmpeg; without it the tracks stay as they are.
+const MUSIC_KBPS = '96k';
+for (const name of readdirSync(join(DIR, 'music')).filter((n) => n.endsWith('.mp3'))) {
+  const src = join(DIR, 'music', name);
+  const tmp = `${src}.tmp.mp3`;
+  try {
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-b:a', MUSIC_KBPS, tmp]);
+    renameSync(tmp, src);
+  } catch {
+    rmSync(tmp, { force: true });
+    console.warn(`ffmpeg unavailable or failed: ${name} kept at its full bitrate`);
+  }
+}
 
 const files = [];
 const walk = (d) => {
@@ -36,7 +51,7 @@ const absolute = [...html.matchAll(/(?:src|href)="(\/[^"/][^"]*)"/g)].map((m) =>
 if (absolute.length) problems.push(`absolute paths in index.html: ${absolute.join(', ')}`);
 if (!html.includes('index-') && !html.includes('assets/')) problems.push('index.html has no bundled script');
 
-console.log(`${files.length} files, ${mb(total)}${total > MOBILE_HOME ? ` (over the ${mb(MOBILE_HOME)} mobile homepage mark)` : ''}`);
+console.log(`${files.length} files, ${mb(total)}${total > MOBILE_HOME ? ` (over the ${mb(MOBILE_HOME)} mobile homepage mark)` : ' (under the mobile homepage mark)'}`);
 if (problems.length) {
   console.error(`not uploadable:\n  ${problems.join('\n  ')}`);
   process.exit(1);

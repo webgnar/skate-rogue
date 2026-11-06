@@ -143,6 +143,15 @@ export class HudView {
     const below = () => top.parentElement?.style.setProperty('--top-b', `${top.offsetTop + top.offsetHeight}px`);
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(below).observe(top);
     below();
+    //and they stack up from just above board mods (zack, 2026-11-06): the board box's top, from the bottom
+    const board = $('board');
+    const hud = board.parentElement!;
+    const above = () => hud.style.setProperty('--board-t', `${hud.offsetHeight - board.offsetTop}px`);
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(above).observe(board);
+      new ResizeObserver(above).observe(hud);
+    }
+    above();
   }
 
   setFloor(n: number, road: Road): void {

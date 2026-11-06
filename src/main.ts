@@ -19,6 +19,7 @@ import { boonArt, boonIcon, spotArt } from './ui/boon-art';
 import { gearArt, gearIcon, gripArt, modArt, slotArt } from './ui/shop-art';
 import { OneButton } from './game/input';
 import { buildFloor } from './gen/descent';
+import { SkaterLayer } from './render/skater-layer';
 import { StreetView } from './render/scene';
 import { FX, initFx } from './render/fx-settings';
 import { frameDue } from './game/frame-cap';
@@ -478,6 +479,9 @@ async function start() {
   const titleRig = titled ? loading.track(SkaterRig.create(base, 'webster', meshy)) : null;
   await Promise.all([loading.track(loadCityTiles(`${base}tex/chicago_tiles.png`)), loadModels(base, MODEL_FILES, loading.add(MODEL_FILES.length)), loading.track(loadPigeon(base)), loading.track(DOG.load(base)), loading.track(CAT.load(base)), loading.track(RAT.load(base)), loading.track(loadPeople(base))]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
+  //the skater drawn over the HUD where he crosses it (zack, 2026-11-06)
+  const layer = new SkaterLayer(document.getElementById('skaterlayer') as HTMLCanvasElement, document.getElementById('hud')!);
+  view.layer = layer;
   await loading.track(view.loadBackdrop(base));
   const sprite = await rig;
   const built = loading.add(2);
@@ -748,6 +752,7 @@ async function start() {
     requestAnimationFrame(tick);
     if (!frameDue(now, ran, FX.fps)) return;
     ran = now;
+    layer.measure(); // the HUD's boxes while the page's layout is clean, before the frame writes to it
     game.frame(now);
     if (ON_CRAZYGAMES) setPlaying(!game.titled && !game.paused && cards.every((el) => el.hidden || !el.isConnected));
   };
