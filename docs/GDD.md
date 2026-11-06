@@ -1330,6 +1330,17 @@ The official roadmap (zack, Oct 31, 2026). Each item is checked against "What th
 8. Grass strips that punish worn wheels.
 9. Wall rides, only if they earn their place.
 
+**The climb** (zack, Nov 6, 2026: "this seems good"; see The fantasy and How a run ends). In this order, each a
+thread of its own:
+- a. **Act 2 rooftops** as level design only: a floor recipe that starts and ends on roofs and overpasses, from the
+  kit we have.
+- b. **Act 3 as a whole cloud act**: the sky route's pieces (wires, girders, the cloud layer) become the main floor,
+  not the top lane.
+- c. **Gravity scaling**: one number per act applied to the ollie, flips and hang time, tested on the bot so act 1's
+  feel never changes. Placeholders: 1x for acts 1-3, 0.7x act 4, 0.3x act 5.
+- d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the gunship line, the beam-up finale.
+- e. **The ship as the hub** between runs, last; it's cosmetic for the menus.
+
 **Ship**
 10. A performance pass for small iPhones.
 11. Release on ad-supported web game portals (zack still picks which).
