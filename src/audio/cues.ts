@@ -6,7 +6,7 @@
 import type { FloorEvent } from '../sim/floor';
 
 export type SampleId =
-  | 'ollie' | 'trick' | 'kicker' | 'impact' | 'land_sketchy' | 'slam' | 'pad' | 'tuck' | 'car_hop' | 'door_slam'
+  | 'ollie' | 'trick' | 'kicker' | 'impact' | 'land_sketchy' | 'slam' | 'pad' | 'car_hop' | 'door_slam'
   | 'clack' | 'bail' | 'coin' | 'stoken' | 'mod' | 'smash' | 'drone_down' | 'car_wreck' | 'birds' | 'gun_aim'
   | 'gun_shot' | 'start' | 'gate' | 'pick' | 'busted' | 'grind' | 'roll' | 'siren';
 export type MusicId = 'gameplay' | 'title';
@@ -32,7 +32,6 @@ const VOL: Record<SampleId, number> = {
   land_sketchy: 0.8,
   slam: 0.9,
   pad: 0.8,
-  tuck: 0.6,
   car_hop: 0.7,
   door_slam: 0.9,
   clack: 0.5,
@@ -106,8 +105,6 @@ export function cueFor(e: FloorEvent): Cue | null {
       return cue('slam');
     case 'pad':
       return cue('pad');
-    case 'tuck':
-      return cue('tuck');
     case 'doorSlam':
       return cue('door_slam');
     case 'shot':
@@ -180,7 +177,6 @@ export function sirenGain(heat: number): number {
 export function buzzFor(e: FloorEvent): number | number[] | null {
   if (e.type === 'land') return e.quality === 'heavy' || e.quality === 'sketchy' ? 25 : 10;
   if (e.type === 'slam') return 60;
-  if (e.type === 'tuck') return 40;
   if (e.type === 'hop') return 15;
   if (e.type === 'clack') return 6;
   if (e.type === 'dent' && e.stage === 3) return [30, 40, 50];

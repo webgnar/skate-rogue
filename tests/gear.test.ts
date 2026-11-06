@@ -4,6 +4,9 @@ import { PHYS, TILE } from '../src/physics/constants';
 import { FloorSim } from '../src/sim/floor';
 import { FLAT, levelOf, pressAt, withExtras } from './helpers';
 import { FEEL } from '../src/physics/feel';
+import { GEAR_BOON_WEAR, skaterMods } from '../src/boons/mods';
+import { offerBoons } from '../src/boons/offer';
+import { BOONS } from '../src/boons/defs';
 
 const GLASS = [
   '................', '................', '................', '................', '................',
@@ -32,6 +35,40 @@ describe('gear wear', () => {
     expect(sim.gear.deck).toBeCloseTo(100 - GEAR.ollie);
     expect(sim.gear.shoes).toBeCloseTo(100 - GEAR.flip);
     expect(sim.gear.trucks).toBe(100);
+  });
+
+  //zack (2026-11-06): the gear boons, for acts 3-4 where gear wore out well before the next shop
+  it('Fiberglass Core halves deck wear and leaves the shoes alone', () => {
+    const sim = new FloorSim(levelOf(FLAT), skaterMods([{ id: 'fiberglassCore', stacks: 1 }]));
+    for (let f = 0; f < 12; f++) sim.step({ pressed: f === 0 || f === 8, held: true });
+    expect(sim.gear.deck).toBeCloseTo(100 - GEAR.ollie * GEAR_BOON_WEAR);
+    expect(sim.gear.shoes).toBeCloseTo(100 - GEAR.flip);
+  });
+
+  it('Ceramic Bearings and Classified Urethane halve bearing and wheel wear', () => {
+    const roll = (ids: ('ceramicBearings' | 'classifiedUrethane')[]) => {
+      const sim = new FloorSim(levelOf(FLAT), skaterMods(ids.map((id) => ({ id, stacks: 1 }))));
+      sim.skater.hsp *= 2; // fast enough to wear the wheels too
+      for (let f = 0; f < 30; f++) sim.step({ pressed: false, held: false });
+      return sim.gear;
+    };
+    const plain = roll([]);
+    const both = roll(['ceramicBearings', 'classifiedUrethane']);
+    expect(100 - plain.bearings).toBeGreaterThan(0);
+    expect(100 - both.bearings).toBeCloseTo((100 - plain.bearings) * GEAR_BOON_WEAR);
+    expect(100 - both.wheels).toBeCloseTo((100 - plain.wheels) * GEAR_BOON_WEAR);
+  });
+
+  it('the gear boons are offered from floor 2 on, never floor 1', () => {
+    const gearIds = ['fiberglassCore', 'ceramicBearings', 'classifiedUrethane'];
+    const seen = (floor: number) => {
+      let n = 0;
+      for (let seed = 1; seed <= 200; seed++) n += offerBoons(seed, { floor, boons: [] }).filter((b) => gearIds.includes(b.id)).length;
+      return n;
+    };
+    expect(seen(1)).toBe(0);
+    expect(seen(2)).toBeGreaterThan(0);
+    expect(BOONS.filter((b) => gearIds.includes(b.id))).toHaveLength(3);
   });
 
   it('grinding wears the trucks', () => {

@@ -31,7 +31,6 @@ export type FloorEvent =
   | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
-  | { type: 'decoy' } // the Decoy boon pulled the cruiser back
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
   | { type: 'skyChain'; n: number; mult: number } // NO GROUND: another sky piece on the line, n pieces in
   | { type: 'skyBank'; n: number; mult: number } // and down on the ground again, the line banked
@@ -42,7 +41,6 @@ export type FloorEvent =
   | { type: 'flowChain'; n: number; mult: number } // DOWNSTREAM: another sewer piece on the line, n pieces in
   | { type: 'flowBank'; n: number; mult: number } // and back up on the street, the line banked
   | SewerEvent // the sewer's moving pieces (src/sim/sewer.ts)
-  | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
   | { type: 'puddle'; x: number; y: number; runoff?: boolean } // rolled into a puddle (it washes out the bearings), or the sewer's runoff (it only soaks the deck)
@@ -75,7 +73,6 @@ const TRIGGERS: Partial<Record<SkaterEvent['type'], TriggerId>> = {
 // the furthest any smash below can reach: a bomb, a big landing or a slam, or touching the widest prop
 const SMASH_FAR = Math.max(SMASH.bombReach, SMASH.landReach, SMASH.slamReach, ...Object.values(PROP_SIZE).map((s) => s.w), 8) + PHYS.width / 2 + 1;
 
-export const SLIP = { reach: 4 * TILE }; // Slipstream: how close behind a car counts as drafting
 export const NEAR_MISS = 10; // px of air between your wheels and a roof that counts as a close call
 export const PICKUP_RADIUS = 26; // px around the skater's middle
 const BODY = 24; // the skater's middle, above their feet
@@ -131,7 +128,6 @@ export class FloorSim {
   }
 
   private readonly flip: () => number; // the board's coin flips, from the floor seed
-  private slipT = 0; // frames drafting behind a car
   // Rain puddles (the view's, src/render/puddles.ts, set by the game on a rainy floor): rolling through one washes
   // out the bearings and soaks the deck. x, y: centre and surface (px); w: half width when full (px); delay: seconds before it starts to form,
   // grow: seconds to form; k: how far it forms in a light rain (1 in a full one)
@@ -158,7 +154,7 @@ export class FloorSim {
     this.gear = { ...gear };
     this.skater.gear = gearScale(this.gear);
     this.heat.value = startHeat;
-    if (mods) this.heat.mods = { rise: mods.heatRise, hopCool: mods.hopCool, decoy: mods.decoy, slow: mods.slowHeat, airCool: mods.airCool };
+    if (mods) this.heat.mods = { rise: mods.heatRise, airCool: mods.airCool };
     //the tutorial teaches the moves first: nothing makes Heat rise
     if (level.tutorial) this.heat.mods = { ...this.heat.mods, rise: 0 };
     this.taken = level.pickups.map(() => false);
@@ -172,7 +168,6 @@ export class FloorSim {
     this.shooter = this.chaser ? new Shooter(level.layout.seed, level.streetY) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
     this.traffic = new Traffic(level, level.tutorial ? [] : spawnPlan(level, level.layout.seed), level.crossings, level.busStops ?? [], level.doors ?? []);
-    this.traffic.noBrake = mods?.spoofed ?? false;
     this.trains = (level.el ?? []).map((s) => new ElTrain(s));
   }
 
@@ -220,7 +215,6 @@ export class FloorSim {
     this.runBoard(skaterEvents);
     this.collect();
     this.closeCalls(skaterEvents);
-    this.slipstream();
     this.smash(skaterEvents);
     this.runOver();
     this.wear(skaterEvents);
@@ -261,7 +255,6 @@ export class FloorSim {
     }
     this.noGround();
     this.chaser?.step(this.skater, skaterEvents);
-    if (this.heat.decoyFired) this.events.push({ type: 'decoy' });
     if (this.state === 'exit') return;
     if (this.skater.mode === 'bail') this.state = 'bail';
     else if (this.skater.mode === 'exit' || this.skater.exited) {
@@ -466,7 +459,7 @@ export class FloorSim {
         }
       } else if (n) {
         this.near.delete(c);
-        if (!n.touched && n.gap >= 0 && n.gap < NEAR_MISS * this.skater.mods.nearScale) {
+        if (!n.touched && n.gap >= 0 && n.gap < NEAR_MISS) {
           this.events.push({ type: 'near' });
           this.heat.add(HEAT.nearMiss);
         }
@@ -474,21 +467,6 @@ export class FloorSim {
     }
   }
 
-  // Slipstream: rolling within a few tiles behind a car going your way builds a draft; held long enough, it
-  // throws you forward with a burst of speed (then ollie it)
-  private slipstream(): void {
-    const sk = this.skater;
-    const need = sk.mods.slipFrames;
-    if (!need) return;
-    const drafting = sk.mode === 'roll' && !sk.surface && this.traffic.inLane.some((v) => v.speed > 0 && v.x0 - sk.x > 0 && v.x0 - sk.x < SLIP.reach);
-    this.slipT = drafting ? this.slipT + 1 : 0;
-    if (this.slipT >= need) {
-      this.slipT = 0;
-      sk.hsp = Math.max(sk.hsp, PHYS.bombSpeed);
-      sk.carry = Math.max(sk.carry, PHYS.bombSpeed);
-      this.events.push({ type: 'slip' });
-    }
-  }
 
   // smashables: skate through them, land hard near them, grind them off a ledge, slam into them, bomb past them
   private smash(events: readonly SkaterEvent[]): void {
@@ -588,7 +566,8 @@ export class FloorSim {
     for (const part of GEAR_PARTS) {
       if (!use[part]) continue;
       const before = this.gear[part];
-      this.gear[part] = Math.max(0, before - use[part] * sk.mods.wearScale);
+      const boon = part === 'deck' || part === 'wheels' || part === 'bearings' ? (sk.mods.partWear?.[part] ?? 1) : 1;
+      this.gear[part] = Math.max(0, before - use[part] * sk.mods.wearScale * boon);
       const line = crossed(before, this.gear[part]);
       if (line) this.events.push({ type: 'wear', part, level: line });
       changed = true;

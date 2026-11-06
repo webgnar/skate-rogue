@@ -26,8 +26,8 @@ function crossAt(px: number, py: number, x: number, y: number, x0: number, y0: n
 describe('no falling through things', () => {
   const builds: Partial<Mods>[] = [
     {},
-    { speedScale: 1.6, slingshot: 2, kickerScale: 1.6, ollieScale: 1.4, jumps: 2 },
-    { ollieScale: 1.6, floatyFlip: true, lateFlip: true, jumps: 3 },
+    { speedScale: 1.6, slingshot: 2, ollieScale: 1.4, jumps: 2 },
+    { ollieScale: 1.6, pressureFlip: true, jumps: 3 },
   ];
   it("fuzzes floors 1-8 on 8 seeds with three builds, with every twist", () => {
     const holes: string[] = [];
@@ -50,7 +50,7 @@ describe('no falling through things', () => {
             //moving things too: traffic, buses at stops, open car doors, drones (as they stood at the start of the step)
             const movers = sk.movers.map((c) => ({ ...c }));
             sim.step({ pressed, held: hold-- > 0 });
-            if (was !== 'air' || sk.mode !== 'air' || sim.events.some((e) => e.type === 'hop' || e.type === 'tuck' || e.type === 'kicker')) continue;
+            if (was !== 'air' || sk.mode !== 'air' || sim.events.some((e) => e.type === 'hop' || e.type === 'kicker')) continue;
             const at = `seed ${seed * 7919} floor ${floor} build ${bi} frame ${f}`;
             for (const s of level.surfaces) {
               if (sk.gone.has(s)) continue; // Greece's ruins fall away

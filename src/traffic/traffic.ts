@@ -126,7 +126,6 @@ export function vehicleSize(kind: VehicleKind): [number, number] {
 
 export class Traffic {
   vehicles: Vehicle[] = [];
-  noBrake = false; // Spoofed Plate: robotaxis don't brake for the skater
   readonly cross: CrossCar[]; // cars crossing at intersections
   readonly hillCross: HillCross[]; // Chinatown's intersections on the hill, cars driving straight across
   readonly cabs: Cab[]; // Chinatown's cabs to skitch
@@ -197,7 +196,7 @@ export class Traffic {
       if (v.wrecked) {
         //rolling to a stop (the floor sim slows it) as it drifts out of the lane
       } else if (v.kind === 'car') v.speed += (v.cruise - v.speed) * 0.04; // pulling away from the corner
-      else if (v.speed > 0 && !v.leaving && !(this.noBrake && v.kind === 'robotaxi')) {
+      else if (v.speed > 0 && !v.leaving) {
         //brake hard when the skater rolls up behind
         const gap = v.x0 - skaterX;
         const target = gap > 0 && gap < TRAFFIC.brakeRange ? PHYS.baseSpeed * TRAFFIC.brakeSpeed : v.cruise;

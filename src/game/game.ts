@@ -726,9 +726,7 @@ export class Game {
     }
     this.floorFrames = 0;
     this.run.scoreScale = mods.scoreScale;
-    this.run.slamStoke = mods.slamStoke;
     this.run.stokenScale = mods.stokenScale;
-    this.run.nearScale = mods.nearScale;
     this.carry = 0;
     this.trafficView.clear(!!from);
     this.elView.clear();
@@ -832,8 +830,6 @@ export class Game {
   }
 
   private rerollCost(): number {
-    //Lucky Reroll: the first one on each pick is free
-    if (this.rerolls === 0 && skaterMods(this.boons).freeReroll) return 0;
     return 15 + 10 * this.rerolls;
   }
 
@@ -2140,7 +2136,7 @@ export class Game {
       this.view.shake(0.12);
       return;
     }
-    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'decoy' && e.type !== 'slip' && e.type !== 'birds' && e.type !== 'dodge') {
+    if (e.type !== 'pickup' && e.type !== 'near' && e.type !== 'birds' && e.type !== 'dodge') {
       this.sprite.onEvent(e);
       const p = this.sprite.mesh.position;
       this.boonFx.event(e, p.x, p.y, Math.max(this.skater.railV, Math.abs(this.skater.hsp)));
@@ -2151,7 +2147,7 @@ export class Game {
     const bank = this.run.onEvent(e, this.skater.hsp);
     if (e.type === 'pickup' && e.mult) this.skyBonus += Math.max(0, this.run.cash - cashBefore - SCORE.cashCoin);
     if (this.run.combo > before) this.bulletTime(this.run.combo);
-    if (e.type === 'slam' || e.type === 'tuck') this.bullet.chainBreak();
+    if (e.type === 'slam') this.bullet.chainBreak();
     else this.chainBeat(e);
     if (bank) {
       this.mission('combo', bank.count);
@@ -2192,10 +2188,6 @@ export class Game {
         this.hud.callout('BUBBLE PADS!', 'good');
         this.particles.dust(toX(this.skater.x), toY(this.level, this.skater.y), 1);
         break;
-      case 'tuck':
-        this.hud.callout('TUCK AND ROLL!', 'good');
-        this.view.shake(0.15);
-        break;
       case 'firecracker':
         this.hud.callout('FIRECRACKER!' + combo, 'trick');
         this.view.zoom.trick();
@@ -2209,13 +2201,6 @@ export class Game {
         this.view.shake(0.04);
         break;
       }
-      case 'slip':
-        this.hud.callout('SLIPSTREAM!', 'trick');
-        this.view.zoom.trick();
-        break;
-      case 'decoy':
-        this.hud.callout('DECOY! HEAT 35', 'good');
-        break;
       case 'birds':
         this.hud.callout('BIRD STRIKE!', 'bad');
         this.view.shake(0.2);

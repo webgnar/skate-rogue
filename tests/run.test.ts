@@ -103,7 +103,14 @@ describe('the fork', () => {
     const offer = offerBoons(3, { floor: 2, boons: [] }, 3, 'GRIND');
     expect(offer).toHaveLength(3);
     expect(offer.every((b) => b.type === 'GRIND')).toBe(true);
-    expect(offerBoons(3, { floor: 2, boons: [] }, 3, 'GRIND', 1)).not.toEqual(offer);
+    //(GRIND is 4 boons since the 2026-11-06 cut, so one reroll can deal the same three: some reroll differs)
+    expect([1, 2, 3].some((k) => JSON.stringify(offerBoons(3, { floor: 2, boons: [] }, 3, 'GRIND', k)) !== JSON.stringify(offer))).toBe(true);
+  });
+
+  it('a boon street with fewer cards of its type than the offer fills up from the other types', () => {
+    const offer = offerBoons(3, { floor: 2, boons: [] }, 3, 'STREET');
+    expect(offer).toHaveLength(3);
+    expect(offer[0].type).toBe('STREET');
   });
 });
 

@@ -43,7 +43,6 @@ export const PHYS = {
   kickerPop: -6.6, // about 87 px of air, over a 64 px truck box
   bombSpeed: 6.5,
   tailgateLip: 14, // the tailgate's top edge, where you leave it
-  tuckBounce: -8, // Tuck and Roll: out of a gap, about 2 tiles over the street
   slingshotMax: 12, // px/frame: the most a Slingshot launch reaches
   slamSpeed: 0.5, // speed drops to half of base
   slamFrames: 36, // ~0.6 s to get back to full speed
@@ -67,9 +66,6 @@ export const PHYS = {
   width: 30, // the board's length, nose to tail (zack, 2026-10-25): what cars, drones and props hit
   height: 48,
   // boons
-  floatyFrames: 24, // Boostin
-  frenzyStep: 0.1, // More Wax
-  frenzyFlat: 0.15, // More Wax only builds on a grind this flat (slope), not down a handrail (zack)
   pressureFrames: 9, // Mad Pop kicks in after holding this long (near the top of the snapped-up pop, PHYS.popSnap)
   ghostTiles: 4, // Ghost Rail
   ghostFrames: 120,

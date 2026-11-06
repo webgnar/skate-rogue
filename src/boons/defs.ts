@@ -3,14 +3,15 @@
 export type BoonType = 'POP' | 'GRIND' | 'FLOW' | 'COOL' | 'LUCK' | 'STREET';
 
 export type BoonId =
-  | 'tripleThreat' | 'bigPop' | 'floatyFlip' | 'lateFlip' | 'pressureFlip' | 'spareChange' | 'strongLegs'
-  | 'railMagnet' | 'grease' | 'railLaunch' | 'exitWax' | 'feebleFrenzy' | 'ghostRail'
-  | 'newWheels' | 'bombHill' | 'butter' | 'kickerBoost' | 'slingshot' | 'firecracker'
-  | 'lowProfile' | 'bubblePads' | 'tuckAndRoll' | 'slamStoke' | 'sirenSong' | 'decoy' | 'ghostMode'
-  | 'stokenMagnet' | 'doubleStoken' | 'hustler' | 'luckyReroll'
-  | 'roofRider' | 'slipstream' | 'hoodPop' | 'spoofedPlate' | 'jaywalker'
+  | 'tripleThreat' | 'bigPop' | 'pressureFlip' | 'strongLegs'
+  | 'railMagnet' | 'grease' | 'railLaunch' | 'ghostRail'
+  | 'newWheels' | 'bombHill' | 'butter' | 'slingshot' | 'firecracker'
+  | 'lowProfile' | 'bubblePads'
+  | 'stokenMagnet' | 'doubleStoken' | 'hustler'
+  | 'roofRider'
   | 'moonShoes' | 'wanted' | 'speedWobbles'
-  | 'rocketGrind' | 'skyLine' | 'perpetualMotion';
+  | 'rocketGrind' | 'skyLine' | 'perpetualMotion'
+  | 'ceramicBearings' | 'fiberglassCore' | 'classifiedUrethane';
 
 export interface Held {
   id: BoonId;
@@ -33,6 +34,7 @@ export interface Boon {
   when?: (run: RunView) => boolean;
   cursed?: boolean; // a strong effect with a cost (GDD: Curses), offered from floor 6
   duo?: [BoonId, BoonId]; // fuses two held boons (GDD: Combos)
+  gear?: boolean; // a gear boon (a part wears slower): in every library, whatever types the meta tree has opened
 }
 
 export const CURSE_COLOR = '#b98cff';
@@ -49,19 +51,14 @@ export const BOON_COLORS: Record<BoonType, string> = { POP: '#ffd23f', GRIND: '#
 export const BOONS: Boon[] = [
   { id: 'tripleThreat', type: 'POP', name: 'Triple Threat', effect: '+1 jump', max: 1 },
   { id: 'bigPop', type: 'POP', name: 'Big Pop', effect: 'Ollie 20% higher', max: 3 },
-  { id: 'floatyFlip', type: 'POP', name: 'Boostin', effect: 'Half gravity right after a flip trick', max: 1 }, // id kept from its old name, Floaty Flip (saves and ?boons= links use it)
-  { id: 'lateFlip', type: 'POP', name: 'Late Flip', effect: 'Flip tricks always go full height', note: 'even on a quick tap', max: 1 },
   { id: 'pressureFlip', type: 'POP', name: 'Mad Pop', effect: 'Keep holding after an ollie to float', note: '30% less gravity after 0.15 s', max: 1 }, // id kept from its old name, Pressure Flip
   {
     id: 'strongLegs', type: 'POP', name: 'Strong Legs', effect: 'Tap twice as you land to ollie straight out of it',
     note: 'no waiting for your knees', max: 1,
   },
-  { id: 'spareChange', type: 'POP', name: 'Spare Change', effect: 'Every grind banks 1/4 of a bonus jump', note: 'lost when you land', max: 3 },
   { id: 'railMagnet', type: 'GRIND', name: 'Rail Magnet', effect: 'Rails catch you from further away', note: '+48 px', max: 2 },
   { id: 'grease', type: 'GRIND', name: 'Ledge Butter', effect: 'Grind 25% faster', note: 'and hit full grind speed instantly', max: 2 }, // id kept from its old name, Grease
   { id: 'railLaunch', type: 'GRIND', name: 'Full Sail', effect: 'Ollies off rails pop higher the faster you grind', max: 1 }, // id kept from its old name, Rail Launch
-  { id: 'exitWax', type: 'GRIND', name: 'Speed Cream', effect: 'Speed from rails lasts 4x longer', max: 1 }, // id kept from its old name, Exit Wax
-  { id: 'feebleFrenzy', type: 'GRIND', name: 'More Wax', effect: '+10% grind speed every 0.5 s on one flat ledge or rail', note: 'not down handrails', max: 1 }, // id kept from its old name, Feeble Frenzy
   {
     id: 'ghostRail', type: 'GRIND', name: 'Ghost Rail', effect: 'Rails keep going 4 tiles past their end',
     note: 'for 2 s after you leave', max: 1,
@@ -70,32 +67,31 @@ export const BOONS: Boon[] = [
   { id: 'bombHill', type: 'FLOW', name: 'Bomb Hill', effect: 'Extra speed bleeds off half as fast', max: 1 },
   { id: 'butter', type: 'FLOW', name: 'Butter', effect: 'Land on flat ground with all your air speed', max: 1 },
   {
-    id: 'kickerBoost', type: 'FLOW', name: 'Kicker Boost', effect: 'Kickers launch 30% harder', note: 'and bomb harder',
-    max: 1, when: (r) => r.floor >= 3, // box trucks come in on floor 4
-  },
-  {
     id: 'firecracker', type: 'FLOW', name: 'Firecracker', effect: 'Roll into a stair set and you firecracker down it',
     note: 'no slam; ollie out any time', max: 1,
   },
   { id: 'slingshot', type: 'FLOW', name: 'Slingshot', effect: 'Riding off the end of a rail launches you 50% harder', max: 2 },
   { id: 'lowProfile', type: 'COOL', name: 'Low Profile', effect: 'Heat rises 25% slower', max: 3 },
   { id: 'bubblePads', type: 'COOL', name: 'Bubble Pads', effect: 'Your first slam each floor costs nothing', note: 'no speed, no Heat', max: 2 },
-  { id: 'tuckAndRoll', type: 'COOL', name: 'Tuck and Roll', effect: 'Fall in a gap and bounce back out', note: 'once per floor, for a slam', max: 1 },
-  { id: 'slamStoke', type: 'COOL', name: 'Slam Stoke', effect: 'Slams fill your stoke instead of draining it', note: 'and keep your combo', max: 1 },
-  { id: 'sirenSong', type: 'COOL', name: 'Siren Song', effect: 'Car hops take 10 more Heat off', max: 2 },
-  { id: 'decoy', type: 'COOL', name: 'Decoy', effect: 'The first time Heat hits 75 on a floor, it drops to 35', max: 1 },
   { id: 'stokenMagnet', type: 'LUCK', name: 'Stoken Magnet', effect: 'Pickups fly to you', note: 'from three times as far', max: 1 },
   { id: 'doubleStoken', type: 'LUCK', name: 'Double Stoken', effect: 'Every Stoken counts twice', max: 1 },
   { id: 'hustler', type: 'LUCK', name: 'Hustler', effect: '+1 card on every boon pick', max: 1 },
-  { id: 'luckyReroll', type: 'LUCK', name: 'Lucky Reroll', effect: 'Your first reroll on each pick is free', max: 1 },
   { id: 'roofRider', type: 'STREET', name: 'Roof Rider', effect: 'Parked car and bus roofs grind like ledges', max: 1 },
-  { id: 'slipstream', type: 'STREET', name: 'Slipstream', effect: 'Draft right behind a car to slingshot past it', note: 'half a second; quicker with 2', max: 2 },
-  { id: 'hoodPop', type: 'STREET', name: 'Hood Pop', effect: 'Car hops bounce 50% higher', max: 2 },
+  //gear boons (zack, 2026-11-06): by acts 3-4 a floor wears your gear about twice as hard as in act 1, and it was busted
+  //well before the next shop. Each one makes its part wear half as fast. Offered once your gear has had a floor or
+  //two to wear (from floor 2's pick on)
   {
-    id: 'spoofedPlate', type: 'STREET', name: 'Spoofed Plate', effect: "Robotaxis don't brake for you", note: 'easier to hop from behind',
-    max: 1,
+    id: 'fiberglassCore', type: 'POP', name: 'Fiberglass Core', effect: 'Your deck wears half as fast', note: 'and every new deck you buy',
+    max: 1, when: (r) => r.floor >= 2, gear: true,
   },
-  { id: 'jaywalker', type: 'STREET', name: 'Jaywalker', effect: 'Close calls count from twice as far', note: 'and score double', max: 1 },
+  {
+    id: 'ceramicBearings', type: 'FLOW', name: 'Ceramic Bearings', effect: 'Your bearings wear half as fast', note: 'and every new set you buy',
+    max: 1, when: (r) => r.floor >= 2, gear: true,
+  },
+  {
+    id: 'classifiedUrethane', type: 'FLOW', name: 'Classified Urethane', effect: 'Your wheels wear half as fast', note: 'and every new set you buy',
+    max: 1, when: (r) => r.floor >= 2, gear: true,
+  },
   //curses: strong, with a cost
   { id: 'moonShoes', type: 'POP', name: 'Moon Shoes', effect: 'Ollie 60% higher', note: 'but grind 30% slower', max: 1, cursed: true },
   { id: 'wanted', type: 'LUCK', name: 'Wanted', effect: 'Double Stoken', note: 'but Heat rises twice as fast', max: 1, cursed: true },
@@ -107,7 +103,6 @@ export const BOONS: Boon[] = [
   },
   { id: 'skyLine', type: 'POP', name: 'Sky Line', effect: 'Every air trick leaves a ghost rail under you', max: 1, duo: ['ghostRail', 'tripleThreat'] },
   { id: 'perpetualMotion', type: 'FLOW', name: 'Perpetual Motion', effect: 'Extra speed never bleeds off', max: 1, duo: ['butter', 'slingshot'] },
-  { id: 'ghostMode', type: 'COOL', name: 'Ghost Mode', effect: 'Half the Heat from skating slow', note: 'the Flock cameras lose you', max: 1 },
 ];
 
 export function boonById(id: BoonId): Boon {

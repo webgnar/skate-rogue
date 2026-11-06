@@ -30,14 +30,14 @@ function peak(sk: Skater, frames: number, script: (f: number) => StepInput): num
 }
 
 describe('boon data', () => {
-  it('has 7 POP, 6 GRIND, 6 FLOW, 7 COOL, 4 LUCK and 5 STREET boons, plus curses and duos, with unique ids', () => {
+  it('has 5 POP, 4 GRIND, 7 FLOW, 2 COOL, 3 LUCK and 1 STREET boons (cut to 19 plus 3 gear boons, zack 2026-11-06), plus curses and duos, with unique ids', () => {
     const plain = BOONS.filter((b) => !b.cursed && !b.duo);
-    expect(plain.filter((b) => b.type === 'POP')).toHaveLength(7);
-    expect(plain.filter((b) => b.type === 'GRIND')).toHaveLength(6);
-    expect(plain.filter((b) => b.type === 'FLOW')).toHaveLength(6);
-    expect(plain.filter((b) => b.type === 'COOL')).toHaveLength(7);
-    expect(plain.filter((b) => b.type === 'LUCK')).toHaveLength(4);
-    expect(plain.filter((b) => b.type === 'STREET')).toHaveLength(5);
+    expect(plain.filter((b) => b.type === 'POP')).toHaveLength(5);
+    expect(plain.filter((b) => b.type === 'GRIND')).toHaveLength(4);
+    expect(plain.filter((b) => b.type === 'FLOW')).toHaveLength(7);
+    expect(plain.filter((b) => b.type === 'COOL')).toHaveLength(2);
+    expect(plain.filter((b) => b.type === 'LUCK')).toHaveLength(3);
+    expect(plain.filter((b) => b.type === 'STREET')).toHaveLength(1);
     expect(BOONS.filter((b) => b.cursed)).toHaveLength(3);
     expect(BOONS.filter((b) => b.duo)).toHaveLength(3);
     expect(new Set(BOONS.map((b) => b.id)).size).toBe(BOONS.length);
@@ -60,11 +60,11 @@ describe('offers', () => {
   });
 
   it('never offers a maxed boon', () => {
-    const boons = withBoons('tripleThreat', 'lateFlip', 'floatyFlip');
+    const boons = withBoons('tripleThreat', 'butter', 'firecracker');
     for (let seed = 0; seed < 200; seed++) {
       const ids = offerBoons(seed, { floor: 3, boons }).map((b) => b.id);
       expect(ids).not.toContain('tripleThreat');
-      expect(ids).not.toContain('lateFlip');
+      expect(ids).not.toContain('butter');
     }
   });
 });
@@ -84,27 +84,6 @@ describe('POP boons', () => {
     expect(sk.jumps).toBe(0);
   });
 
-  it('Late Flip: a tapped flip rises as high as a held one', () => {
-    const flip = (late: boolean, hold: number) => {
-      const sk = late ? skater(FLAT, 'lateFlip') : skater(FLAT);
-      run(sk, 20, pressAt(0, 20));
-      return peak(sk, 60, pressAt(0, hold));
-    };
-    expect(flip(true, 2)).toBeCloseTo(flip(true, 60), 0);
-    expect(flip(false, 2)).toBeLessThan(flip(false, 60) * 0.7);
-  });
-
-  it('Boostin (floatyFlip): more hang time after a flip', () => {
-    const air = (...ids: BoonId[]) => {
-      const sk = skater(FLAT, ...ids);
-      let f = 0;
-      sk.step({ pressed: true, held: true });
-      while (sk.mode === 'air' && f < 300) sk.step({ pressed: ++f === 10, held: true });
-      return f;
-    };
-    expect(air('floatyFlip')).toBeGreaterThan(air() + 4);
-  });
-
   it('Mad Pop (pressureFlip): holding past 0.15 s floats, a short hold does not', () => {
     const base = peak(skater(FLAT), 120, pressAt(0, 120));
     const pressure = peak(skater(FLAT, 'pressureFlip'), 120, pressAt(0, 120));
@@ -113,20 +92,6 @@ describe('POP boons', () => {
     expect(tap).toBeCloseTo(peak(skater(FLAT), 120, pressAt(0, 2)));
   });
 
-  it('Spare Change x3: banks a bonus air jump after two grinds, lost on landing', () => {
-    const sk = skater(RAIL, 'spareChange', 'spareChange', 'spareChange');
-    // bank 0.75 twice by grinding the same rail twice
-    sk.x = 16 * TILE + 1 * TILE;
-    run(sk, 40, pressAt(0, 40));
-    expect(sk.mode).toBe('grind');
-    run(sk, 20, pressAt(0, 20));
-    run(sk, 40, (f) => ({ pressed: false, held: f < 10 }));
-    expect(sk.spare).toBeGreaterThanOrEqual(1.5);
-    sk.jumps = 0;
-    sk.mode = 'air';
-    sk.step({ pressed: true, held: true });
-    expect(sk.events.at(-1)?.type).toBe('trick');
-  });
 });
 
 describe('GRIND boons', () => {
@@ -173,27 +138,6 @@ describe('GRIND boons', () => {
       return sk.vsp;
     };
     expect(popOffRail('railLaunch')).toBeLessThan(popOffRail() - 1);
-  });
-
-  it('Speed Cream (exitWax): rail speed lasts longer on the ground', () => {
-    const carryAfter = (...ids: BoonId[]) => {
-      const sk = skater(FLAT, ...ids);
-      sk.carry = 8;
-      run(sk, 120);
-      return sk.carry;
-    };
-    expect(carryAfter('exitWax')).toBeGreaterThan(carryAfter() + 2);
-  });
-
-  it('More Wax (feebleFrenzy): speed builds the longer you grind one flat rail', () => {
-    const sk = skater(RAIL, 'feebleFrenzy', 'grease');
-    sk.x = 16 * TILE + 1 * TILE;
-    let f = 0;
-    while (sk.mode !== 'grind' && f++ < 60) sk.step({ pressed: f === 1, held: true });
-    const early = sk.hsp;
-    run(sk, 35); // still on the rail: the lifted board catches it a few frames into it (src/physics/tuck.ts)
-    expect(sk.mode).toBe('grind');
-    expect(sk.hsp).toBeGreaterThan(early * 1.05);
   });
 
   it('Ghost Rail: rolling off a rail end keeps you grinding', () => {

@@ -180,7 +180,7 @@ describe('effect settings from the URL', () => {
 describe('boon and board mod looks', () => {
   const calls: string[] = [];
   const fake = { spray: () => calls.push('spray'), stream: (k: string) => calls.push(k) } as unknown as Particles;
-  const look = { mode: 'air' as const, floatT: 10, holdT: 0, onRailT: 0, carry: 0, hsp: 3 };
+  const look = { mode: 'air' as const, holdT: 20, carry: 0, hsp: 3 };
   it('shows only the boons that are held', () => {
     const fx = new BoonFx(fake);
     fx.setBoons([{ id: 'bigPop', stacks: 1 }]);
@@ -188,11 +188,11 @@ describe('boon and board mod looks', () => {
     fx.event({ type: 'ollie', spin: 0 }, 0, 0, 3);
     fx.update(1 / 60, look, 0, 0);
     expect(calls).toEqual(['spray']);
-    fx.setBoons([{ id: 'floatyFlip', stacks: 1 }]);
+    fx.setBoons([{ id: 'pressureFlip', stacks: 1 }]);
     calls.length = 0;
     fx.event({ type: 'ollie', spin: 0 }, 0, 0, 3);
     fx.update(1 / 60, look, 0, 0);
-    expect(calls).toEqual(['floaty']);
+    expect(calls).toEqual(['pressure']);
   });
   it('every board mod effect except sparks has a look', () => {
     const fx = new BoonFx(fake);
@@ -210,17 +210,13 @@ describe('boon and board mod looks', () => {
       fx.event(e, 0, 0, speed);
       return calls.length;
     };
-    expect(at('hoodPop', { type: 'hop' })).toBeGreaterThan(0);
-    expect(at('sirenSong', { type: 'hop' })).toBeGreaterThan(0);
-    expect(at('kickerBoost', { type: 'kicker' })).toBeGreaterThan(0);
     expect(at('slingshot', { type: 'exit' })).toBeGreaterThan(0);
-    expect(at('slamStoke', { type: 'slam' })).toBeGreaterThan(0);
     expect(at('bubblePads', { type: 'pad' })).toBeGreaterThan(0);
     expect(at('moonShoes', { type: 'ollie', spin: 0 })).toBeGreaterThan(0);
     expect(at('skyLine', { type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false })).toBeGreaterThan(0);
     expect(at('butter', { type: 'land' }, 1)).toBe(0); // only when the air speed carries on
     expect(at('butter', { type: 'land' }, 9)).toBeGreaterThan(0);
-    expect(at('hoodPop', { type: 'slam' })).toBe(0);
+    expect(at('slingshot', { type: 'slam' })).toBe(0);
     //Rocket Grind only off a fast grind
     fx.setBoons([{ id: 'rocketGrind', stacks: 1 }]);
     fx.update(1 / 60, { ...look, mode: 'grind' }, 0, 0);

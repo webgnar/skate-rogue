@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { addBoon, type BoonId, type Held } from '../src/boons/defs';
 import { skaterMods } from '../src/boons/mods';
 import { offerBoons } from '../src/boons/offer';
-import { PHYS, TILE } from '../src/physics/constants';
+import { TILE } from '../src/physics/constants';
 import { RunScore } from '../src/run/score';
 import { FloorSim } from '../src/sim/floor';
-import { TRAFFIC } from '../src/traffic/traffic';
 import { FLAT, levelOf } from './helpers';
 
 const idle = { pressed: false, held: false };
@@ -26,11 +25,6 @@ function steps(s: FloorSim, n: number): string[] {
   return out;
 }
 
-const robotaxi = (s: FloorSim, gap: number) => {
-  const x0 = s.skater.x + gap;
-  s.traffic.vehicles.push({ id: 7, kind: 'robotaxi', speed: 1.6, cruise: 1.6, lane: 0, leaving: false, x0, x1: x0 + TRAFFIC.carW, bottom: s.level.streetY, roof: s.level.streetY - TRAFFIC.carH });
-  return s.traffic.vehicles[s.traffic.vehicles.length - 1];
-};
 
 describe('STREET boons', () => {
   it('Roof Rider: land on a parked roof and grind it', () => {
@@ -45,42 +39,6 @@ describe('STREET boons', () => {
     }
   });
 
-  it('Hood Pop: car hops bounce 50% higher', () => {
-    expect(skaterMods(held('hoodPop')).hopScale).toBe(1.5);
-  });
-
-  it('Spoofed Plate: robotaxis keep their speed when you roll up behind', () => {
-    const plain = sim();
-    const a = robotaxi(plain, 2 * TILE);
-    steps(plain, 10);
-    const spoof = sim('spoofedPlate');
-    const b = robotaxi(spoof, 2 * TILE);
-    steps(spoof, 10);
-    expect(a.speed).toBeLessThan(1.5);
-    expect(b.speed).toBeCloseTo(1.6);
-  });
-
-  it('Slipstream: drafting a car going your way throws you forward', () => {
-    const s = sim('slipstream', 'spoofedPlate');
-    robotaxi(s, 3.5 * TILE);
-    let slipped = false;
-    for (let f = 0; f < 40 && !slipped; f++) {
-      s.step(idle);
-      slipped = s.events.some((e) => e.type === 'slip');
-    }
-    expect(slipped).toBe(true);
-    expect(s.skater.carry).toBeGreaterThan(PHYS.baseSpeed);
-    expect(steps(sim('spoofedPlate'), 40)).not.toContain('slip');
-  });
-
-  it('Jaywalker doubles the close-call window and its score', () => {
-    expect(skaterMods(held('jaywalker')).nearScale).toBe(2);
-    const r = new RunScore();
-    r.nearScale = 2;
-    r.onEvent({ type: 'near' }, 3.5);
-    r.onEvent({ type: 'land' }, 3.5);
-    expect(r.score).toBe(400);
-  });
 });
 
 describe('LUCK boons', () => {
@@ -95,9 +53,8 @@ describe('LUCK boons', () => {
     expect(steps(s, 2)).toContain('pickup');
   });
 
-  it('Hustler adds a card; Lucky Reroll is a mod flag', () => {
+  it('Hustler adds a card', () => {
     expect(skaterMods(held('hustler')).extraCards).toBe(1);
     expect(offerBoons(1, { floor: 3, boons: [] }, 4)).toHaveLength(4);
-    expect(skaterMods(held('luckyReroll')).freeReroll).toBe(true);
   });
 });
