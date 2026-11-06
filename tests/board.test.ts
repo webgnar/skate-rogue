@@ -11,9 +11,9 @@ import { FloorSim } from '../src/sim/floor';
 const still = { pressed: false, held: false };
 
 describe('board mods', () => {
-  it('has 6 triggers and 8 effects, starting with 3 empty slots', () => {
+  it('has 6 triggers and 7 effects (Jump Refill cut, 2026-11-06), starting with 3 empty slots', () => {
     expect(MOD_DEFS.filter((m) => m.kind === 'trigger')).toHaveLength(6);
-    expect(MOD_DEFS.filter((m) => m.kind === 'effect')).toHaveLength(8);
+    expect(MOD_DEFS.filter((m) => m.kind === 'effect')).toHaveLength(7);
     expect(MOD_DEFS.filter((m) => m.kind === 'modifier')).toHaveLength(4);
     expect(newBoard()).toEqual([null, null, null]);
   });
@@ -85,15 +85,14 @@ describe('board mods', () => {
     expect(sim.skater.vsp).toBeLessThanOrEqual(PHYS.ollie * BOARD.doublePop + PHYS.grav + 1e-6);
   });
 
-  it('Gravity Flip stops a fall and pulls up; Jump Refill banks half a jump', () => {
+  it('Gravity Flip stops a fall and pulls up', () => {
     const l = buildFloor(9, 1);
-    const sim = new FloorSim(l, undefined, 0, ['onTrick', 'gravFlip', 'jumpRefill']);
+    const sim = new FloorSim(l, undefined, 0, ['onTrick', 'gravFlip']);
     sim.traffic.vehicles.length = 0;
     sim.step({ pressed: true, held: true });
     for (let f = 0; f < 30; f++) sim.step({ pressed: false, held: true });
     sim.step({ pressed: true, held: true }); // the flip
     expect(sim.skater.gravFlipT).toBeGreaterThan(0);
-    expect(sim.skater.spare).toBeCloseTo(BOARD.jumpRefill);
     for (let f = 0; f < 10; f++) sim.step({ pressed: false, held: false });
     expect(sim.skater.vsp).toBeLessThan(PHYS.trick);
   });

@@ -15,7 +15,7 @@ export function offerBoons(seed: number, run: RunView, count = 3, type?: BoonTyp
   const lib = run.library;
   const pool = BOONS.filter((b) => !b.cursed && !b.duo && open(b) && (!lib || b.gear || lib.types.includes(b.type)));
   //a typed street deals its own type first; when that type has fewer cards left than the offer (the pool was cut
-  //to 19 boons on 2026-11-06, so COOL and STREET are small), the rest come from any type
+  //to 19 boons on 2026-11-06, then 16, so COOL and LUCK are small), the rest come from any type
   const typed = type ? pool.filter((b) => b.type === type) : [];
   const rest = type ? pool.filter((b) => b.type !== type) : pool;
   const picks: Boon[] = [];

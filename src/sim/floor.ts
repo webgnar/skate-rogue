@@ -384,9 +384,6 @@ export class FloorSim {
         else sk.hsp = Math.max(sk.hsp, Math.min(BOARD.speedKickMax, sk.hsp + BOARD.speedKick));
         sk.carry = Math.max(sk.carry, Math.abs(sk.mode === 'rail' ? sk.railV : sk.hsp));
         break;
-      case 'jumpRefill':
-        sk.spare += BOARD.jumpRefill;
-        break;
       case 'gravFlip':
         if (sk.mode === 'air') {
           sk.gravFlipT = BOARD.gravFlipFrames;

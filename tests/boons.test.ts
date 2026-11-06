@@ -30,14 +30,13 @@ function peak(sk: Skater, frames: number, script: (f: number) => StepInput): num
 }
 
 describe('boon data', () => {
-  it('has 5 POP, 4 GRIND, 7 FLOW, 2 COOL, 3 LUCK and 1 STREET boons (cut to 19 plus 3 gear boons, zack 2026-11-06), plus curses and duos, with unique ids', () => {
+  it('has 3 POP, 5 GRIND, 5 FLOW, 2 COOL and 2 LUCK boons (counting the gear boons) (overlaps merged, zack 2026-11-06), plus curses and duos, with unique ids', () => {
     const plain = BOONS.filter((b) => !b.cursed && !b.duo);
-    expect(plain.filter((b) => b.type === 'POP')).toHaveLength(5);
-    expect(plain.filter((b) => b.type === 'GRIND')).toHaveLength(4);
-    expect(plain.filter((b) => b.type === 'FLOW')).toHaveLength(7);
+    expect(plain.filter((b) => b.type === 'POP')).toHaveLength(3);
+    expect(plain.filter((b) => b.type === 'GRIND')).toHaveLength(5);
+    expect(plain.filter((b) => b.type === 'FLOW')).toHaveLength(5);
     expect(plain.filter((b) => b.type === 'COOL')).toHaveLength(2);
-    expect(plain.filter((b) => b.type === 'LUCK')).toHaveLength(3);
-    expect(plain.filter((b) => b.type === 'STREET')).toHaveLength(1);
+    expect(plain.filter((b) => b.type === 'LUCK')).toHaveLength(2);
     expect(BOONS.filter((b) => b.cursed)).toHaveLength(3);
     expect(BOONS.filter((b) => b.duo)).toHaveLength(3);
     expect(new Set(BOONS.map((b) => b.id)).size).toBe(BOONS.length);
@@ -84,12 +83,11 @@ describe('POP boons', () => {
     expect(sk.jumps).toBe(0);
   });
 
-  it('Mad Pop (pressureFlip): holding past 0.15 s floats, a short hold does not', () => {
-    const base = peak(skater(FLAT), 120, pressAt(0, 120));
-    const pressure = peak(skater(FLAT, 'pressureFlip'), 120, pressAt(0, 120));
-    expect(pressure).toBeGreaterThan(base);
-    const tap = peak(skater(FLAT, 'pressureFlip'), 120, pressAt(0, 2));
-    expect(tap).toBeCloseTo(peak(skater(FLAT), 120, pressAt(0, 2)));
+  it("Big Pop's float (it took in Mad Pop): holding past 0.15 s floats, a short hold does not", () => {
+    const noFloat = () => new Skater(levelOf(FLAT), { ...skaterMods(withBoons('bigPop')), pressureFlip: false });
+    expect(skaterMods(withBoons('bigPop')).pressureFlip).toBe(true);
+    expect(peak(skater(FLAT, 'bigPop'), 120, pressAt(0, 120))).toBeGreaterThan(peak(noFloat(), 120, pressAt(0, 120)));
+    expect(peak(skater(FLAT, 'bigPop'), 120, pressAt(0, 2))).toBeCloseTo(peak(noFloat(), 120, pressAt(0, 2)));
   });
 
 });

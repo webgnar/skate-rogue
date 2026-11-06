@@ -5,7 +5,6 @@ export interface Mods {
   jumps: number; // extra jumps
   ollieScale: number;
   pressureFlip: boolean;
-  strongLegs: boolean; // a second press during the landing's impact ollies anyway
   railMagnet: number; // px
   grindScale: number;
   grindInstant: boolean;
@@ -25,7 +24,7 @@ export interface Mods {
   magnet: number; // pickup reach multiplier
   stokenScale: number;
   extraCards: number;
-  // STREET
+  // traffic
   roofRider: boolean; // parked roofs are grind ledges
   hopScale: number; // car-hop bounce (a skater's, src/run/meta.ts)
   // curses and duos
@@ -45,7 +44,6 @@ export const NO_MODS: Mods = {
   jumps: 0,
   ollieScale: 1,
   pressureFlip: false,
-  strongLegs: false,
   railMagnet: 0,
   grindScale: 1,
   grindInstant: false,
@@ -77,22 +75,21 @@ export function skaterMods(boons: Held[]): Mods {
   return {
     jumps: s('tripleThreat'),
     ollieScale: 1 + 0.2 * s('bigPop') + 0.6 * s('moonShoes'),
-    pressureFlip: s('pressureFlip') > 0,
-    strongLegs: s('strongLegs') > 0,
+    pressureFlip: s('bigPop') > 0, // Big Pop's float (it took in Mad Pop)
     railMagnet: 48 * s('railMagnet'),
     grindScale: (1 + 0.25 * s('grease')) * (s('moonShoes') ? 0.7 : 1),
     grindInstant: s('grease') > 0,
     railLaunch: s('railLaunch') > 0 ? 0.4 : 0,
-    carryBleedScale: s('perpetualMotion') ? 0 : s('bombHill') > 0 ? 0.5 : 1,
+    carryBleedScale: s('perpetualMotion') ? 0 : s('butter') > 0 ? 0.5 : 1, // Butter took in Bomb Hill
     ghostRail: s('ghostRail') > 0,
     speedScale: 1 + 0.2 * s('newWheels') + 0.4 * s('speedWobbles'),
     scoreScale: 1 + 0.2 * s('newWheels'),
     butter: s('butter') > 0,
-    slingshot: 1 + 0.5 * s('slingshot'),
+    slingshot: s('railLaunch') > 0 ? 1.5 : 1, // Full Sail took in Slingshot
     heatRise: (1 - 0.25 * s('lowProfile')) * (s('wanted') ? 2 : 1),
     bubblePads: s('bubblePads'),
     firecracker: s('firecracker') > 0,
-    magnet: s('stokenMagnet') > 0 ? 3 : 1,
+    magnet: s('doubleStoken') > 0 ? 3 : 1, // Double Stoken took in Stoken Magnet
     stokenScale: (s('doubleStoken') > 0 ? 2 : 1) * (s('wanted') ? 2 : 1),
     extraCards: s('hustler'),
     roofRider: s('roofRider') > 0,

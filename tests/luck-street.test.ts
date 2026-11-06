@@ -42,12 +42,12 @@ describe('STREET boons', () => {
 });
 
 describe('LUCK boons', () => {
-  it('Double Stoken counts each Stoken twice; Stoken Magnet reaches three times as far', () => {
+  it('Double Stoken counts each Stoken twice and (it took in Stoken Magnet) reaches three times as far', () => {
     const r = new RunScore();
     r.stokenScale = 2;
     r.onEvent({ type: 'pickup', kind: 'stoken', index: 0 }, 3.5);
     expect(r.stoken).toBe(2);
-    const s = sim('stokenMagnet');
+    const s = sim('doubleStoken');
     s.level.pickups.push({ kind: 'cash', x: s.skater.x + 20, y: s.skater.y - 24 - 60 });
     (s as unknown as { taken: boolean[] }).taken.push(false);
     expect(steps(s, 2)).toContain('pickup');

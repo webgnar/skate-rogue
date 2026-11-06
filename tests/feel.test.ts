@@ -8,8 +8,7 @@ import { SCALE } from '../src/render/skater-rig';
 import { TRICK_CATCH, TRICK_ROLL } from '../src/physics/tricks';
 import { CLIPS, sample } from '../src/render/poses';
 import { FLAT, levelOf, pressAt, run, withExtras } from './helpers';
-import { addBoon } from '../src/boons/defs';
-import { NO_MODS, skaterMods } from '../src/boons/mods';
+import { NO_MODS } from '../src/boons/mods';
 
 type Land = Extract<SkaterEvent, { type: 'land' }>;
 const lands = (sk: Skater) => sk.events.filter((e): e is Land => e.type === 'land');
@@ -704,7 +703,7 @@ describe('no ollie during the impact', () => {
     expect(popped - landedAt).toBeGreaterThanOrEqual(PHYS.impactTiers[2].frames);
   });
 
-  // zack (2026-10-26): the Strong Legs boon gives a panicked second tap its ollie
+  // Strong Legs (a second tap during the impact ollied) was cut on 2026-11-06: taps during the impact never pop
   function tapsAfterLanding(taps: number[], mods = NO_MODS): { ollied: boolean; at: number } {
     const sk = new Skater(levelOf(FLAT), mods);
     run(sk, 1, pressAt(0));
@@ -719,13 +718,9 @@ describe('no ollie during the impact', () => {
     return { ollied: at >= 0, at };
   }
 
-  it('Strong Legs: a second tap during the impact ollies right then; one tap still waits', () => {
-    const legs = skaterMods(addBoon([], 'strongLegs'));
+  it('taps during the impact never ollie (Strong Legs is gone)', () => {
     expect(tapsAfterLanding([2, 5]).ollied).toBe(false);
-    const twice = tapsAfterLanding([2, 5], legs);
-    expect(twice.ollied).toBe(true);
-    expect(twice.at).toBe(5);
-    expect(tapsAfterLanding([2], legs).ollied).toBe(false);
+    expect(tapsAfterLanding([2]).ollied).toBe(false);
   });
 
 });

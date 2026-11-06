@@ -35,7 +35,7 @@ const SCENARIOS = [
   ...[1, 2, 3, 4, 5].map((act) => ({ id: `escape-${act}`, q: `seed=${act * 911}&escape=${act}`, secs: 45, turbo: 2, what: `act ${act}'s escape` })),
   { id: 'mash', q: 'seed=777&floor=2', bot: 'mash', secs: 50, turbo: 2, what: 'a button-masher on floor 2' },
   { id: 'sewer', q: 'seed=103&floor=2', bot: 'sewer', secs: 60, turbo: 2, what: 'the sewer bot cruising the sewer route (stairs, kick-outs, rats)' },
-  { id: 'boons', q: 'seed=4242&floor=5&boons=bigPop,bigPop,grease,pressureFlip,railMagnet,slingshot,tripleThreat', secs: 50, turbo: 3, what: 'a strong POP and GRIND build' },
+  { id: 'boons', q: 'seed=4242&floor=5&boons=bigPop,bigPop,grease,railLaunch,railMagnet,ghostRail,tripleThreat', secs: 50, turbo: 3, what: 'a strong POP and GRIND build' },
   ...['webster', 'keanu', 'roxy', 'goldie'].map((s, i) => ({ id: `skater-${s}`, q: `seed=${60 + i}&floor=${2 + i}`, skater: s, secs: 30, turbo: 2, what: `${s} on the rig` })),
 ];
 
