@@ -1,30 +1,15 @@
-// Card art for the skate shop (openspec/changes/ui3-shop-look): each card shows one of the game's own models
-// (rendered by art/cards, public/sprites/cards/*.png; the gear cards' truck, wheel and shoe are art/gear.py) on a burst in the card's colour, with a comic glyph on top
-// that says what the mod does (an arrow for a pop, a clock for a delay, ×2...).
+// Card art for the skate shop (openspec/changes/ui3-shop-look): the mod cards and the slot card show zack's
+// hand-drawn pictures (handArt); the gear cards show the game's own models (rendered by art/cards,
+// public/sprites/cards/*.png; the truck, wheel and shoe are art/gear.py) on a burst in the card's colour.
 import type { ModId } from '../board/mods';
 import type { GearPart } from '../run/gear';
 
 const base = import.meta.env.BASE_URL;
 
 export type Pic =
-  | 'board' | 'pop' | 'flip' | 'grind' | 'car' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe' | 'bearing'
-  | 'butter' | 'wax' | 'cruiser' | 'robotaxi' | 'bus' | 'boxtruck' | 'drone' | 'chopper' | 'wanted' | 'signal' | 'rocket';
+  | 'board' | 'pop' | 'grind' | 'coin' | 'stoken' | 'deck' | 'truck' | 'wheel' | 'shoe' | 'bearing' | 'cruiser'
+  | 'signal' | 'rocket';
 export type Glyph = 'up' | 'down' | 'right' | 'curl' | 'clock' | 'speed' | 'ring' | 'sparks' | 'plus' | 'flipv' | string;
-
-const MOD_ART: Record<ModId, [Pic, Glyph?]> = {
-  onOllie: ['pop', 'up'],
-  onLand: ['board', 'down'],
-  onGrind: ['grind'],
-  onTrick: ['flip', 'curl'],
-  doublePop: ['pop', '2X'],
-  speedKick: ['board', 'speed'],
-  cashBurst: ['coin', 'sparks'],
-  shockwave: ['board', 'ring'],
-  patchJob: ['deck', 'plus'],
-  twice: ['stoken', '×2'],
-  comboOnly: ['flip', '5+'],
-  coinFlip: ['coin', '?'],
-};
 
 const GEAR_ART: Record<GearPart, Pic> = { deck: 'deck', trucks: 'truck', wheels: 'wheel', shoes: 'shoe', bearings: 'bearing' };
 
@@ -74,13 +59,18 @@ export function pic(p: Pic): string {
   return p === 'bearing' ? BEARING : `<img class="pic" src="${base}sprites/cards/${p}.png" alt="" draggable="false" />`;
 }
 
+// zack's hand-drawn card pictures (2026-11-06): one 384 px WebP per card in public/sprites/cards/art, named by the
+// boon or mod id ('extraSlot' for the shop's slot card). A card with one shows it alone, with no glyph
+export function handArt(id: string): string {
+  return `<img class="pic hand" src="${base}sprites/cards/art/${id}.webp" alt="" draggable="false" />`;
+}
+
 export function modArt(id: ModId): string {
-  const [p, g] = MOD_ART[id];
-  return `<span class="art">${pic(p)}${glyph(g)}</span>`;
+  return `<span class="art">${handArt(id)}</span>`;
 }
 
 export function slotArt(): string {
-  return `<span class="art">${pic('board')}${glyph('plus')}</span>`;
+  return `<span class="art">${handArt('extraSlot')}</span>`;
 }
 
 export function gearArt(part: GearPart): string {
