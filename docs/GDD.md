@@ -410,6 +410,17 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
 | 4 | **Above the clouds:** blimps, thin air, the tops of the tallest towers, the stars coming out | 3 + escape | **The ceiling:** the AI's drones and gunships hold a line at the top of the sky; break through it on the blimps |
 | 5 | **Space:** low gravity, huge jumps, top speed; satellites, debris, the black | 3 + finale | **The beam-up:** the AI's last launch chases you; reach the Pleiadian ship's beam, and it jumps to the stars |
 
+- **Act 2's floors are rooftop floors** (built Nov 6, 2026, the climb's step a; level design only, the same kit and
+  physics; `ROOFTOPS` in src/gen/sky-beats.ts). Floors 4-6 start up on a rooftop deck 2.5 tiles over the hill's
+  run-up, so the act opens on the roofs and the street is somewhere you fall to. At the top of each cable car the
+  next stretch's first roof starts 2 tiles past the crest's lip, half a tile up: an ollie off the lip makes it, and
+  rolling off without one drops you onto the hill road under it. The act's sky recipes are roof after roof, with the
+  odd billboard, water tower, scaffold or set piece between. Over the street chases and the run to the gate the top
+  route's rooftops carry the line on, and the overpass past the gate is where it ends, so a good player starts on a
+  roof and ends on the overpass (the sky bot: up on the roofs most of each floor's first stretch, and through the
+  gate on the high road on about three floors in four). The cloud layer still sits over the roofs from floor 5 (the
+  sky route, the high way), and the hill road and the sewer under it are unchanged. Endless reuses acts 4 and 5, so it
+  never gets these floors.
 - Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
   by skating. They use the same traffic and Heat rules.
 - The Hive is dropped (zack, Nov 6, 2026). The acts' kits are the same fused city seen from higher up, not new
@@ -1357,7 +1368,7 @@ The official roadmap (zack, Oct 31, 2026). Each item is checked against "What th
 **The climb** (zack, Nov 6, 2026: "this seems good"; see The fantasy and How a run ends). In this order, each a
 thread of its own:
 - a. **Act 2 rooftops** as level design only: a floor recipe that starts and ends on roofs and overpasses, from the
-  kit we have.
+  kit we have. Built Nov 6, 2026 (see How a run ends).
 - b. **Act 3 as a whole cloud act**: the sky route's pieces (wires, girders, the cloud layer) become the main floor,
   not the top lane.
 - c. **Gravity scaling**: one number per act applied to the ollie, flips and hang time, tested on the bot so act 1's
@@ -1404,8 +1415,12 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
   someone awake in another city).
 - **The climb** (fantasy decided Nov 6, 2026, see The fantasy): the act heights are a default to check with zack;
-  where gravity starts to drop and how far it goes are numbers to tune; the level design of the higher acts (rooftop floors, the cloud layer as a whole act,
-  blimps and thin air) and the ship as the between-runs hub are not designed or built.
+  where gravity starts to drop and how far it goes are numbers to tune; the level design of the higher acts (the cloud layer as a whole act,
+  blimps and thin air) and the ship as the between-runs hub are not designed or built. Act 2's rooftop floors
+  (built Nov 6, 2026) left three calls open, with these defaults: you start 2.5 tiles up on the roof and each later
+  stretch's roof is half a tile over its crest (an ollie, never a flip); the cloud layer still runs over floors 5 and
+  6 (default: it moves up to act 3 when step b makes the clouds the main floor); and the rooftops stay optional,
+  so a player who never ollies off a roof's end skates the hill road as in act 1.
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
