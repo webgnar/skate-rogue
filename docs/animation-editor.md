@@ -7,13 +7,20 @@ npm run dev
 # open http://localhost:5173/?editor          (or ?editor&clip=kickflip, ?editor&skater=roxy)
 ```
 
+The editor shows **Webster** (the hero, the skater on the title screen) unless `?skater=` picks another
+(`lou-gnar`, `keanu`, `roxy`, `goldie`). Every skater shares Lou's rig and plays the same clips, so a key saved on
+Webster plays the same on all of them.
+
 ## Posing
 
 - **Pick a clip** at the top left. `air` is the one that plays after every air trick (and off drops) until you land;
   `freefall` is the bail. Space plays it (0.5× by default; the speed menu goes down to 0.1×). The **roll**
   box scrolls the ground so pushes and rides read like they do in the game.
-- **Scrub** by dragging on the timeline. The arrow keys step one frame (1/30 s), `,` and `.` jump between keys.
-- **Drag in the view.** Click a dot, then drag it or its arrows:
+- **Scrub** by dragging on the timeline. It lands on whole frames, and on a key whenever you pass within a few pixels
+  of one (some keys sit between frames). The arrow keys step one frame (1/30 s) and stop on any key in between,
+  `,` and `.` jump between keys.
+- **Drag in the view.** Click a dot, then drag it or its arrows. The values that dot moves light up in its colour
+  on the right, scrolled into view:
   - yellow: the hips (the legs follow with IK);
   - cyan: the front (left) foot; pink: the back (right) foot. A foot standing on the board slides along the deck.
     Set its **on board** to 0 to take it off, and it goes anywhere (flips, the push foot, slams);
@@ -37,7 +44,8 @@ npm run dev
 - **Auto-key:** changing anything between keys adds a key at the playhead. `k` adds one, delete removes one (the
   first key stays at 0). Drag a key's diamond to retime it, or type a new **length** to stretch the whole clip.
 - On a looping clip whose last key matches its first, editing either one edits both, so the loop doesn't jump.
-- **copy pose / paste pose** (ctrl+c / ctrl+v) copies the pose at the playhead to another time.
+- **copy pose / paste pose** (ctrl+c / ctrl+v) copies the pose at the playhead to another time. With a dot picked
+  it copies just that dot's values (the button reads "copy back foot" and so on), and paste puts back only those.
 - **ghost** shows the previous key see-through. **ref photo** (or drop an image on the view) lays a reference photo
   over the view, with a fade slider and a mirror button. The side view is the game's camera.
 - ctrl+z / ctrl+shift+z undo and redo. Unsaved clips survive a reload (they're kept in this browser).

@@ -348,15 +348,32 @@ export const DOG_PET = { x: -9.4, z: -0.9 }; // where it sits by the homeless ma
 // where the dog is on the street's minute, and what it's doing: in from the left to the homeless man, along behind
 // Webster to the trash can, off to the right, and later running back the other way along the curb
 function dogRoute(p: number) {
-  const x = track(p, [[0, -24], [7, DOG_PET.x], [15, DOG_PET.x], [21, 2.6], [30, 2.6], [37, 24], [44, 24], [52, -24]]);
-  const z = track(p, [[0, 0.4], [7, DOG_PET.z], [15, DOG_PET.z], [17, -1.2], [21, -1.0], [30, -1.0], [33, -0.6], [44, 1.4]]);
-  const what = step(p, [[0, 'trot'], [7, 'sit'], [15, 'trot'], [21, 'sniff'], [26, 'scratch'], [30, 'trot'], [37, 'gone'], [44, 'run'], [52, 'gone']] as const);
+  const x = track(p, [[0, -24], [7, DOG_PET.x], [15, DOG_PET.x], [21, 2.6], [31, 2.6], [37, 24], [44, 24], [52, -24]]);
+  const z = track(p, [[0, 0.4], [7, DOG_PET.z], [15, DOG_PET.z], [17, -1.2], [21, -1.0], [31, -1.0], [34, -0.6], [44, 1.4]]);
+  //after its shake it stands and turns its head to look at the camera a moment (zack 2026-11-06), then trots off
+  const what = step(p, [[0, 'trot'], [7, 'sit'], [15, 'trot'], [21, 'sniff'], [26, 'scratch'], [28, 'look'], [31, 'trot'], [37, 'gone'], [44, 'run'], [52, 'gone']] as const);
   return { x, z, what };
 }
 
 // the stray: the blender bot's dog (src/render/bot-model.ts) when it loaded, else the code-built one
 function dog(): Life {
   return modelDog() ?? codeDog();
+}
+
+// where the dog looks when it turns to the camera: the camera's last stop across the street, its body turned part
+// way there (radians, its facing)
+const DOG_LOOK = { at: new THREE.Vector3(3.6, 1.5, 17), body: -0.6, most: 0.9 }; // most: the furthest its neck turns, radians
+
+// turns a bone by a world yaw (about the up axis) on top of its pose; the bone's parents' world matrices must be current
+const _q = new THREE.Quaternion();
+const _p = new THREE.Quaternion();
+const _y = new THREE.Vector3(0, 1, 0);
+function turnBone(bone: THREE.Object3D, yaw: number): void {
+  bone.parent!.getWorldQuaternion(_p);
+  //a world rotation W on a bone with parent rotation P: local' = P^-1 W P local
+  _q.setFromAxisAngle(_y, yaw);
+  bone.quaternion.premultiply(_p.clone().invert().multiply(_q).multiply(_p));
+  bone.updateMatrixWorld(true);
 }
 
 // the blender bot's dog, rigged: the same minute as the code-built dog, each thing it does a clip
@@ -366,14 +383,20 @@ function modelDog(): Life | null {
   const group = new THREE.Group();
   inkify(rig.root);
   group.add(rig.root);
+  //the bones the look turns, base to tip, and how much of the turn each takes: spread down the neck so no one joint
+  //twists the mesh
+  const lookBones = (['Neck', 'Neck.001', 'Head'] as const).map((n) => rig.root.getObjectByName(n)).filter((b): b is THREE.Object3D => !!b);
+  const share = 1 / Math.max(1, lookBones.length);
+  const posed = lookBones.map((b) => b.quaternion.clone()); // each bone as the clip posed it, before the look
   let face = 0;
+  let look = 0; // how far its head is turned to the camera, 0 to 1
   return {
     group,
     update(t: number, dt: number): void {
       const { x, z, what } = dogRoute(t % SCENE);
       rig.root.visible = what !== 'gone';
       rig.root.position.set(x, 0, z);
-      const want = what === 'run' ? Math.PI : what === 'sit' ? -0.6 : 0;
+      const want = what === 'run' ? Math.PI : what === 'sit' ? -0.6 : what === 'look' ? DOG_LOOK.body : 0;
       face += (want - face) * Math.min(1, dt * 6);
       rig.root.rotation.y = face;
       //the clips at the pace the route moves it: trotting about 2 a second, running about 7
@@ -381,8 +404,21 @@ function modelDog(): Life | null {
       else if (what === 'run') rig.play('run', 0.2, 1.5);
       //the model shakes itself off where the code-built dog scratched (a lifted back leg folds its hip through itself)
       else if (what === 'scratch') rig.play('shake', 0.25);
+      else if (what === 'look') rig.play('idle', 0.35);
       else if (what !== 'gone') rig.play(what, 0.35);
+      //put back the clip's pose under last frame's look first, so the look never piles up on a bone the clip doesn't
+      //key every frame
+      lookBones.forEach((b, i) => b.quaternion.copy(posed[i]));
       rig.update(dt);
+      lookBones.forEach((b, i) => posed[i].copy(b.quaternion));
+      //the look: the rest of the turn to the camera down its neck to its head, on top of the clip, eased in and out
+      look += ((what === 'look' ? 1 : 0) - look) * Math.min(1, dt * 4);
+      if (look > 0.001 && lookBones.length) {
+        rig.root.updateMatrixWorld(true);
+        const want = Math.atan2(DOG_LOOK.at.x - x, DOG_LOOK.at.z - z) - Math.PI / 2 - face;
+        const turn = THREE.MathUtils.clamp(want, -DOG_LOOK.most, DOG_LOOK.most) * look;
+        for (const b of lookBones) turnBone(b, turn * share);
+      }
     },
   };
 }
@@ -487,7 +523,7 @@ function codeDog(): Life {
       const { x, z, what } = dogRoute(p);
       d.visible = what !== 'gone';
       d.position.set(x, 0, z);
-      const want = what === 'run' ? Math.PI : what === 'sit' ? -0.6 : 0;
+      const want = what === 'run' ? Math.PI : what === 'sit' ? -0.6 : what === 'look' ? DOG_LOOK.body : 0;
       face += (want - face) * Math.min(1, dt * 6);
       d.rotation.y = face;
       const moving = what === 'trot' || what === 'run';
@@ -511,7 +547,7 @@ function codeDog(): Life {
       //the head: up while it trots, nose down sniffing the can, tipped to the scratch, looking up at the man
       const sniff = what === 'sniff';
       neck.rotation.z = sniff ? -0.9 + Math.sin(t * 14) * 0.05 : what === 'scratch' ? -0.1 : what === 'sit' ? 0.25 : moving ? Math.sin(t * pace * 2) * 0.05 : 0;
-      head.rotation.set(what === 'scratch' ? 0.45 : 0, 0, sniff ? 0.25 : what === 'sit' ? -0.55 : 0);
+      head.rotation.set(what === 'scratch' ? 0.45 : 0, what === 'look' ? -0.9 : 0, sniff ? 0.25 : what === 'sit' ? -0.55 : 0);
       jaw.position.y = -0.17 - (what === 'run' || what === 'sit' ? 0.04 + Math.abs(Math.sin(t * 8)) * 0.03 : 0); // panting
       for (const e of ears) e.rotation.z = moving ? Math.sin(t * pace + 1) * 0.35 : sniff ? 0.4 : 0;
       //the tail: up and wagging, fastest when it's being petted

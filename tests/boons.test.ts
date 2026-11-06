@@ -3,9 +3,9 @@ import { addBoon, BOONS, stacksOf, type BoonId, type Held } from '../src/boons/d
 import { skaterMods } from '../src/boons/mods';
 import { offerBoons } from '../src/boons/offer';
 import { PHYS, TILE } from '../src/physics/constants';
-import { CurvedRail } from '../src/physics/level';
+import { CurvedRail, surfaceY, type Surface } from '../src/physics/level';
 import { Skater, type StepInput } from '../src/physics/skater';
-import { FLAT, levelOf, pressAt, run } from './helpers';
+import { FLAT, levelOf, pressAt, run, withExtras } from './helpers';
 
 const RAIL = [
   '................', '................', '................', '................', '................',
@@ -227,6 +227,26 @@ describe('GRIND boons', () => {
       expect(offEnd(drop, 'ghostRail')).toBe('grind');
       expect(offEnd(drop)).not.toBe('grind');
     }
+  });
+
+  it('Ghost Rail: ground rising up to the ghost takes over, you ride up it instead of through it', () => {
+    //zack, 2026-11-06: the ghost carried him through a slanted embankment (the sewer's brick outlet ramp) and he died
+    //under it
+    const sy = levelOf(FLAT).streetY;
+    const bank: Surface = { kind: 'bank', x0: 13 * TILE, x1: 17 * TILE, y: sy, y1: sy - 100, row: 0 };
+    const top: Surface = { kind: 'roof', x0: 17 * TILE, x1: 30 * TILE, y: sy - 100, row: 0 };
+    const rail = new CurvedRail(3 * TILE, sy - 60, 12 * TILE, sy - 60, 0);
+    const sk = new Skater(withExtras([bank, top], [rail], { x: 3 * TILE + 4, y: sy - 80 }), skaterMods(withBoons('ghostRail')));
+    sk.mode = 'air';
+    sk.vsp = 1;
+    let under = false;
+    for (let f = 0; f < 240 && (sk.mode as string) !== 'bail'; f++) {
+      sk.step({ pressed: false, held: false });
+      if (sk.x > bank.x0 && sk.x < bank.x1 && sk.y > surfaceY(bank, sk.x) + 4) under = true;
+    }
+    expect(under).toBe(false);
+    expect(sk.mode).toBe('roll');
+    expect(sk.surface).toBe(top);
   });
 });
 

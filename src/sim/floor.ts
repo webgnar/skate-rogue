@@ -45,7 +45,7 @@ export type FloorEvent =
   | { type: 'slip' } // Slipstream: drafted a car long enough for a burst
   | { type: 'doorSlam'; x: number; y: number } // a car hop slammed an open car door shut (px: the door's top)
   | { type: 'wear'; part: GearPart; level: 'worn' | 'busted' } // a part of your gear just wore past a line
-  | { type: 'puddle'; x: number; y: number } // rolled into a puddle: it washes out the bearings
+  | { type: 'puddle'; x: number; y: number; runoff?: boolean } // rolled into a puddle (it washes out the bearings), or the sewer's runoff (it only soaks the deck)
   | ShotEvent // the guards shooting at you on a chase (src/sim/shots.ts)
   | { type: 'smash'; index: number; prop: string; x: number; y: number; how: SmashHow; loot?: Loot }
   // a car hop dented a car (src/traffic/damage.ts): x is its middle and y its roof, px; stage 3 is wrecked
@@ -579,7 +579,7 @@ export class FloorSim {
       const drag = GEAR.puddleDrag.fresh + (GEAR.puddleDrag.dead - GEAR.puddleDrag.fresh) * (1 - sk.gear.grip);
       sk.hsp *= 1 - drag;
       sk.carry *= 1 - drag;
-      this.events.push({ type: 'puddle', x: sk.x, y: sk.y });
+      this.events.push({ type: 'puddle', x: sk.x, y: sk.y, runoff: wet === runoff });
     }
     this.wading = wet;
     const speed = Math.abs(sk.mode === 'rail' ? sk.railV : sk.hsp);
