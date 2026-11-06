@@ -78,6 +78,29 @@ more. A floor takes 150–750 ms to generate and validate in Node, because the b
 Gear wear was halved to keep about 4 floors to half-worn gear. The balance test's Heat bound went from 60 to 80,
 because with two or three street chases a floor, slams get more chances to bunch up.
 
+## Act 2: the rooftops (`ROOFTOPS` in `src/gen/sky-beats.ts`)
+
+The climb's first step (GDD Roadmap, Nov 6, 2026): act 2 is the rooftops, as level design on the kit we have. The
+hill, the chases, the cable cars and the street finale are the same as every other act's; what changes is where the
+line starts and how you get on it.
+
+- **You start on a roof.** Floors 4-6 open on a rooftop deck (a sky beat's tar roof on its glass skyscraper) 2.5
+  tiles over the hill's run-up, from 2 tiles behind the start to 4 tiles past the lip (`startUp`, `startRoof`). The
+  floor's `startY` is the deck, so coming in from the last floor you roll straight onto it.
+- **Each later stretch starts on a roof too.** At the top of each cable car the stretch's first roof starts 2 tiles
+  past the crest's lip, half a tile over it (`entryIn`, `entryUp`): an ollie off the lip lands on it, and rolling
+  off the lip without one drops you onto the hill road under it. (Elsewhere the sky's first piece is 2.5 tiles over
+  the lip, a big ollie and a flip.)
+- **Roof after roof.** The act's sky recipes are mostly `roofs`, with a split, a billboard, a water tower, a
+  scaffold or a set piece between.
+- **It ends on the overpass.** Over the street chases and the run to the gate the top route's rooftops carry the
+  line on, onto the overpass past the gate (the high road). In between there are the L and the top route's power
+  lines, the act's "first power lines".
+- **The other routes stay.** The hill road and the street are under the roofs, and the sewer under them; the sewer
+  bot rolls off each roof's end to get down to its drains. From floor 5 the cloud layer is still over the roofs.
+- Tests: `tests/rooftops.test.ts` (starts on a roof, a roof an ollie off every later crest, the sky bot mostly up on
+  the roofs and out on the high road).
+
 ## The look (`src/render/hillside.ts`)
 
 - **The hill**: every piece of the descent is solid ground down out of sight. Road with a double yellow down the
