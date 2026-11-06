@@ -10,7 +10,8 @@ import { SEWER_ROOF, type Level } from '../physics/level';
 import { SEWER_SIM, type SewerSim } from '../sim/sewer';
 import { SEWER } from '../gen/sewer';
 import { inkify } from './toon';
-import { disposeGeometries } from './dispose';
+import { disposeGeometries, shareGeometry } from './dispose';
+import { RAT, type BotRig, type RatClip } from './bot-model';
 import { CAR, trainCar } from './el-view';
 import { EL } from '../traffic/el';
 import { warmMesh } from './shader-keep';
@@ -89,7 +90,7 @@ const waterFragment = /* glsl */ `
 
 export class SewerView {
   readonly group = new THREE.Group();
-  private rats: { mesh: THREE.Group; rat: { x: number; alive: boolean } }[] = [];
+  private rats: { mesh: THREE.Object3D; rat: { x: number; alive: boolean }; pack: { awake: boolean }; rig: BotRig<RatClip> | null }[] = [];
   private surges: { mesh: THREE.Group; body: THREE.Mesh; wave: THREE.Group; foam: THREE.Mesh; mat: THREE.ShaderMaterial; bodyMat: THREE.ShaderMaterial; rise: number; fall: number; t: SewerSim['tunnels'][number] }[] = [];
   // the wave crashed at the tunnel's end (x, y in world units, h its height): the game puts the canal's splash there
   onCrash: (x: number, y: number, h: number) => void = () => {};
@@ -127,10 +128,11 @@ export class SewerView {
     for (const t of sim.tunnels) {
       const fy = Y(t.s.y);
       for (const rat of t.pack?.rats ?? []) {
-        const m = this.rat();
+        const rig = this.ratRig();
+        const m = rig?.root ?? this.rat();
         m.position.set(rat.x / TILE, fy, 0.4 + (rat.x % 3) * 0.5);
         this.group.add(m);
-        this.rats.push({ mesh: m, rat });
+        this.rats.push({ mesh: m, rat, pack: t.pack!, rig });
       }
       if (t.surge) {
         //the wave: under half the tunnel's height, its lip well under the roof (zack, 2026-11-02: "make the wave smaller")
@@ -326,6 +328,22 @@ export class SewerView {
     return new THREE.Mesh(geo, this.foam);
   }
 
+  // the blender bot's rat (zack's ref, 2026-11-06: build_rat.py), facing the way the pack runs (-x), each one a step
+  // out of time with the next; null when the model didn't load, and the code-built rat below stands in
+  private ratRig(): BotRig<RatClip> | null {
+    const rig = RAT.rig<RatClip>();
+    if (!rig) return null;
+    inkify(rig.root);
+    //(the copies and their ink share the model's geometry: freeing the floor mustn't free it)
+    rig.root.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) shareGeometry((o as THREE.Mesh).geometry);
+    });
+    rig.root.rotation.y = Math.PI;
+    rig.play('sniff', 0);
+    rig.update(Math.random() * 2);
+    return rig;
+  }
+
   // a hunched sewer rat (zack's ref): a humped grey body, a pointed snout with a pink nose and an open mouth, round
   // ears, little legs and a long pink tail
   private rat(): THREE.Group {
@@ -370,7 +388,12 @@ export class SewerView {
       r.mesh.visible = r.rat.alive;
       if (!r.rat.alive) continue;
       r.mesh.position.x = at(r.rat, 'x') / TILE;
-      r.mesh.rotation.z = Math.sin(this.time * 30 + r.rat.x) * 0.12;
+      if (r.rig) {
+        //sniffing about until the pack sees you, then the scurry
+        if (r.pack.awake) r.rig.play('run', 0.15, 1.4);
+        else r.rig.play('sniff', 0.3);
+        r.rig.update(dt);
+      } else r.mesh.rotation.z = Math.sin(this.time * 30 + r.rat.x) * 0.12;
     }
     for (const s of this.surges) {
       const sg = s.t.surge!;
