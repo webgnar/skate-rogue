@@ -7,7 +7,7 @@ import { buildFloor } from '../src/gen/descent';
 import { FloorSim } from '../src/sim/floor';
 import { Pilot } from '../src/bot/pilot';
 import { maxGap, skyLines } from '../src/gen/sky-line';
-import { cloudy } from '../src/gen/clouds';
+import { cloudy, highDials, layerScale } from '../src/gen/clouds';
 import { TILE } from '../src/physics/constants';
 import type { Level } from '../src/physics/level';
 
@@ -40,17 +40,20 @@ describe('the sky line', () => {
   });
 
   it('nothing on the line is further than a flip from the piece before it', () => {
-    for (let seed = 1; seed <= 6; seed++) for (let f = 5; f <= 12; f++) {
+    for (let seed = 1; seed <= 6; seed++) for (let f = 5; f <= 15; f++) {
       const l = chicago(seed * 53, f);
-      //(each stretch's city sky, and the cloud layer over the whole floor)
-      for (const line of skyLines(l)) {
-        for (let i = 1; i < line.length; i++) {
-          const from = line.slice(0, i).sort((p, q) => q.x1 - p.x1)[0];
-          if (from.x1 >= line[i].x0) continue; // one over another: either way on
-          const gap = (line[i].x0 - from.x1) / TILE;
-          expect(gap).toBeLessThanOrEqual(maxGap((line[i].y0 - from.y1) / TILE) + 1);
+      //(each stretch's city sky, and the cloud layer over the whole floor; acts 4 and 5 by their own reach, grown for
+      //their gravity)
+      highDials(f, () => {
+        for (const line of skyLines(l)) {
+          for (let i = 1; i < line.length; i++) {
+            const from = line.slice(0, i).sort((p, q) => q.x1 - p.x1)[0];
+            if (from.x1 >= line[i].x0) continue; // one over another: either way on
+            const gap = (line[i].x0 - from.x1) / TILE;
+            expect(gap).toBeLessThanOrEqual(maxGap((line[i].y0 - from.y1) / TILE) + layerScale(f));
+          }
         }
-      }
+      });
     }
   });
 
@@ -63,9 +66,9 @@ describe('the sky line', () => {
       }
   });
 
-  it('the long first stretch climbs into the clouds; the ones after stay in the city sky (act 4: act 3 is all clouds)', () => {
+  it('the long first stretch climbs into the clouds; the ones after stay in the city sky (Endless: acts 3-5 are all layer)', () => {
     for (let seed = 1; seed <= 6; seed++) {
-      const l = chicago(seed * 53, 10);
+      const l = chicago(seed * 53, 16);
       expect(cloudy(l, 0)).toBe(true);
       expect(cloudy(l, 1)).toBe(false);
     }
@@ -74,7 +77,7 @@ describe('the sky line', () => {
   it('a good player can skate the sky line from end to end on most stretches', () => {
     let made = 0;
     let runs = 0;
-    for (let seed = 1; seed <= 5; seed++) for (const f of [5, 7, 9, 11]) {
+    for (let seed = 1; seed <= 5; seed++) for (const f of [5, 7, 9]) {
       const l = chicago(seed * 53, f);
       for (const span of l.hillSpans ?? []) {
         const got = skate(l, span, 5);

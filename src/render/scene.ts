@@ -488,6 +488,15 @@ export class StreetView {
     this.cut[0].constant = NO_CUT;
   }
 
+  // the far cards alone, the kit left as it is: act 5's floors are up in space (stars and planets behind the line,
+  // not the skyline), the run's one city still under them
+  private cards: BiomeId | null = null;
+  async setCards(id: BiomeId): Promise<void> {
+    if ((this.cards ?? this.biome) === id) return;
+    this.cards = id;
+    await this.buildBackdrop(id);
+  }
+
   // the district's kit (skins.ts): loads its tiles, then rebuilds the floor's kit in them. Chicago if they fail.
   async setBiome(id: BiomeId): Promise<void> {
     const sheet = await loadSheet(this.base, id).catch((err) => {
@@ -496,6 +505,7 @@ export class StreetView {
     });
     this.biome = sheet ? id : 'chicago';
     this.sheet = sheet;
+    this.cards = null;
     await this.buildBackdrop(id);
     if (this.kit) this.setLevel(this.level, this.seed, this.floor);
   }

@@ -32,7 +32,7 @@ import { floorEdit } from './level-edits';
 import { makeRng, randInt, type Rng } from './rng';
 import { busy, clearAt, groundAt, TOP } from './top-route';
 import { SKY_SWAY } from '../sim/sky';
-import { cloudy, crestOf, lipOf, stairStart, cloudFloor } from './clouds';
+import { cloudy, crestOf, lipOf, stairStart, layerFloor } from './clouds';
 import { openAt } from './sky-line';
 
 export type SkyBeat = 'roofs' | 'billboard' | 'tower' | 'crane' | 'scaffold' | 'gap' | 'beam' | 'split' | SkyPiece | 'lines';
@@ -177,7 +177,7 @@ export function addSkyBeats(level: Level, seed: number): void {
   const spans = level.hillSpans;
   const floor = level.layout.floor;
   //(act 3's floors are the cloud layer, src/gen/clouds.ts CLOUD_ACT: no city sky under it)
-  if (!spans?.length || !skyRecipe(floor).length || cloudFloor(floor)) return;
+  if (!spans?.length || !skyRecipe(floor).length || layerFloor(floor)) return;
   const d = skyDials(floor);
   const rng = makeRng(seed * 71 + floor * 6151);
   //the finds roll from their own seed, so they never move the beats

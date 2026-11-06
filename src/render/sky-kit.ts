@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { groundAt } from '../gen/top-route';
+import { layerAct } from '../gen/clouds';
 import { surface } from './surfaces';
 
 const X = (px: number) => px / TILE;
@@ -99,6 +100,11 @@ export function buildSkyBeats(level: Level): THREE.Group {
   const solar = new THREE.MeshLambertMaterial({ color: 0x24407a, emissive: 0x0a1430 });
   const lamp = new THREE.MeshLambertMaterial({ color: 0xd8dce4, emissive: 0x403820 });
   const board = new THREE.MeshLambertMaterial({ map: adTexture() });
+  const beacon = new THREE.MeshBasicMaterial({ color: 0xff3a4a });
+  const crown = surface('concrete', 0x6a6478);
+  const white = new THREE.MeshLambertMaterial({ color: 0xdfe2ea });
+  //(act 5 is up in space: the staircase's girders float free, white station truss, no crane up there to hang them on)
+  const space = layerAct(level.layout.floor) === 5;
   const tall = new THREE.MeshLambertMaterial({ map: glassTexture() });
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -171,6 +177,32 @@ export function buildSkyBeats(level: Level): THREE.Group {
       box(w, 0.18, 1.6, cx, y - 0.09, -0.3, wood);
       for (const lx of [x0 + 0.15, x1 - 0.15]) for (const z of [-0.25, -0.95]) leg(lx, y - 0.18, z, 0.05);
       box(w, 0.05, 0.05, cx, y + 0.6, -0.9, steel); // the guard rail at the back
+    } else if (s.sky === 'spire') {
+      //a skyscraper's crown up through the clouds (act 4, src/gen/clouds.ts HIGH): the roof deck you land on, a
+      //setback under it, the glass tower all the way down to the city, and its antenna mast behind with a red beacon
+      box(w, 0.35, 2.8, cx, y - 0.175, -0.9, crown);
+      box(w, 0.12, 0.12, cx, y - 0.02, 0.45, parapet); // the flashing along the front edge
+      box(w - 0.6, 1.2, 2.6, cx, y - 0.95, -1.1, crown); // the setback, its plant room
+      for (let lx = x0 + 0.8; lx < x1 - 0.5; lx += 1.6) box(0.6, 0.5, 0.06, lx, y - 0.9, 0.22, lamp); // its louvres
+      const base = Math.min(foot(x0 * TILE), foot(x1 * TILE)) - 6;
+      const h = y - 1.55 - base;
+      const body = box(w + 0.6, h, 3.4, cx, base + h / 2, -1.6, tall);
+      const uv = body.geometry.getAttribute('uv') as THREE.BufferAttribute;
+      for (let v = 0; v < uv.count; v++) uv.setXY(v, (uv.getX(v) * (w + 0.6)) / 4, (uv.getY(v) * h) / 4);
+      box(0.16, 5, 0.16, cx + w * 0.2, y + 2.5, -2.0, steel); // the antenna
+      for (const dy of [1.2, 2.6]) box(0.7, 0.06, 0.06, cx + w * 0.2, y + dy, -2.0, steel);
+      box(0.28, 0.28, 0.28, cx + w * 0.2, y + 5.1, -2.0, beacon);
+    } else if (space && s.sky === 'step') {
+      //act 5's: a length of white station truss, drifting
+      box(w, 0.14, 1.2, cx, y - 0.07, -0.25, white);
+      box(w, 0.1, 0.1, cx, y - 0.6, 0.25, white);
+      box(w, 0.1, 0.1, cx, y - 0.6, -0.75, white);
+      for (let lx = x0 + 0.3; lx < x1 - 0.1; lx += 1) {
+        const strut = box(0.06, 0.62, 0.06, lx + 0.25, y - 0.35, 0.25, steel);
+        strut.rotation.z = 0.7;
+        box(0.06, 0.55, 0.06, lx, y - 0.35, -0.75, steel);
+      }
+      box(0.3, 0.12, 0.3, x0 + 0.2, y - 0.05, 0.5, beacon); // a nav light at its nose
     } else if (s.sky === 'step' || s.sky === 'girder') {
       //the staircase up into the clouds (and a split's high way, girders to grind): steel girders hoisted on crane
       //cables, nothing under them down to the city
@@ -232,5 +264,52 @@ export function buildSkyBeats(level: Level): THREE.Group {
       } else box(0.7, h + 0.25, 0.03, x, top - (h + 0.25) / 2 - 0.05, -0.12, m).rotation.z = ((i % 5) - 2) * 0.04;
     }
   });
+  return g;
+}
+
+// Act 5's finale (src/gen/escape.ts): the Pleiadian ship hanging over the gate, its beam a column of light down
+// through every height to the street, so whichever way you come you skate into it. A pearl saucer, a violet glass
+// dome with the flame-lit core the Stoken carries, a ring of lights round its rim
+export function buildShip(level: Level): THREE.Group {
+  const g = new THREE.Group();
+  const at = level.escape?.beam;
+  if (!at) return g;
+  g.name = 'pleiadianShip';
+  const x = X(at.x);
+  const y = (level.streetY - at.y) / TILE;
+  const pearl = new THREE.MeshLambertMaterial({ color: 0xe8e4f4, emissive: 0x2a2440 });
+  const rim = new THREE.MeshLambertMaterial({ color: 0x9a94b8 });
+  const glass = new THREE.MeshLambertMaterial({ color: 0x9a5cff, emissive: 0x3a1680, transparent: true, opacity: 0.8 });
+  const core = new THREE.MeshBasicMaterial({ color: 0xffb040 });
+  const light = new THREE.MeshBasicMaterial({ color: 0xbfe8ff });
+  const hull = new THREE.Mesh(new THREE.SphereGeometry(4.5, 32, 12), pearl);
+  hull.scale.y = 0.22;
+  hull.position.set(x, y, -2);
+  g.add(hull);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 0.25, 40), rim);
+  band.position.set(x, y, -2);
+  g.add(band);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), glass);
+  dome.position.set(x, y + 0.6, -2);
+  g.add(dome);
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 8), core);
+  flame.position.set(x, y + 1.0, -2);
+  g.add(flame);
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), light);
+    l.position.set(x + Math.cos(a) * 4.62, y, -2 + Math.sin(a) * 4.62);
+    g.add(l);
+  }
+  //the beam: from its belly down to the street, wide enough to fill the lane, light added over whatever's behind
+  const h = y + 0.5;
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.4, 2.6, h, 24, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+  );
+  beam.position.set(x, y - h / 2, -0.5);
+  beam.userData.inked = true; // no ink on light
+  beam.name = 'beam';
+  g.add(beam);
   return g;
 }

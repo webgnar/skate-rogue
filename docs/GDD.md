@@ -435,8 +435,33 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   every later stretch has a **girder staircase** off its lip: a big ollie and a flip onto the first, a flip a step, up
   through the layer until a cloud ahead is in reach (the sky bot climbs back up about 9 times in 10). The hill road
   and the sewer under it are unchanged; where the layer ends, just before the gate, you drop onto the top route's roofs
-  and out over the overpass (the sky bot leaves on the high road). Acts 4 and 5 keep the cloud
-  layer as it was (up a staircase partway down the first stretch) until act 4 gets its own pieces.
+  and out over the overpass (the sky bot leaves on the high road).
+- **Act 4's floors are above the clouds** (built Nov 6, 2026, the climb's step d; `HIGH` in src/gen/clouds.ts).
+  Floors 10-12 start up in the cloud layer like act 3's, higher (about 16 tiles over the street), with a sea of
+  clouds drawn under the lane and the stars coming out. Everything in the layer is grown for act 4's 0.7x gravity:
+  every gap, rise and piece is 1/0.7 as long (so a jump that just made it on the street just makes it here, and
+  the floor is as many jumps long). Its new pieces are **blimps** (a long back to cruise, several a floor), **the
+  tops of the tallest towers** (a crowned deck with an antenna and a red beacon, the glass running all the way down to
+  the city) and **swinging I-beams** (a girder on a cable, grind it as it swings along the lane). The set pieces stay
+  (zack: don't drop them): one a floor out of the crane's jib, the window washer's rig and the billboard bust, now
+  between two tower tops. The girder staircase still brings you back up if you fall (the sky bot: up there more than
+  nine tenths of the floor, and climbs back about 5 times in 6).
+- **Act 5's floors are space** (built Nov 6, 2026, step d). Floors 13-15 start higher still (about 26 tiles) in a
+  black, starry sky over the Earth, every piece grown for 0.3x gravity the same way. The clouds become **station
+  decks**, **solar panels** and **junk plates**; drifting clouds are **debris**; balloons are **satellites**; rainbows
+  are a station's ring; the staircase's girders float free as white truss. The set pieces are re-skinned for space
+  rather than dropped: the blimp is a **shuttle**, the crane's jib a station's **robot arm**, the washer's rig a
+  **capsule** that sinks under you (no billboards or I-beams up here). The sky bot stays up nearly the whole floor.
+- **The ceiling, act 4's escape** (built Nov 6, 2026, step d; src/gen/escape.ts). Off the street on a girder, then a
+  **blimp convoy** climbing a flip a blimp up to the cruise, the AI's **drones** diving onto the blimps' backs (the
+  street swarm's patterns, grown for the gravity), and at the end the **gunship line**: six gunships hanging nose to
+  tail across the sky over the last blimp. Hop onto their backs and run along them (car-hop them like a roadblock),
+  or slam into their noses. Skated in act 4's gravity. The sky bot gets through every seed tried.
+- **The beam-up, act 5's finale** (built Nov 6, 2026, step d). The double roadblock and the helicopter are still on
+  the street below; the way out is up, onto station decks, debris and satellites, while the AI's **last launch**, a
+  rocket, chases you at your height (the chase rules: every slam lets it close, three close together and it has
+  you). The **Pleiadian ship** hangs over the gate with its beam down through every height: skate into it to win.
+  Skated in act 5's gravity. The Chapter 1 ending cutscene that follows is not in the build yet.
 - Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
   by skating. They use the same traffic and Heat rules.
 - The Hive is dropped (zack, Nov 6, 2026). The acts' kits are the same fused city seen from higher up, not new
@@ -1409,6 +1434,7 @@ thread of its own:
   touches (ollie and flip height, hang time, slopes, rail pull). An ollie and a flip go 2.9 tiles high for 1.0 s on
   the street, 4.4 tiles for 1.6 s in act 4 and 10.5 tiles for 3.7 s in act 5. Endless past act 5 stays at 0.3x.
 - d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the gunship line, the beam-up finale.
+  Built Nov 6, 2026 (see How a run ends).
 - e. **The ship as the hub** between runs, last; it's cosmetic for the menus.
 
 **Ship**
@@ -1450,8 +1476,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
   someone awake in another city).
 - **The climb** (fantasy decided Nov 6, 2026, see The fantasy): the act heights are a default to check with zack;
-  where gravity starts to drop and how far it goes are numbers to tune; the level design of the higher acts (act 4's
-  blimps and thin air) and the ship as the between-runs hub are not designed or built. Act 2's rooftop floors
+  where gravity starts to drop and how far it goes are numbers to tune; the ship as the between-runs hub is not
+  designed or built. Act 2's rooftop floors
   (built Nov 6, 2026) left three calls open, with these defaults: you start 2.5 tiles up on the roof and each later
   stretch's roof is half a tile over its crest (an ollie, never a flip); and the rooftops stay optional,
   so a player who never ollies off a roof's end skates the hill road as in act 1. Act 3's cloud floors (built Nov 6,
@@ -1460,10 +1486,17 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   skip it (its blimp, crane jib and rig are up in the clouds, one a floor); each girder staircase's first step is a big
   ollie and a flip off the lip (act 2's roofs are an ollie); and the escape after act 3 is unchanged (matching the
   escapes to the new act heights is its own step). Act gravity (built Nov 6, 2026) left these defaults: the
-  placeholders 1x / 0.7x / 0.3x as they are; the escapes keep street gravity (their car-hops and drones are tuned
-  for it); gravity drops in one step at the act gate rather than easing floor by floor; and the boons that bend
+  placeholders 1x / 0.7x / 0.3x as they are; acts 1-3's escapes keep street gravity (the ceiling and the beam-up
+  skate in their act's, since step d); gravity drops in one step at the act gate rather than easing floor by floor; and the boons that bend
   gravity (Big Pop's float, Gravity Flip) keep their share of it, so they get bigger in absolute terms as you climb
   but no extra boost on top.
+  Acts 4 and 5 (built Nov 6, 2026, step d) left these defaults: every gap, rise and piece in their layers grows by
+  1/gravity, so a floor is as many jumps long as act 3's (only the rig stays short, as it drops under you); act 4
+  keeps the jib, the rig and the billboard as its set pieces, one a floor, with the blimps and I-beams as plain
+  beats; act 5 re-skins the blimp, jib and rig as a shuttle, a robot arm and a capsule, with no billboard or I-beam;
+  the street drone swarm left the run (its drones are on the ceiling's blimps; it's still built for a later use);
+  the finale keeps the double roadblock and the helicopter on the street under the climb; and Endless past act 5
+  keeps the old cloud layer (up a staircase partway down the first stretch).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the

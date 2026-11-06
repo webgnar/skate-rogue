@@ -38,7 +38,7 @@ interface Piece {
   cloud: boolean; // up in the cloud layer
 }
 
-export const CLOUDY = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon']);
+export const CLOUDY = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon', 'spire']);
 
 // every piece of the sky line in [a, b], in order along it
 export function piecesOf(level: Level, a: number, b: number): Piece[] {

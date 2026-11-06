@@ -11,6 +11,8 @@ import { TILE } from '../physics/constants';
 import type { Level, Surface } from '../physics/level';
 import type { Sky, SkyPieceSim } from '../sim/sky';
 import { groundAt } from '../gen/top-route';
+import { layerAct } from '../gen/clouds';
+import { piecesOf } from '../gen/sky-line';
 import { toX, toY } from './kit';
 import { adTexture, adUv } from './sky-kit';
 import { inkify } from './toon';
@@ -118,6 +120,74 @@ function cloud(p: Parts, top: THREE.Material, under: THREE.Material, w: number, 
   if (!thin) for (const t of [0.3, 0.7]) p.add(top, new THREE.SphereGeometry(0.7 + (seed % 3) * 0.1, 12, 8).scale(1.3, 0.9, 1), w * t, 0.2, -1.0);
 }
 
+// Act 5, space (src/gen/clouds.ts HIGH): the cloud layer's pieces drawn as what's up there. Each keeps its deck along
+// y = 0 from x = 0 to w (tiles), the same footing as the cloud it stands in for.
+interface SpaceMats {
+  hull: THREE.Material;
+  dark: THREE.Material;
+  panel: THREE.Material;
+  foil: THREE.Material;
+  rust: THREE.Material;
+  light: THREE.Material;
+  white: THREE.Material;
+}
+
+// a space station's deck: a hull plate on a truss, a module or two behind it, nav lights at its ends
+function stationDeck(p: Parts, m: SpaceMats, w: number, seed: number): void {
+  p.box(m.hull, w, 0.3, 2.2, w / 2, -0.15, -0.3);
+  for (let x = 1.5; x < w - 0.5; x += 2) p.box(m.dark, 0.05, 0.31, 2.21, x, -0.15, -0.3); // its panel seams
+  truss(p, m.dark, 0.3, w - 0.3, -1.05, -0.3, 0.6, 0.9, 0.05);
+  for (const x of [0.15, w - 0.15]) p.box(m.light, 0.22, 0.22, 0.22, x, 0.05, 0.75);
+  //modules behind the lane: pressurised cans along it, a radiator fin up off the odd one
+  for (let x = 2 + (seed % 3); x < w - 2; x += 6) {
+    p.add(m.white, new THREE.CylinderGeometry(0.9, 0.9, 3.2, 14).rotateZ(Math.PI / 2), x, 0.4, -1.9);
+    p.box(m.dark, 0.2, 1.9, 1.9, x - 1.6, 0.4, -1.9);
+    if ((seed + x) % 2 < 1) p.box(m.panel, 0.08, 2.2, 1.2, x + 0.6, 2.4, -1.9);
+  }
+}
+
+// a solar panel wing: a thin blue grid on a spar (a wisp's footing: a short deck)
+function solarPanel(p: Parts, m: SpaceMats, w: number): void {
+  p.box(m.panel, w, 0.1, 1.8, w / 2, -0.05, -0.3);
+  for (let x = 1; x < w; x += 1) p.box(m.dark, 0.04, 0.11, 1.81, x, -0.05, -0.3);
+  p.box(m.dark, w, 0.11, 0.04, w / 2, -0.05, -0.3);
+  p.box(m.foil, w + 0.3, 0.14, 0.14, w / 2, -0.18, -1.3); // the spar it hangs off, behind
+}
+
+// a sheet of junk that breaks off once you've stood on it (a thin cloud's): bent rusty plates, a snapped strut
+function junkPlate(p: Parts, m: SpaceMats, w: number, seed: number): void {
+  const n = Math.max(2, Math.round(w / 2));
+  for (let i = 0; i < n; i++) {
+    const pw = w / n;
+    const tilt = (((seed + i * 5) % 5) - 2) * 0.03;
+    p.box(i % 2 ? m.rust : m.dark, pw + 0.05, 0.16, 1.6 - (i % 3) * 0.2, pw * (i + 0.5), -0.08, -0.3, tilt);
+  }
+  p.bar(m.hull, [w * 0.3, -0.2, -0.6], [w * 0.55, -1.3, -0.9], 0.08);
+}
+
+// a piece of debris, drifting (a drifting cloud's): a flat-topped hunk of rock round a torn hull plate
+function debris(p: Parts, m: SpaceMats, w: number, seed: number): void {
+  p.box(m.hull, w, 0.22, 1.8, w / 2, -0.11, -0.3);
+  for (let i = 0; i < Math.max(2, Math.round(w / 2.5)); i++) {
+    const r = 0.8 + ((seed + i * 3) % 4) * 0.18;
+    const rock = new THREE.IcosahedronGeometry(r, 0);
+    rock.scale(1.2, 0.9, 1);
+    p.add(m.rust, rock, Math.min(w - r, Math.max(r, (i + 0.5) * 2.5)), -r * 0.85, -0.5);
+  }
+  p.bar(m.dark, [w * 0.7, 0, -0.9], [w * 0.95, 1.4, -1.4], 0.1);
+}
+
+// a satellite (a balloon's): its gold-foiled body the deck, solar wings out behind, a dish
+function satellite(p: Parts, m: SpaceMats, w: number): void {
+  p.box(m.foil, w, 0.9, 1.4, w / 2, -0.45, -0.2);
+  p.box(m.dark, w + 0.1, 0.1, 1.5, w / 2, -0.02, -0.2);
+  p.box(m.dark, 0.12, 0.12, 4, w / 2, -0.45, -2.6);
+  for (const z of [-2.2, -3.8]) p.box(m.panel, w * 1.6, 0.08, 1.4, w / 2, -0.45, z);
+  const dish = new THREE.SphereGeometry(0.9, 14, 8, 0, Math.PI * 2, 0, Math.PI / 3).rotateX(Math.PI);
+  p.add(m.white, dish, w / 2, -0.9 - 0.9 * 0.5, 0.1);
+  p.box(m.light, 0.16, 0.16, 0.16, w - 0.1, 0.08, 0.5);
+}
+
 let balloonSkin: THREE.Texture | null = null;
 // a hot air balloon's envelope: bright gores, red and gold and white
 function balloonTexture(): THREE.Texture {
@@ -202,6 +272,19 @@ export class SkyPiecesView {
   private readonly bands = RAINBOW.map((c) => new THREE.MeshLambertMaterial({ color: c, emissive: new THREE.Color(c).multiplyScalar(0.25) }));
   private readonly wicker = new THREE.MeshLambertMaterial({ color: 0x9a6a40 });
   private readonly envelope = new THREE.MeshLambertMaterial({ map: balloonTexture() });
+  // act 5's (space): station hull, its dark trusses, solar cells, gold foil, rust, nav lights
+  private readonly space: SpaceMats = {
+    hull: new THREE.MeshLambertMaterial({ color: 0xc4c8d4, emissive: 0x20222c }),
+    dark: new THREE.MeshLambertMaterial({ color: 0x3a3e4c }),
+    panel: new THREE.MeshLambertMaterial({ color: 0x2a50c8, emissive: 0x0a1848 }),
+    foil: new THREE.MeshLambertMaterial({ color: 0xe0b030, emissive: 0x3a2808 }),
+    rust: new THREE.MeshLambertMaterial({ color: 0x7a5440 }),
+    light: new THREE.MeshBasicMaterial({ color: 0xff4a5a }),
+    white: new THREE.MeshLambertMaterial({ color: 0xf0f0f4, emissive: 0x2a2a34 }),
+  };
+  private readonly ringBands = [0xc4c8d4, 0x3a3e4c, 0x2a50c8, 0x3a3e4c].map((c) => new THREE.MeshLambertMaterial({ color: c, emissive: new THREE.Color(c).multiplyScalar(0.2) }));
+  private readonly shuttle = new THREE.MeshLambertMaterial({ color: 0xf2f2f6, emissive: 0x24242c });
+  private readonly tiles = new THREE.MeshLambertMaterial({ color: 0x1a1a22 });
   // the cloud layer's still clouds (src/gen/clouds.ts), and the thin ones, which break up once you've stood on them
   private clouds: THREE.Group | null = null;
   private thin: { s: Surface; g: THREE.Object3D }[] = [];
@@ -218,6 +301,8 @@ export class SkyPiecesView {
     const level = sky.level;
     const Y = (py: number) => toY(level, py);
     const foot = (px: number) => Y(groundAt(level, px) ?? level.streetY);
+    const space = layerAct(level.layout.floor) === 5;
+    const sm = this.space;
     for (const sim of sky.pieces) {
       const s = sim.site;
       const g = new THREE.Group();
@@ -226,7 +311,35 @@ export class SkyPiecesView {
       const ropes: THREE.Object3D[] = [];
       const w = T(s.x1 - s.x0);
       const p = new Parts();
-      if (s.kind === 'cloud') {
+      if (space && s.kind === 'cloud') {
+        debris(p, sm, w, Math.round(s.x0));
+        p.into(moving);
+      } else if (space && s.kind === 'balloon') {
+        satellite(p, sm, w);
+        p.into(moving);
+      } else if (space && s.kind === 'blimp') {
+        //a shuttle drifting nose first (the blimp's mechanics): its back the deck, black heat tiles underneath, its
+        //delta wing out behind the lane and its tail fin up at the back
+        const r = 1.3;
+        p.add(this.shuttle, new THREE.CapsuleGeometry(r, w, 6, 18).rotateZ(Math.PI / 2), w / 2, -r, 0);
+        p.box(this.tiles, w + r, 0.5, 2.2, w / 2 + r * 0.3, -2 * r + 0.15, 0);
+        p.add(this.tiles, new THREE.ConeGeometry(r * 0.98, 1.6, 18).rotateZ(-Math.PI / 2), w + r + 0.5, -r, 0);
+        p.box(this.shuttle, w * 0.55, 0.18, 5.5, w * 0.42, -r * 1.4, -3.2);
+        p.box(this.tiles, w * 0.55, 0.06, 5.5, w * 0.42, -r * 1.4 - 0.12, -3.2);
+        p.box(this.shuttle, 2.2, 2.6, 0.18, 0.4, 0.9, -0.6);
+        p.box(this.space.light, 0.4, 0.4, 0.4, -r + 0.2, -r, 0.6); // the engine glow
+        for (const ex of [-0.5, 0.5]) p.add(this.tiles, new THREE.CylinderGeometry(0.35, 0.55, 0.8, 10).rotateZ(Math.PI / 2), -r - 0.2, -r + ex, 0);
+        p.box(this.glass, 1.4, 0.4, 2.0, w + 0.2, -0.45, 0); // the cockpit windows
+        p.into(moving);
+      } else if (space && s.kind === 'rig') {
+        //a capsule (the rig's mechanics: it drops away under you once you land): its deck on top of a white pod,
+        //a heat shield under it
+        p.box(sm.hull, w, 0.18, 1.4, w / 2, -0.09, -0.3);
+        p.add(sm.white, new THREE.CylinderGeometry(w * 0.32, w * 0.48, 1.6, 16), w / 2, -1.0, -0.3);
+        p.add(this.tiles, new THREE.CylinderGeometry(w * 0.5, w * 0.5, 0.25, 16), w / 2, -1.9, -0.3);
+        p.box(sm.light, 0.2, 0.2, 0.2, 0.15, 0.05, 0.4);
+        p.into(moving);
+      } else if (s.kind === 'cloud') {
         cloud(p, this.puff, this.puffUnder, w, Math.round(s.x0));
         p.into(moving);
       } else if (s.kind === 'beam') {
@@ -320,7 +433,12 @@ export class SkyPiecesView {
         const top = Y(s.y);
         const bottom = foot(s.mast!);
         const m = new Parts();
-        mast(m, this.yellow, mx, -1.2, bottom - top - 0.2, -0.75, 1.1);
+        //(in space, act 5: a station's robot arm, on a node of the station instead of a mast up from the city)
+        if (space) {
+          m.add(sm.white, new THREE.CylinderGeometry(1.2, 1.2, 3, 16).rotateX(Math.PI / 2), mx, -2.2, -2.4);
+          m.box(sm.dark, 0.9, 1.6, 0.9, mx, -1.3, -1.2);
+          m.box(sm.panel, 0.1, 3, 6, mx, -2.2, -6);
+        } else mast(m, this.yellow, mx, -1.2, bottom - top - 0.2, -0.75, 1.1);
         m.into(g);
         const pivot = new THREE.Group();
         pivot.position.set(mx, 0, -1.2);
@@ -328,7 +446,13 @@ export class SkyPiecesView {
         const z = 1.2;
         const j0 = -mx;
         const j1 = w - mx;
-        truss(p, this.yellow, 0.6, j1, -0.58, z, 0.55, 0.5); // its top chord is what you grind
+        const arm = space ? sm.white : this.yellow;
+        truss(p, arm, 0.6, j1, -0.58, z, 0.55, 0.5); // its top chord is what you grind
+        if (space) {
+          p.box(sm.dark, 1.1, 1.1, 1.1, 0, -0.55, z); // the arm's shoulder joint
+          p.box(sm.dark, 0.8, 0.8, 0.8, j1, -0.55, z); // and its hand, at the far end
+          p.box(sm.light, 0.2, 0.2, 0.2, j1 + 0.4, -0.3, z);
+        } else {
         truss(p, this.yellow, j0, -0.6, -0.3, z, 0.4, 0.6);
         p.box(this.yellow, 1.3, 0.55, 1.3, 0, -0.55, z); // slewing unit
         p.box(this.yellow, 0.9, 0.9, 0.9, 0.3, -1.2, z + 0.75); // the cab, hung off the side
@@ -342,6 +466,7 @@ export class SkyPiecesView {
         p.box(this.steel, 0.5, 0.18, 0.6, tx, -0.55, z);
         p.box(this.rope, 0.03, 1.6, 0.03, tx, -1.4, z);
         p.box(this.orange, 0.3, 0.35, 0.2, tx, -2.3, z);
+        }
         p.into(pivot);
         g.add(pivot);
         g.userData.pivot = pivot;
@@ -382,7 +507,8 @@ export class SkyPiecesView {
       const w = T(s.x1 - s.x0);
       if (s.sky === 'thin') {
         const tp = new Parts();
-        cloud(tp, this.puffUnder, this.puffUnder, w, Math.round(s.x0), true);
+        if (space) junkPlate(tp, sm, w, Math.round(s.x0));
+        else cloud(tp, this.puffUnder, this.puffUnder, w, Math.round(s.x0), true);
         const tg = new THREE.Group();
         tp.into(tg);
         tg.position.set(toX(s.x0), Y(s.y), 0);
@@ -391,7 +517,9 @@ export class SkyPiecesView {
         continue;
       }
       const c = new Parts();
-      cloud(c, this.puff, this.puffUnder, w, Math.round(s.x0), s.sky === 'wisp');
+      if (space && s.sky === 'wisp') solarPanel(c, sm, w);
+      else if (space) stationDeck(c, sm, w, Math.round(s.x0));
+      else cloud(c, this.puff, this.puffUnder, w, Math.round(s.x0), s.sky === 'wisp');
       const cg = new THREE.Group();
       c.into(cg);
       cg.position.set(toX(s.x0), Y(s.y), 0);
@@ -404,14 +532,16 @@ export class SkyPiecesView {
         const [ax, ay, bx, by] = [toX(r.xs[i - 1]), Y(r.ys[i - 1]), toX(r.xs[i]), Y(r.ys[i])];
         const len = Math.hypot(bx - ax, by - ay) + 0.04;
         const ang = Math.atan2(by - ay, bx - ax);
-        this.bands.forEach((m, k) => {
+        //(in space, a ring of station hull: its bands grey and solar blue)
+        (space ? this.ringBands : this.bands).forEach((m, k) => {
           const off = -0.11 - k * 0.2;
           cl.box(m, len, 0.2, 0.7, (ax + bx) / 2 - Math.sin(ang) * off, (ay + by) / 2 + Math.cos(ang) * off, 0, ang);
         });
       }
       for (const k of [0, r.xs.length - 1]) {
         const c = new Parts();
-        cloud(c, this.puff, this.puffUnder, 2.4, k + Math.round(r.xs[0]), true);
+        if (space) c.box(sm.dark, 1.6, 1.2, 1.4, 1.2, 0.2, -0.3); // a docking node at each foot
+        else cloud(c, this.puff, this.puffUnder, 2.4, k + Math.round(r.xs[0]), true);
         const cg = new THREE.Group();
         c.into(cg);
         cg.position.set(toX(r.xs[k]) - 1.2, Y(r.ys[k]) - 0.9, 0.3);
@@ -420,8 +550,31 @@ export class SkyPiecesView {
     }
     cl.into(group);
     inkify(group);
+    //act 4, above the clouds: a sea of cloud a few tiles under the line, the whole floor long, so the city's a long way
+    //down through the gaps in it (behind the lane, and lower in front of it, so it never covers the line you ride)
+    if (layerAct(level.layout.floor) === 4) group.add(this.cloudSea(level));
     this.clouds = group;
     this.group.add(group);
+  }
+
+  // the sea of cloud under act 4's line (see reset): big soft heaps every few tiles, merged into two meshes
+  private cloudSea(level: Level): THREE.Object3D {
+    const line = piecesOf(level, 0, level.width).filter((p) => p.cloud);
+    const sea = new Parts();
+    const Y = (py: number) => toY(level, py);
+    if (!line.length) return new THREE.Group();
+    for (let x = line[0].x0, k = 0; x < line[line.length - 1].x1; x += 4 * TILE, k++) {
+      //(under the nearest piece of the line)
+      const near = line.reduce((a, p) => (Math.abs((p.x0 + p.x1) / 2 - x) < Math.abs((a.x0 + a.x1) / 2 - x) ? p : a));
+      const top = Y(near.y0) - 6;
+      const r = 2.4 + ((k * 7) % 5) * 0.35;
+      sea.add(this.puff, new THREE.SphereGeometry(r, 10, 6).scale(1.6, 0.7, 1.2), toX(x), top - r * 0.5, -5 - (k % 3) * 1.5);
+      sea.add(this.puffUnder, new THREE.SphereGeometry(r * 1.3, 10, 6).scale(1.6, 0.6, 1.2), toX(x) + 2, top - r * 1.4, -8);
+      if (k % 2 === 0) sea.add(this.puff, new THREE.SphereGeometry(r * 0.9, 10, 6).scale(1.7, 0.6, 1), toX(x) + 1, top - 3.5, 3);
+    }
+    const g = new THREE.Group();
+    sea.into(g);
+    return g;
   }
 
   update(level: Level, skaterX: number, gone?: ReadonlySet<Surface>): void {

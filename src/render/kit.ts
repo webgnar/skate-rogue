@@ -18,7 +18,7 @@ import { makeRng, randInt } from '../gen/rng';
 import { CITY, cityTiles, paintTexture, pixelTexture, tileCanvas, tileTexture, useSheet, type TileCell } from './textures';
 import { SKINS, type Skin } from './skins';
 import type { BiomeId } from './biomes';
-import { buildSkyBeats } from './sky-kit';
+import { buildShip, buildSkyBeats } from './sky-kit';
 import { DEPTH, depthStep } from './depth';
 import { buildSewers } from './sewer-kit';
 import { buildForegroundSteps, buildHillSteps } from './hillside';
@@ -631,6 +631,7 @@ function* build(level: Level, skin: Skin, city: boolean, biome: BiomeId, worlds:
   projectSurfaces(kit);
   if (sliceDone()) yield;
   kit.add(buildSkyBeats(level));
+  kit.add(buildShip(level));
   return kit;
 }
 
