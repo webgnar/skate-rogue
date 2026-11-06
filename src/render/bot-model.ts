@@ -120,3 +120,7 @@ export const DOG = new BotModel('bot/dog.glb', 2.0);
 export const CAT = new BotModel('bot/cat.glb', 1.3);
 export type DogClip = 'walk' | 'run' | 'sit' | 'sniff' | 'shake' | 'idle';
 export type CatClip = 'walk' | 'run' | 'sit' | 'jump' | 'idle';
+
+// the sewer's rats, in packs that run at the skater (src/render/sewer-view.ts)
+export const RAT = new BotModel('bot/rat.glb', 1.2);
+export type RatClip = 'run' | 'walk' | 'sniff' | 'hop' | 'idle';
