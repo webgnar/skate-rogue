@@ -224,7 +224,6 @@ function makeHud(): Hud {
   const shopEl = document.getElementById('shop')!;
   const underEl = document.getElementById('under')!;
   const pausedEl = document.getElementById('paused')!;
-  const hintEl = document.getElementById('hint')!;
   const view = new HudView();
   const dice = new DicePanel(document.getElementById('dice')!, () => FX.reduceMotion);
   const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
@@ -259,7 +258,6 @@ function makeHud(): Hud {
   return {
     floor: (n, road) => {
       view.setFloor(n, road);
-      hintEl.hidden = n > 1; // the controls line only on the first floor
     },
     money: (cash, stoken) => view.money(cash, stoken),
     score: (score, combo, stoke, gnar, pending) => view.setScore(score, combo, stoke, gnar, pending),
