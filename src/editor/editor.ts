@@ -783,6 +783,19 @@ export async function startEditor(base: string): Promise<void> {
     const r = track.getBoundingClientRect();
     return Math.max(0, Math.min(range, ((x - r.left) / r.width) * range));
   };
+  // scrubbing lands on whole frames, and on a key whenever the pointer is within a few pixels of one (keys from the
+  // code clips sit between frames, so frame steps alone would hop over them)
+  const KEY_PULL_PX = 8;
+  const scrubTo = (x: number) => {
+    const r = track.getBoundingClientRect();
+    const raw = timeAt(x);
+    const pull = (KEY_PULL_PX / r.width) * range;
+    let best: number | null = null;
+    for (const k of clip.keys) if (Math.abs(k.t - raw) <= pull && (best === null || Math.abs(k.t - raw) < Math.abs(best - raw))) best = k.t;
+    const end = clipLength(clip as Clip);
+    if (best === null && Math.abs(end - raw) <= pull) best = end;
+    return best ?? Math.min(snapT(raw), end);
+  };
   track.addEventListener('pointerdown', (e) => {
     playing = false;
     track.setPointerCapture(e.pointerId);
@@ -792,7 +805,7 @@ export async function startEditor(base: string): Promise<void> {
       t = clip.keys[draggingKey].t;
       if (draggingKey > 0) remember(`move:${draggingKey}:${performance.now()}`);
     } else {
-      t = Math.min(snapT(timeAt(e.clientX)), clipLength(clip as Clip));
+      t = scrubTo(e.clientX);
     }
     changed();
   });
@@ -801,7 +814,7 @@ export async function startEditor(base: string): Promise<void> {
     if (draggingKey > 0) {
       t = moveKey(clip, draggingKey, timeAt(e.clientX));
     } else if (draggingKey < 0) {
-      t = Math.min(snapT(timeAt(e.clientX)), clipLength(clip as Clip));
+      t = scrubTo(e.clientX);
     }
     changed();
   });
@@ -859,7 +872,13 @@ export async function startEditor(base: string): Promise<void> {
     else if (e.key === '.') jumpKey(1);
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       playing = false;
-      t = Math.min(clipLength(clip as Clip), snapT(t + (e.key === 'ArrowLeft' ? -SNAP : SNAP)));
+      // one frame, stopping on any key (or the end) in between
+      const dir = e.key === 'ArrowLeft' ? -1 : 1;
+      const end = clipLength(clip as Clip);
+      let to = Math.max(0, Math.min(end, snapT(t + dir * SNAP)));
+      if (Math.abs(to - t) < 1e-6) to = Math.max(0, Math.min(end, t + dir * SNAP));
+      for (const k of [...clip.keys.map((k) => k.t), end]) if (dir * (k - t) > 1e-6 && dir * (to - k) > 1e-6) to = k;
+      t = to;
       changed();
     } else if (e.key === 'Escape') pick(null);
     else if (e.key === 'h') {
