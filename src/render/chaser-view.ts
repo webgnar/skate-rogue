@@ -53,7 +53,7 @@ function makeWave(): THREE.Group {
 }
 
 // the AI's last launch: a white rocket, red nose and fins, flying along the lane nose first (+x), its engine lit
-function makeRocket(): THREE.Group {
+export function makeRocket(): THREE.Group {
   const g = new THREE.Group();
   const white = lambert(0xe8ecf0, 0x202428);
   const red = lambert(0xd02a2a, 0x300808);

@@ -3,6 +3,7 @@
 // tower crane's boom. Each stands on legs down to the hill behind the lane. Plain shared materials, so the floor's
 // batching (batch.ts) merges them into a handful of draws.
 import * as THREE from 'three';
+import { saucer } from '../ship/saucer';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { groundAt } from '../gen/top-route';
@@ -267,9 +268,8 @@ export function buildSkyBeats(level: Level): THREE.Group {
   return g;
 }
 
-// Act 5's finale (src/gen/escape.ts): the Pleiadian ship hanging over the gate, its beam a column of light down
-// through every height to the street, so whichever way you come you skate into it. A pearl saucer, a violet glass
-// dome with the flame-lit core the Stoken carries, a ring of lights round its rim
+// Act 5's finale (src/gen/escape.ts): the Pleiadian ship (src/ship/saucer.ts) hanging over the gate, its beam a
+// column of light down through every height to the street, so whichever way you come you skate into it
 export function buildShip(level: Level): THREE.Group {
   const g = new THREE.Group();
   const at = level.escape?.beam;
@@ -277,30 +277,9 @@ export function buildShip(level: Level): THREE.Group {
   g.name = 'pleiadianShip';
   const x = X(at.x);
   const y = (level.streetY - at.y) / TILE;
-  const pearl = new THREE.MeshLambertMaterial({ color: 0xe8e4f4, emissive: 0x2a2440 });
-  const rim = new THREE.MeshLambertMaterial({ color: 0x9a94b8 });
-  const glass = new THREE.MeshLambertMaterial({ color: 0x9a5cff, emissive: 0x3a1680, transparent: true, opacity: 0.8 });
-  const core = new THREE.MeshBasicMaterial({ color: 0xffb040 });
-  const light = new THREE.MeshBasicMaterial({ color: 0xbfe8ff });
-  const hull = new THREE.Mesh(new THREE.SphereGeometry(4.5, 32, 12), pearl);
-  hull.scale.y = 0.22;
-  hull.position.set(x, y, -2);
-  g.add(hull);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 0.25, 40), rim);
-  band.position.set(x, y, -2);
-  g.add(band);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), glass);
-  dome.position.set(x, y + 0.6, -2);
-  g.add(dome);
-  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 8), core);
-  flame.position.set(x, y + 1.0, -2);
-  g.add(flame);
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2;
-    const l = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), light);
-    l.position.set(x + Math.cos(a) * 4.62, y, -2 + Math.sin(a) * 4.62);
-    g.add(l);
-  }
+  const ship = saucer();
+  ship.position.set(x, y, -2);
+  g.add(ship);
   //the beam: from its belly down to the street, wide enough to fill the lane, light added over whatever's behind
   const h = y + 0.5;
   const beam = new THREE.Mesh(

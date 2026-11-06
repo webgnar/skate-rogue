@@ -60,6 +60,7 @@ import { bindMissions } from './ui/missions-panel';
 import { DicePanel } from './ui/dice-panel';
 import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 import { TitleScene } from './title/title-scene';
+import { Aboard } from './ship/aboard';
 import { ON_CRAZYGAMES, breakAd, happyTime, initPortal, loadingDone, setPlaying, watchPortalMute } from './net/portal';
 
 const base = import.meta.env.BASE_URL;
@@ -482,6 +483,8 @@ async function start() {
   const titleRig = titled ? loading.track(SkaterRig.create(base, 'webster', meshy)) : null;
   await Promise.all([loading.track(loadCityTiles(`${base}tex/chicago_tiles.png`)), loadModels(base, MODEL_FILES, loading.add(MODEL_FILES.length)), loading.track(loadPigeon(base)), loading.track(DOG.load(base)), loading.track(CAT.load(base)), loading.track(RAT.load(base)), loading.track(loadPeople(base))]);
   const view = new StreetView(canvas, buildFloor(seed, 1));
+  //the ship between runs (src/ship/aboard.ts)
+  const aboard = new Aboard(view.renderer, skater, all);
   //the skater drawn over the HUD where he crosses it (zack, 2026-11-06)
   const layer = new SkaterLayer(document.getElementById('skaterlayer') as HTMLCanvasElement, document.getElementById('hud')!);
   view.layer = layer;
@@ -511,6 +514,9 @@ async function start() {
   const showOver = hud.over;
   hud.over = (result) => {
     showOver(result);
+    //the summary goes up over the ship (src/ship/aboard.ts), the run's HUD out of its way
+    document.getElementById('app')!.classList.toggle('aboard', !!result && !!aboard.ready);
+    if (result) aboard.summary();
     if (result && (result.won || (result.newBest && result.act > 1))) happyTime();
     if (result) void breakAd((on) => sound.sleep(on)); // between runs; a no-op while ads are paused
     //the leaderboard lives on our own server, so it stays off on the portal (docs/CRAZYGAMES.md)
@@ -554,9 +560,11 @@ async function start() {
     location.search = q.toString().replace(/=(&|$)/g, '$1');
   };
   const metaScreen = new MetaScreen(document.getElementById('meta')!, all, (changed) => {
+    aboard.unlocks('close');
     //the new skater or deck is picked up from the save, so a ?skater= in the link would only override it
     if (changed) reloadWith('skater', false);
   });
+  metaScreen.onChange = () => aboard.unlocks('change'); // a skater bought wakes up aboard
   const dailyBtn = document.querySelector<HTMLElement>('#over [data-daily]')!;
   dailyBtn.hidden = !owns('daily') && !daily;
   dailyBtn.textContent = daily ? 'NORMAL RUN' : 'DAILY RUN';
@@ -564,7 +572,10 @@ async function start() {
     e.stopPropagation();
     e.preventDefault();
     const t = e.target instanceof Element ? e.target : null;
-    if (t?.closest('[data-open-meta]')) metaScreen.open();
+    if (t?.closest('[data-open-meta]')) {
+      metaScreen.open();
+      aboard.unlocks('open');
+    }
     else if (t?.closest('[data-scores]')) void scores.open();
     else if (t?.closest('[data-daily]')) reloadWith('daily', !daily);
     else if (t?.closest('[data-gnar]')) {
@@ -744,8 +755,65 @@ async function start() {
     if (import.meta.env.DEV) Object.assign(window, { titleScene: scene }); // stills of the way down in headless checks
     screen.show();
   }
+  //the ship between runs (src/ship/aboard.ts): the hub behind the run summary, the ending after act 5's beam.
+  //?ship shows the hub on its own (?ship=crew framed on the crew), ?ending plays the ending (?ending=short the
+  //later wins' 5 s one), for stills
+  game.backdrop = (dt) => aboard.backdrop(dt);
+  const endingEl = document.getElementById('ending')!;
+  const endingCap = endingEl.querySelector<HTMLElement>('.cap')!;
+  const endingCard = endingEl.querySelector<HTMLElement>('.endcard')!;
+  const endingFlash = endingEl.querySelector<HTMLElement>('.flash')!;
+  const endingUi = {
+    caption: (text: string) => {
+      if (text) endingCap.textContent = text;
+      endingCap.classList.toggle('on', !!text);
+    },
+    card: (step: 0 | 1 | 2) => {
+      endingCard.classList.toggle('on', step > 0);
+      if (step) endingCard.dataset.step = String(step);
+    },
+    flash: (k: number) => {
+      endingFlash.style.opacity = String(Math.max(0, Math.min(1, k)));
+    },
+  };
+  game.playEnding = (done, full?: boolean) => {
+    const scene = aboard.ending(endingUi, () => {
+      endingEl.hidden = true;
+      app.classList.remove('titled');
+      done();
+    }, full);
+    if (!scene) return null;
+    endingEl.hidden = false;
+    endingEl.querySelector('.skip')!.textContent = scene.full ? 'TAP TO SKIP' : '';
+    app.classList.add('titled');
+    return scene;
+  };
+  const shipLink = params.get('ship');
+  const endingLink = params.get('ending');
+  if (shipLink !== null || endingLink !== null) {
+    await aboard.load(base, meshy);
+    const hub = aboard.ready!;
+    if (import.meta.env.DEV) Object.assign(window, { hub, aboard });
+    if (shipLink !== null) {
+      hub.look(shipLink === 'crew' ? 'crew' : 'wide');
+      app.classList.add('titled');
+      game.titled = true;
+      game.titleDraw = (dt) => hub.frame(dt);
+    } else {
+      game.cinema = game.playEnding(() => {
+        game.cinema = null;
+      }, endingLink !== 'short');
+      if (import.meta.env.DEV) Object.assign(window, { endingScene: game.cinema });
+    }
+  }
   loading.finish();
   loadingDone();
+  //the crew's models, a few seconds into the first run (they're only wanted at its end; not under the title's glide)
+  const boardShip = () => {
+    if (game.titled) return void setTimeout(boardShip, 2000);
+    void aboard.load(base, meshy).catch((err) => console.warn('ship hub', err));
+  };
+  if (!aboard.ready) setTimeout(boardShip, 4000);
 
   //the portal hears when skating starts and stops (src/net/portal.ts): skating is no title and no card up
   const cards = ['title', 'paused', 'pick', 'under', 'shop', 'cont', 'dice', 'over', 'scores', 'meta']

@@ -25,6 +25,7 @@ function art(u: Unlock): string {
 
 export class MetaScreen {
   private changed = false;
+  onChange: (() => void) | null = null; // something bought or picked (the ship hub wakes a new skater)
 
   constructor(
     private readonly el: HTMLElement,
@@ -80,6 +81,7 @@ export class MetaScreen {
     }
     writeSave(save);
     this.render(save, note);
+    if (this.changed) this.onChange?.();
   }
 
   private render(save: Save, note: string): void {
