@@ -81,9 +81,28 @@ function levelEditor(): Plugin {
   };
 }
 
-export default defineConfig({
+// The CrazyGames build (npm run build:crazygames, docs/CRAZYGAMES.md): the same game into dist-crazygames/, without the
+// home screen app tags (the portal frames the game and runs its own full screen). .env.crazygames sets VITE_PORTAL.
+function portalPage(): Plugin {
+  return {
+    name: 'portal-page',
+    apply: 'build',
+    transformIndexHtml: (html) =>
+      html
+        .replace(/\s*<!--[^>]*Home Screen[^>]*-->/, '')
+        .replace(/\s*<meta name="(apple-mobile-web-app-[a-z-]+|mobile-web-app-capable)"[^>]*>/g, '')
+        .replace(/\s*<link rel="(manifest|apple-touch-icon)"[^>]*>/g, ''),
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   base: './',
-  plugins: [clipEditor(), levelEditor()],
-  build: { target: 'es2022', assetsInlineLimit: 0, chunkSizeWarningLimit: 800 },
+  plugins: [clipEditor(), levelEditor(), ...(mode === 'crazygames' ? [portalPage()] : [])],
+  build: {
+    target: 'es2022',
+    assetsInlineLimit: 0,
+    chunkSizeWarningLimit: 800,
+    ...(mode === 'crazygames' ? { outDir: 'dist-crazygames' } : {}),
+  },
   test: { include: ['tests/**/*.test.ts'] },
-});
+}));

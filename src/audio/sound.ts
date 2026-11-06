@@ -4,6 +4,7 @@
 // the game never waits on sound.
 import { COIN_VERB, coinMix, LOOPS, MUSIC, SAMPLES, rollGain, sampleFile, sirenGain, type Cue, type MusicId } from './cues';
 import { SETTINGS } from '../ui/settings';
+import { portalMuted } from '../net/portal';
 import { BandMeter, type Bands } from './bands';
 
 export interface SoundFrame {
@@ -126,8 +127,10 @@ export class Sound {
 
   applyVolumes(): void {
     if (!this.ctx) return;
-    this.sfx.gain.value = SETTINGS.sound;
-    this.musicBus.gain.value = SETTINGS.music * LOOPS.music;
+    //the portal's mute (src/net/portal.ts) wins over the game's own volumes
+    const on = portalMuted ? 0 : 1;
+    this.sfx.gain.value = SETTINGS.sound * on;
+    this.musicBus.gain.value = SETTINGS.music * LOOPS.music * on;
     this.loadMusic();
   }
 

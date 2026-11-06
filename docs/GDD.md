@@ -1010,6 +1010,13 @@ Rules:
 - **Ads stay paused** (zack, Oct 31, 2026). When they come back they're the optional kind only (watch one for a
   reward), and the Supporter pack turns them off.
 
+### Where it launches first: CrazyGames
+zack picked the CrazyGames web portal first (Nov 4, 2026). `npm run build:crazygames` makes the uploadable zip with
+their SDK wired in: loading and gameplay start/stop, a celebration on an escape or a new best, the site's mute, and
+saves through their Data module. On the portal the game has no full screen switch, no leaderboard and no dev tools.
+The ad calls are in place but switched off (ads still paused). Details and limits: `docs/CRAZYGAMES.md`. The upload,
+store art and Basic Launch submission are zack's, on the CrazyGames developer portal **(not submitted yet)**.
+
 ### Chapters (story packs)
 
 The five-act escape (see How a run ends) is **Chapter 1**, free, with its ending. Each later chapter is a new
