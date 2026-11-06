@@ -5,7 +5,6 @@
 import { ON_CRAZYGAMES } from '../net/portal';
 
 const TIPS = [
-  'TAP / HOLD = OLLIE · TAP IN THE AIR = FLIP',
   'Add Skate Escape to your Home Screen to play it fullscreen',
 ].filter((t) => !ON_CRAZYGAMES || !t.includes('Home Screen')); // the portal has its own full screen
 
@@ -17,7 +16,7 @@ export class Loading {
   constructor(private readonly el: HTMLElement) {
     this.blocks = [...el.querySelectorAll<HTMLElement>('.meter i')];
     const tip = el.querySelector('.tip');
-    if (tip) tip.textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+    if (tip && TIPS.length) tip.textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
   }
 
   say(what: string): void {
