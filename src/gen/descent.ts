@@ -17,7 +17,7 @@ import { makeRng, randInt, type Rng } from './rng';
 import { addTopRoute, TOP } from './top-route';
 import { addSewer, addSewerStash, SEWER } from './sewer';
 import { addSkyBeats, addSkyStash } from './sky-beats';
-import { addClouds, cloudMix, CLOUDS, type CloudBeat } from './clouds';
+import { addClouds, cloudMix, CLOUDS, highDials, type CloudBeat } from './clouds';
 import { bridgeSky } from './sky-line';
 import { addSpinTokens, type SpinSpots } from './spin-tokens';
 import { buildClimb, buildHills, editFloor, hillDials, stretches } from './hills';
@@ -308,8 +308,11 @@ export function buildFloor(seed: number, floor: number, library: Piece[] = PIECE
     //the cloud layer and the sewer take a floor's level-editor edits over their dials (docs/level-editor.md)
     const fe = floorEdit(editFloor(level.layout.floor));
     const cl = fe.clouds;
-    if (cl?.on !== false) withDials(CLOUDS, cl?.on ? { from: 1, ...cl } : cl, () => cloudMix(cl?.mix as CloudBeat[] | undefined, () => addClouds(level, level.layout.seed)));
-    bridgeSky(level);
+    //(acts 4 and 5: the layer and its bridging grown for the act's gravity, src/gen/clouds.ts HIGH)
+    highDials(level.layout.floor, () => {
+      if (cl?.on !== false) withDials(CLOUDS, cl?.on ? { from: 1, ...cl } : cl, () => cloudMix(cl?.mix as CloudBeat[] | undefined, () => addClouds(level, level.layout.seed)));
+      bridgeSky(level);
+    });
     if (fe.sewer?.on !== false) withDials(SEWER, fe.sewer, () => addSewer(level, level.layout.seed));
   }
   const spinSpots: SpinSpots = { side: [sideFrom, topFrom], top: [topFrom, level.pickups.length] };

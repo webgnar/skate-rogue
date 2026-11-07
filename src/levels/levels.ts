@@ -12,6 +12,8 @@ import { SAVED_EDITS, floorEdit, useLevelEdits, type FloorEdit, type LevelEdits 
 import { buildFloor, type FloorOptions } from '../gen/descent';
 import { validatedFloor } from '../gen/validate';
 import { floorTwist } from '../gen/twists';
+import { actOf } from '../gen/escape';
+import { actGravity } from '../physics/feel';
 import { PIECES } from '../gen/pieces';
 import { FloorSim } from '../sim/floor';
 import { Pilot } from '../bot/pilot';
@@ -71,7 +73,7 @@ const SKY_HELP: Record<SkyBeat, string> = {
 
 // the cloud layer's beats (src/gen/clouds.ts), and the route layers' dials: keys of CLOUDS and SEWER, overlaid per
 // floor while it's built (withDials in level-edits.ts). `unit` is px per shown unit (TILE for a height kept in px)
-const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap', 'fork', 'hops', 'climb'];
+const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap', 'fork', 'hops', 'climb', 'spire', 'blimp', 'beam'];
 const CLOUD_HELP: Record<CloudBeat, string> = {
   puff: 'a cloud to land on',
   thin: 'a thin cloud that puffs away a moment after you land',
@@ -82,6 +84,9 @@ const CLOUD_HELP: Record<CloudBeat, string> = {
   fork: 'a high way and a low way: a long low cloud, clouds over it off a wisp a flip up',
   hops: 'a run of short wisps, evenly spaced, each a little lower: pop along',
   climb: 'a few wisps, each a tile higher: a climb within the layer, then it falls gently back',
+  spire: "act 4: a skyscraper's crown up through the clouds",
+  blimp: 'act 4: a blimp of the fleet, its long back to cruise',
+  beam: 'act 4: a steel I-beam on a crane cable, swinging slowly along the lane',
 };
 interface LayerDial {
   key: string;
@@ -239,6 +244,7 @@ export function startLevels(): void {
     short: r.kind === 'stash',
     twist: floorTwist(seed, f),
     hills: true,
+    gravity: actGravity(actOf(f)), // the act's, as in the game (src/run/floor-level.ts)
   });
 
   // ---------- page ----------

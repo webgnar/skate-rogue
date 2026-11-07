@@ -14,7 +14,7 @@ import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { deckChoices, STOCK_DECK, type DeckArt } from '../board/deck-art';
 import { RunScore, SCORE } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
-import { firstCloud } from '../gen/clouds';
+import { firstCloud, layerAct } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { noBustedTime } from '../sim/supply';
 import { SupplyView } from '../render/supply-view';
@@ -324,6 +324,13 @@ export class Game {
   private cloudStart = false; // ?clouds: each new floor starts up on its cloud layer (src/gen/clouds.ts)
   paused = false; // frozen by the pause button, Esc / P, or the page going hidden
   titleDraw: ((dt: number) => void) | null = null; // draws the title's own scene in place of the street (src/title)
+  // a cutscene drawn in place of the street (the Chapter 1 ending, src/ship/ending-scene.ts): taps go to it, the run
+  // waits for it
+  cinema: { frame(dt: number): void; tap(): void } | null = null;
+  // act 5 won: play the ending, then call done (main.ts makes it; null, or no ending ready: straight to the summary)
+  playEnding: ((done: () => void, full?: boolean) => { frame(dt: number): void; tap(): void } | null) | null = null;
+  // what's drawn behind the run summary in place of the street (the ship hub, src/ship/hub-scene.ts); false: not ready
+  backdrop: ((dt: number) => boolean) | null = null;
   titled = false; // held still under the title screen (src/ui/title.ts) until SKATE: the street drawn, the title music on
   sound: Sound | null = null; // set by main once the page is up
   private menuAt = 0;
@@ -667,9 +674,10 @@ export class Game {
   //the run's clock (afternoon into neon night), rain on some floors, graded to the district; returns the rain level.
   //`blend`: ease into it from what's on screen (rolling on from the last floor) rather than switch
   private applyMood(blend = false): number {
-    const rain = WEATHER.rain ?? (BIOMES[this.biome].dry ? 0 : rainLevel(this.seed, this.floor)); // no rain under the sea, indoors or in space
+    const biome = this.skyBiome();
+    const rain = WEATHER.rain ?? (BIOMES[biome].dry ? 0 : rainLevel(this.seed, this.floor)); // no rain under the sea, indoors or in space
     const mood = moodAt(WEATHER.clock ?? clockFor(this.floor));
-    const look = biomeMood(rain > 0 ? rainy(mood) : mood, this.biome);
+    const look = biomeMood(rain > 0 ? rainy(mood) : mood, biome);
     if (blend && this.shown) this.moodBlend = { from: this.shown.mood, fromRain: this.shown.rain, to: look, toRain: rain, t: 0 };
     else {
       this.moodBlend = null;
@@ -678,10 +686,18 @@ export class Game {
     return rain;
   }
 
+  // the sky the floor's graded to: act 5 is up in space (black, full of stars, no rain: src/gen/clouds.ts HIGH),
+  // and its escape with it; everywhere else the run's one city
+  private skyBiome(): BiomeId {
+    const space = layerAct(this.floor) === 5 || (this.road.kind === 'escape' && this.road.act >= ACTS);
+    return space && this.biome === 'chicago' ? 'space' : this.biome;
+  }
+
   private setLook(look: Mood, rain: number): void {
     this.shown = { mood: look, rain };
     this.view.setMood(look, rain);
-    this.view.ambience.set(this.biome);
+    this.view.ambience.set(this.skyBiome());
+    void this.view.setCards(this.skyBiome() === 'space' ? 'space' : this.biome);
     this.trafficView.beams.setNight(look.neon);
     this.visor.setNight(look.neon, VISOR_TINT[this.biome]);
     this.phoneFx.setNight(look.neon);
@@ -779,7 +795,7 @@ export class Game {
     this.hud.money(this.run.cash, this.run.stoken);
     if (this.road.kind === 'hot') this.hud.callout('RUSH HOUR', 'bad');
     if (this.road.kind === 'escape') {
-      this.hud.callout(this.sim.chaser ? CHASER_CALLS[chaserLook()].start : `ESCAPE: ${label(this.road)}`, 'bad');
+      this.hud.callout(this.sim.chaser ? CHASER_CALLS[chaserLook(this.level)].start : `ESCAPE: ${label(this.road)}`, 'bad');
     }
   }
 
@@ -832,6 +848,16 @@ export class Game {
     this.mission('act', act);
     if (act >= ACTS) {
       this.mission('escape');
+      //into the ship's beam: the ending, then the dice and the summary
+      const scene = this.autopilot ? null : this.playEnding?.(() => {
+        this.cinema = null;
+        this.endRun(performance.now(), false, true);
+      });
+      if (scene) {
+        this.openMenu('over', now); // nothing in the run moves while it plays
+        this.cinema = scene;
+        return;
+      }
       return this.endRun(now, false, true);
     }
     this.advance();
@@ -1346,7 +1372,7 @@ export class Game {
       keep(t, 't');
       for (const b of t.boxes) keep(b, 'x0', 'x1');
     }
-    if (sim.chaser) keep(sim.chaser, 'x');
+    if (sim.chaser) keep(sim.chaser, 'x', 'y');
     if (sim.chopper) keep(sim.chopper, 'x');
     keep(sim.sky.chopper, 'x');
     for (const f of sim.sky.flocks) keep(f, 'x', 'y');
@@ -1372,6 +1398,13 @@ export class Game {
       this.sound?.update({ mode: 'roll', speed: 0, heat: 0, skating: false, over: false, paused: false, title: true });
       if (this.titleDraw) this.titleDraw(realDt);
       else this.view.render();
+      return;
+    }
+    //a cutscene: a tap is its own (to skip), the run holds still behind it
+    if (this.cinema) {
+      if (this.input.takePress()) this.cinema.tap();
+      this.sound?.update({ mode: 'roll', speed: 0, heat: 0, skating: false, over: true, paused: false });
+      this.cinema?.frame(realDt);
       return;
     }
     //paused: the street holds its last frame and presses are dropped
@@ -1463,7 +1496,7 @@ export class Game {
     } else if (this.state === 'skate' && this.sim.state === 'caught') {
       this.state = 'caught';
       this.menuAt = now;
-      this.hud.callout(this.sim.chaser?.caught ? CHASER_CALLS[chaserLook()].caught : 'BUSTED!', 'bad');
+      this.hud.callout(this.sim.chaser?.caught ? CHASER_CALLS[chaserLook(this.level)].caught : 'BUSTED!', 'bad');
       buzz(200);
       this.sound?.play(MOMENT.busted);
     }
@@ -1541,7 +1574,7 @@ export class Game {
       const street = toY(this.level, this.level.streetY);
       const ch = this.sim.chopper;
       if (ch) this.escapeFx.chopper(toX(at(ch, 'x')), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
-      if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, street, this.chaserView.surging, dt);
+      if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, this.chaserView.look === 'rocket' ? this.chaserView.group.position.y : street, this.chaserView.surging, dt);
     }
     this.pedView.update(this.level, this.skater, dt, toX(this.skater.x), this.biome);
     this.phoneFx.update(this.pedView.phones());
@@ -1591,7 +1624,8 @@ export class Game {
     this.view.close.update(realDt * this.timeScale * devSpeed(), this.skater.mode, CAM.closeUp && SETTINGS.closeUp && !FX.reduceMotion);
     this.view.follow(x, y, dt, realDt * this.timeScale * devSpeed());
     this.view.adapt(realDt * 1000);
-    this.view.render();
+    //behind the run summary: the ship, if it's ready (the street otherwise)
+    if (!(this.state === 'over' && this.backdrop?.(realDt))) this.view.render();
     this.perf(realDt);
     if (this.colDebug?.on) this.colDebug.draw(this.level, this.skater, this.view.camera, realDt, this.perfText, { x, y });
     this.updatePlaytest();

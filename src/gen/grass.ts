@@ -9,6 +9,7 @@ import { CROSS } from '../traffic/cross';
 export const GRASS = {
   gap: [22, 40] as [number, number], // tiles between strips
   len: [2, 4] as [number, number], // tiles long
+  max: 3, // strips a floor at most: a few, not a lawn (zack, 2026-11-06)
 };
 
 export function placeGrass(level: Level): Glass[] {
@@ -17,8 +18,9 @@ export function placeGrass(level: Level): Glass[] {
   const between = ([a, b]: [number, number]) => a + rng() * (b - a);
   const clear = (x0: number, x1: number) => {
     for (let x = x0; x <= x1; x += TILE / 2) if (!isStreetAt(level, x)) return false;
-    //flat street only: not under a hill's slope or a ramp
-    if (level.surfaces.some((s) => s.x1 > x0 && s.x0 < x1 && s.y >= level.streetY - 2)) return false;
+    //flat street only: not under a hill's slope or a ramp (the sewer's floors under the street don't count: they're
+    //down below, and on a sewer floor they run under nearly all of it, which used to leave no grass at all)
+    if (level.surfaces.some((s) => !s.sewer && s.x1 > x0 && s.x0 < x1 && s.y >= level.streetY - 2)) return false;
     if (level.cars.some((c) => c.x1 > x0 - TILE && c.x0 < x1 + TILE)) return false;
     if (level.glass.some((g) => g.x1 > x0 - 2 * TILE && g.x0 < x1 + 2 * TILE)) return false;
     return !level.crossings.some((i) => i.x + CROSS.w / 2 + CROSS.street * TILE > x0 && i.x + CROSS.w / 2 - CROSS.street * TILE < x1);
@@ -27,6 +29,7 @@ export function placeGrass(level: Level): Glass[] {
     const x0 = Math.round(x / TILE) * TILE;
     const x1 = x0 + Math.round(between(GRASS.len)) * TILE;
     if (clear(x0, x1)) out.push({ x0, x1 });
+    if (out.length >= GRASS.max) break;
   }
   return out;
 }

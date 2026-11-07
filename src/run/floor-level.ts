@@ -1,11 +1,12 @@
-// The floor a run is on: the tutorial, an act's escape, or a validated floor with its twist (one fused world: no
-// districts, so no district gravity).
+// The floor a run is on: the tutorial, an act's escape, or a validated floor with its twist, in its act's gravity
+// (ACT_GRAVITY: street gravity in the city acts, lighter at the top of the climb).
 // Pure, so the game and the playtest bot build exactly the same floor for a seed, floor and road.
 import type { Level } from '../physics/level';
 import type { Road } from '../gen/roads';
 import { rollFork } from '../gen/roads';
 import { validatedFloor } from '../gen/validate';
-import { validatedEscape } from '../gen/escape';
+import { actOf, validatedEscape } from '../gen/escape';
+import { actGravity } from '../physics/feel';
 import { tutorialLevel } from '../gen/tutorial';
 import { floorTwist } from '../gen/twists';
 import { gnarDanger } from './gnar';
@@ -29,5 +30,6 @@ export function floorLevel(s: FloorSpec): Level {
     short: s.road.kind === 'stash',
     twist: floorTwist(s.seed, s.floor),
     hills: true,
+    gravity: actGravity(actOf(s.floor)),
   }).level;
 }

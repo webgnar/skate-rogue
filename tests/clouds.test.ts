@@ -1,4 +1,5 @@
-// The cloud layer (src/gen/clouds.ts): way up over the hills from floor 7 (act 3, tests/cloud-act.test.ts), reached by a staircase of sky pieces
+// The cloud layer (src/gen/clouds.ts): way up over the hills from floor 7 (acts 3-5 run it the whole floor,
+// tests/cloud-act.test.ts and tests/high-acts.test.ts; Endless keeps it as it was), reached by a staircase of sky pieces
 // (zack, 2026-10-31: "climb a staircase of sky pieces"), with clouds, thin clouds, rainbows and balloons up there.
 import { describe, expect, it } from 'vitest';
 import { buildFloor } from '../src/gen/descent';
@@ -8,12 +9,12 @@ import { TILE } from '../src/physics/constants';
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
 
 describe('the cloud layer', () => {
-  it('none before floor 7; from then a staircase up into clouds, rainbows and balloons', () => {
+  it("none before floor 7; in Endless a staircase up into clouds, rainbows and balloons", () => {
     let rainbows = 0;
     let balloons = 0;
     for (let seed = 1; seed <= 8; seed++) {
       expect(chicago(seed * 53, 6).surfaces.some((s) => s.sky === 'cloud')).toBe(false);
-      const l = chicago(seed * 53, 10);
+      const l = chicago(seed * 53, 16);
       expect(l.surfaces.filter((s) => s.sky === 'cloud' || s.sky === 'thin').length + l.rails.filter((r) => r.sky === 'rainbow').length + (l.skyMovers ?? []).filter((m) => m.kind === 'cloud' || m.kind === 'balloon').length).toBeGreaterThan(4);
       rainbows += l.rails.filter((r) => r.sky === 'rainbow').length;
       balloons += (l.skyMovers ?? []).filter((m) => m.kind === 'balloon').length;

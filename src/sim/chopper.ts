@@ -35,12 +35,13 @@ export class Chopper {
     readonly from: number, // it joins the chase when the skater passes this x
     readonly covers: Cover[],
     startX: number,
+    readonly top?: number, // (px, y down) it can't climb past this: act 5's finale, up in space over it, it loses you
   ) {
     this.x = startX - CHOPPER.startBehind;
   }
 
   covered(sk: Skater): boolean {
-    return this.covers.some((c) => sk.x >= c.x0 && sk.x <= c.x1 && sk.y > c.y);
+    return this.covers.some((c) => sk.x >= c.x0 && sk.x <= c.x1 && sk.y > c.y) || (this.top !== undefined && sk.y < this.top);
   }
 
   step(sk: Skater): boolean {

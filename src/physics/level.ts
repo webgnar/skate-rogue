@@ -54,7 +54,7 @@ export interface Car {
   x1: number;
   roof: number; // y of the roof
   bottom: number;
-  model?: 'cruiser' | 'bus'; // parked roadblock vehicles; plain parked cars leave it out
+  model?: 'cruiser' | 'bus' | 'gunship'; // parked roadblock vehicles (a gunship: act 4's ceiling, hovering); plain parked cars leave it out
   kicker?: number; // a box truck's dropped tailgate: this far behind x0 it launches you (px)
   skitch?: boolean; // a Chinatown cab (src/traffic/cab.ts): roll into its back bumper and you hang on, skitching
   ledge?: Surface; // an L train's car (src/traffic/el.ts): a one-way platform: its roof is a grind that moves with it, and it never hits you
@@ -178,12 +178,15 @@ export interface EscapeSite {
   x0: number; // the set piece starts here
   x1: number;
   chopperFrom?: number; // the helicopter joins the chase here
+  chopperTop?: number; // and can't climb past this (px): act 5's finale, the line up in space is out of its reach
   covers: { x0: number; x1: number; y: number }[]; // L tracks overhead: the spotlight can't see under them
   chaseFrom?: number; // act 3's chaser joins here (src/sim/chaser.ts)
-  drones?: { x: number; h: number }[]; // the drone swarm: where each drone hovers, and its roof above the street
+  drones?: { x: number; h: number; base?: number }[]; // the drone swarm: where each drone hovers, and its roof above the street (or a blimp's back)
+  rocket?: boolean; // act 5's finale: the chaser is the AI's last launch, a rocket flying at your height (src/sim/chaser.ts)
+  beam?: { x: number; y: number }; // act 5's finale: the Pleiadian ship's beam over the gate, the ship at y (px)
 }
 
-export type EscapeKind = 'roadblock' | 'chopper' | 'chase' | 'drones' | 'finale';
+export type EscapeKind = 'roadblock' | 'chopper' | 'chase' | 'drones' | 'ceiling' | 'finale';
 
 export interface Level {
   layout: Layout;
@@ -237,6 +240,7 @@ export interface SkyMover {
   floor?: number; // rig: the lowest its deck sinks to
   phase?: number; // swing, beam: frames into its swing at the start of the floor
   mast?: number; // swing: the mast's x, what the jib slews round
+  cloud?: boolean; // a set piece up in act 3's cloud layer, part of its line (src/gen/clouds.ts CLOUD_ACT)
 }
 
 // a paper billboard standing across the lane between two sky decks: top (y0) to bottom (y1), px

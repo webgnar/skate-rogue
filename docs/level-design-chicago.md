@@ -113,6 +113,10 @@ clouds, same physics; the hill, the chases, the cable cars and the street finale
   in the clouds the whole floor.
 - **No city sky.** The act's floors have no sky beats (roofs, cranes, water towers, billboards, set pieces): those
   are act 2's and act 4's. Between the clouds and the street there are the top route's power lines and the girders.
+- **Set pieces in the clouds.** One a floor, the first place it fits past 30% along the layer (`pieceAt`): the blimp
+  (16 tiles, half a tile up), the crane's jib (12 tiles, a tile up) or the window washer's rig (4 tiles, then 2 of
+  open sky to an 8-11 tile cloud; it drops to the street under you). They're part of the layer's line (`cloud` on the
+  mover), so the reach rules and the bridging treat them like clouds.
 - **Girders back up.** Fall off and every later stretch has a staircase of red girders off its lip: the first 2 tiles
   past the lip and a flip over it (`entryIn`, `entryUp`), each step a flip over the last, until a cloud ahead is in
   reach (up to `steps`, 14). It climbs over the rail that runs down the hill off the lip (only the rail right under a

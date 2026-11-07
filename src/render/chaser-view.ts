@@ -10,11 +10,13 @@ import { toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
 
-export type ChaserLook = 'wave' | 'chariot' | 'guards';
+export type ChaserLook = 'wave' | 'chariot' | 'guards' | 'rocket';
 
 // one world, one chaser (zack, Oct 24 2026: no separate biomes): the guards, the city's own security after you.
 // The wave and the chariot stay built for a later use (Endless, or a special floor).
-export function chaserLook(): ChaserLook {
+// Act 5's finale sends a rocket instead (src/sim/chaser.ts).
+export function chaserLook(level?: Level): ChaserLook {
+  if (level?.escape?.rocket) return 'rocket';
   return 'guards';
 }
 
@@ -22,6 +24,7 @@ export const CHASER_CALLS: Record<ChaserLook, { start: string; caught: string }>
   wave: { start: 'THE WAVE IS COMING!', caught: 'WIPED OUT!' },
   chariot: { start: 'CHARIOT ON YOUR TAIL!', caught: 'TRAMPLED!' },
   guards: { start: 'GUARDS! RUN!', caught: 'COLLARED!' },
+  rocket: { start: 'LAUNCH DETECTED!', caught: 'INTERCEPTED!' },
 };
 
 const lambert = (color: number, emissive = 0) => new THREE.MeshLambertMaterial({ color, emissive });
@@ -46,6 +49,34 @@ function makeWave(): THREE.Group {
   g.add(lip);
   for (let i = 0; i < 7; i++) g.add(box(0.5, 0.35, 0.8, foam, 0.6 + (i % 2) * 0.4, 3.55 + (i % 3) * 0.12, -3.5 + i));
   g.add(box(0.5, 0.25, 6, foam, 1.0, 0.12, -1)); // the wash along the street
+  return g;
+}
+
+// the AI's last launch: a white rocket, red nose and fins, flying along the lane nose first (+x), its engine lit
+export function makeRocket(): THREE.Group {
+  const g = new THREE.Group();
+  const white = lambert(0xe8ecf0, 0x202428);
+  const red = lambert(0xd02a2a, 0x300808);
+  const dark = lambert(0x30343a);
+  const flame = new THREE.MeshBasicMaterial({ color: 0xffd060 });
+  const along = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.rotation.z = -Math.PI / 2; // a cylinder stands on y: lay it along x, its top forward
+    m.position.x = x;
+    return m;
+  };
+  g.add(along(new THREE.CylinderGeometry(0.32, 0.32, 2.2, 12), white, 0));
+  g.add(along(new THREE.CylinderGeometry(0.33, 0.33, 0.25, 12), red, 0.5));
+  g.add(along(new THREE.ConeGeometry(0.32, 0.8, 12), red, 1.5));
+  g.add(along(new THREE.CylinderGeometry(0.22, 0.3, 0.3, 12), dark, -1.25));
+  const fire = along(new THREE.ConeGeometry(0.22, 0.9, 10), flame, -1.85);
+  fire.rotation.z = Math.PI / 2; // the flame points back
+  fire.name = 'flame';
+  g.add(fire);
+  for (const [y, z] of [[0.45, 0], [-0.45, 0], [0, 0.45], [0, -0.45]]) {
+    const fin = box(0.6, Math.abs(y) > 0 ? 0.35 : 0.05, Math.abs(z) > 0 ? 0.35 : 0.05, red, -0.8, y, z);
+    g.add(fin);
+  }
   return g;
 }
 
@@ -232,10 +263,10 @@ export class ChaserView {
   update(level: Level, chaser: Chaser | null, dt: number, aiming = false): void {
     this.group.visible = chaser !== null;
     if (!chaser) return;
-    const look = chaserLook();
+    const look = chaserLook(level);
     if (look !== this.look) {
       if (this.body) this.group.remove(this.body);
-      this.body = fromModels(look) ?? (look === 'wave' ? makeWave() : look === 'chariot' ? makeChariot() : makeGuards());
+      this.body = look === 'rocket' ? makeRocket() : fromModels(look) ?? (look === 'wave' ? makeWave() : look === 'chariot' ? makeChariot() : makeGuards());
       inkify(this.body);
       this.group.add(this.body);
       this.look = look;
@@ -246,7 +277,14 @@ export class ChaserView {
     const target = toX(at(chaser, 'x'));
     this.surging = target - this.x > 0.5;
     this.x += (target - this.x) * Math.min(1, dt * (target > this.x ? 6 : 2));
-    this.group.position.set(this.x, toY(level, level.streetY), 0.2);
+    //the rocket flies at your height (it rides 1.5 up its tile so it sits level with you), the guards run the street
+    this.group.position.set(this.x, look === 'rocket' ? toY(level, at(chaser, 'y')) - 0.5 : toY(level, level.streetY), 0.2);
+    if (look === 'rocket') {
+      this.body!.rotation.x += dt * 3; // it rolls as it flies
+      const f = this.body!.getObjectByName('flame');
+      if (f) f.scale.setScalar(0.85 + Math.random() * 0.35);
+      return;
+    }
     const run = Math.sin(this.t * 14);
     //raised to aim, held through the shot's recoil, then back to pumping
     const up = aiming || this.kick > 0.05;

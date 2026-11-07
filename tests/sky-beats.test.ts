@@ -12,22 +12,23 @@ import { isFloorEdit } from '../src/levels/drafts';
 
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
 // (the cloud layer and its staircase are their own, src/gen/clouds.ts)
-const LAYER = new Set(['cloud', 'thin', 'wisp', 'step', 'rainbow']);
+const LAYER = new Set(['cloud', 'thin', 'wisp', 'step', 'rainbow', 'spire']);
 const skyOf = (l: ReturnType<typeof chicago>) => [...l.surfaces.filter((s) => s.sky && !LAYER.has(s.sky)), ...l.rails.filter((r) => r.sky && !LAYER.has(r.sky))];
 
 afterEach(() => useLevelEdits(SAVED_EDITS));
 
 describe('sky beats', () => {
-  it('none on act 1 or in act 3 (the clouds), a run of them over the hills in acts 2 and 4', () => {
+  it('none on act 1 or up in the layer acts (3-5), a run of them over the hills in act 2', () => {
     for (let seed = 1; seed <= 4; seed++) {
       expect(skyOf(chicago(seed * 53, 2))).toHaveLength(0);
-      for (const f of [4, 10, 13]) expect(skyOf(chicago(seed * 53, f)).length).toBeGreaterThan(3);
+      for (const f of [4, 5, 6]) expect(skyOf(chicago(seed * 53, f)).length).toBeGreaterThan(3);
+      for (const f of [8, 10, 13]) expect(skyOf(chicago(seed * 53, f))).toHaveLength(0);
     }
   });
 
   it('stays clear of the power line and never claims to be the top route', () => {
     for (let seed = 1; seed <= 4; seed++) {
-      const l = chicago(seed * 53, 10);
+      const l = chicago(seed * 53, 5);
       const wires = l.rails.filter((r) => r.top || r.wire);
       for (const s of l.surfaces.filter((x) => x.sky)) {
         expect(s.top).toBeFalsy();
@@ -40,11 +41,11 @@ describe('sky beats', () => {
   });
 
   it("the editor's sky recipe and dials win over the code's", () => {
-    useLevelEdits({ floors: { '2': { sky: [['billboard']], skyStart: 0.2 }, '10': { sky: [] } } });
+    useLevelEdits({ floors: { '2': { sky: [['billboard']], skyStart: 0.2 }, '5': { sky: [] } } });
     expect(skyRecipe(2)).toEqual([['billboard']]);
     expect(skyOf(chicago(53, 2)).length).toBeGreaterThan(0);
     expect(skyOf(chicago(53, 2)).every((p) => p.sky === 'billboard')).toBe(true);
-    expect(skyOf(chicago(53, 10))).toHaveLength(0);
+    expect(skyOf(chicago(53, 5))).toHaveLength(0);
     expect(isFloorEdit({ sky: [['roofs', 'crane'], ['gap']], skyHeight: 5 })).toBe(true);
     expect(isFloorEdit({ sky: [['spaceship']] })).toBe(false);
     expect(isFloorEdit({ sky: [[]] })).toBe(false);

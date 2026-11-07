@@ -32,7 +32,7 @@ export function wantTitle(params: URLSearchParams, testing: boolean): boolean {
   } catch {
     //no storage: show it
   }
-  const dev = ['notitle', 'clouds', 'sewer', 'shop', 'debug', 'collision'].some((k) => params.has(k));
+  const dev = ['notitle', 'clouds', 'sewer', 'shop', 'debug', 'collision', 'ship', 'ending'].some((k) => params.has(k));
   return !skip && !testing && !dev;
 }
 

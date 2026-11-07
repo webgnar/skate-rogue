@@ -97,7 +97,7 @@ describe('meta progression', () => {
     expect(new Set(later.filter(Boolean))).toEqual(new Set(TWISTS));
     expect(later.filter(Boolean).length).toBeGreaterThan(60);
     expect(later.filter(Boolean).length).toBeLessThan(140);
-    //no district gravity any more
-    expect(floorLevel({ seed: 5, floor: 13, road, library: FULL_LIBRARY, gnar: 0 }).gravity ?? 1).toBe(1);
+    //no district gravity any more: gravity follows the act (tests/act-gravity.test.ts), street gravity through act 3
+    expect(floorLevel({ seed: 5, floor: 7, road, library: FULL_LIBRARY, gnar: 0 }).gravity ?? 1).toBe(1);
   });
 });

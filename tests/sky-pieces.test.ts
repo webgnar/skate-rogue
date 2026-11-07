@@ -14,8 +14,8 @@ const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefin
 const piecesOf = (l: Level) => [...(l.skyMovers ?? []).filter((m) => m.kind !== 'cloud' && m.kind !== 'balloon' && m.kind !== 'beam').map((m) => m.kind), ...(l.busts ?? []).map(() => 'bust')];
 
 // the first floor (by seed) whose sky has this
-function find(test: (l: Level) => boolean): Level {
-  for (let seed = 1; seed < 200; seed++) for (let f = 5; f <= 15; f++) {
+function find(test: (l: Level) => boolean, last = 15): Level {
+  for (let seed = 1; seed < 200; seed++) for (let f = 5; f <= last; f++) {
     const l = chicago(seed * 53, f);
     if (test(l)) return l;
   }
@@ -39,7 +39,8 @@ describe('the sky route', () => {
       expect(piecesOf(chicago(seed * 53, 4))).toHaveLength(0);
       for (let f = 5; f <= 15; f++) {
         const l = chicago(seed * 53, f);
-        const p = piecesOf(l);
+        //(act 4's blimps are a fleet, beats of their own up over the clouds: src/gen/clouds.ts HIGH)
+        const p = piecesOf(l).filter((k) => f < 10 || f > 12 || k !== 'blimp');
         expect(p.length).toBeLessThanOrEqual(1);
         p.forEach((k) => seen.add(k));
       }
@@ -59,7 +60,7 @@ describe('the sky route', () => {
     expect(score.cash).toBe(2);
     expect(score.stoken).toBe(2);
     //jump the bust's gap from its first deck to its second: through the billboard, two pieces on the line
-    const l = find((x) => !!x.busts?.length);
+    const l = find((x) => !!x.busts?.length, 9); // (act 4's bust is jumped in its own gravity)
     const b = l.busts![0];
     const first = l.surfaces.find((s) => s.sky && s.x1 < b.x && b.x - s.x1 < 3 * TILE)!;
     const sim = new FloorSim({ ...l, startX: first.x0 + 8, startY: first.y });
@@ -73,8 +74,9 @@ describe('the sky route', () => {
   });
 
   it("the window washer's rig drops once you land on it", () => {
-    const l = find((x) => !!x.skyMovers?.some((m) => m.kind === 'rig'));
-    const m = l.skyMovers!.find((k) => k.kind === 'rig')!;
+    //(a city rig: act 3's up in the clouds are tests/cloud-act.test.ts)
+    const l = find((x) => !!x.skyMovers?.some((m) => m.kind === 'rig' && !m.cloud));
+    const m = l.skyMovers!.find((k) => k.kind === 'rig' && !k.cloud)!;
     const sim = new FloorSim({ ...l, startX: m.x0 + 8, startY: m.y - 4 });
     const rig = sim.sky.pieces.find((p) => p.site === m)!;
     run(sim, 10);

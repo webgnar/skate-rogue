@@ -22,6 +22,7 @@ export interface Save {
   gnar: number; // the highest Gnar level won (src/run/gnar.ts)
   gnarPick: number; // the level the next run is at
   tutorialDone?: boolean; // the tutorial floor was cleared (or skipped by an old save)
+  endingSeen?: boolean; // the Chapter 1 ending played in full once (src/ship/ending-scene.ts); later wins get the short one
   missions: MissionSave; // the three missions showing and Skater Rank (src/run/missions.ts)
   headStart: HeadStart; // what the street dice won for the next run (src/run/dice.ts)
 }
@@ -50,6 +51,7 @@ export function loadSave(): Save {
       headStart: cleanHeadStart(s.headStart),
       ...(typeof s.tag === 'string' && s.tag ? { tag: s.tag } : {}),
       ...(s.tutorialDone ? { tutorialDone: true } : {}),
+      ...(s.endingSeen ? { endingSeen: true } : {}),
       ...(isGrip(s.tape) ? { tape: s.tape } : {}),
     };
   } catch {

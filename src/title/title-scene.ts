@@ -8,7 +8,8 @@
 // It draws with the game's renderer onto the game's canvas, in its own THREE.Scene and camera; the run's street is
 // built behind it and takes over on SKATE.
 import * as THREE from 'three';
-import { BASE, BOARD, type Pose } from '../render/poses';
+import type { Pose } from '../render/poses';
+import { danceAt, dancePoses } from './dance';
 import { SCALE, type SkaterRig } from '../render/skater-rig';
 import { SKATER_HALO, SKATER_INK, PAPER } from '../game/game';
 import { glowMaterial, INK, inkify, outlineMaterial, setInkLens, setInkResolution, silhouetteInk } from '../render/toon';
@@ -51,10 +52,7 @@ function glide(end: Shot) {
   return { curve, from: facing(TOP), to: facing(end) };
 }
 
-const HAND_ARM = 0; // the lead (left, +x) arm twirls the board
-const SPIN = 8; // the board's twirl, radians a second (zack's sprite: a turn in 0.75 s)
-const BOARD_AT = { x: 0.5, z: 0.08 }; // where the board stands, rig space: at his lead side
-const DANCE_KEYS = 16; // poses in his bar of dancing, a quarter beat apart
+export const SPIN = 8; // the board's twirl, radians a second (zack's sprite: a turn in 0.75 s)
 
 export class TitleScene {
   readonly scene = new THREE.Scene();
@@ -87,71 +85,9 @@ export class TitleScene {
       s.add(rig.mesh);
       inkify(rig.mesh, { toon: false });
       silhouetteInk(rig.mesh, rig.boardGroup, outlineMaterial(), this.ink[0], this.ink[1], this.halo);
-      this.keys = this.standPoses(rig);
+      this.keys = dancePoses(rig);
     }
     this.place();
-  }
-
-  // Webster stood on the sidewalk off his board, from zack's boardspin sprite (2026-11-02): the board stood on its
-  // tail at his side, his lead hand resting on the nose, twirling it about its long axis (bottom, edge, grip, edge).
-  // And dancing to the title music while he waits (zack: "the skater doing a dance motion before you start"): a knee
-  // bounce on every beat, hips and shoulders swaying over two, head nodding, a step-touch, the free arm pumping. A
-  // bar of poses at quarter beats, each with the hand solved (SkaterRig.reach) to the top of the nose
-  private standPoses(rig: SkaterRig): Pose[] {
-    const stand: Pose = {
-      ...BASE,
-      yaw: 0.1,
-      hipY: 0.84,
-      bend: 0.04,
-      lean: -0.04,
-      head: -0.1,
-      nod: 0.05,
-      headTilt: -0.06,
-      footFOn: 0,
-      footBOn: 0,
-      footFX: 0.15,
-      footFY: 0,
-      footFZ: 0.02,
-      footBX: -0.15,
-      footBY: 0,
-      footBZ: -0.02,
-      footFTurn: 0.25,
-      footBTurn: -0.25,
-      //the free (trailing) arm hangs loose, a little out from the side
-      armRRaise: 0.35,
-      armRFwd: 0.05,
-      armRElbow: 0.3,
-    };
-    return Array.from({ length: DANCE_KEYS }, (_, i) => {
-      const b = (i / DANCE_KEYS) * 4; // beats into the bar
-      const hit = (1 + Math.cos(b * Math.PI * 2)) / 2; // 1 on the beat, 0 between
-      const sway = Math.sin(b * Math.PI); // side to side over two beats
-      const p: Pose = {
-        ...stand,
-        hipY: stand.hipY - hit * 0.05,
-        hipX: sway * 0.035,
-        yaw: stand.yaw + sway * 0.12,
-        lean: stand.lean + hit * 0.03,
-        bend: stand.bend + hit * 0.07,
-        nod: stand.nod + hit * 0.2,
-        headTilt: stand.headTilt + sway * 0.12,
-        head: stand.head + Math.sin((b * Math.PI) / 2) * 0.12,
-        footFY: Math.pow(Math.max(0, sway), 2) * 0.07,
-        footBY: Math.pow(Math.max(0, -sway), 2) * 0.07,
-        armRRaise: stand.armRRaise + hit * 0.25,
-        armRFwd: 0.2 + sway * 0.35,
-        armRElbow: 0.6 + hit * 0.6,
-      };
-      //the board on its tail beside him, nose up: it pitches a quarter turn up about the tail, the tail on the ground
-      p.boardPivot = -BOARD.tail;
-      p.boardPitch = Math.PI / 2;
-      p.boardX = BOARD_AT.x + BOARD.tail;
-      p.boardY = -BOARD.deckTop + 0.02;
-      p.boardZ = BOARD_AT.z;
-      const hand = new THREE.Vector3(BOARD_AT.x - 0.02, BOARD.length + 0.05, BOARD_AT.z);
-      Object.assign(p, rig.reach(p, HAND_ARM, hand));
-      return p;
-    });
   }
 
   // tap: start down (or, on the way, skip to the bottom)
@@ -203,14 +139,7 @@ export class TitleScene {
     this.street.update(this.t, dt);
     this.life.update(this.t, dt);
     if (this.rig && this.keys.length) {
-      const n = this.keys.length;
-      const u = ((GROOVE.t / BEAT) * (n / 4)) % n;
-      const i = Math.floor(u);
-      const f = u - i;
-      const a = this.keys[i];
-      const b = this.keys[(i + 1) % n];
-      const p = { ...a };
-      for (const key of Object.keys(a) as (keyof Pose)[]) p[key] = a[key] + (b[key] - a[key]) * f;
+      const p = danceAt(this.keys, GROOVE.t / BEAT);
       this.rig.preview(p);
       this.spin += dt * SPIN;
       this.rig.boardGroup.rotation.x = this.spin; // about the board's long axis, standing up
