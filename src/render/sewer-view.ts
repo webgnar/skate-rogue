@@ -88,6 +88,11 @@ const waterFragment = /* glsl */ `
   }
 `;
 
+// how far behind and ahead of the skater (world units) a rat is drawn and animated: past the widest view (a wide
+// desktop window sees ~26 either side; an iPhone SE sideways ~12)
+const RAT_BEHIND = 35;
+const RAT_AHEAD = 55;
+
 export class SewerView {
   readonly group = new THREE.Group();
   private rats: { mesh: THREE.Object3D; rat: { x: number; alive: boolean }; pack: { awake: boolean }; rig: BotRig<RatClip> | null }[] = [];
@@ -380,14 +385,17 @@ export class SewerView {
     return g;
   }
 
-  // x: the skater's (world units), so the wave rises where you can see it
+  // x: the skater's (world units), so the wave rises where you can see it, and only the rats near it move
   update(dt: number, x = Infinity): void {
     this.time += dt;
     slimeClock.value = this.time;
     for (const r of this.rats) {
-      r.mesh.visible = r.rat.alive;
-      if (!r.rat.alive) continue;
-      r.mesh.position.x = at(r.rat, 'x') / TILE;
+      const rx = at(r.rat, 'x') / TILE;
+      //only the rats near you are drawn and animated: a floor's packs are dozens of skinned rats, and posing every one
+      //every frame cost more than the rest of the sewer (perf pass, 2026-11-07)
+      r.mesh.visible = r.rat.alive && (!Number.isFinite(x) || (rx > x - RAT_BEHIND && rx < x + RAT_AHEAD));
+      if (!r.mesh.visible) continue;
+      r.mesh.position.x = rx;
       if (r.rig) {
         //sniffing about until the pack sees you, then the scurry
         if (r.pack.awake) r.rig.play('run', 0.15, 1.4);

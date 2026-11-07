@@ -16,6 +16,7 @@ import { glowMaterial, INK, inkify, outlineMaterial, setInkLens, setInkResolutio
 import { glowTexture } from '../title/city';
 import { danceAt, dancePoses } from '../title/dance';
 import { makeRng } from '../gen/rng';
+import { batchStatic } from '../render/batch';
 
 export const HUB = {
   floorR: 17, // the deck inside the dome
@@ -100,9 +101,13 @@ export class HubScene {
     const spot = new THREE.Group();
     spot.name = 'spot';
     s.add(spot);
-    deck(spot);
-    dome(spot);
-    scrap(spot);
+    //the deck, the dome and the scrap never move: merged a mesh per look (batch.ts), ~85 draws down to ~25
+    const still = new THREE.Group();
+    deck(still);
+    dome(still);
+    scrap(still);
+    batchStatic(still);
+    spot.add(still);
     const core = stokenCore();
     this.flame = core.flame;
     this.electrons = core.electrons;
@@ -170,7 +175,14 @@ export class HubScene {
     this.shot = shot;
   }
 
+  // a frame of the hub: posed, then drawn
   frame(dt: number): void {
+    this.pose(dt);
+    this.render();
+  }
+
+  // everything frame() does but the draw: the crew posed and placed, the core and the camera moved on
+  pose(dt: number): void {
     this.t += dt;
     this.spin += dt * HUB.spin;
     this.fuel += (this.fuelTo - this.fuel) * Math.min(1, dt * 1.5);
@@ -197,7 +209,6 @@ export class HubScene {
     });
     this.earth.rotation.y += dt * 0.01;
     this.place(dt);
-    this.render();
   }
 
   private place(dt: number): void {
