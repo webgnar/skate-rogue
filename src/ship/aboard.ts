@@ -25,7 +25,7 @@ export class Aboard {
     const hub = new HubScene(this.renderer);
     this.crew(hub);
     hub.setBank(loadSave().stoken, true);
-    hub.frame(0); // posed and placed once, so the compile sees what it will draw
+    hub.pose(0); // posed and placed once, so the compile sees what it will draw (not drawn: a draw compiles every shader on the spot)
     await this.renderer.compileAsync(hub.scene, hub.camera);
     this.hub = hub;
   }

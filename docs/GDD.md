@@ -1467,7 +1467,12 @@ thread of its own:
   progression, The ship hub), with the Chapter 1 ending (see Cutscenes).
 
 **Ship**
-10. A performance pass for small iPhones.
+10. A performance pass for small iPhones. Nov 7, 2026 pass, measured with `npm run perf` at iPhone SE sizes: acts
+    3-5 were drawing and posing every sewer rat on the floor each frame (now only the ones within reach of the
+    screen: about 70 fewer draw calls and 1,200 fewer node updates a frame there); the ship hub's first load drew it
+    once in the middle of the first run, compiling all its shaders at once (a freeze of a few seconds on the test
+    machine; it now only compiles in the background); and the hub's still pieces are merged (about 200 draws down to
+    160).
 11. Release on ad-supported web game portals (zack still picks which).
 12. App store builds with Capacitor, if wanted.
 
@@ -1531,6 +1536,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   keeps the old cloud layer (up a staircase partway down the first stretch).
 - **Wall rides** (from Alto's Odyssey and OlliOlli World): ollie into a building wall, billboard or bus side,
   ride along it for a beat and tap to pop off it higher. zack likes them but hasn't decided how they'd be used.
+  Nov 7, 2026: zack might bring them back for the cloud world (acts 3-5), for example riding a blimp's side or a
+  cloud bank. Not designed or built yet.
 - **Swipe to flip** (zack, Oct 31, 2026): a swipe in any direction could throw the flip, leaving the tap for the
   ollie. For now it stays tap only, until the controls are hashed out.
 - Alto's Odyssey ideas not taken: zen mode and the wingsuit (neither fits a one-button escape). The rest is already
