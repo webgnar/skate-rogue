@@ -25,8 +25,10 @@ function skate(l: Level, [a, b]: [number, number], v: number): number | null {
   for (let f = 0; f < 4000 && sim.state === 'skate' && sim.skater.x < b; f++) {
     sim.step(pilot.input(sim));
     const sk = sim.skater;
-    if (sk.surface?.sky || sk.rail?.sky || sim.sky.pieces.some((p) => p.ledge === sk.surface)) on = sk.x;
-    if (sim.skyLine === 0 && sk.mode !== 'air' && f > 30) break;
+    const up = !!(sk.surface?.sky || sk.surface?.top || sk.rail?.sky || sk.rail?.top || sim.sky.pieces.some((p) => p.ledge === sk.surface));
+    if (up) on = sk.x;
+    //(touched the ground: NO GROUND's line can't say so, it's off in the climb acts)
+    if (!up && sk.mode !== 'air' && f > 30) break;
   }
   return Math.min(1, (on - decks[0].x0) / Math.max(1, last - decks[0].x0));
 }

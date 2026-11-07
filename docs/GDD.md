@@ -256,6 +256,10 @@ built the same day (greybox, waiting on zack's reference images in the shared fo
 - **NO GROUND.** Chain sky pieces (the wire, rooftops, decks, booms, a blimp's back) without touching the ground below
   and the coins up there multiply: x1.5 at two pieces, up to x4 (Stoken by the whole part). Air between pieces keeps
   the line; touching the ground below banks it ("SKY LINE x5!"); a bail loses it. It's the reason to stay up there.
+  It only runs where going up is a choice (zack, Nov 7, 2026: "might be irrelevant now"): acts 1 and 2, their
+  escapes, act 3's street chase and Endless. From act 3's cloud floors up you're off the ground the whole floor, so
+  it's off there, and on the ceiling and the beam-up. **(Waiting on zack's pick:** this is the recommended option;
+  the others were dropping it everywhere or leaving it on.**)**
 - **Set pieces, one a floor at most, from floor 5:** an **ad blimp** moored over the hill, its long back a calm
   cruise; a **window washer's rig** that drops under you once you land, so you pop off it quick onto the roof
   ahead; a **tower crane** whose jib slews out of the lane and back (land early, or it swings away under you); and a

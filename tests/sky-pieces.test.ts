@@ -143,3 +143,21 @@ describe('the sky route', () => {
     expect(sim.skater.x - before).toBeCloseTo(p.x - at, 5);
   });
 });
+
+describe('NO GROUND only where going up is a choice', () => {
+  it('pays on the street and rooftop acts and Endless, not in the climb acts or their escapes', async () => {
+    const { skyBonus } = await import('../src/sim/floor');
+    const { buildEscape } = await import('../src/gen/escape');
+    for (const f of [2, 5]) expect(skyBonus(chicago(53, f))).toBe(true);
+    for (const f of [8, 11, 14]) expect(skyBonus(chicago(53, f))).toBe(false);
+    expect(skyBonus(buildEscape(3, 3))).toBe(true);
+    for (const act of [4, 5]) expect(skyBonus(buildEscape(3, act))).toBe(false);
+    //in act 3 the cloud layer never builds a line
+    const l = chicago(53, 8);
+    const cloud = l.surfaces.find((s) => s.sky)!;
+    const sim = new FloorSim({ ...l, startX: cloud.x0 + 8, startY: cloud.y });
+    const events = run(sim, 300);
+    expect(events.some((e) => e.type === 'skyChain')).toBe(false);
+    expect(sim.skyLine).toBe(0);
+  }, 60000);
+});

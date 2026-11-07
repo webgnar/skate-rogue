@@ -8,6 +8,7 @@ import { PHYS, TILE } from '../physics/constants';
 import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
 import { TOP } from '../gen/top-route';
+import { layerAct } from '../gen/clouds';
 import { Chaser } from './chaser';
 import { Shooter, type ShotEvent } from './shots';
 import { Swarm } from './drones';
@@ -276,8 +277,10 @@ export class FloorSim {
   }
 
   // NO GROUND: each new sky piece you land on or catch adds to the line; the air between keeps it going; the
-  // ground below banks it (a bail just loses it)
+  // ground below banks it (a bail just loses it). Only where going up is a choice: from act 3 the climb is the
+  // floor (the cloud layer, the sky, space; the ceiling and the beam-up), so it's off there (zack, Nov 7, 2026)
   private noGround(): void {
+    if (!skyBonus(this.level)) return;
     const sk = this.skater;
     if (sk.mode === 'air') return;
     const piece = sk.mode === 'rail' ? (sk.rail && (sk.rail.top || sk.rail.sky) ? sk.rail : null) : sk.surface && (sk.surface.top || sk.surface.sky) ? sk.surface : null;
@@ -621,4 +624,12 @@ export class FloorSim {
 
 function isGrind(mode: Mode): boolean {
   return mode === 'grind' || mode === 'rail';
+}
+
+// whether NO GROUND pays on this floor: the street and rooftop acts and their escapes (and Endless, which keeps the
+// optional cloud layer), not the climb acts where you're up off the ground the whole floor
+export function skyBonus(level: Level): boolean {
+  const esc = level.escape?.kind;
+  if (esc) return esc !== 'ceiling' && esc !== 'finale';
+  return layerAct(level.layout.floor) === 0;
 }
