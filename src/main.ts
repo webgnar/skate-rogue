@@ -643,8 +643,10 @@ async function start() {
     ...Array.from({ length: ACTS * FLOORS_PER_ACT }, (_, i) => `floor ${i + 1}`),
     ...Array.from({ length: ACTS }, (_, i) => `escape ${i + 1}`),
   ];
-  //no dev tools in the portal build: players there get the plain game
-  if (ON_CRAZYGAMES) document.getElementById('devhead')!.hidden = true;
+  //no dev tools in the shipped builds (zack, 2026-11-07): players get the plain game. They're on in npm run dev, and
+  //on the Vercel build with ?dev (or ?debug) in the link; never on the portal
+  const devTools = !ON_CRAZYGAMES && (import.meta.env.DEV || params.has('dev') || params.has('debug'));
+  if (!devTools) document.getElementById('devhead')!.hidden = true;
   const dev = new DevPanel(document.getElementById('devhead')!, {
     collision: (on) => game.toggleCollision(on),
     fps: showFps,
@@ -673,8 +675,8 @@ async function start() {
       else location.search = q.toString();
     },
   });
-  if (DEV.collision || params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
-  showFps(DEV.fps);
+  if ((devTools && DEV.collision) || params.get('debug') === 'collision' || params.has('collision')) game.toggleCollision(true);
+  showFps(devTools && DEV.fps);
   if (params.has('debug') || params.has('collision')) {
     const colBtn = document.createElement('button');
     colBtn.id = 'colbtn';
@@ -687,7 +689,7 @@ async function start() {
     });
   }
   window.addEventListener('keydown', (e) => {
-    if (ON_CRAZYGAMES) return; // the dev keys stay off on the portal, like the DEV TOOLS button
+    if (!devTools) return; // the dev keys stay off in the shipped builds, like the DEV TOOLS button
     if (e.code === 'KeyC') {
       game.toggleCollision();
       saveDev();

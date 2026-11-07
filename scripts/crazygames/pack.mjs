@@ -15,6 +15,11 @@ const MOBILE_HOME = 20 * 1024 * 1024; // their mobile homepage wants the initial
 // what the portal build never loads: the Meshy test skaters (DEV TOOLS only, off in this build), the home screen
 // app's icons and manifest (the page tags are stripped by vite.config.ts), and notes
 for (const p of ['models/meshy', 'icons', 'manifest.webmanifest', 'music/README.md']) rmSync(join(DIR, p), { recursive: true, force: true });
+// and the far backdrops of the old separate worlds (src/render/biomes.ts BACKDROPS): the one city only draws Chicago's
+// skyline, planets and sculptures; the rest show only with the ?biome= dev flag, which leaves out a layer that's missing.
+// About 0.7 MB, room for the hand-drawn card art (public/sprites/cards/art)
+const OLD_BACKDROPS = ['atlantis_dragon', 'atlantis_wave', 'clemente', 'hightech', 'museum_city', 'space_stars'];
+for (const b of OLD_BACKDROPS) rmSync(join(DIR, 'tex', `bkgd_${b}.png`), { force: true });
 
 // the music at 96 kbps for the portal (160 on Vercel): the two tracks drop from 5 to 3 MB, which brings the build under
 // CrazyGames' 20 MB mobile homepage mark. Needs ffmpeg; without it the tracks stay as they are.
