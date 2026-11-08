@@ -1096,17 +1096,25 @@ with a roll of **two dice on the curb** under a street lamp, before the summary.
 spin tokens) turn up rarely in runs, and each one found adds a roll. The point is to give the player something even
 when they lose, and the **Match** (from pinball) is the rare roll that feels huge.
 
-- A plain roll pays a few Stoken: the pips halved, rounded up (2 to 6).
-- **Doubles** (1 in 6) pay a head start for the next run: 2-2 or 3-3 a $40 head start, 4-4 (hard eight) a free boon,
-  5-5 (hard ten) a saved continue.
-- **Snake eyes** (1-1) pays a grip colour.
-- **Boxcars** (6-6) is the **MATCH** (1 in 36): the next run starts with 5 hearts instead of 3. Continues held for the
-  next run cap at 2, so past the cap the Match pays 25 Stoken (and 5-5 pays 10).
+**Every roll is a combo** (zack, Nov 8, 2026: "i dont understand how i earned something from this insignificant
+roll"). Each roll is named in street craps slang over the dice, and a paytable under the title lights the combo it
+made, so you always see why it paid what it did:
+
+| Combo | Dice | Odds | Pays |
+|---|---|---|---|
+| **BOXCARS**, the MATCH | 6-6 | 1 in 36 | next run starts with 5 hearts instead of 3 |
+| **DOUBLES** | any other pair | 5 in 36 | snake eyes (1-1) a grip colour; 2-2, 3-3 a $40 head start; 4-4 a free boon; 5-5 a saved continue |
+| **YO-LEVEN** | 5-6 | 2 in 36 | $40 head start |
+| **LUCKY SEVEN** | any 7 | 6 in 36 | 8 Stoken |
+| **STRAIGHT** | two in a row: 1-2, 2-3, 4-5 (3-4 is a seven, 5-6 a yo-leven) | 6 in 36 | 4 Stoken |
+| **NO DICE (n)** | anything else | 16 in 36 | 1 Stoken, a scrap (its name and prize are grey) |
+
+Continues held for the next run cap at 2, so past the cap the Match pays 25 Stoken (and 5-5 pays 10).
 
 **One pair at a time** (zack, Nov 6, 2026): the free roll first, then a roll per chip. The chips left show as a row
-of red chips under the title ("ROLL 2 OF 4", "x2 CHIPS LEFT"). Once a pair lands, a tap claims its prize (it drops
-into a WON row at the bottom); then the next chip pops out of the row, flies down flipping to your hand and turns
-into the next pair of dice, so you can see what the chips are for. The last prize's tap goes on to the summary.
+of red chips under the title ("ROLL 2 OF 4", "x2 CHIPS LEFT"). Once a pair lands, a tap claims its prize: it lifts off the
+curb and flies into its spot in the WON row at the bottom (zack, Nov 8, 2026: so you see what you're earning); then the next chip pops out of the row, flies down flipping to your hand and turns
+into the next pair of dice, so you can see what the chips are for. After the last prize flies in, the WON row stays up with CONTINUE, and a tap goes on to the summary.
 
 **Shake your phone or tap ROLL** to throw the pair (it rattles in your hand until then; zack, Nov 4, 2026), and a tap
 while it tumbles lands it. On an iPhone, motion needs a tap to allow it, so

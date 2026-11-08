@@ -1,7 +1,8 @@
 // The end-of-run street dice (src/run/dice.ts): real 3D casino dice (src/render/dice3d.ts) on a strip of curb under
 // a street lamp. One big pair at a time (zack, 2026-11-06): the free roll first, then one per chip. Each pair rattles
-// in your hand until you shake the phone or tap ROLL, tumbles onto the curb and lands; its name and prize stamp in,
-// spelled out (what you got and what it's for). A tap claims it: the prize drops into the WON row, and if a chip's
+// in your hand until you shake the phone or tap ROLL, tumbles onto the curb and lands; the combo it made lights up
+// in the paytable under the title (zack, 2026-11-08: make the combos mean something), and its name and prize stamp in,
+// spelled out (what you got and what it's for). A tap claims it: the prize flies into its spot in the WON row, and if a chip's
 // left, it pops out of the chip count, flies down to your hand and turns into the next pair. Boxcars (the MATCH)
 // glows and flashes gold. A tap while the dice tumble lands them, a tap while a chip flies skips the flight.
 // Reduce motion: the throw and the chip just show where they end up.
@@ -19,6 +20,7 @@ export const SHAKE = {
   within: 900, // ms the jolts have to come in
 };
 
+export const PRIZE_MS = 520; // a claimed prize's flight from under the dice into its spot in the WON row
 export const CHIP_MS = 650; // a chip's flight from the count down to your hand, before it turns into dice
 
 // the prize icons, inked like the rest of the game (the Stoken particle is the HUD's)
@@ -34,8 +36,9 @@ const ICON: Record<PrizeIcon, string> = {
 const CHIP = '<i class="chip"><b>&#9733;</b></i>';
 
 type Permissioned = { requestPermission?: () => Promise<'granted' | 'denied'> };
-// where a pair is: in your hand, tumbling, landed (its prize showing), or a chip on its way to become it
-type Phase = 'hand' | 'tumble' | 'landed' | 'chip';
+// where a pair is: in your hand, tumbling, landed (its prize showing), or a chip on its way to become it; done: the
+// last prize is in the WON row, a tap goes on to the summary
+type Phase = 'hand' | 'tumble' | 'landed' | 'chip' | 'done';
 
 export class DicePanel {
   private anims: Animation[] = [];
@@ -91,9 +94,16 @@ export class DicePanel {
         return false;
       case 'landed':
         this.claim();
-        if (this.at + 1 >= this.view.rolls.length) return true;
-        this.chipIn(this.at + 1);
+        if (this.at + 1 < this.view.rolls.length) this.chipIn(this.at + 1);
+        else {
+          //the last prize flies in too, and the whole WON row stays up until you go on
+          this.phase = 'done';
+          this.el.classList.add('done');
+          this.button('CONTINUE ▶', true);
+        }
         return false;
+      case 'done':
+        return true;
     }
   }
 
@@ -105,14 +115,15 @@ export class DicePanel {
     this.phase = 'hand';
     const r = v.rolls[k];
     const n = v.rolls.length;
-    this.el.classList.remove('thrown', 'landed', 'matched', 'flying');
+    this.el.classList.remove('thrown', 'landed', 'matched', 'flying', 'done');
+    this.hit(null);
     this.el.querySelector('.title')!.textContent = n > 1 ? `ROLL ${k + 1} OF ${n}` : 'ROLL ’EM';
     this.el.querySelector('.sub')!.textContent = k === 0 ? 'THE FREE ROLL, EVERY RUN' : 'A CHIP ROLL';
     this.chips(n - 1 - k);
     this.el.querySelector('.how')!.textContent = this.canShake() ? 'SHAKE YOUR PHONE OR TAP ROLL' : 'TAP ROLL';
     this.button('ROLL ▶', true);
     this.el.querySelector('.curb')!.innerHTML =
-      `<div class="pair${r.big ? ' big' : ''}${r.match ? ' match' : ''}">` +
+      `<div class="pair ${r.combo}${r.big ? ' big' : ''}${r.match ? ' match' : ''}">` +
       `<div class="dice"><div class="die"></div><div class="die"></div></div>` +
       `<div class="name">${r.name}</div>` +
       `<div class="prize"><span class="icon">${ICON[r.prize.icon]}</span><span class="what"><b>${r.prize.main}</b><small>${r.prize.sub}</small></span></div></div>`;
@@ -154,10 +165,17 @@ export class DicePanel {
     const v = this.view!;
     this.el.classList.add('landed');
     this.el.classList.toggle('matched', v.rolls[this.at].match);
+    this.hit(v.rolls[this.at].combo);
     this.button(this.at + 1 < v.rolls.length ? 'NEXT ROLL ▶' : 'COLLECT', true);
   }
 
-  // the prize drops into the WON row
+  // the paytable lights the combo the pair landed on, so you see why it paid what it did
+  private hit(combo: string | null): void {
+    for (const e of this.el.querySelectorAll<HTMLElement>('.pays [data-combo]')) e.classList.toggle('hit', e.dataset.combo === combo);
+  }
+
+  // the prize lifts off the curb and flies into its spot in the WON row (zack, 2026-11-08: so you see what you're
+  // earning), shrinking into the row's chip and popping it in as it lands
   private claim(): void {
     const r = this.view!.rolls[this.at];
     const won = this.el.querySelector('.won')!;
@@ -165,7 +183,42 @@ export class DicePanel {
     item.className = 'item';
     item.innerHTML = `<span class="icon">${ICON[r.prize.icon]}</span>${r.prize.main.replace(/^MATCH! /, '')}`;
     won.append(item);
-    if (!this.calm()) item.animate([{ opacity: 0, transform: 'translateY(-30px) scale(1.6)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
+    const prize = this.el.querySelector<HTMLElement>('.pair .prize');
+    if (this.calm() || !prize) return;
+    const box = this.el.getBoundingClientRect();
+    const a = prize.getBoundingClientRect();
+    const b = item.getBoundingClientRect();
+    const fly = document.createElement('div');
+    fly.className = 'flyprize';
+    fly.append(prize.cloneNode(true));
+    fly.style.width = `${a.width}px`;
+    this.el.append(fly);
+    prize.style.visibility = 'hidden';
+    const x0 = a.left - box.left;
+    const y0 = a.top - box.top;
+    const x1 = b.left - box.left;
+    const y1 = b.top - box.top;
+    const k = Math.min(1, b.height / a.height);
+    //one transform list in every key: up a little off the curb, then down into the row, shrinking to the item's size
+    const at = (x: number, y: number, scale: number) => `translate(${x}px, ${y}px) scale(${scale})`;
+    fly.animate(
+      [
+        { transform: at(x0, y0, 1), opacity: 1 },
+        { transform: at(x0 + (x1 - x0) * 0.25, Math.min(y0, y1) - 26, 1.12), opacity: 1, offset: 0.3 },
+        { transform: at(x1, y1, k), opacity: 1, offset: 0.92 },
+        { transform: at(x1, y1, k), opacity: 0 },
+      ],
+      { duration: PRIZE_MS, easing: 'cubic-bezier(0.4, 0, 0.3, 1)', fill: 'forwards' },
+    ).onfinish = () => fly.remove();
+    item.animate(
+      [
+        { opacity: 0, transform: 'scale(1)' },
+        { opacity: 0, transform: 'scale(1)', offset: 0.85 },
+        { opacity: 1, transform: 'scale(1.35)', offset: 0.93 },
+        { opacity: 1, transform: 'scale(1)' },
+      ],
+      { duration: PRIZE_MS + 160, easing: 'ease-out' },
+    );
   }
 
   // the next chip pops out of the count, flies down to your hand and turns into roll k's dice
