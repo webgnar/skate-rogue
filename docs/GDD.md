@@ -919,7 +919,8 @@ Noita's wands take spells in slots that fire in order and modify each other. Our
 - A board has **slots** (start with 3). Each slot holds one mod.
 - Mods are **triggers** and **effects**. A trigger (On Ollie, On Land, On Grind, On Trick) fires the effects that
   follow it in the slots, left to right, until the next trigger.
-- Effects: Double Pop (a second small ollie 0.2 s later), Speed Kick, Cash Burst, Shockwave (makes nearby cars
+- Effects: Double Pop (a second small ollie 0.2 s later, once a jump: it comes back when you
+  touch ground or a rail; fired off every dead flip it flew a whole floor, zack 2026-11-08), Speed Kick, Cash Burst, Shockwave (makes nearby cars
   swerve out of the skate lane), Patch Job (+5 to your most worn gear part, at most 6 times a floor, so the board
   can feed the gear without wear stopping mattering).
 - Modifiers change the next effect: ×2, Only On Combo ×5, Chance 50%.
