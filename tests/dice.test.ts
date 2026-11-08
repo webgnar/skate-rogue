@@ -1,14 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { cleanHeadStart, DICE, NO_HEAD_START, payout, roll, rollAll, rollName, rollsFor } from '../src/run/dice';
+import { cleanHeadStart, comboOf, DICE, NO_HEAD_START, payout, roll, rollAll, rollName, rollsFor } from '../src/run/dice';
 import { makeRng } from '../src/gen/rng';
 import { buildFloor } from '../src/gen/descent';
 
 describe('street dice', () => {
-  it('a plain roll pays the pips halved, doubles pay a head start, boxcars is the MATCH', () => {
+  it('the combo decides the pay: no dice a scrap, straights and sevens Stoken, elevens and doubles a head start, boxcars the MATCH', () => {
     const rng = makeRng(3);
-    expect(payout(2, 5, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'stoken', n: 4 });
-    expect(payout(1, 2, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'stoken', n: 2 });
-    expect(payout(6, 5, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'stoken', n: 6 });
+    expect(comboOf(4, 2)).toBe('miss');
+    expect(payout(4, 2, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'stoken', n: DICE.miss });
+    expect(payout(1, 3, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'stoken', n: DICE.miss });
+    expect(comboOf(1, 2)).toBe('straight');
+    expect(payout(4, 5, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'stoken', n: DICE.straight });
+    expect(comboOf(3, 4)).toBe('seven');
+    expect(payout(2, 5, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'stoken', n: DICE.seven });
+    expect(comboOf(6, 5)).toBe('eleven');
+    expect(payout(6, 5, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'cash', n: DICE.cash });
+    expect(rollName({ dice: [4, 2], prize: { kind: 'stoken', n: 1 }, match: false })).toBe('NO DICE (6)');
+    expect(DICE.miss).toBeLessThan(DICE.straight);
+    expect(DICE.straight).toBeLessThan(DICE.seven);
     expect(payout(2, 2, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'cash', n: DICE.cash });
     expect(payout(3, 3, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'cash', n: DICE.cash });
     expect(payout(4, 4, rng, NO_HEAD_START, 'black')).toEqual({ kind: 'boon' });

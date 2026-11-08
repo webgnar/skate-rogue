@@ -19,7 +19,7 @@ import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear'
 import { noBustedTime } from '../sim/supply';
 import { SupplyView } from '../render/supply-view';
 import { loadSave, whole, writeSave } from '../run/save';
-import { NO_HEAD_START, prizeLabel, rollAll, rollName, rollsFor, type PrizeLabel, type Roll } from '../run/dice';
+import { comboOf, NO_HEAD_START, prizeLabel, rollAll, rollName, rollsFor, type Combo, type PrizeLabel, type Roll } from '../run/dice';
 import { boonsOfType, Missions, PX_PER_M, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
@@ -207,7 +207,7 @@ export interface Hud {
 
 // the street dice: a pair per roll (one free, one per chip found), thrown one at a time
 export interface DiceView {
-  rolls: { dice: Roll['dice']; name: string; prize: PrizeLabel; big: boolean; match: boolean }[];
+  rolls: { dice: Roll['dice']; name: string; combo: Combo; prize: PrizeLabel; big: boolean; match: boolean }[];
 }
 
 export const DICE_MS = 1300; // a pair of dice tumbles this long before it lands (src/ui/dice-panel.ts)
@@ -1245,6 +1245,7 @@ export class Game {
       rolls: rolls.map((r) => ({
         dice: r.dice,
         name: rollName(r),
+        combo: comboOf(r.dice[0], r.dice[1]),
         prize: prizeLabel(r.prize, (id) => gripDef(id).name, r.match, CONTINUES + (r.held ?? 0)),
         big: r.dice[0] === r.dice[1],
         match: r.match,
