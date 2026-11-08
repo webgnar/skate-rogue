@@ -102,6 +102,7 @@ export class FloorSim {
   readonly shooter: Shooter | null; // and its guards' guns
   readonly trains: ElTrain[]; // the L's trains, one line per stretch of track
   private pops: number[] = []; // frames until each Double Pop
+  private popSpent = false; // this jump's Double Pop has gone: one a jump, back when you touch ground or a rail
   private later: { effect: EffectId; slot: number; t: number }[] = []; // board effects waiting to fire
   private patches = 0; // Patch Jobs fired this floor
   combo = 0; // the run's live combo count, set by the game each step (Combo Only reads it)
@@ -349,13 +350,16 @@ export class FloorSim {
   // (sparks, cash, slow-mo) go out as events for the run and the view
   private runBoard(events: readonly SkaterEvent[]): void {
     const sk = this.skater;
+    if (sk.mode !== 'air') this.popSpent = false;
     this.pops = this.pops.filter((t) => {
       if (t > 1) return true;
-      //a small ollie, so it snaps up like one (PHYS.popSnap)
+      //a small ollie, so it snaps up like one (PHYS.popSnap). One a jump: On Trick fired it off every dead flip, so
+      //tapping in the air flew a whole floor without touching down (zack, 2026-11-08)
       const pop = PHYS.ollie * BOARD.doublePop * PHYS.popSnap;
-      if (sk.mode === 'air' && sk.vsp > pop) {
+      if (sk.mode === 'air' && sk.vsp > pop && !this.popSpent) {
         sk.vsp = pop;
         sk.snap = true;
+        this.popSpent = true;
       }
       return false;
     }).map((t) => t - 1);
@@ -384,7 +388,8 @@ export class FloorSim {
     const sk = this.skater;
     switch (effect) {
       case 'doublePop':
-        this.pops.push(BOARD.doublePopFrames);
+        //one waiting at a time (×2 doesn't stack a second pop)
+        if (!this.pops.length) this.pops.push(BOARD.doublePopFrames);
         break;
       case 'speedKick':
         //kicks stack, up to a cap

@@ -83,6 +83,25 @@ describe('board mods', () => {
     expect(sim.skater.vsp).toBeLessThanOrEqual(PHYS.ollie * BOARD.doublePop + PHYS.grav + 1e-6);
   });
 
+  it('Double Pop is one a jump: On Trick + Double Pop can not fly a floor off dead flips (zack, 2026-11-08)', () => {
+    //tapping every 24 frames used to fire a pop off every dead flip and stay in the air from start to exit
+    const longest = (board: Slots) => {
+      const sim = new FloorSim(buildFloor(9, 6), undefined, 0, board);
+      sim.traffic.vehicles.length = 0;
+      let air = 0;
+      let best = 0;
+      for (let f = 0; f < 3600 && sim.state === 'skate'; f++) {
+        const tap = f % 24 === 0;
+        sim.step({ pressed: tap, held: tap });
+        air = sim.skater.mode === 'air' ? air + 1 : 0;
+        best = Math.max(best, air);
+      }
+      return best;
+    };
+    expect(longest(['onTrick', 'doublePop', 'cashBurst'])).toBeLessThan(300);
+    expect(longest(['onTrick', 'twice', 'doublePop'])).toBeLessThan(300);
+  });
+
   it('Shockwave pulls nearby cars out of the skate lane, not far ones', () => {
     const l = buildFloor(9, 3);
     const car = (x: number) => ({ id: x, kind: 'robotaxi' as const, speed: 1, cruise: 1, lane: 0, leaving: false, x0: x, x1: x + 64, roof: l.streetY - 40, bottom: l.streetY });

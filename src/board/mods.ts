@@ -21,7 +21,7 @@ export const MOD_DEFS: ModDef[] = [
   { id: 'onLand', kind: 'trigger', name: 'On Land', short: 'LAND', text: 'Fires when you land on your wheels', price: 20 },
   { id: 'onGrind', kind: 'trigger', name: 'On Grind', short: 'GRIND', text: 'Fires when you lock onto a ledge or rail', price: 20 },
   { id: 'onTrick', kind: 'trigger', name: 'On Trick', short: 'TRICK', text: 'Fires on every flip trick', price: 25 },
-  { id: 'doublePop', kind: 'effect', name: 'Double Pop', short: '2X POP', text: 'A second small ollie 0.2 s later', price: 40 },
+  { id: 'doublePop', kind: 'effect', name: 'Double Pop', short: '2X POP', text: 'A second small ollie 0.2 s later, once a jump', price: 40 },
   { id: 'speedKick', kind: 'effect', name: 'Speed Kick', short: 'KICK', text: '+2 speed, fading like rail speed', price: 35 },
   { id: 'cashBurst', kind: 'effect', name: 'Cash Burst', short: '+$2', text: '+2 cash', price: 25 },
   { id: 'shockwave', kind: 'effect', name: 'Shockwave', short: 'SHOCK', text: 'Cars near you pull out of the skate lane', price: 45 },
