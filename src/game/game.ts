@@ -179,6 +179,7 @@ export interface ShopView {
 export interface Hud {
   floor(n: number, road: Road): void;
   callout(text: string, kind?: 'trick' | 'good' | 'bad'): void;
+  points?(text: string, kind: 'good' | 'bad', points: number): void; // a callout carrying score points: it flies into the score box
   debug(text: string): void;
   boons(held: Held[]): void;
   pick(offer: Boon[] | null, info?: PickInfo): void; // null hides the cards
@@ -836,7 +837,7 @@ export class Game {
       this.advance();
       this.hud.callout(`+${whole(pay)} STOKEN`, 'good');
     }
-    if (road.kind !== 'cash' && road.kind !== 'stash') this.hud.callout(`FLOOR CLEAR +${pts}`, 'good');
+    if (road.kind !== 'cash' && road.kind !== 'stash') this.pointsCall(`FLOOR CLEAR +${pts}`, 'good', pts);
   }
 
   // through an act's escape: pay out, and the last act wins the run; the road picked before it comes next
@@ -1812,6 +1813,12 @@ export class Game {
 
   // bullet time (src/game/bullet-time.ts): a huge combo or a close call over a car glides the game into slow motion. Reduce motion skips it,
   // like the slam's hit-stop
+  // a callout with score points in it: it flies up into the score box where the HUD can (src/ui/callouts.ts)
+  private pointsCall(text: string, kind: 'good' | 'bad', points: number): void {
+    if (this.hud.points) this.hud.points(text, kind, points);
+    else this.hud.callout(text, kind);
+  }
+
   private bulletTime(combo: number, near = false): void {
     const speed = Math.abs(this.skater.hsp) / PHYS.baseSpeed;
     const s = near ? this.bullet.near(combo, speed) : this.bullet.combo(combo, speed);
@@ -2277,7 +2284,7 @@ export class Game {
         if (e.manual) this.hud.callout(this.sprite.manualName + combo, 'trick');
         if (bank) {
           const how = called || (bank.how === 'sketchy' ? 'SKETCHY ' : bank.how === 'big' ? 'BIG DROP ' : '');
-          this.hud.callout(`${how}+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), bank.how === 'sketchy' ? 'bad' : 'good');
+          this.pointsCall(`${how}+${bank.points.toLocaleString()}` + (bank.cash ? ` · +${bank.cash} CASH` : ''), bank.how === 'sketchy' ? 'bad' : 'good', bank.points);
           this.hud.money(this.run.cash, this.run.stoken);
         }
         //dust on every landing, scaled by how hard it came down (the sim's impact into the surface): a kiss barely

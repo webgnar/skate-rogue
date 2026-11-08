@@ -216,7 +216,7 @@ let skipMission: (i: number) => void = () => {};
 let pauseBoard: BoardView | null = null; // the pause card's turntable board, once the rig has loaded
 
 function makeHud(): Hud {
-  const callouts = makeCallouts(document.getElementById('callout')!, () => FX.reduceMotion);
+  const callouts = makeCallouts(document.getElementById('callout')!, () => FX.reduceMotion, document.getElementById('pointfly')!);
   const missionToast = makeMissionToast(document.getElementById('mission')!);
   const debugEl = document.getElementById('debug')!;
   const boonsEl = document.getElementById('boons')!;
@@ -267,6 +267,10 @@ function makeHud(): Hud {
     score: (score, combo, stoke, gnar, pending) => view.setScore(score, combo, stoke, gnar, pending),
     noGround: (n, mult, bonus, banked, label) => view.setNoGround(n, mult, bonus, banked, label),
     callout: (text, kind = 'trick') => callouts.show(text, kind),
+    points: (text, kind, points) => {
+      view.holdScore(points);
+      callouts.show(text, kind, { to: document.getElementById('scorebox')!, land: () => view.landScore(points) });
+    },
     debug: (text) => (debugEl.textContent = text),
     heat: (value) => {
       view.setHeat(value);
