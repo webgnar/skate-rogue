@@ -27,6 +27,16 @@ const C = {
 
 export const STOCK_DECK: DeckArt = { id: 'stock', name: 'Stock', shape: 'plain', base: RED, ink: [] };
 
+// what each deck of the unlock tree (src/run/meta.ts) comes in at the start of a run, from zack's references
+// (2026-11-08): the Cruiser orange with a tone-on-tone bolt, the Downhill a plain vintage red, the Slab an 80s
+// sunburst in red, blue and yellow
+const STOCK_BY_DECK: Record<string, DeckArt> = {
+  cruiser: { id: 'stock-cruiser', name: 'Stock', shape: 'bolt', base: 0xf2622a, ink: [0xc9401f] },
+  bombhill: { id: 'stock-downhill', name: 'Stock', shape: 'plain', base: 0xb02a22, ink: [] },
+  slab: { id: 'stock-slab', name: 'Stock', shape: 'sunburst', base: 0xd8392b, ink: [0x2f6fe0, 0xf2c230] },
+};
+export const stockDeck = (deck: string): DeckArt => STOCK_BY_DECK[deck] ?? STOCK_DECK;
+
 // the rack's four (art/skateshop.py) and twenty more in the same style
 export const DECK_ARTS: DeckArt[] = [
   { id: 'band', name: 'Belt', shape: 'band', base: C.yellow, ink: [C.black] },

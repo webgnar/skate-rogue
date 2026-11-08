@@ -62,7 +62,7 @@ Stoken you grab is banked when a run ends. The run-over screen has an **UNLOCKS*
 - [ ] Tapping a locked item you can afford buys it (the bank drops, the tag turns to RIDE or OWNED). One you can't afford is greyed out and says how much more you need.
 - [ ] Tapping an owned skater or deck makes it RIDING. BACK reloads the game with your new setup.
 - [ ] **Skaters:** Webster (grinds 15% faster, first pick GRIND), Roxy (car-hops 20% higher, first pick GRIND), Keanu (Heat cools 15% faster in the air, first pick COOL), Goldie (+25% cash from everything, first pick LUCK). The first floor's sign shows that type, as long as its pack is unlocked; otherwise POP.
-- [ ] **Decks:** Cruiser (+10% speed, ollies 5% lower), Bombhill (+15% speed, gear wears 30% faster), Slab (4 board slots from the start, ollies 8% lower). Feel the difference in a run.
+- [ ] **Decks:** Cruiser (+10% speed, ollies 5% lower), Downhill (+15% speed, gear wears 30% faster), Slab (4 board slots from the start, ollies 8% lower). Feel the difference in a run.
 - [ ] **Boon library:** a new phone only gets POP and GRIND boons (12 cards). Each pack adds its type to the cards and the road signs. Curses and Duos are their own unlocks.
 - [ ] **Daily run:** once unlocked, the run-over screen shows DAILY RUN. It reloads into today's seed (the seed line says "daily"), the run-over screen shows today's daily best, and NORMAL RUN goes back.
 - [ ] *Tuning:* prices run from 15 to 60 Stoken (465 for everything). Does a good run earn enough that the first unlock comes after 2 or 3 runs?

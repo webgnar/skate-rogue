@@ -85,6 +85,9 @@ export const SKATERS = ['lou-gnar', 'webster', 'keanu', 'roxy', 'goldie'] as con
 export type SkaterId = (typeof SKATERS)[number];
 export const isSkater = (s: string | null): s is SkaterId => SKATERS.includes(s as SkaterId);
 
+// the board model for a deck: the stock popsicle is board.glb, the others board-<id>.glb (art/board.py)
+export const boardFile = (deck: string): string => (deck === 'popsicle' ? 'board.glb' : `board-${deck}.glb`);
+
 export class SkaterRig {
   readonly mesh = new THREE.Group();
   private readonly mats: THREE.MeshToonMaterial[] = [];
@@ -261,17 +264,18 @@ export class SkaterRig {
   // the QFS skaters (art/skaters.py) share Lou's rig and play his clips, from lou-gnar.glb
   // meshy: the skaters rebuilt from zack's Meshy models (public/models/meshy, the DEV TOOLS MODELS switch); they still
   // play the clips in the old lou-gnar.glb
-  static async create(base: string, skater: SkaterId = 'lou-gnar', meshy = false): Promise<SkaterRig> {
+  // deck: which deck of the unlock tree it rides (src/run/meta.ts), each its own shape (art/board.py)
+  static async create(base: string, skater: SkaterId = 'lou-gnar', meshy = false, deck = 'popsicle'): Promise<SkaterRig> {
     // ?v: the skater files at public/models/<name>.glb held the Meshy models for a day (PR #332) before the old ones
     // came back (#334); a new address keeps a phone from showing a cached Meshy model with MODELS on OLD
     const load = (file: string) =>
-      new GLTFLoader().loadAsync(`${base}models/${file}${file === 'board.glb' ? '' : `?v=${SKATER_FILES}`}`).catch((err) => {
+      new GLTFLoader().loadAsync(`${base}models/${file}${file.startsWith('board') ? '' : `?v=${SKATER_FILES}`}`).catch((err) => {
         console.warn(`${file} failed to load, using the built-in one`, err);
         return undefined;
       });
     const [lou, board, own] = await Promise.all([
       load('lou-gnar.glb'),
-      load('board.glb'),
+      load(boardFile(deck)),
       meshy ? load(`meshy/${skater}.glb`) : skater === 'lou-gnar' ? undefined : load(`${skater}.glb`),
     ]);
     const model = own ?? lou;

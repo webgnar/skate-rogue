@@ -26,7 +26,7 @@ export const UNLOCKS: Unlock[] = [
   { id: 'lou-gnar', branch: 'skater', name: 'Lou Gnar', line: 'Grinds 15% faster. First pick: POP', cost: 60 },
   { id: 'popsicle', branch: 'deck', name: 'Popsicle', line: 'The stock deck: 3 slots', cost: 0 },
   { id: 'cruiser', branch: 'deck', name: 'Cruiser', line: '+10% speed, ollies 5% lower', cost: 25 },
-  { id: 'bombhill', branch: 'deck', name: 'Bombhill', line: '+15% speed, gear wears 30% faster', cost: 35 },
+  { id: 'bombhill', branch: 'deck', name: 'Downhill', line: '+15% speed, gear wears 30% faster', cost: 35 },
   { id: 'slab', branch: 'deck', name: 'Slab', line: '4 slots, ollies 8% lower', cost: 45 },
   { id: 'FLOW', branch: 'library', name: 'FLOW pack', line: 'Speed boons join the pool', cost: 15 },
   { id: 'COOL', branch: 'library', name: 'COOL pack', line: 'Heat boons join the pool', cost: 20 },
