@@ -647,21 +647,20 @@ async function start() {
     ...Array.from({ length: ACTS * FLOORS_PER_ACT }, (_, i) => `floor ${i + 1}`),
     ...Array.from({ length: ACTS }, (_, i) => `escape ${i + 1}`),
   ];
-  //no dev tools in the shipped builds (zack, 2026-11-07): players get the plain game. They're on in npm run dev, and
-  //on the Vercel build with ?dev (or ?debug) in the link; never on the portal. A phone playing from its home screen
-  //can't add ?dev, so five quick taps on the pause card's PAUSED turn them on (and off) for that device, kept
+  //dev tools are ON in every build but the portal (zack, 2026-11-08: "we need dev tools available on mobile"; the
+  //2026-11-07 hidden-on-Vercel rule made them unreachable on the phone). The CrazyGames build never has them. Five quick
+  //taps on the pause card's PAUSED still hide them (and bring them back) for that device, kept
   const DEV_KEY = 'gnar-run-devtools';
   const devSaved = (): boolean => {
     try {
-      return localStorage.getItem(DEV_KEY) === '1';
+      return localStorage.getItem(DEV_KEY) !== '0';
     } catch {
-      return false;
+      return true;
     }
   };
   const saveDevTools = (on: boolean): void => {
     try {
-      if (on) localStorage.setItem(DEV_KEY, '1');
-      else localStorage.removeItem(DEV_KEY);
+      localStorage.setItem(DEV_KEY, on ? '1' : '0');
     } catch {
       /* private mode: this session only */
     }
