@@ -4,7 +4,7 @@ import type { Level } from '../physics/level';
 import { CAM, CLOSE_CAM, CamDrift, CloseUp, DYN_CAM, LouZoom, Rhythm, SMOOTH, Spring, framing, softFloor, type Framing } from './camera';
 import { SETTINGS } from '../ui/settings';
 import { LENS, Lens, lensSource, lensWiden } from './lens';
-import { LAYER, solidAlpha, type Box, type SkaterLayer } from './skater-layer';
+import { LAYER, type Box, type SkaterLayer } from './skater-layer';
 import { updateShown } from './shown';
 import { tilt } from './tilt';
 import { buildKitSteps, LEAD, toX, toY } from './kit';
@@ -191,8 +191,7 @@ export class StreetView {
     readonly canvas: HTMLCanvasElement,
     private level: Level,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: true, alpha: true });
-    this.renderer.setClearAlpha(1); // alpha only for the skater's pass over the HUD (skater-layer.ts)
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: true });
     //checking a shader for errors waits for it to finish compiling: only in development
     this.renderer.debug.checkShaderErrors = !import.meta.env.PROD;
     this.keep = new ShaderKeep(this.renderer);
@@ -739,6 +738,7 @@ export class StreetView {
     }
     r.setRenderTarget(null);
     jobs.push(this.lens.warm(r));
+    if (this.layer) jobs.push(this.layer.warm(r, this.front, this.camera));
     await Promise.all(jobs);
     //drivers finish a compile lazily, on the program's first use: use each one now (its uniforms and attributes)
     for (const p of (r.info.programs ?? []) as unknown as { getUniforms(): unknown; getAttributes(): unknown }[]) {
@@ -790,8 +790,7 @@ export class StreetView {
     return { x: left, y: top, w: right - left, h: bottom - top };
   }
 
-  // the skater alone in his box on a clear background, copied up over the HUD; before the frame proper, which then
-  // draws over it
+  // the skater alone in his box on the HUD's own canvas (skater-layer.ts), where he crosses the HUD
   private drawLayer(): void {
     const layer = this.layer;
     if (!layer) return;
@@ -800,20 +799,9 @@ export class StreetView {
       layer.clear();
       return;
     }
-    const r = this.renderer;
-    const h = this.canvas.clientHeight;
-    r.setScissor(box.x, h - box.y - box.h, box.w, box.h);
-    r.setScissorTest(true);
-    r.setClearAlpha(0);
     this.over.visible = this.withActor.visible = false;
-    this.lens.render(r, this.camera, this.lensK, FX.pixel > 1, this.lensLevel > 1, () => {
-      r.clear();
-      r.render(this.front, this.camera);
-    });
+    layer.draw(this.renderer, this.front, this.camera, box, this.lensK, FX.pixel > 1, this.lensLevel > 1);
     this.over.visible = this.withActor.visible = true;
-    r.setClearAlpha(1);
-    r.setScissorTest(false);
-    layer.copy(this.canvas, box);
   }
 
   get resolution(): number {
@@ -868,7 +856,6 @@ export class StreetView {
       r.render(this.front, this.camera);
       this.actor.visible = this.withActor.visible = true;
     });
-    if (this.layer) solidAlpha(this.renderer);
     this.scene.matrixWorldAutoUpdate = this.front.matrixWorldAutoUpdate = true;
     this.compiled += this.keep.pin();
   }

@@ -4,13 +4,18 @@
 // above the HUD that holds only the skater, and only where he crosses a HUD panel or a callout: everywhere else the
 // street's own canvas shows him as before (with his dithered ghost behind walls, which this copy doesn't have).
 //
-// Each frame the street view draws the skater alone, on a clear background, into the box round him (one small pass
-// before the frame proper, bent by the fisheye the same way), and copies that box here, cut to the HUD rectangles
-// it crosses. When he crosses none (most of a run) it costs nothing.
+// Each frame this canvas's own WebGL renderer draws the skater alone, on a clear background, in the box round him
+// (bent by the fisheye the same way), and the canvas is clipped to the HUD rectangles he crosses. When he crosses
+// none (most of a run) it's hidden and costs nothing.
+//
+// (It used to draw him on the street's canvas and copy that box up with drawImage. Reading a WebGL canvas back like
+// that stalls the GPU every frame: ~10 ms a frame in the cloud, most of a small iPhone's frame whenever he was over
+// the held boons. Thread "Fix act 3 lag on iPhone 13 mini", 2026-11-08.)
 //
 // The rectangles are read at the start of a frame (measure()), before the HUD writes its numbers, while the page's
 // layout is still clean, so reading them doesn't force the browser to lay the page out again mid-frame.
 import * as THREE from 'three';
+import { Lens } from './lens';
 
 // what the skater goes over: the top bar's panels, the meters, the callouts, held boons, board mods, gear wear
 export const LAYER = {
@@ -27,16 +32,21 @@ export interface Box {
 }
 
 export class SkaterLayer {
-  private readonly ctx: CanvasRenderingContext2D;
+  private readonly renderer: THREE.WebGLRenderer;
+  private readonly lens = new Lens();
   private rects: DOMRect[] = [];
   private hits: DOMRect[] = [];
   private drawn = false;
+  private clip = '';
+  private readonly size = new THREE.Vector2();
 
   constructor(
     readonly canvas: HTMLCanvasElement,
     private readonly hud: HTMLElement,
   ) {
-    this.ctx = canvas.getContext('2d')!;
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, stencil: true, powerPreference: 'high-performance' });
+    this.renderer.setClearColor(0x000000, 0);
+    this.canvas.style.visibility = 'hidden';
   }
 
   // the HUD's rectangles, read before the frame writes to the page
@@ -52,59 +62,65 @@ export class SkaterLayer {
     this.rects = rects;
   }
 
-  // does the skater's box cross anything on the HUD (and keep the ones it does for copy())
+  // does the skater's box cross anything on the HUD (and keep the ones it does for draw())
   wants(box: Box): boolean {
     const top = this.canvas.getBoundingClientRect();
     this.hits.length = 0;
     for (const r of this.rects) {
       const x = r.left - top.left;
       const y = r.top - top.top;
-      if (x < box.x + box.w && x + r.width > box.x && y < box.y + box.h && y + r.height > box.y) this.hits.push(r);
+      if (x < box.x + box.w && x + r.width > box.x && y < box.y + box.h && y + r.height > box.y) this.hits.push(new DOMRect(x, y, r.width, r.height));
     }
     return this.hits.length > 0;
   }
 
-  // copy the box from the street's canvas (where the skater was just drawn alone) into this one, cut to the HUD
-  copy(src: HTMLCanvasElement, box: Box): void {
-    const c = this.canvas;
-    if (c.width !== src.width || c.height !== src.height) {
-      c.width = src.width;
-      c.height = src.height;
-    }
-    const sx = src.width / Math.max(1, src.clientWidth);
-    const sy = src.height / Math.max(1, src.clientHeight);
-    const top = c.getBoundingClientRect();
-    const ctx = this.ctx;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.save();
-    ctx.beginPath();
-    for (const r of this.hits) ctx.rect((r.left - top.left) * sx, (r.top - top.top) * sy, r.width * sx, r.height * sy);
-    ctx.clip();
-    const x = Math.floor(box.x * sx);
-    const y = Math.floor(box.y * sy);
-    const w = Math.min(src.width - x, Math.ceil(box.w * sx));
-    const h = Math.min(src.height - y, Math.ceil(box.h * sy));
-    if (w > 0 && h > 0) ctx.drawImage(src, x, y, w, h, x, y, w, h);
-    ctx.restore();
+  // draw the skater's scene (only him showing) into his box, the street's camera and lens, at the street canvas's
+  // size and pixel ratio, and clip the canvas to the HUD boxes he crosses
+  draw(main: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, box: Box, k: number, chunky: boolean, sharp: boolean): void {
+    const r = this.renderer;
+    this.match(main);
+    const h = this.canvas.clientHeight;
+    r.setScissor(box.x, h - box.y - box.h, box.w, box.h);
+    r.setScissorTest(true);
+    this.lens.render(r, camera, k, chunky, sharp, () => {
+      r.clear();
+      r.render(scene, camera);
+    });
+    r.setScissorTest(false);
+    //only where a HUD box is: a polygon of its rectangles, each joined back to the corner by a seam of no width
+    const clip = `polygon(${this.hits.map((c) => `0 0, ${c.x}px ${c.y}px, ${c.x + c.width}px ${c.y}px, ${c.x + c.width}px ${c.y + c.height}px, ${c.x}px ${c.y + c.height}px, ${c.x}px ${c.y}px`).join(', ')}, 0 0)`;
+    if (clip !== this.clip) this.canvas.style.clipPath = this.clip = clip;
+    if (!this.drawn) this.canvas.style.visibility = 'visible';
     this.drawn = true;
+  }
+
+  // the same drawing size, pixel ratio and colour handling as the street's canvas, so the copy lands on him exactly
+  private match(main: THREE.WebGLRenderer): void {
+    const r = this.renderer;
+    r.outputColorSpace = main.outputColorSpace;
+    r.toneMapping = main.toneMapping;
+    r.toneMappingExposure = main.toneMappingExposure;
+    if (r.getPixelRatio() !== main.getPixelRatio()) r.setPixelRatio(main.getPixelRatio());
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    r.getSize(this.size);
+    if (this.size.x !== w || this.size.y !== h) r.setSize(w, h, false);
+  }
+
+  // compile the skater's shaders for this canvas too (the loading screen), so his first time over the HUD doesn't
+  // stop to make them
+  warm(main: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera): Promise<unknown> {
+    this.match(main);
+    const target = new THREE.WebGLRenderTarget(4, 4);
+    this.renderer.setRenderTarget(target);
+    const into = this.renderer.compileAsync(scene, camera);
+    this.renderer.setRenderTarget(null);
+    return Promise.all([into, this.renderer.compileAsync(scene, camera), this.lens.warm(this.renderer)]).finally(() => target.dispose());
   }
 
   clear(): void {
     if (!this.drawn) return;
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.canvas.style.visibility = 'hidden';
     this.drawn = false;
   }
-}
-
-// the canvas's alpha back to solid once the frame is drawn (the street's canvas has alpha now, for the skater's
-// pass; a shader that writes alpha under 1 would otherwise show the page through)
-export function solidAlpha(renderer: THREE.WebGLRenderer): void {
-  const gl = renderer.getContext();
-  gl.colorMask(false, false, false, true);
-  gl.clearColor(0, 0, 0, 1);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.colorMask(true, true, true, true);
-  renderer.state.buffers.color.reset(); // three's cached mask and clear colour are stale now
 }
