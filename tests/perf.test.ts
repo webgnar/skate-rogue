@@ -55,7 +55,9 @@ describe('kit merges', () => {
       hull.userData.ink = true;
       m.add(hull);
     }
-    const ink = mergeInk(root)!;
+    const inks = mergeInk(root);
+    expect(inks).toHaveLength(1); // a small scatter is one chunk
+    const ink = inks[0];
     const verts = meshes.reduce((n, m) => n + m.geometry.getAttribute('position').count, 0);
     expect(ink.geometry.getAttribute('position').count).toBe(verts);
     expect(ink.geometry.index!.count).toBe(meshes.reduce((n, m) => n + m.geometry.index!.count, 0));

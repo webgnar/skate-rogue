@@ -128,13 +128,16 @@ export class PickupView {
   private coins: THREE.InstancedMesh | null = null;
   private gems: StokenParticles | null = null;
   private chips: THREE.InstancedMesh | null = null; // spin tokens
-  private slots: { mesh: THREE.InstancedMesh | null; i: number; x: number; y: number; popT: number; gone: boolean }[] = [];
+  private slots: { mesh: THREE.InstancedMesh | null; x: number; y: number; popT: number; gone: boolean }[] = [];
   private t = 0;
   private readonly m = new THREE.Matrix4();
   private readonly q = new THREE.Quaternion();
   private readonly e = new THREE.Euler();
   private readonly v = new THREE.Vector3();
   private readonly s = new THREE.Vector3();
+  private readonly pv = new THREE.Matrix4();
+  private readonly frustum = new THREE.Frustum();
+  private readonly ball = new THREE.Sphere(new THREE.Vector3(), 1); // a coin, popping and bobbing, with room
 
   setLevel(level: Level): void {
     for (const mesh of [this.coins, this.chips]) {
@@ -155,14 +158,13 @@ export class PickupView {
     this.chips = chipMesh(Math.max(1, spins));
     this.coins.count = cash;
     this.chips.count = spins;
-    let c = 0;
-    let g = 0;
-    let k = 0;
     for (const p of level.pickups) {
       const mesh = p.kind === 'cash' ? this.coins : p.kind === 'spin' ? this.chips : null; // null: a Stoken particle
-      const i = p.kind === 'cash' ? c++ : p.kind === 'spin' ? k++ : g++;
-      this.slots.push({ mesh, i, x: toX(p.x), y: toY(level, p.y), popT: 0, gone: false });
+      this.slots.push({ mesh, x: toX(p.x), y: toY(level, p.y), popT: 0, gone: false });
     }
+    //update culls them along the floor itself: an instanced mesh's bounds are worked out once, from wherever its
+    //first instances stood, and would cull coins packed in later
+    this.coins.frustumCulled = this.chips.frustumCulled = false;
     inkify(this.coins);
     inkify(this.chips);
     this.group.add(this.coins, this.gems.group, this.chips);
@@ -183,17 +185,31 @@ export class PickupView {
       slot.popT = POP_SECS;
       return null;
     }
-    slot.gone = true;
-    this.m.makeScale(0, 0, 0);
-    this.coins!.setMatrixAt(slot.i, this.m);
-    this.coins!.instanceMatrix.needsUpdate = true;
+    slot.gone = true; // (update packs the coins still showing; this one's left out from now)
     return new THREE.Vector3(slot.x, slot.y + Math.sin(this.t * 3 + slot.x) * 0.05, COIN_Z);
   }
 
-  update(dt: number): void {
+  // Only the pickups in view are posed and drawn: a floor holds hundreds (act 3's cloud floors 800+ coins), and
+  // posing and drawing every one of them, ink hull and all, each frame cost a small phone more than the floor itself
+  // (thread "Fix act 3 lag on iPhone 13 mini", 2026-11-08). Each frame the ones in the camera's view are packed into the
+  // front of their InstancedMesh and its count (and its ink hull's) cut to them. No camera (tests): all of them.
+  update(dt: number, camera?: THREE.PerspectiveCamera): void {
     this.t += dt;
+    let frustum: THREE.Frustum | null = null;
+    if (camera) {
+      camera.updateMatrixWorld();
+      this.pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      frustum = this.frustum.setFromProjectionMatrix(this.pv);
+    }
+    let coins = 0;
+    let chips = 0;
+    let gems = 0;
     for (const s of this.slots) {
       if (s.gone) continue;
+      if (frustum) {
+        this.ball.center.set(s.x, s.y, COIN_Z);
+        if (!frustum.intersectsSphere(this.ball)) continue;
+      }
       let scale = 1;
       let lift = 0;
       if (s.popT > 0) {
@@ -203,12 +219,12 @@ export class PickupView {
         lift = k * 0.5;
         if (s.popT <= 0) {
           s.gone = true;
-          scale = 0;
+          continue;
         }
       }
       this.v.set(s.x, s.y + lift + Math.sin(this.t * 3 + s.x) * 0.05, COIN_Z);
       if (!s.mesh) {
-        this.gems?.place(s.i, this.v, scale, this.t, s.x * 0.7);
+        this.gems?.place(gems++, this.v, scale, this.t, s.x * 0.7);
         continue;
       }
       const spin = this.t * 4 + s.x * 0.7;
@@ -216,10 +232,24 @@ export class PickupView {
       this.q.setFromEuler(this.e);
       this.s.setScalar(scale);
       this.m.compose(this.v, this.q, this.s);
-      s.mesh.setMatrixAt(s.i, this.m);
+      s.mesh.setMatrixAt(s.mesh === this.coins ? coins++ : chips++, this.m);
     }
-    if (this.coins) this.coins.instanceMatrix.needsUpdate = true;
-    this.gems?.flush();
-    if (this.chips) this.chips.instanceMatrix.needsUpdate = true;
+    this.show(this.coins, coins);
+    this.show(this.chips, chips);
+    if (this.gems) {
+      this.gems.count = gems;
+      this.gems.flush();
+    }
+  }
+
+  // draw the first n instances, and the ink hull with them (it shares the instance matrices: src/render/toon.ts)
+  private show(mesh: THREE.InstancedMesh | null, n: number): void {
+    if (!mesh) return;
+    mesh.count = n;
+    mesh.visible = n > 0;
+    for (const c of mesh.children) if (c instanceof THREE.InstancedMesh) c.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.instanceMatrix.clearUpdateRanges();
+    mesh.instanceMatrix.addUpdateRange(0, n * 16);
   }
 }

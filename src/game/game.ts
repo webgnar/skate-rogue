@@ -1593,7 +1593,7 @@ export class Game {
       else if (spot === 'lost') this.hud.callout("LOST 'EM", 'good');
     }
     this.spotState = spot;
-    this.pickups.update(dt);
+    this.pickups.update(dt, this.view.camera);
     const sup = this.sim.supply;
     this.supplyView.set(sup ? { part: sup.part, x: toX(sup.x), y: toY(this.level, sup.y) } : null);
     this.supplyView.update(dt);
@@ -1644,8 +1644,11 @@ export class Game {
       const shaders = this.view.compiled ? ` · ${this.view.compiled} new shader${this.view.compiled > 1 ? 's' : ''}` : '';
       this.view.compiled = 0;
       const cpu = this.perfCpu / Math.max(1, this.perfFrames);
+      //frames shown over the last second (not one frame's 1/dt, which jumps around), the average frame and the worst
+      const fps = this.perfFrames / Math.max(this.perfT, 1e-3);
+      const ms = (this.perfT * 1000) / Math.max(1, this.perfFrames);
+      this.perfText = `${Math.round(fps)} fps · ${ms.toFixed(1)} ms · worst ${Math.round(this.perfWorst * 1000)} · cpu ${cpu.toFixed(1)} · ${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris · res ${this.view.resolution.toFixed(2)} · fx ${FX.tier}${shaders}`;
       this.perfCpu = this.perfFrames = 0;
-      this.perfText = `${Math.round(1 / Math.max(realDt, 1e-3))} fps · worst ${Math.round(this.perfWorst * 1000)} ms · cpu ${cpu.toFixed(1)} ms · ${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris · res ${this.view.resolution.toFixed(2)} · fx ${FX.tier}${shaders}`;
       this.perfT = 0;
       this.perfWorst = 0;
     }
