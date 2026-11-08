@@ -55,8 +55,12 @@ export const SEWER = {
   bowl: 3, // tiles of each side of the full pipe's bowl, and of its bottom
   bowlDepth: 2 * TILE,
   bowlLip: 0.5 * TILE, // its far side comes up this far over the floor: you carve out of it into the air
-  subway: 3, // tiles of gap over the subway line: an ollie clears it, or a train's roof under you does
-  subwayPeriod: 150, // frames between trains (src/sim/sewer.ts)
+  // the subway (zack, 2026-11-08): its tracks cross the tunnel in a trench just under the floor, live (the third rail
+  // zaps you); a slow five-car train crawls across on them, its roof an ollie over the floor, hopped like a car's
+  subway: 2.5, // tiles: the trench, as wide as the train (an ollie clears it bare: about 4.4 tiles of air on the flat)
+  subwayRoof: 40, // px: the train's roof over the floor, a parked car's (one ollie up)
+  subwayPeriod: 960, // frames between trains once they run (src/sim/sewer.ts; one crawls across in about 12.5 s)
+  subwayLead: [15, 180] as [number, number], // frames its nose reaches the lane before you reach the trench (cruising)
   gator: 0.45, // the chance of the alligator on a floor, in one of its tunnels
   gatorFrom: 2,
   gatorLen: 2.5, // tiles nose to tail
@@ -499,7 +503,8 @@ function furnish(level: Level, room: Room, more: Rng, rng: Rng, piece: PieceKind
     } else if (piece === 'subway') {
       const g0 = x + TILE;
       const g1 = g0 + SEWER.subway * TILE;
-      s.piece = { kind: 'subway', x0: g0, x1: g1, phase: Math.floor(more() * SEWER.subwayPeriod) };
+      const [l0, l1] = SEWER.subwayLead;
+      s.piece = { kind: 'subway', x0: g0, x1: g1, phase: l0 + Math.floor(more() * (l1 - l0)) };
       floors.push([g0, g1, 1]);
       level.pickups.push({ kind: 'cash', x: (g0 + g1) / 2, y: s.y - 1.5 * TILE });
       x += w;

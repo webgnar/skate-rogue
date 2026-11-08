@@ -85,6 +85,7 @@ export class Skater {
   kicked = false; // launched by a kicker: the pop is the ramp's, so letting go doesn't cut it short
   snap = false; // rising off an ollie: the pop's fast climb and hang at the top (PHYS.popSnap)
   gear: GearScale = NO_WEAR; // worn gear holds you back (GDD: Gear and wear), set by the floor sim
+  zapped = false; // bailed on the sewer subway's live tracks, not into water or down a pit
   movers: Car[] = []; // moving traffic in the skate lane, set each step by the floor sim
   skitching: Car | null = null; // a Chinatown cab you're hanging on to (src/traffic/cab.ts)
   private skitchX = 0; // its back bumper last step
@@ -1110,6 +1111,15 @@ export class Skater {
     this.jumps = this.maxJumps;
     this.nose = false;
     this.events.push({ type: 'kicker' });
+  }
+
+  // down on the sewer subway's live tracks (src/sim/sewer.ts): the third rail, and that's a bail (no pads save it)
+  zap(y: number): void {
+    this.y = y;
+    this.mode = 'bail';
+    this.hsp = 0;
+    this.vsp = 0;
+    this.zapped = true;
   }
 
   // hit by a guard's bullet (src/sim/shots.ts): down you go, as a slam (Bubble Pads take it)

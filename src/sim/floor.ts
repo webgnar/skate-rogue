@@ -198,7 +198,7 @@ export class FloorSim {
     for (const t of this.trains) t.step(this.skater.x);
     this.swarm?.step(this.skater);
     this.sky.stepPieces(this.skater);
-    this.sewer.stepTrains();
+    this.sewer.stepTrains(this.skater);
     this.fall = this.skater.mode === 'air' ? this.skater.vsp : 0;
     const crossing = this.traffic.crossing;
     const doors = this.traffic.doorBoxes;
@@ -312,7 +312,7 @@ export class FloorSim {
     const sk = this.skater;
     this.sewer.step(sk, down);
     this.events.push(...this.sewer.events);
-    const lose = events.some((e) => e.type === 'slam' || e.type === 'bail') || this.sewer.events.some((e) => e.type === 'ratBump' || e.type === 'washed' || e.type === 'bite');
+    const lose = events.some((e) => e.type === 'slam' || e.type === 'bail') || this.sewer.events.some((e) => e.type === 'ratBump' || e.type === 'washed' || e.type === 'bite' || e.type === 'zap');
     for (const e of this.sewer.events) if (e.type === 'washed') this.knocks += GEAR.puddleDeck * SEWER_SIM.surgeSoak;
     if (lose) {
       this.flowLine = 0;

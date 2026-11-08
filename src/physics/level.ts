@@ -305,7 +305,7 @@ export type SewerPiece =
   | { kind: 'rats'; x: number; n: number } // where the pack starts, and how many
   | { kind: 'surge'; x: number } // the storm gate the water bursts out of
   | { kind: 'bowl'; x0: number; x1: number; depth: number } // the dip, and how far down its bottom is (px)
-  | { kind: 'subway'; x0: number; x1: number; phase: number }; // the gap over the tracks, and the trains' timing (frames)
+  | { kind: 'subway'; x0: number; x1: number; phase: number }; // the trench of live tracks, and the train's timing (frames its nose crosses into the lane before you reach it)
 
 // the sewer under x, if there is one
 export function sewerAt(level: Level, x: number): Sewer | undefined {

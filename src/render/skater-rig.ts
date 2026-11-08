@@ -128,6 +128,7 @@ export class SkaterRig {
   private fadeLen = FADE;
   private pose: Pose = { ...BASE };
   private flash = 0;
+  private zapT = 0; // seconds left of being electrocuted (shock)
   private pushes = 0;
   private rideT = 0;
   // where the hand grabs while towed (world space: the cable car's back pole, src/render/cable-view.ts), or null
@@ -139,7 +140,7 @@ export class SkaterRig {
   private bound: { bone: THREE.Bone; driver: THREE.Object3D; offset: THREE.Matrix4; local: THREE.Matrix4; rest: { p: THREE.Vector3; q: THREE.Quaternion } }[] = [];
   private board: THREE.Object3D | null = null; // the Blender board, which shows gear wear
   private worn = '';
-  private held: 'idle' | 'busted' | null = null; // the gear the wear was last drawn for, in steps of 5
+  private held: 'idle' | 'busted' | 'zapped' | null = null; // the gear the wear was last drawn for, in steps of 5
   // the bones and board as the clip posed them, before the slope; crossfades start from these
   private raw: { pos: THREE.Vector3[]; rot: THREE.Quaternion[]; board: THREE.Matrix4 } | null = null;
   // Clips keyed in Blender (lou-gnar.glb's animations, art/lou_gnar.py): sampled straight onto the bones, and they
@@ -996,8 +997,13 @@ export class SkaterRig {
   }
 
   // hold a pose clip whatever the skater is doing ('idle' under a menu, 'busted' when caught); null lets go
-  hold(name: 'idle' | 'busted' | null): void {
+  hold(name: 'idle' | 'busted' | 'zapped' | null): void {
     this.held = name;
+  }
+
+  // electrocuted (the sewer subway's third rail): `secs` of strobing blue-white and shaking (the pose: hold('zapped'))
+  shock(secs: number): void {
+    this.zapT = secs;
   }
 
   update(dtMs: number, sk: Skater, angle: number): void {
@@ -1008,7 +1014,7 @@ export class SkaterRig {
 
     if (this.held) {
       if (this.clipName !== this.held) this.play(this.held, 0.25);
-    } else if (this.clipName === 'idle' || this.clipName === 'busted') {
+    } else if (this.clipName === 'idle' || this.clipName === 'busted' || this.clipName === 'zapped') {
       this.play(sk.mode === 'air' ? 'air' : 'ride', 0.2);
     } else if (sk.firecracking) {
       //riding a stair set down in a manual: the clip runs while the tail clacks each step
@@ -1096,7 +1102,15 @@ export class SkaterRig {
 
     if (this.flash > 0) this.flash -= dt;
     const blink = this.flash > 0 && Math.floor(this.flash * 20) % 2 === 0;
-    for (const mat of this.mats) mat.emissive.setRGB(blink ? 0.75 : 0, 0, 0);
+    //electrocuted: strobing electric blue-white, and shaking stiff
+    if (this.zapT > 0) {
+      this.zapT -= dt;
+      const on = Math.floor(this.zapT * 24) % 2 === 0;
+      for (const mat of this.mats) mat.emissive.setRGB(on ? 0.55 : 0.05, on ? 0.85 : 0.1, on ? 1 : 0.2);
+      this.mesh.rotation.z += (Math.random() - 0.5) * 0.12;
+      this.mesh.position.x += (Math.random() - 0.5) * 0.05;
+      this.mesh.position.y += Math.random() * 0.05;
+    } else for (const mat of this.mats) mat.emissive.setRGB(blink ? 0.75 : 0, 0, 0);
   }
 
   // Tilt the board to the slope about the wheels' contact under the rig's origin, keep the feet planted on it, and

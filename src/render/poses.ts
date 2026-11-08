@@ -263,6 +263,16 @@ export const CLIPS: Record<string, Clip> = {
       { t: 1.75, pose: { hipY: 0.88, bend: -0.04, nod: 0.35, head: 0.6, armLRaise: 2.5, armRRaise: 2.5, armLFwd: 0.35, armRFwd: 0.35, armLElbow: 1.0, armRElbow: 1.0 } },
     ],
   },
+  // zapped on the sewer subway's third rail (zack, 2026-11-08): stiff as a board, arms flung out, head thrown back,
+  // shaking (held, like busted: game.ts while he's electrocuted)
+  zapped: {
+    loop: true,
+    keys: [
+      { t: 0, pose: { hipY: 0.95, bend: -0.12, nod: -0.45, head: 0.1, armLRaise: 1.75, armRRaise: 1.6, armLFwd: 0.15, armRFwd: -0.1, armLElbow: 0.15, armRElbow: 0.1, footFX: 0.08, footBX: -0.06 } },
+      { t: 0.05, pose: { hipY: 0.97, bend: -0.06, nod: -0.6, head: -0.1, armLRaise: 1.95, armRRaise: 1.85, armLFwd: -0.1, armRFwd: 0.2, armLElbow: 0.35, armRElbow: 0.3, footFX: 0.12, footBX: -0.1 } },
+      { t: 0.1, pose: { hipY: 0.95, bend: -0.12, nod: -0.45, head: 0.1, armLRaise: 1.75, armRRaise: 1.6, armLFwd: 0.15, armRFwd: -0.1, armLElbow: 0.15, armRElbow: 0.1, footFX: 0.08, footBX: -0.06 } },
+    ],
+  },
   // rolling fast: no pushing, a relaxed stance over the bolts
   ride: {
     loop: true,
@@ -725,7 +735,7 @@ export const CLIPS: Record<string, Clip> = {
 // a switch twin, 'switchPush' for 'push' and so on, that starts out as its mirror image along the board: the other
 // foot pushes and pops, the other arm leads, the board turns and pitches the other way. Each twin is a clip of its
 // own, so the editor can key it apart from the regular one.
-const NO_SWITCH = new Set(['idle', 'busted']); // held poses under a menu or a bust, never seen turned round
+const NO_SWITCH = new Set(['idle', 'busted', 'zapped']); // held poses under a menu, a bust or the third rail, never seen turned round
 export const switchName = (name: string): string => `switch${name[0].toUpperCase()}${name.slice(1)}`;
 export const isSwitch = (name: string): boolean => /^switch[A-Z]/.test(name);
 

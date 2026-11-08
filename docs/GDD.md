@@ -375,8 +375,12 @@ Under each street chase where the street is clear runs a brick storm tunnel, dra
   wobble and lose speed), the **flood surge** (the storm gate behind you bursts and a wall of water chases you down the
   tunnel a little faster than cruising: the current or a grind outruns it, else WASHED OUT, a slam and a soaked deck),
   a **full pipe** bowl the floor dips through and carves you out of, or a **subway crossing** (zack: "subway train cars
-  that act as cross traffic"): a gap onto the tracks where trains cross under the tunnel; hop off a train's roof or
-  ollie the gap, drop in with no train and you bail.
+  that act as cross traffic"): live tracks cross the tunnel in a trench just under its floor, and a slow five-car
+  train crawls across on them, its roof one ollie over the floor (zack, 2026-11-08: "top of train car should be one
+  jumps height so the player can car hop it. it should move slowly with about 5 train cars long"). Ollie up and car
+  hop its roof, or ollie the bare tracks between trains; roll into its side and you slam, and down on the tracks the
+  third rail gets you: THIRD RAIL!, ZZZAP!, electrocuted (lit up, arcs crawling over him, shaking stiff) and a bail.
+  The first train is timed to you, so it's usually across the tunnel as you come up on it.
 - **Finds:** the **sewer alligator** (now and then; its jaws open as you come up; ollie it for a chip, roll into it
   and it bites) and a **DIY stash** crate on the floor (a chip or a fresh gear part, like the sky's).
 - **The sewer road:** on a floor with a fork, the last street chase's tunnel runs to the gate and comes up at it: take

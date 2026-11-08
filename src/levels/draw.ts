@@ -182,7 +182,7 @@ export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; 
       const p = sw.piece;
       if (p) {
         const [px, name] =
-          p.kind === 'rats' ? [p.x, `🐀 rats ×${p.n} ←`] : p.kind === 'surge' ? [p.x, '🌊 flood surge →'] : p.kind === 'bowl' ? [p.x0, 'full pipe bowl'] : [p.x0, '🚇 subway gap'];
+          p.kind === 'rats' ? [p.x, `🐀 rats ×${p.n} ←`] : p.kind === 'surge' ? [p.x, '🌊 flood surge →'] : p.kind === 'bowl' ? [p.x0, 'full pipe bowl'] : [p.x0, '🚇 subway tracks'];
         text(X(px), Y(sw.y) - 30, name, C.runoff);
         if (p.kind === 'subway') g.push(`<rect x="${f(X(p.x0))}" y="${f(Y(sw.y) - 1)}" width="${f((p.x1 - p.x0) * scale)}" height="${f(30 * scale + 4)}" fill="#0c1612" stroke="${C.runoff}" stroke-dasharray="2 2"/>`);
       }

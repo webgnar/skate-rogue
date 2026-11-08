@@ -28,7 +28,7 @@ as text instead of writing the file (see Saving).
 - **The sewer** in green under the street chases: the way in (`dig ↓` at a construction spot or `plank ramp ↓` at the
   foot of a hill) and the outlet as yellow-edged holes in the street, the tunnel, its floor and outlet ramp, its pipes
   and runoff, named `SEWER · 30 tiles · 5 down`. Kick-outs are orange (`kick-out ↑` and the grate over them); the set
-  piece is named (rats, flood surge, full pipe bowl, subway gap); the alligator and a DIY stash crate are marked; the
+  piece is named (rats, flood surge, full pipe bowl, subway tracks); the alligator and a DIY stash crate are marked; the
   tunnel to the gate says `SEWER ROAD → spot`, and the fork shows where the sewer road leads.
 - **show sky / clouds / sewer** at the top hide or show each layer. Each layer's panel has a **show me** button that
   scrolls the view to it.

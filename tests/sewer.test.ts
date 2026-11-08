@@ -180,7 +180,7 @@ describe('the sewer route', { timeout: 30000 }, () => {
 
 // zack (2026-10-31): "build all of it": construction spots for the ways in, kick-outs, DOWNSTREAM, the set pieces,
 // the alligator, the DIY stash and the sewer road at the gate
-import { SEWER_SIM } from '../src/sim/sewer';
+import { SEWER_SIM, TRAIN_LEN, TRAIN_TRAVEL } from '../src/sim/sewer';
 import { floorLevel } from '../src/run/floor-level';
 import { FIRST_ROAD } from '../src/gen/roads';
 
@@ -374,42 +374,64 @@ describe('the sewer route, built out', { timeout: 60000 }, () => {
     expect(clear.events).not.toContain('bite');
   });
 
-  it('the subway: hop off a passing train, or ollie the gap; drop in with no train and you bail', () => {
+  it('the subway: a slow five-car train, its roof an ollie up: hop it, or ollie the bare tracks; down on them and you are zapped', () => {
     const { level, s } = find((w) => w.piece?.kind === 'subway', true);
     const p = s.piece as { x0: number; x1: number; phase: number };
-    //roll off the edge with a train under the gap: a hop off its roof, and across
-    const onTrain = (sim: FloorSim) => sim.sewer.tunnels.find((t) => t.s === s)!.train!;
-    let crossedOnTrain = false;
-    let bailedNoTrain = false;
-    for (let wait = 0; wait < SEWER.subwayPeriod; wait += 10) {
+    //(zack, 2026-11-08) its roof's one ollie over the floor, a parked car's; it's five cars long and crawls across
+    expect(SEWER.subwayRoof).toBeLessThanOrEqual(45);
+    expect(SEWER_SIM.trainCars).toBe(5);
+    const inLane = (TRAIN_LEN + SEWER_SIM.lane[1] - SEWER_SIM.lane[0]) / SEWER_SIM.trainSpeed;
+    expect(inLane / 60).toBeGreaterThan(3);
+    expect(TRAIN_TRAVEL).toBeLessThanOrEqual(Math.max(SEWER.subwayPeriod, TRAIN_TRAVEL));
+    //a run at it from 4 tiles back: the train in the lane the whole way (`on`), or no train at all
+    const run = (on: boolean, press: (sim: FloorSim) => boolean) => {
       const sim = new FloorSim({ ...level, startX: p.x0 - 4 * TILE, startY: s.y });
-      //hold back the skater's start by stepping the trains first
-      for (let k = 0; k < wait; k++) sim.sewer.stepTrains();
-      let train = false;
-      for (let f = 0; f < 200 && sim.state === 'skate' && sim.skater.x < p.x1 + 2 * TILE; f++) {
-        sim.step({ pressed: false, held: false });
-        if (sim.skater.x > p.x0 && sim.skater.x < p.x1) train ||= onTrain(sim).on;
+      const tr = sim.sewer.tunnels.find((t) => t.s === s)!.train!;
+      if (on) Object.assign(tr, { run: true, timed: true, z: SEWER_SIM.lane[0] + 3 });
+      else tr.lead = -Infinity;
+      const events: string[] = [];
+      let tap = -99;
+      for (let f = 0; f < 200 && sim.state === 'skate' && sim.skater.x < p.x1 + 3 * TILE; f++) {
+        const pr = press(sim);
+        if (pr) tap = f;
+        sim.step({ pressed: pr, held: f - tap < 6 });
+        if (on) expect(tr.on).toBe(true);
+        events.push(...sim.events.map((e) => e.type));
       }
-      if (train && sim.state === 'skate' && sim.skater.x >= p.x1) crossedOnTrain = true;
-      if (!train && sim.state === 'bail') bailedNoTrain = true;
+      return { sim, events };
+    };
+    //no ollie: down onto the bare tracks, or into the train's side and down: the third rail, a bail
+    for (const on of [false, true]) {
+      const r = run(on, () => false);
+      expect(r.sim.state).toBe('bail');
+      expect(r.sim.skater.zapped).toBe(true);
+      expect(r.events).toContain('zap');
+      if (on) expect(r.events).toContain('slam');
     }
-    expect(crossedOnTrain).toBe(true);
-    expect(bailedNoTrain).toBe(true);
-    //an ollie at the edge clears it whenever
-    let at = -1;
-    const hop = ride(level, s, p.x0 - 4 * TILE, true, (sim, f) => {
-      if (at < 0 && p.x0 - sim.skater.x < 3 * sim.skater.hsp) at = f;
-      return f === at;
-    }, 200);
-    expect(hop.events).toContain('subway');
-    expect(hop.sim.state).toBe('skate');
+    //an ollie a little before the edge: over the bare tracks, or up onto the train's roof in a hop and over
+    let did = false;
+    const ollie = (sim: FloorSim) => {
+      if (did || p.x0 - sim.skater.x > 6 * sim.skater.hsp) return false;
+      did = true;
+      return true;
+    };
+    for (const on of [false, true]) {
+      did = false;
+      const r = run(on, ollie);
+      expect(r.sim.state).toBe('skate');
+      expect(r.sim.skater.x).toBeGreaterThan(p.x1);
+      expect(r.events).toContain('subway');
+      expect(r.events).not.toContain('zap');
+      if (on) expect(r.events).toContain('hop');
+    }
   });
 
   it('the full pipe: the floor dips through its bowl and carves you out the far side', () => {
     const { level, s } = find((w) => w.piece?.kind === 'bowl', true);
     const p = s.piece as { x0: number; x1: number; depth: number };
     let low = 0;
-    const { sim } = ride(level, s, p.x0 - 3 * TILE, true, (sim) => {
+    //(out the far side and a little on: the room after can open on the next set piece, the subway's live tracks)
+    const { sim } = ride(level, { ...s, x1: p.x1 }, p.x0 - 3 * TILE, true, (sim) => {
       low = Math.max(low, sim.skater.y - s.y);
       return false;
     }, 300);
