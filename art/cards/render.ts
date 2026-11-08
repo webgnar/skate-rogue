@@ -158,7 +158,7 @@ async function main(): Promise<Record<string, string>> {
   //each deck in its own shape (art/board.py) and the paint and graphic it starts a run in (deck-art.ts stockDeck)
   for (const id of ['popsicle', 'cruiser', 'bombhill', 'slab']) {
     const deck = part(await load(boardFile(id)), (m) => [...DECK_PARTS, 'decktop', 'plastic'].includes(matName(m)));
-    out[`deck-${id}`] = shot(deckLook(deck, stockDeck(id)), [-1.25, 0.2, 1.05]);
+    out[`deck-${id}`] = shot(deckLook(deck, stockDeck(id)), [-1.45, 0.6, 0.85]);
   }
   return out;
 }
