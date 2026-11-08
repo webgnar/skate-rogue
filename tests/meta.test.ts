@@ -40,23 +40,30 @@ describe('meta progression', () => {
   });
 
   it('buying spends banked Stoken once', () => {
-    expect(buy([], 10, 'webster')).toBeNull();
-    const got = buy([], 40, 'webster')!;
-    expect(got).toEqual({ unlocked: ['webster'], stoken: 10 });
-    expect(buy(got.unlocked, 100, 'webster')).toBeNull();
-    expect(buy([], 0, 'lou-gnar')).toBeNull(); // free ones are always owned
+    expect(buy([], 10, 'roxy')).toBeNull();
+    const got = buy([], 40, 'roxy')!;
+    expect(got).toEqual({ unlocked: ['roxy'], stoken: 10 });
+    expect(buy(got.unlocked, 100, 'roxy')).toBeNull();
+    expect(buy([], 0, 'webster')).toBeNull(); // free ones are always owned
+  });
+
+  it('skaters unlock Webster (free), Roxy, Keanu, Goldie, then Lou Gnar last and priciest', () => {
+    const skaters = UNLOCKS.filter((u) => u.branch === 'skater');
+    expect(skaters.map((u) => u.id)).toEqual(['webster', 'roxy', 'keanu', 'goldie', 'lou-gnar']);
+    expect(skaters.map((u) => u.cost)).toEqual([0, 30, 40, 50, 60]);
+    expect(STOCK.skater).toBe('webster');
   });
 
   it('each skater leans the first pick to their type, if it is in the library', () => {
-    expect(firstPick(STOCK, fresh)).toBe('POP');
-    expect(firstPick({ ...STOCK, skater: 'webster' }, fresh)).toBe('GRIND');
+    expect(firstPick(STOCK, fresh)).toBe('GRIND');
+    expect(firstPick({ ...STOCK, skater: 'lou-gnar' }, fresh)).toBe('POP');
     expect(firstPick({ ...STOCK, skater: 'keanu' }, fresh)).toBe('POP');
     expect(firstPick({ ...STOCK, skater: 'keanu' }, FULL_LIBRARY)).toBe('COOL');
   });
 
   it('skater passives and deck stats', () => {
     expect(withLoadout(NO_MODS, STOCK)).toEqual(NO_MODS);
-    expect(withLoadout(NO_MODS, { ...STOCK, skater: 'webster' }).grindScale).toBeCloseTo(1.15);
+    expect(withLoadout(NO_MODS, { ...STOCK, skater: 'lou-gnar' }).grindScale).toBeCloseTo(1.15);
     expect(withLoadout(NO_MODS, { ...STOCK, skater: 'roxy' }).hopScale).toBeCloseTo(1.2);
     const bomb = withLoadout(NO_MODS, { ...STOCK, deck: 'bombhill' });
     expect(bomb.speedScale).toBeCloseTo(1.15);

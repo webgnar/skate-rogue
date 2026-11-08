@@ -35,6 +35,18 @@ describe('the Chapter 1 ending save flag', () => {
     writeSave({ ...EMPTY_SAVE, endingSeen: true });
     expect(loadSave().endingSeen).toBe(true);
   });
+  it('a save from before the new skater order keeps Lou Gnar and gets Webster\'s 30 Stoken back, once', () => {
+    mem.set('gnar-run-save', JSON.stringify({ stoken: 5, unlocked: ['webster', 'FLOW'], skater: 'lou-gnar' }));
+    const old = loadSave();
+    expect(old.unlocked.sort()).toEqual(['FLOW', 'lou-gnar']);
+    expect(old.stoken).toBe(35);
+    expect(old.skater).toBe('lou-gnar');
+    writeSave(old);
+    expect(loadSave().stoken).toBe(35);
+    //a new phone starts on Webster, owning nothing
+    mem.clear();
+    expect(loadSave()).toMatchObject({ skater: 'webster', unlocked: [], stoken: 0 });
+  });
 });
 
 describe('dev links', () => {

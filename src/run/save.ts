@@ -25,30 +25,44 @@ export interface Save {
   endingSeen?: boolean; // the Chapter 1 ending played in full once (src/ship/ending-scene.ts); later wins get the short one
   missions: MissionSave; // the three missions showing and Skater Rank (src/run/missions.ts)
   headStart: HeadStart; // what the street dice won for the next run (src/run/dice.ts)
+  crew?: number; // the skater order the save was made under: 2 = Webster free, Lou Gnar last (2026-11-08)
+}
+
+const CREW = 2;
+
+// Lou Gnar was the free starter before 2026-11-08 and Webster cost 30. A save made then keeps Lou (owned now, he's
+// 60) and gets the 30 back if it had bought Webster, who's free now. Runs once: the save is marked with CREW.
+export function moveCrew(s: Partial<Save>, unlocked: UnlockId[], stoken: number): { unlocked: UnlockId[]; stoken: number } {
+  if ((Number(s.crew) || 0) >= CREW) return { unlocked, stoken };
+  const kept = unlocked.filter((id) => id !== 'webster');
+  return { unlocked: kept.includes('lou-gnar') ? kept : [...kept, 'lou-gnar'], stoken: stoken + (unlocked.includes('webster') ? 30 : 0) };
 }
 
 // Stoken as a whole number: a Gnar level pays 1.2 a pickup, so the run's count carries fractions (and float sums
 // like 10.799999999999997); the HUD, the screens and the bank only ever see the whole Stoken
 export const whole = (n: number): number => Math.floor(n + 1e-6);
 
-export const EMPTY_SAVE: Save = { best: 0, stoken: 0, wins: 0, unlocked: [], skater: 'lou-gnar', deck: 'popsicle', daily: { day: '', best: 0 }, gnar: 0, gnarPick: 0, missions: EMPTY_MISSIONS, headStart: NO_HEAD_START };
+export const EMPTY_SAVE: Save = { best: 0, stoken: 0, wins: 0, unlocked: [], skater: 'webster', deck: 'popsicle', daily: { day: '', best: 0 }, gnar: 0, gnarPick: 0, missions: EMPTY_MISSIONS, headStart: NO_HEAD_START, crew: CREW };
 
 export function loadSave(): Save {
   try {
     const raw = store.getItem(KEY);
-    const s = raw ? (JSON.parse(raw) as Partial<Save>) : {};
+    const s = raw ? (JSON.parse(raw) as Partial<Save>) : { crew: CREW };
+    const owned = Array.isArray(s.unlocked) ? s.unlocked.filter(isUnlockId) : [];
+    const { unlocked, stoken } = moveCrew(s, owned, whole(Number(s.stoken) || 0));
     return {
       best: Number(s.best) || 0,
-      stoken: whole(Number(s.stoken) || 0),
+      stoken,
       wins: Number(s.wins) || 0,
-      unlocked: Array.isArray(s.unlocked) ? s.unlocked.filter(isUnlockId) : [],
-      skater: isSkaterId(s.skater) ? s.skater : 'lou-gnar',
+      unlocked,
+      skater: isSkaterId(s.skater) ? s.skater : 'webster',
       deck: isDeck(s.deck) ? s.deck : 'popsicle',
       daily: { day: String(s.daily?.day ?? ''), best: Number(s.daily?.best) || 0 },
       gnar: Number(s.gnar) || 0,
       gnarPick: Number(s.gnarPick) || 0,
       missions: cleanMissions(s.missions),
       headStart: cleanHeadStart(s.headStart),
+      crew: CREW,
       ...(typeof s.tag === 'string' && s.tag ? { tag: s.tag } : {}),
       ...(s.tutorialDone ? { tutorialDone: true } : {}),
       ...(s.endingSeen ? { endingSeen: true } : {}),

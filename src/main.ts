@@ -469,9 +469,9 @@ async function start() {
   const fixedSeed = daily ? dailySeed() : Number(params.get('seed')) || 0;
   const seed = fixedSeed || Math.floor(Math.random() * 1e6);
 
-  //?skater=webster (keanu, roxy, goldie) rides one without unlocking it
+  //?skater=lou-gnar (keanu, roxy, goldie) rides one without unlocking it
   const urlSkater = params.get('skater');
-  const skater = isSkater(urlSkater) ? urlSkater : owns(save.skater) ? save.skater : 'lou-gnar';
+  const skater = isSkater(urlSkater) ? urlSkater : owns(save.skater) ? save.skater : 'webster';
   const deck = owns(save.deck) ? save.deck : 'popsicle';
   //the loading screen (src/ui/loading.ts): every model (the car-hop damage too), tile sheet and the skater, all at once
   //?models=new rides the Meshy rebuilds (DEV TOOLS MODELS), ?models=old the old skaters
