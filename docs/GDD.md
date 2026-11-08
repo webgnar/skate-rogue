@@ -1015,8 +1015,8 @@ Oct 30), each worn by the thing it takes the beating from:
 **Stoken** (the QFS currency, kept for the universe) is earned in runs and kept when you bail. It is spent on an
 **unlock tree** with three branches:
 
-- **Deck shop:** new decks (stats and slot counts), new skaters (Webster, Keanu, Roxy, Goldie from QFS; Lou Gnar
-  is the default). Each skater has one small passive and leans the first boon pick toward one type (decided
+- **Deck shop:** new decks (stats and slot counts), new skaters (Webster is the free starter; then Roxy, Keanu,
+  Goldie, and Lou Gnar last and priciest, zack 2026-11-08). Each skater has one small passive and leans the first boon pick toward one type (decided
   Oct 23, 2026; draft passives below, to be balanced).
 - **Boon library:** unlocks boons into the pool. A run starts with 12 of the boons above; the rest are unlocked.
   Also unlocks duo boons and curses.
@@ -1025,11 +1025,11 @@ Oct 30), each worn by the thing it takes the beating from:
 
 | Skater | Passive (draft) | First boon pick leans to |
 | --- | --- | --- |
-| Lou Gnar (default) | None: the baseline | Any |
-| Webster | Grinds start 15% faster | GRIND |
-| Keanu | Heat cools 15% faster while you're airborne | COOL |
-| Roxy | Car-hops bounce 20% higher | GRIND |
-| Goldie | +25% cash from every source | LUCK |
+| Webster (free, the default) | None: the baseline | GRIND |
+| Roxy (30) | Car-hops bounce 20% higher | GRIND |
+| Keanu (40) | Heat cools 15% faster while you're airborne | COOL |
+| Goldie (50) | +25% cash from every source | LUCK |
+| Lou Gnar (60) | Grinds start 15% faster | POP |
 
 Built Oct 24, 2026 (first version, src/run/meta.ts): an UNLOCKS screen off the run-over screen. Skaters cost 30
 to 60 Stoken with the passives above. Decks: Popsicle (stock, 3 slots), Cruiser (+10% speed, ollies 5% lower,
@@ -1037,6 +1037,11 @@ to 60 Stoken with the passives above. Decks: Popsicle (stock, 3 slots), Cruiser 
 GRIND to start; FLOW, COOL and LUCK packs (15 to 25) add their boons and their road signs; Curses (35) and
 Duos (40). Spots: the daily run (20; one seed per UTC day, its own best). Biome starts and gnar mode are still to
 come. See docs/overnight-decisions.md.
+
+Reordered Nov 8, 2026 (zack): Webster is the free starter and Lou Gnar the last, priciest skater (60). Webster
+took Lou's "baseline" (no passive) and Lou took Webster's 15% grind speed, so the free skater stays plain and each
+paid one is a small trade. Each kept their own first pick. Saves from before keep Lou and get back the 30 Stoken
+they paid for Webster (src/run/save.ts, moveCrew).
 
 ### The ship hub
 

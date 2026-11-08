@@ -37,7 +37,7 @@ export class Aboard {
   private crew(hub: HubScene): void {
     const save = loadSave();
     const rider = this.rider;
-    hub.setCrew(this.rigs, (id) => this.all || id === 'lou-gnar' || id === rider || has(save.unlocked, id), rider);
+    hub.setCrew(this.rigs, (id) => this.all || id === 'webster' || id === rider || has(save.unlocked, id), rider);
   }
 
   // behind the run summary: true if it drew

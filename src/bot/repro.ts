@@ -21,8 +21,8 @@ export function reproQuery(r: Repro): string {
   if (r.danger && r.danger !== 1 && !r.escape) q.push(`danger=${r.danger}`);
   if (r.gnar) q.push(`gnar=${r.gnar}`);
   if (r.biome) q.push(`biome=${r.biome}`);
-  //a fresh setup whatever the save holds: everything unlocked, Lou on the stock deck
-  q.push('unlockall', 'skater=lou-gnar');
+  //a fresh setup whatever the save holds: everything unlocked, Webster on the stock deck
+  q.push('unlockall', 'skater=webster');
   if (r.bot) q.push(r.bot === 'ref' ? 'bot' : `bot=${r.bot}`);
   return '?' + q.join('&');
 }

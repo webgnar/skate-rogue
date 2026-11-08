@@ -19,11 +19,11 @@ export interface Unlock {
 }
 
 export const UNLOCKS: Unlock[] = [
-  { id: 'lou-gnar', branch: 'skater', name: 'Lou Gnar', line: 'The baseline. First pick: POP', cost: 0 },
-  { id: 'webster', branch: 'skater', name: 'Webster', line: 'Grinds 15% faster. First pick: GRIND', cost: 30 },
-  { id: 'roxy', branch: 'skater', name: 'Roxy', line: 'Car-hops bounce 20% higher. First pick: GRIND', cost: 40 },
-  { id: 'keanu', branch: 'skater', name: 'Keanu', line: 'Heat cools 15% faster in the air. First pick: COOL', cost: 50 },
-  { id: 'goldie', branch: 'skater', name: 'Goldie', line: '+25% cash from everything. First pick: LUCK', cost: 60 },
+  { id: 'webster', branch: 'skater', name: 'Webster', line: 'The baseline. First pick: GRIND', cost: 0 },
+  { id: 'roxy', branch: 'skater', name: 'Roxy', line: 'Car-hops bounce 20% higher. First pick: GRIND', cost: 30 },
+  { id: 'keanu', branch: 'skater', name: 'Keanu', line: 'Heat cools 15% faster in the air. First pick: COOL', cost: 40 },
+  { id: 'goldie', branch: 'skater', name: 'Goldie', line: '+25% cash from everything. First pick: LUCK', cost: 50 },
+  { id: 'lou-gnar', branch: 'skater', name: 'Lou Gnar', line: 'Grinds 15% faster. First pick: POP', cost: 60 },
   { id: 'popsicle', branch: 'deck', name: 'Popsicle', line: 'The stock deck: 3 slots', cost: 0 },
   { id: 'cruiser', branch: 'deck', name: 'Cruiser', line: '+10% speed, ollies 5% lower', cost: 25 },
   { id: 'bombhill', branch: 'deck', name: 'Bombhill', line: '+15% speed, gear wears 30% faster', cost: 35 },
@@ -84,7 +84,8 @@ export interface Loadout {
   deck: DeckId;
 }
 
-export const STOCK: Loadout = { skater: 'lou-gnar', deck: 'popsicle' };
+// Webster is the free starter and Lou Gnar the last, priciest unlock (zack, 2026-11-08)
+export const STOCK: Loadout = { skater: 'webster', deck: 'popsicle' };
 
 export const LEAN: Record<SkaterId, BoonType> = { 'lou-gnar': 'POP', webster: 'GRIND', roxy: 'GRIND', keanu: 'COOL', goldie: 'LUCK' };
 
@@ -99,7 +100,7 @@ export const DECK_SLOTS: Record<DeckId, number> = { popsicle: 3, cruiser: 3, bom
 // the skater's passive and the deck's stats on top of the boons' mods
 export function withLoadout(mods: Mods, l: Loadout): Mods {
   const m = { ...mods };
-  if (l.skater === 'webster') m.grindScale *= 1.15;
+  if (l.skater === 'lou-gnar') m.grindScale *= 1.15;
   if (l.skater === 'roxy') m.hopScale *= 1.2;
   if (l.skater === 'keanu') m.airCool *= 1.15;
   if (l.deck === 'cruiser') {

@@ -34,8 +34,8 @@ describe('playtest bot (sim)', () => {
   it('test URLs carry the boons, road and escape', () => {
     const boons = parseBoons('bigPop,bigPop,grease,nope');
     expect(boons).toEqual([{ id: 'bigPop', stacks: 2 }, { id: 'grease', stacks: 1 }]);
-    expect(reproQuery({ seed: 7, floor: 4, boons, danger: 2, bot: 'ref' })).toBe('?seed=7&floor=4&boons=bigPop,bigPop,grease&danger=2&unlockall&skater=lou-gnar&bot');
-    expect(reproQuery({ seed: 7, floor: 6, escape: 2, danger: 3 })).toBe('?seed=7&escape=2&unlockall&skater=lou-gnar');
+    expect(reproQuery({ seed: 7, floor: 4, boons, danger: 2, bot: 'ref' })).toBe('?seed=7&floor=4&boons=bigPop,bigPop,grease&danger=2&unlockall&skater=webster&bot');
+    expect(reproQuery({ seed: 7, floor: 6, escape: 2, danger: 3 })).toBe('?seed=7&escape=2&unlockall&skater=webster');
   });
 
   it('two whole runs come back with no physics findings', () => {
