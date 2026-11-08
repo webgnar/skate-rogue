@@ -31,7 +31,7 @@ html, body {
 #app.titled #skaterlayer { display: none; }
 #hud { position: absolute; inset: 0; pointer-events: none; }
 #hud > * { position: absolute; text-shadow: 2px 2px 0 var(--shadow); }
-#callout {
+#callout, #pointfly {
   top: 22%;
   left: 0;
   right: 0;
@@ -39,6 +39,11 @@ html, body {
   font-size: clamp(24px, 6vw, 44px);
   letter-spacing: 2px;
 }
+/* points fly up into the score box from a layer drawn before the top bar, so they pass behind it */
+#pointfly .pop { position: absolute; top: 0; left: 0; right: 0; padding: 0 12px; transition: translate 0.18s ease-out; will-change: transform; }
+#pointfly .pop span { display: inline-block; }
+#pointfly .good { color: var(--good); }
+#pointfly .bad { color: var(--bad); }
 /* one per callout (src/ui/callouts.ts floats them up off the screen); a newer one pushes it up a line */
 #callout .pop { position: absolute; top: 0; left: 0; right: 0; padding: 0 12px; transition: translate 0.18s ease-out; will-change: transform; }
 #callout .trick { color: var(--trick); }
@@ -551,7 +556,7 @@ html, body {
 #app.debug #debug { display: block; }
 #seed { display: none; }
 #paused .seed { font: 12px ui-monospace, monospace; opacity: 0.6; }
-#callout { font-family: 'Bangers', 'Arial Black', sans-serif; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; letter-spacing: 0.06em; }
+#callout, #pointfly { font-family: 'Bangers', 'Arial Black', sans-serif; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; letter-spacing: 0.06em; }
 #app.calm #combobox { transition: none; }
 
 /* phones: Lou is big on screen now, so the HUD gets out of the way (zack, 2026-10-25: "gameplay UI should shrink

@@ -166,9 +166,34 @@ export class HudView {
     this.stoken.text(String(whole(stoken)));
   }
 
+  // points on their way up into the score box (src/ui/callouts.ts): the total leaves them out until they land
+  private flying = 0;
+  private shown = 0;
+  private scorePop: Animation | null = null;
+
+  holdScore(points: number): void {
+    this.flying += points;
+  }
+
+  // points just landed in the score box: count them in and give the total a little pop (zack, 2026-11-08)
+  landScore(points: number): void {
+    this.flying = Math.max(0, this.flying - points);
+    this.score.text(Math.max(0, this.shown - this.flying).toLocaleString('en-US'));
+    const el = this.score.el;
+    if (!el.animate) return;
+    this.scorePop?.cancel();
+    this.scorePop = el.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(1.22)', offset: 0.35 }, { transform: 'scale(1)' }],
+      { duration: 240, easing: 'ease-out' },
+    );
+  }
+
   // stoke and gnar 0..1; pending is the live combo's points before the speed bonus
   setScore(score: number, combo: number, stoke: number, gnar: number, pending: number): void {
-    this.score.text(score.toLocaleString('en-US'));
+    //a new run (the score dropped) forgets anything still in the air
+    if (score < this.shown) this.flying = 0;
+    this.shown = score;
+    this.score.text(Math.max(0, score - this.flying).toLocaleString('en-US'));
     const live = combo > 1;
     this.comboBox.data('live', live ? '1' : '0');
     if (live) {

@@ -14,7 +14,7 @@ import * as THREE from 'three';
 
 // what the skater goes over: the top bar's panels, the meters, the callouts, held boons, board mods, gear wear
 export const LAYER = {
-  over: '#logo, #center > .panel:not([data-live="0"]), #right > *, #stoke, #heat, #callout .pop, #boons .chip, #board, #gear, #mission:not([hidden])',
+  over: '#logo, #center > .panel:not([data-live="0"]), #right > *, #stoke, #heat, #callout .pop, #pointfly .pop, #boons .chip, #board, #gear, #mission:not([hidden])',
   edge: 8, // css px each HUD box grows by, for the neon edges and drop shadows drawn outside it
   pad: 0.2, // the box round the skater grows by this much each way (his bounds are his rest pose's, not his pose's)
 };
