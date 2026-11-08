@@ -204,8 +204,13 @@ def half_width(u, halves):
     if SHAPE == 'cruiser':
         if u < 0:  # narrowing a little to a square tail
             return cap(r * (1 - 0.1 * smooth((a - 0.2) / 0.25)), 0.35 * r)
-        t = max(0.0, (a - 0.17) / (end - 0.17))
-        return 0.16 * r + (r - 0.16 * r) * (1 - t ** 1.25)
+        # a gothic arch (tangent ogive): the sides bow out and curve in to a point (zack, 2026-11-08)
+        start = 0.2
+        if a <= start:
+            return r
+        ln = end - start
+        rho = (r * r + ln * ln) / (2 * r)
+        return max(math.sqrt(max(rho * rho - (a - start) ** 2, 0.0)) + r - rho, 0.04 * r)
     if SHAPE == 'bombhill':
         if u < 0:
             return cap(r, 0.75 * r)
