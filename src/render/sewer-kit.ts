@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { TILE } from '../physics/constants';
 import { inHill, pitAt, SEWER_ROOF, type Level, type Sewer } from '../physics/level';
 import { SEWER } from '../gen/sewer';
-import { EL } from '../traffic/el';
+import { SEWER_SIM } from '../sim/sewer';
 import { makeRng } from '../gen/rng';
 import { surface } from './surfaces';
 import { DEPTH, depthStep } from './depth';
@@ -565,19 +565,24 @@ export function buildSewers(level: Level): THREE.Group {
     //the subway crossing: the gap onto the tracks, the line running off into the city, a third rail and a signal
     if (sub) {
       const [a, b] = [X(sub.x0), X(sub.x1)];
-      //(the bed's as deep as an L car's roof is high: its roof just under the floor, sewer-view.ts; zack, 2026-11-01:
-      //"move it up". Ballast and sleepers under a light, the black of the line only off back in the city. Its ground
-      //goes down to the deep's rock in the deep: down to ROCK it was drawn inside out there, a black hole to the sky)
-      const bed = fy - EL.carH / TILE - 0.1;
+      //(zack, 2026-11-08: the tracks raised with the train, so its roof's an ollie over the floor: the rail heads just
+      //under the floor, SEWER_SIM.bed. Ballast and sleepers under a light, the black of the line only off back in the
+      //city. Its ground goes down to the deep's rock in the deep: down to ROCK it was drawn inside out there)
+      const bed = fy - SEWER_SIM.bed / TILE - 0.12;
       box(a, b, Math.min(rock, bed - 1), bed, SUBWAY_BACK, FRONT, ballast);
-      for (let z = SUBWAY_BACK + 0.5; z < FRONT; z += 0.7) box(a + 0.15, b - 0.15, bed, bed + 0.08, z, z + 0.25, sleeper);
+      for (let z = SUBWAY_BACK + 0.5; z < FRONT; z += 0.7) box(a + 0.15, b - 0.15, bed, bed + 0.06, z, z + 0.25, sleeper);
       light(a + 0.3, b - 0.3, bed, fy + 1.2, 1.6);
       box(a - 0.3, a, bed, fy - 0.3, SUBWAY_BACK, FRONT, brick);
       box(b, b + 0.3, bed, fy - 0.3, SUBWAY_BACK, FRONT, brick);
       box(a, b, fy + 0.5, roofAt(a), SUBWAY_BACK, BACK - 0.01, dark); // the line's tunnel mouth over the gap, back into the dark
       for (const x of [a + (b - a) * 0.3, a + (b - a) * 0.7]) box(x - 0.05, x + 0.05, bed, bed + 0.12, SUBWAY_BACK, FRONT, rail);
-      box(a + (b - a) * 0.88 - 0.06, a + (b - a) * 0.88 + 0.06, bed, bed + 0.18, SUBWAY_BACK, FRONT, yellow);
+      //the third rail: on its insulators, its yellow guard board (the live crackle along it: sewer-view.ts)
+      box(a + (b - a) * 0.88 - 0.06, a + (b - a) * 0.88 + 0.06, bed, bed + 0.2, SUBWAY_BACK, FRONT, yellow);
       box(b + 0.35, b + 0.5, fy, fy + 1.4, BACK + 0.2, BACK + 0.35, dark);
+      const volts = board('DANGER', 'live third rail', '#f2c230', '#141414');
+      volts.scale.setScalar(0.45);
+      volts.position.set(b + 1.1, fy + 1.1, BACK + 0.05);
+      g.add(volts);
       const sign = board('MIND THE GAP', 'trains cross here', '#7a1e1e', '#ffffff');
       sign.scale.setScalar(0.55);
       sign.position.set(a - 1, roofAt(a) - 1.1, BACK + 0.05);

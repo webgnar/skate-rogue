@@ -1,10 +1,11 @@
 // The sewer route's moving pieces (src/gen/sewer.ts), stepped by the floor sim: rat packs that run at you down the
-// floor, the flood surge that bursts out of the storm gate behind you, the subway's trains crossing under the tunnel,
-// and the sewer alligator. Pure, so the game, the bots and tests all run the same thing.
+// floor, the flood surge that bursts out of the storm gate behind you, the subway's train crossing the tunnel on its
+// live tracks, and the sewer alligator. Pure, so the game, the bots and tests all run the same thing.
 import { PHYS, TILE } from '../physics/constants';
 import { sewerAt, type Car, type Level, type Sewer } from '../physics/level';
 import type { Skater } from '../physics/skater';
 import { SEWER } from '../gen/sewer';
+import { EL } from '../traffic/el';
 
 export const SEWER_SIM = {
   ratSpeed: 1.6, // px/frame: a pack runs at you this fast once it's seen you
@@ -20,8 +21,18 @@ export const SEWER_SIM = {
   //behind you down there, rushing up to it when it does; it still only catches you at surgeSpeed)
   surgeLead: 3.5 * TILE,
   surgeRush: 0.25, // of the gap past surgeLead it closes each frame
-  trainFrames: 72, // frames a train takes to cross under the tunnel, in every SEWER.subwayPeriod
-  trainWarn: 45, // frames before one that its headlight shows down the line
+  // the subway (zack, 2026-11-08: "top of train car should be one jumps height so the player can car hop it. it should
+  // move slowly with about 5 train cars long", "the tracks ... should be electrical hazard"): a long, slow train
+  // crosses the tunnel on tracks raised to just under its floor, its roof an ollie over it (SEWER.subwayRoof) to hop
+  // like a car's; between trains the tracks are bare and live, and down on them you're zapped
+  trainCars: 5,
+  trainSpeed: 0.1, // tiles/frame along the line (6 a second): a slow crawl across
+  trainHurry: [0.04, 0.3] as const, // tiles/frame: how slow or fast the first comes in, out of the city, timed to you
+  trainFrom: -40, // z, tiles: where the line comes out of the city (its nose sets off from here)
+  trainTo: 14, // and where it goes back into it, past the camera (the train's gone once its tail's past here)
+  lane: [0.3, 1.9] as const, // z: the skate lane, which the train's in while any of it is across
+  bed: 14, // px under the floor: the rail heads, the train's wheels (its roof + the L car's height, EL.carH)
+  zapFrom: 4, // px under the floor (the board's middle over the tracks) and the third rail has you
   gatorWake: 5 * TILE, // the alligator opens its jaws as you come this close
   gatorLow: 14, // px: feet this close over the floor over it and it bites
 };
@@ -33,7 +44,8 @@ export type SewerEvent =
   | { type: 'washed'; x: number; y: number } // the surge caught you
   | { type: 'gator'; x: number; y: number } // cleared the alligator: a spin token
   | { type: 'bite'; x: number; y: number } // rolled into it
-  | { type: 'subway'; x: number; y: number }; // over the subway line, by ollie or by train roof
+  | { type: 'subway'; x: number; y: number } // over the subway line, by ollie or by train roof
+  | { type: 'zap'; x: number; y: number }; // down on the live tracks: electrocuted
 
 export interface Rat {
   x: number;
@@ -56,10 +68,21 @@ export interface Surge {
 }
 
 export interface Train {
-  box: Car; // its roof across the gap, while it's under the tunnel
-  t: number; // frames into the period
-  on: boolean;
+  box: Car; // its roof (and side) across the gap, while it's in the lane
+  lead: number; // frames: the first sets off this long before you'd reach the trench at the speed you're going
+  phase: number; // frames its nose crosses into the lane before you reach the trench (SEWER.subwayLead)
+  z: number; // tiles: its nose along the line
+  wait: number; // frames until the next one sets off (-1: the first, waiting for you)
+  timed: boolean; // the first has come into the lane (or you're past): no more timing it to you
+  run: boolean; // on the line (in sight)
+  on: boolean; // across the skate lane
 }
+
+// tiles of train, nose to tail: five of the L's cars
+export const TRAIN_LEN = (SEWER_SIM.trainCars * EL.carLen + (SEWER_SIM.trainCars - 1) * EL.coupling) / TILE;
+// frames from setting off to its nose reaching the lane, and to its tail leaving the line
+export const TRAIN_ARRIVE = (SEWER_SIM.lane[0] - SEWER_SIM.trainFrom) / SEWER_SIM.trainSpeed;
+export const TRAIN_TRAVEL = (SEWER_SIM.trainTo - SEWER_SIM.trainFrom + TRAIN_LEN) / SEWER_SIM.trainSpeed;
 
 export interface Gator {
   open: number; // 0..1, its jaws
@@ -89,27 +112,60 @@ export class SewerSim {
       const p = s.piece;
       if (p?.kind === 'rats') st.pack = { rats: Array.from({ length: p.n }, (_, k) => ({ x: p.x + k * SEWER_SIM.ratGap, alive: true })), awake: false, bumped: false, cleared: 0, done: false };
       if (p?.kind === 'surge') st.surge = { front: s.drain[0], on: false, caught: false, done: false };
-      if (p?.kind === 'subway') st.train = { box: { x0: p.x0 - 2, x1: p.x1 + 2, roof: s.y + 3, bottom: s.y + 4 * TILE }, t: p.phase, on: false };
+      //(its nose reaches the lane p.phase frames before you reach the gap at cruising speed: the train's mostly across
+      //the tunnel as you come up on it, sometimes still coming, sometimes its tail going)
+      if (p?.kind === 'subway')
+        st.train = {
+          box: { x0: p.x0, x1: p.x1, roof: s.y - SEWER.subwayRoof, bottom: s.y + SEWER_SIM.bed },
+          lead: TRAIN_ARRIVE + p.phase,
+          phase: p.phase,
+          z: SEWER_SIM.trainFrom,
+          wait: -1,
+          timed: false,
+          run: false,
+          on: false,
+        };
       if (s.gator) st.gator = { open: 0, over: false, done: false, bit: false };
       return st;
     });
   }
 
-  // the subway trains under the tunnel right now, as boxes in the skate lane (their roofs are one-way: you hop off them)
+  // the subway trains across the tunnel right now, as boxes in the skate lane: hop their roofs as a car's
   get boxes(): Car[] {
     const out: Car[] = [];
     for (const t of this.tunnels) if (t.train?.on) out.push(t.train.box);
     return out;
   }
 
-  // before the skater moves: the trains come and go on their timetable
-  stepTrains(): void {
+  // before the skater moves: a train sets off as you come up on its line (timed from how fast you're going), then
+  // one every SEWER.subwayPeriod
+  stepTrains(sk: { x: number; hsp: number }): void {
     this.frame++;
     for (const t of this.tunnels) {
       const tr = t.train;
       if (!tr) continue;
-      tr.t = (tr.t + 1) % SEWER.subwayPeriod;
-      tr.on = tr.t < SEWER_SIM.trainFrames;
+      const x0 = (t.s.piece as { x0: number }).x0;
+      const speed = Math.max(PHYS.baseSpeed, Math.abs(sk.hsp));
+      if (!tr.run) {
+        if (tr.wait < 0 ? sk.x < x0 - tr.lead * speed : tr.wait-- > 0) continue;
+        tr.run = true;
+        tr.z = SEWER_SIM.trainFrom;
+      }
+      //the first is timed to you: on its way in it hurries or holds back, so its nose crosses into the lane `phase`
+      //frames before you reach the tracks (you speed up and slow down down here); then it crawls across
+      let v = SEWER_SIM.trainSpeed;
+      const lane = SEWER_SIM.lane[0];
+      if (!tr.timed && tr.z < lane && sk.x < x0) {
+        const left = (x0 - sk.x) / speed - tr.phase;
+        v = Math.min(SEWER_SIM.trainHurry[1], Math.max(SEWER_SIM.trainHurry[0], (lane - tr.z) / Math.max(1, left)));
+      } else tr.timed = true;
+      tr.z += v;
+      if (tr.z - TRAIN_LEN > SEWER_SIM.trainTo) {
+        tr.run = false;
+        tr.timed = true;
+        tr.wait = Math.max(60, SEWER.subwayPeriod - Math.ceil(TRAIN_TRAVEL));
+      }
+      tr.on = tr.run && tr.z >= lane && tr.z - TRAIN_LEN <= SEWER_SIM.lane[1];
     }
   }
 
@@ -174,6 +230,13 @@ export class SewerSim {
       //the subway: in the air over its gap and across, or off a train's roof, it's cleared
       const p = s.piece;
       if (p?.kind === 'subway' && mine) {
+        //down on the tracks (off the lip, or a slam into the train's side): the third rail
+        if (sk.x > p.x0 && sk.x < p.x1 && sk.y > s.y + SEWER_SIM.zapFrom && sk.mode !== 'bail' && sk.mode !== 'exit') {
+          t.overGap = false;
+          sk.zap(s.y + SEWER_SIM.bed);
+          this.events.push({ type: 'zap', x: sk.x, y: s.y + SEWER_SIM.bed });
+          continue;
+        }
         if (sk.x > p.x0 && sk.x < p.x1 && sk.mode === 'air') t.overGap = true;
         if (t.overGap && sk.x >= p.x1 && sk.grounded) {
           t.overGap = false;

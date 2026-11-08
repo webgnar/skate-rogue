@@ -153,7 +153,7 @@ function flipNow(level: Level, near: Near, sk: Skater): boolean {
 }
 
 // down in the sewer (src/gen/sewer.ts): ollie a kick-out (to stay down), the alligator, a rat pack running at you
-// and the subway's gap, at the last moment the ollie still clears it; ride the bowl, and ollie off the end of a pipe
+// and the subway's tracks, at the last moment the ollie still clears them (sooner up onto a train's roof); ride the bowl, and ollie off the end of a pipe
 // (railEnd: the reference line's press there)
 function sewerPress(sim: FloorSim, railEnd: boolean): boolean {
   const sk = sim.skater;
@@ -169,8 +169,10 @@ function sewerPress(sim: FloorSim, railEnd: boolean): boolean {
   const half = PHYS.width / 2;
   if (s.gator && ahead(s.gator[0] - half, 0, 3 * v)) return true;
   const p = s.piece;
-  if (p?.kind === 'subway' && ahead(p.x0, 0, Math.max(12, 3 * v))) return true;
-  const pack = sim.sewer.tunnels.find((t) => t.s === s)?.pack;
+  //(with a train across, a little sooner: up past its side, an ollie high, before you reach it)
+  const tunnel = sim.sewer.tunnels.find((t) => t.s === s);
+  if (p?.kind === 'subway' && (tunnel?.train?.on ? ahead(p.x0 - half, 0, Math.max(24, 8 * v)) : ahead(p.x0, 0, Math.max(12, 3 * v)))) return true;
+  const pack = tunnel?.pack;
   if (pack?.awake && pack.rats.some((r) => r.alive && ahead(r.x - half, 0, 3 * (v + 1.6)))) return true;
   return false;
 }

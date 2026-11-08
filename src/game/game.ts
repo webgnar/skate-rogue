@@ -41,7 +41,8 @@ import { CableView } from '../render/cable-view';
 import { Impacts } from '../render/impact';
 import { GrindImpacts } from '../render/grind-impact';
 import { WaterSplashes } from '../render/water-splash';
-import { Particles, TRICK_TRAIL } from '../render/particles';
+import { Particles, TRICK_TRAIL, type Spray } from '../render/particles';
+import { ShockFx } from '../render/shock-fx';
 import { FocusLines } from '../render/focus-lines';
 import { SoundWords } from '../render/sound-word';
 import { TimeWarp } from './time-warp';
@@ -226,6 +227,10 @@ const MOOD_BLEND_SECS = 4;
 
 // going under in a canal: how deep (world units, enough to cover him) and how long, and when the continue card comes up
 const SINK = { depth: 4.5, secs: 1.5, wait: 1.7 };
+// electrocuted on the sewer subway's third rail: how long he's lit up, and when the continue card comes up
+const ZAP = { secs: 1.6, wait: 1.6 };
+// the sparks off the rail as it gets him: electric blue and white, fast and short
+const ZAP_SPARKS: Spray = { n: 40, colors: [[0.6, 0.95, 1], [1, 1, 1], [0.35, 0.7, 1]], life: [0.15, 0.45], size: [0.04, 0.1], speed: [3, 9], angle: [Math.PI * 0.1, Math.PI * 0.9], grav: 10, drag: 2, ink: true };
 const MENU_LOCK_MS = 300; // taps right after a menu opens are ignored
 const CONT_LOCK_MS = 700;
 const SMASH_CHAIN = 4; // smashes in quick succession for a Wrecking Ball
@@ -355,6 +360,8 @@ export class Game {
   private readonly grindFlash = new GrindImpacts();
   private readonly splashes: WaterSplashes;
   private sink: { at: number; x: number; top: number; bubble: number } | null = null; // went into the canal: going under
+  private zap: { at: number; x: number; y: number } | null = null; // down on the subway's live tracks: electrocuted
+  private readonly shockFx = new ShockFx(); // the arcs crawling over him then
   private readonly chopper = new ChopperView();
   private readonly topChopper = new ChopperView(); // over the top route (src/sim/sky.ts)
   private readonly skyView = new SkyView();
@@ -497,7 +504,7 @@ export class Game {
       this.words.spawn(x, y + h * 0.7, 'KRASH!');
       this.view.shake(0.2);
     };
-    this.view.over.add(this.impacts.group, this.splashes.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
+    this.view.over.add(this.shockFx.group, this.impacts.group, this.splashes.group, this.shotsView.front, this.particles.points, this.words.group, this.focus.mesh);
     this.view.scene.add(this.trafficView.group, this.elView.group, this.cableView.group, this.chinatownView.group, this.chopper.group, this.topChopper.group, this.skyView.group, this.sewerView.group, this.droneView.group, this.chaserView.group, this.shotsView.group, this.bountyView.group, this.pedView.group, this.phoneFx.group, this.twistView.group);
     this.view.front.add(this.trafficView.heatLights.front);
     this.view.scene.add(this.pickups.group, this.supplyView.group);
@@ -720,6 +727,8 @@ export class Game {
     this.state = 'skate';
     this.finished = false;
     this.sink = null;
+    this.zap = null;
+    this.shockFx.clear();
     this.view.ghostOff = false;
     this.pending = null;
     this.colDebug?.reset();
@@ -1383,7 +1392,7 @@ export class Game {
     for (const t of sim.sewer.tunnels) {
       for (const r of t.pack?.rats ?? []) keep(r, 'x');
       if (t.surge) keep(t.surge, 'front');
-      if (t.train) keep(t.train, 't');
+      if (t.train) keep(t.train, 'z');
     }
   }
 
@@ -1492,9 +1501,15 @@ export class Game {
       this.finished = true;
       this.finishFloor(now);
     } else if (this.state === 'skate' && this.sim.state === 'bail') {
-      //into the canal: the splash, and he goes under before the continue card comes up
-      if (!this.sink && this.inWater()) this.splashDown(now);
-      if (!this.sink || now - this.sink.at >= SINK.wait * 1000) this.fell(now, false);
+      //into the canal: the splash, and he goes under before the continue card comes up (on the subway's live tracks
+      //he's electrocuted instead: sewerFx 'zap')
+      if (this.zap) {
+        if (this.zap.at < 0) this.zap.at = now;
+        if (now - this.zap.at >= ZAP.wait * 1000) this.fell(now, false);
+      } else {
+        if (!this.sink && this.inWater()) this.splashDown(now);
+        if (!this.sink || now - this.sink.at >= SINK.wait * 1000) this.fell(now, false);
+      }
     } else if (this.state === 'skate' && this.sim.state === 'caught') {
       this.state = 'caught';
       this.menuAt = now;
@@ -1559,8 +1574,9 @@ export class Game {
     this.sprite.update(dt * 1000, this.skater, sk.feel.pitch);
     this.sprite.setGear(this.sim.gear);
     //stood still on the board under a menu, hands up when busted
-    this.sprite.hold(this.state === 'caught' ? 'busted' : this.state === 'skate' ? null : 'idle');
+    this.sprite.hold(this.state === 'caught' ? 'busted' : this.zap ? 'zapped' : this.state === 'skate' ? null : 'idle');
     this.impacts.update(dt);
+    this.shockFx.update(realDt, this.sprite.mesh.position.x, toY(this.level, y));
     this.grindFlash.update(dt);
     this.splashes.update(realDt);
     this.chopper.update(this.level, this.sim.chopper, dt);
@@ -1963,7 +1979,7 @@ export class Game {
   }
 
   // the sewer's moving pieces (src/sim/sewer.ts): rats cleared or tripped over, the surge, the alligator, the subway
-  private sewerFx(e: Extract<FloorSim['events'][number], { type: 'rats' | 'ratBump' | 'surge' | 'washed' | 'gator' | 'bite' | 'subway' }>): void {
+  private sewerFx(e: Extract<FloorSim['events'][number], { type: 'rats' | 'ratBump' | 'surge' | 'washed' | 'gator' | 'bite' | 'subway' | 'zap' }>): void {
     const x = toX(e.x);
     const y = toY(this.level, e.y);
     switch (e.type) {
@@ -2003,6 +2019,19 @@ export class Game {
       case 'subway':
         this.run.addStyle(SCORE.drone);
         this.hud.callout('SUBWAY GAP!', 'good');
+        break;
+      case 'zap':
+        //the third rail (zack, 2026-11-08: the tracks "should be electrical hazard"): he's lit up and shaking, arcs
+        //crawling over him and sparks off the rail, before the continue card
+        this.zap = { at: -1, x, y }; // (frame() starts its clock)
+        this.sprite.shock(ZAP.secs);
+        this.hud.callout('THIRD RAIL!', 'bad');
+        this.words.spawn(x, y + 1, 'ZZZAP!');
+        this.particles.spray(x, y + 0.1, ZAP_SPARKS);
+        this.shockFx.burst(x, y);
+        this.view.shake(0.35);
+        if (!FX.reduceMotion) this.view.punch(0.5);
+        buzz(300);
         break;
     }
   }
@@ -2191,7 +2220,7 @@ export class Game {
       this.skyBonus = 0;
       return;
     }
-    if (e.type === 'rats' || e.type === 'ratBump' || e.type === 'surge' || e.type === 'washed' || e.type === 'gator' || e.type === 'bite' || e.type === 'subway') return this.sewerFx(e);
+    if (e.type === 'rats' || e.type === 'ratBump' || e.type === 'surge' || e.type === 'washed' || e.type === 'gator' || e.type === 'bite' || e.type === 'subway' || e.type === 'zap') return this.sewerFx(e);
     if (e.type === 'doorSlam') {
       //BAM: the door slams shut under the hop, a puff off its edge and a jolt
       this.hud.callout('DOOR SLAM!', 'good');

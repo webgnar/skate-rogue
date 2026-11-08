@@ -1,7 +1,7 @@
 // The sewer route's moving pieces (src/sim/sewer.ts), drawn: rat packs scurrying at you down the floor, the flood
 // surge's curling wave (faceted, its lip hanging over you, cel caustics running over it) rising up out of the floor
-// and coming down the tunnel behind you, then crashing at the tunnel's end, subway trains crossing under the tunnel
-// out of the city and back into it, and the sewer alligator, its jaws opening as you come up on it. Greybox shapes,
+// and coming down the tunnel behind you, then crashing at the tunnel's end, a long subway train crawling across the
+// tunnel out of the city and back into it (the bare tracks' third rail crackling between trains), and the sewer alligator, its jaws opening as you come up on it. Greybox shapes,
 // inked like the rest of the street.
 import * as THREE from 'three';
 import { at } from '../game/interp';
@@ -17,9 +17,6 @@ import { EL } from '../traffic/el';
 import { warmMesh } from './shader-keep';
 import { slimeClock, slimeMaterial } from './slime';
 
-const TRAIN_LEN = (2 * EL.carLen + EL.coupling) / TILE; // tiles of train, along the line: two of the L's cars
-const TRAIN_FAR = -40; // where the line comes out of the city (z)
-const TRAIN_NEAR = 14; // and where it goes back into it, past the camera
 const WAVE_DEPTH = 5; // the flood wave across the tunnel
 const WAVE_MAX = 2.5; // tiles tall at most
 const WAVE_Z = 0.2; // its middle (the skate lane's about 0.4..1.9)
@@ -102,7 +99,7 @@ export class SewerView {
   //(the water's shader compiled with the loading screen's, not on the frame the gate bursts: shader-keep.ts)
   private readonly warm = warmMesh(this.waterMaterial(1, 1));
   private readonly warmSlime = warmMesh(slimeMaterial()); // (the floor's runoff: sewer-kit.ts)
-  private trains: { mesh: THREE.Group; light: THREE.Mesh; t: SewerSim['tunnels'][number] }[] = [];
+  private trains: { mesh: THREE.Group; light: THREE.Mesh; arc: THREE.Mesh; t: SewerSim['tunnels'][number] }[] = [];
   private gators: { mesh: THREE.Group; jaw: THREE.Object3D; t: SewerSim['tunnels'][number] }[] = [];
   private time = 0;
   private readonly fur = new THREE.MeshLambertMaterial({ color: 0x6a5e58 });
@@ -110,6 +107,8 @@ export class SewerView {
   private readonly eye = new THREE.MeshBasicMaterial({ color: 0xff3a3a });
   private readonly foam = new THREE.MeshLambertMaterial({ color: 0xeaf8ff });
   private readonly beam = new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.35, depthWrite: false });
+  //(the live third rail's crackle: an electric blue glow along its top, flickering)
+  private readonly volt = new THREE.MeshBasicMaterial({ color: 0x7fe6ff, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending });
   //(the gator low-poly and faceted, bright green, like zack's ref)
   private readonly scales = new THREE.MeshLambertMaterial({ color: 0x3fb03a, flatShading: true });
   private readonly ridge = new THREE.MeshLambertMaterial({ color: 0x2a7a26, flatShading: true });
@@ -159,23 +158,41 @@ export class SewerView {
       }
       const p = t.s.piece;
       if (p?.kind === 'subway' && t.train) {
-        //the L's own cars (zack, 2026-11-01: "use the L train car in the sewer, move it up"), length along the line,
-        //their roofs just under the tunnel's floor: you hop off one as it crosses
+        //five of the L's cars (zack, 2026-11-08: "about 5 train cars long"), length along the line, as wide as the
+        //trench, their roofs an ollie over the tunnel's floor (SEWER.subwayRoof): you hop it as it crawls across
         const m = new THREE.Group();
-        for (const [i, front] of [[0, true], [1, false]] as const) {
-          const car = trainCar(front);
+        const n = SEWER_SIM.trainCars;
+        const wide = (p.x1 - p.x0) / TILE / CAR.w;
+        for (let i = 0; i < n; i++) {
+          const car = trainCar(i === 0);
           car.rotation.y = -Math.PI / 2; // (its front, +x, down the line toward the camera)
-          car.position.z = TRAIN_LEN / 2 - CAR.len / 2 - i * (CAR.len + EL.coupling / TILE);
+          car.scale.z = wide; // (its width, across the tunnel)
+          car.position.z = -CAR.len / 2 - i * (CAR.len + EL.coupling / TILE);
           m.add(car);
         }
+        //(the last car's cab faces back up the line)
+        if (n > 1) {
+          const tail = m.children[n - 1];
+          m.remove(tail);
+          const back = trainCar(true);
+          back.rotation.y = Math.PI / 2;
+          back.scale.z = wide;
+          back.position.copy(tail.position);
+          m.add(back);
+        }
         inkify(m);
-        //the headlight down the line, before a train comes
-        const light = new THREE.Mesh(new THREE.ConeGeometry(1.2, 14, 16, 1, true).rotateX(-Math.PI / 2), this.beam);
-        light.position.set((p.x0 + p.x1) / 2 / TILE, fy - 1.6, TRAIN_FAR + 7);
-        light.visible = false;
-        m.position.set((p.x0 + p.x1) / 2 / TILE, fy - CAR.h - 0.04, TRAIN_FAR);
-        this.group.add(m, light);
-        this.trains.push({ mesh: m, light, t });
+        //its headlight down the line ahead of it
+        const light = new THREE.Mesh(new THREE.ConeGeometry(1, 10, 16, 1, true).rotateX(-Math.PI / 2), this.beam);
+        light.position.set(0, CAR.h * 0.45, 5);
+        m.add(light);
+        //(the nose is the group's origin: z = the sim's nose)
+        m.position.set((p.x0 + p.x1) / 2 / TILE, fy + SEWER.subwayRoof / TILE - CAR.h, SEWER_SIM.trainFrom);
+        m.visible = false;
+        //the third rail's crackle, across the trench under the lane (sewer-kit.ts draws the rail)
+        const arc = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 6), this.volt);
+        arc.position.set(p.x0 / TILE + ((p.x1 - p.x0) / TILE) * 0.88, fy - SEWER_SIM.bed / TILE + 0.2, 1);
+        this.group.add(m, arc);
+        this.trains.push({ mesh: m, light, arc, t });
       }
       if (t.s.gator && t.gator) {
         const [g0, g1] = t.s.gator;
@@ -438,11 +455,15 @@ export class SewerView {
     }
     for (const tr of this.trains) {
       const t = tr.t.train!;
-      const k = at(t, 't', 10);
-      const run = k < SEWER_SIM.trainFrames;
-      tr.mesh.visible = run;
-      if (run) tr.mesh.position.z = TRAIN_FAR + (TRAIN_NEAR - TRAIN_FAR) * (k / SEWER_SIM.trainFrames) + TRAIN_LEN / 2 - 4;
-      tr.light.visible = !run && SEWER.subwayPeriod - k < SEWER_SIM.trainWarn;
+      tr.mesh.visible = t.run;
+      if (t.run) tr.mesh.position.z = at(t, 'z', 1);
+      //(its headlight only while it's still coming: past the lane it'd shine into the camera)
+      tr.light.visible = tr.mesh.position.z < SEWER_SIM.lane[0] - 2;
+      //the live rail flickers, brighter with no train over it
+      const f = Math.sin(this.time * 47) * Math.sin(this.time * 13.7 + 1.3);
+      tr.arc.visible = !t.on || f > 0.6;
+      this.volt.opacity = 0.45 + 0.45 * Math.abs(f);
+      tr.arc.scale.y = 1 + 2 * Math.max(0, f);
     }
     for (const gt of this.gators) {
       const g = gt.t.gator!;
