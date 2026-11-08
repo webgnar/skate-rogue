@@ -128,6 +128,38 @@ function cloneMerge(list: THREE.Mesh[], inv: THREE.Matrix4): THREE.BufferGeometr
   return merged;
 }
 
+// A heavy batch is split along the floor (by each mesh's middle) into BATCH_CHUNK lengths. One mesh for the whole
+// floor was one draw but never culled: the camera sees a few dozen units of a floor 600+ long and drew every
+// triangle of it, its outline too (thread "Fix act 3 lag on iPhone 13 mini", 2026-11-08). Light batches stay whole:
+// on older iPhones a draw costs more than a few thousand triangles.
+export const BATCH_CHUNK = 64;
+export const BATCH_SPLIT_TRIS = 6000;
+
+const tris = (m: THREE.Mesh) => (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3;
+const mid = new THREE.Vector3();
+
+function* chunked(lists: Iterable<THREE.Mesh[]>): Generator<THREE.Mesh[]> {
+  for (const list of lists) {
+    if (list.reduce((n, m) => n + tris(m), 0) <= BATCH_SPLIT_TRIS) {
+      yield list;
+      continue;
+    }
+    const xs = list.map((m) => {
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      return m.geometry.boundingBox!.getCenter(mid).applyMatrix4(m.matrixWorld).x;
+    });
+    const from = xs.reduce((a, b) => Math.min(a, b), Infinity);
+    const parts = new Map<number, THREE.Mesh[]>();
+    list.forEach((m, i) => {
+      const k = Math.floor((xs[i] - from) / BATCH_CHUNK);
+      const l = parts.get(k);
+      if (l) l.push(m);
+      else parts.set(k, [m]);
+    });
+    yield* parts.values();
+  }
+}
+
 // returns how many meshes were merged away
 export function batchStatic(root: THREE.Object3D): number {
   return run(batchSteps(root));
@@ -147,7 +179,7 @@ export function* batchSteps(root: THREE.Object3D): Generator<void, number> {
     else groups.set(k, [o]);
   });
   let saved = 0;
-  for (const list of groups.values()) {
+  for (const list of chunked(groups.values())) {
     if (list.length < 2) continue;
     if (sliceDone()) yield;
     const merged = (yield* bakeSteps(list, inv)) ?? cloneMerge(list, inv);

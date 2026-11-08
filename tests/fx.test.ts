@@ -373,7 +373,7 @@ describe('kit merge', () => {
     expect(slabs).toHaveLength(4);
     batchStatic(root);
     inkify(root, { outline: (m) => !m.userData.noInk && solid(m) });
-    const ink = mergeInk(root, slabs)!;
+    const [ink] = mergeInk(root, slabs);
     expect(ink.userData.ink).toBe(true);
     // 4 fronts + 1 side batch + 1 top batch + the sign + its own outline + the merged ink
     expect(draws(root)).toBe(9);

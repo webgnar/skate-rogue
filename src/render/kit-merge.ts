@@ -65,17 +65,30 @@ export function* splitSteps(root: THREE.Object3D): Generator<void, THREE.BufferG
   return whole;
 }
 
-// merge the kit's static outlines, and outlines for the split boxes, into one mesh
-export function mergeInk(root: THREE.Object3D, whole: THREE.BufferGeometry[] = []): THREE.Mesh | null {
+// merge the kit's static outlines, and outlines for the split boxes, into a few meshes: one per INK_CHUNK of the
+// floor's length (see mergeInkSteps)
+export function mergeInk(root: THREE.Object3D, whole: THREE.BufferGeometry[] = []): THREE.Mesh[] {
   return run(mergeInkSteps(root, whole));
 }
 
+// world units of floor per merged outline. One outline for the whole floor was one draw, but it was never culled:
+// every frame drew every outline on the floor, ~150k triangles on act 3's floors (thread "Fix act 3 lag on iPhone 13
+// mini", 2026-11-08). In chunks, the camera culls all but the two or three in view.
+export const INK_CHUNK = 48;
+
 const nmat = new THREE.Matrix3();
 const v = new THREE.Vector3();
+const box = new THREE.Box3();
+
+interface InkPart {
+  src: THREE.BufferGeometry;
+  m: THREE.Matrix4 | null;
+}
 
 // mergeInk a hull at a time, yielding when the frame's slice is spent (slice.ts). Each hull's position and
-// inkNormal are baked into root space straight into the merged arrays, always indexed
-export function* mergeInkSteps(root: THREE.Object3D, whole: THREE.BufferGeometry[] = []): Generator<void, THREE.Mesh | null> {
+// inkNormal are baked into root space straight into the merged arrays, always indexed; each hull goes to the chunk
+// its middle is in
+export function* mergeInkSteps(root: THREE.Object3D, whole: THREE.BufferGeometry[] = []): Generator<void, THREE.Mesh[]> {
   root.updateMatrixWorld(true);
   const hulls: THREE.Mesh[] = [];
   root.traverse((o) => {
@@ -84,8 +97,38 @@ export function* mergeInkSteps(root: THREE.Object3D, whole: THREE.BufferGeometry
     if (!p || p instanceof THREE.InstancedMesh || p instanceof THREE.SkinnedMesh || live(p) || !p.visible) return;
     hulls.push(o);
   });
-  const parts = [...hulls.map((h) => ({ src: h.geometry, m: local(h, root) as THREE.Matrix4 | null })), ...whole.map((g) => ({ src: g, m: null }))];
-  if (!parts.length) return null;
+  const parts: InkPart[] = [...hulls.map((h) => ({ src: h.geometry, m: local(h, root) as THREE.Matrix4 | null })), ...whole.map((g) => ({ src: g, m: null }))];
+  if (!parts.length) return [];
+  //each part's middle along the floor, then the chunks counted from the first
+  const mids: number[] = [];
+  for (const p of parts) {
+    if (sliceDone()) yield;
+    if (!p.src.boundingBox) p.src.computeBoundingBox();
+    box.copy(p.src.boundingBox!);
+    if (p.m) box.applyMatrix4(p.m);
+    mids.push((box.min.x + box.max.x) / 2);
+  }
+  const from = mids.reduce((a, b) => Math.min(a, b), Infinity);
+  const chunks = new Map<number, InkPart[]>();
+  parts.forEach((p, i) => {
+    const k = Math.floor((mids[i] - from) / INK_CHUNK);
+    const list = chunks.get(k);
+    if (list) list.push(p);
+    else chunks.set(k, [p]);
+  });
+  const out: THREE.Mesh[] = [];
+  for (const list of chunks.values()) {
+    const ink = yield* mergeChunk(list);
+    root.add(ink);
+    out.push(ink);
+  }
+  for (const g of whole) g.dispose();
+  for (const h of hulls) h.removeFromParent();
+  return out;
+}
+
+// one chunk's hulls merged into one outline mesh, culled by its own bounds
+function* mergeChunk(parts: InkPart[]): Generator<void, THREE.Mesh> {
   let verts = 0;
   let idx = 0;
   for (const p of parts) {
@@ -133,17 +176,17 @@ export function* mergeInkSteps(root: THREE.Object3D, whole: THREE.BufferGeometry
     }
     v0 += n;
   }
-  for (const g of whole) g.dispose();
   const merged = new THREE.BufferGeometry();
   merged.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   merged.setAttribute('inkNormal', new THREE.BufferAttribute(nor, 3));
   merged.setIndex(new THREE.BufferAttribute(index, 1));
-  for (const h of hulls) h.removeFromParent();
+  //the outline pushes out along inkNormal in the shader: bounds with room for that, so the camera's cull keeps
+  //an outline whose mesh is just off screen
+  merged.computeBoundingSphere();
+  merged.boundingSphere!.radius += 0.5;
   const ink = new THREE.Mesh(merged, outlineMaterial());
   ink.name = 'ink';
   ink.userData.ink = true;
   ink.userData.inkMerged = true;
-  ink.frustumCulled = false;
-  root.add(ink);
   return ink;
 }

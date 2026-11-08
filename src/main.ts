@@ -644,9 +644,45 @@ async function start() {
     ...Array.from({ length: ACTS }, (_, i) => `escape ${i + 1}`),
   ];
   //no dev tools in the shipped builds (zack, 2026-11-07): players get the plain game. They're on in npm run dev, and
-  //on the Vercel build with ?dev (or ?debug) in the link; never on the portal
-  const devTools = !ON_CRAZYGAMES && (import.meta.env.DEV || params.has('dev') || params.has('debug'));
-  if (!devTools) document.getElementById('devhead')!.hidden = true;
+  //on the Vercel build with ?dev (or ?debug) in the link; never on the portal. A phone playing from its home screen
+  //can't add ?dev, so five quick taps on the pause card's PAUSED turn them on (and off) for that device, kept
+  const DEV_KEY = 'gnar-run-devtools';
+  const devSaved = (): boolean => {
+    try {
+      return localStorage.getItem(DEV_KEY) === '1';
+    } catch {
+      return false;
+    }
+  };
+  const saveDevTools = (on: boolean): void => {
+    try {
+      if (on) localStorage.setItem(DEV_KEY, '1');
+      else localStorage.removeItem(DEV_KEY);
+    } catch {
+      /* private mode: this session only */
+    }
+  };
+  if (!ON_CRAZYGAMES && params.has('dev')) saveDevTools(true);
+  let devTools = !ON_CRAZYGAMES && (import.meta.env.DEV || params.has('dev') || params.has('debug') || devSaved());
+  const devHead = document.getElementById('devhead')!;
+  devHead.hidden = !devTools;
+  if (!ON_CRAZYGAMES) {
+    let taps: number[] = [];
+    document.querySelector('#paused .title')?.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      const now = performance.now();
+      taps = [...taps.filter((t) => now - t < 2500), now];
+      if (taps.length < 5) return;
+      taps = [];
+      devTools = !devTools;
+      saveDevTools(devTools);
+      devHead.hidden = !devTools;
+      if (!devTools) {
+        devHead.nextElementSibling?.setAttribute('hidden', '');
+        showFps(false);
+      } else showFps(DEV.fps);
+    });
+  }
   const dev = new DevPanel(document.getElementById('devhead')!, {
     collision: (on) => game.toggleCollision(on),
     fps: showFps,
