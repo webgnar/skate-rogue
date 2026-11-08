@@ -210,7 +210,10 @@ def half_width(u, halves):
             return r
         ln = end - start
         rho = (r * r + ln * ln) / (2 * r)
-        return max(math.sqrt(max(rho * rho - (a - start) ** 2, 0.0)) + r - rho, 0.04 * r)
+        arch = max(math.sqrt(max(rho * rho - (a - start) ** 2, 0.0)) + r - rho, 0.0)
+        tip = 0.005  # the very point, rounded off small so it ends clean (zack, 2026-11-08)
+        over = a - (end - tip)
+        return arch if over <= 0 else min(arch, math.sqrt(max(tip * tip - over * over, 0.0)))
     if SHAPE == 'bombhill':
         if u < 0:
             return cap(r, 0.75 * r)
@@ -233,6 +236,8 @@ def deck(mats):
     cols = [-halves[1] + i / 40 * (halves[0] + halves[1]) for i in range(41)]
     for side, end in ((1, halves[0]), (-1, halves[1])):  # finer toward each end, where the outline turns
         cols += [side * (end - r * (1 - math.sin(a / 8 * math.pi / 2))) for a in range(1, 8)]
+        if SHAPE != 'popsicle':  # and finer still at the very tip
+            cols += [side * (end - d) for d in (0.0005, 0.0015, 0.003, 0.005, 0.008)]
     split = shape.get('split_grip')
     GRIP_GAP = (-0.11, 0.1)  # the Slab's bare top between its two grip patches
     if split:
@@ -243,7 +248,7 @@ def deck(mats):
     bm = bmesh.new()
     grid = []
     for u in cols:
-        hw = max(half_width(u, halves), 0.012)
+        hw = max(half_width(u, halves), 0.012 if SHAPE == 'popsicle' else 0.0008)  # a point's tip keeps its point
         end = halves[0] if u >= 0 else halves[1]
         x, z, _ = at(u)
         line = []
