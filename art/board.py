@@ -18,9 +18,34 @@ import bpy  # first: the bpy module provides bmesh and mathutils
 import bmesh
 from mathutils import Matrix, Vector
 
+import sys
+
 HERE = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else bpy.path.abspath('//')
 ROOT = os.path.dirname(HERE)
-GLB = os.path.join(ROOT, 'public', 'models', 'board.glb')
+# The four decks (src/run/meta.ts), each from zack's references (2026-11-08). All share the trucks, wheels, length,
+# truck bolts and the seven coloured plies on the edge; they differ in outline, width, nose kick and extras.
+#   blender -b -P art/board.py -- cruiser      (one deck; no name builds all four)
+# popsicle -> public/models/board.glb, the others -> public/models/board-<id>.glb
+SHAPES = {
+    # the stock deck: a long rounded rectangle, both kicks
+    'popsicle': {'width': 1.0, 'nose_kick': 0.3},
+    # a Zip Zinger style cruiser: wide, a pointed nose with a flat tip, a square tail with round corners
+    'cruiser': {'width': 1.12, 'nose_kick': 0.14, 'wheel': 0xF1E6CF},
+    # Downhill: a slalom deck, narrow, the nose tapering straight to a point, a round tail, nearly flat, amber wheels
+    'bombhill': {'width': 0.88, 'nose_kick': 0.07, 'wheel': 0xF2B233},
+    # Slab: an 80s pool deck, wide, a waist above the tail, a round nose, two grip patches with the deck bare
+    # between them, and blue plastic under it: a nose guard, two rails and a tail skid (zack: "with the plastic
+    # accents on the bottom")
+    'slab': {'width': 1.25, 'nose_kick': 0.16, 'wheel': 0x2F5BD0, 'split_grip': True, 'plastics': True},
+}
+ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+SHAPE = 'popsicle'
+
+
+def glb_path(name):
+    return os.path.join(ROOT, 'public', 'models', 'board.glb' if name == 'popsicle' else f'board-{name}.glb')
+
+
 BLEND = os.path.join(HERE, 'board.blend')
 
 # BOARD in poses.ts
@@ -55,6 +80,8 @@ COLORS = {
     'logo': 0xD12A2A,
     'wheel': 0xF1E6CF,
     'gripbar': 0xE2C08D,  # bare maple; wear.ts paintGrip picks a colour that stands out from the grip
+    'decktop': 0xC8312B,  # the Slab's bare top between its grip patches
+    'plastic': 0x2F5BD0,  # the Slab's rails, nose guard and tail skid
 }
 PLIES = [0xB52E28, 0xE2C08D, 0xE8B830, 0xB52E28, 0xE8B830, 0xE2C08D, 0xB52E28]  # top to bottom
 
@@ -98,11 +125,11 @@ def image(name, w, h, color_at):
 
 
 def swirl(x, y, n=128):
-    """Spitfire-style face: a black and silver swirl ring round a cream centre."""
+    """Spitfire-style face: a black and silver swirl ring round a cream centre (the deck's own wheel colour)."""
     u, v = (x + 0.5) / n * 2 - 1, (y + 0.5) / n * 2 - 1
     r = math.hypot(u, v)
     if r < 0.4 or r > 0.82:
-        return COLORS['wheel']
+        return SHAPES[SHAPE].get('wheel', COLORS['wheel'])
     a = math.atan2(v, u) / (2 * math.pi)
     return 0x16161A if int(math.floor(a * 22 + r * 4.5)) % 2 == 0 else 0xC9CCD2
 
@@ -119,9 +146,21 @@ def link(name, bm, mats):
 
 
 def centreline():
-    """The deck's profile: flat, a curve of 2·BEND into the kick, then straight out to x = ±TAIL. Returns
-    (arc length of each half, f(u) -> (x, z, angle))."""
+    """The deck's profile: flat, a curve of 2·BEND into the kick, then straight out to x = ±TAIL. The tail always
+    kicks KICK (the pop poses strike it on the ground); the nose kicks the deck's own nose_kick. Returns
+    (arc length of each half: (nose, tail), f(u) -> (x, z, angle)), u + toward the nose."""
+    ends = {}
+    for side, kick in ((1, SHAPES[SHAPE]['nose_kick']), (-1, KICK)):
+        ends[side] = half_line(kick)
 
+    def at(u):
+        x, z, ang = ends[1 if u >= 0 else -1][1](abs(u))
+        return (x if u >= 0 else -x), z, ang
+
+    return (ends[1][0], ends[-1][0]), at
+
+
+def half_line(KICK):
     def walk(straight, u=None, step=0.0005):
         x = z = s = 0.0
         while True:
@@ -144,35 +183,69 @@ def centreline():
     for _ in range(30):  # the straight part of the kick that puts the tip at TAIL
         mid = (lo + hi) / 2
         lo, hi = (mid, hi) if walk(mid)[0] < TAIL else (lo, mid)
-    half = FLAT + BEND + lo
+    return FLAT + BEND + lo, lambda u: walk(0.0, u)
 
-    def at(u):
-        x, z, ang = walk(0.0, abs(u))
-        return (x if u >= 0 else -x), z, ang
 
-    return half, at
+def smooth(t):
+    t = min(1.0, max(0.0, t))
+    return t * t * (3 - 2 * t)
+
+
+def half_width(u, halves):
+    """The deck's half width at arc length u along it (+ toward the nose), from the deck's outline."""
+    r = WIDTH * SHAPES[SHAPE]['width'] / 2
+    end = halves[0] if u >= 0 else halves[1]
+    a = abs(u)
+
+    def cap(c, rad):  # a round end of radius rad on a body of half width c
+        over = a - (end - rad)
+        return c if over <= 0 else (c - rad) + math.sqrt(max(rad * rad - over * over, 0.0))
+
+    if SHAPE == 'cruiser':
+        if u < 0:  # narrowing a little to a square tail
+            return cap(r * (1 - 0.1 * smooth((a - 0.2) / 0.25)), 0.35 * r)
+        t = max(0.0, (a - 0.17) / (end - 0.17))
+        return 0.16 * r + (r - 0.16 * r) * (1 - t ** 1.25)
+    if SHAPE == 'bombhill':
+        if u < 0:
+            return cap(r, 0.75 * r)
+        t = max(0.0, (a - 0.24) / (end - 0.24))
+        return 0.26 * r + (r - 0.26 * r) * (1 - t)
+    if SHAPE == 'slab':
+        if u >= 0:  # tapering a little into a round nose
+            c = r * (1 - 0.1 * smooth((a - 0.02) / 0.36))
+            return cap(c, c)
+        waist = 0.07 * math.exp(-(((a - 0.18) / 0.1) ** 2))  # pinched in above the back truck, then a wide tail
+        return cap(r * (1 - waist), 0.3 * r)
+    return cap(r, r)
 
 
 def deck(mats):
     """The grip surface as a grid, popsicle outline and concave, then solidified down into the plies."""
-    half, at = centreline()
-    r = WIDTH / 2
-    cols = [i / 30 * 2 * (half - r) - (half - r) for i in range(31)]
-    cols += [s * (half - r + r * math.sin(a / 6 * math.pi / 2)) for s in (1, -1) for a in range(1, 7)]
+    halves, at = centreline()
+    shape = SHAPES[SHAPE]
+    r = WIDTH * shape['width'] / 2
+    cols = [-halves[1] + i / 40 * (halves[0] + halves[1]) for i in range(41)]
+    for side, end in ((1, halves[0]), (-1, halves[1])):  # finer toward each end, where the outline turns
+        cols += [side * (end - r * (1 - math.sin(a / 8 * math.pi / 2))) for a in range(1, 8)]
+    split = shape.get('split_grip')
+    GRIP_GAP = (-0.11, 0.1)  # the Slab's bare top between its two grip patches
+    if split:
+        cols += list(GRIP_GAP)
     cols += list(BAR)
     cols = sorted(c for c in cols if not any(0 < abs(c - b) < 0.006 for b in BAR))
     rows = 10
     bm = bmesh.new()
     grid = []
     for u in cols:
-        over = max(0.0, abs(u) - (half - r))
-        hw = max(math.sqrt(max(r * r - over * over, 0.0)), 0.012)
+        hw = max(half_width(u, halves), 0.012)
+        end = halves[0] if u >= 0 else halves[1]
         x, z, _ = at(u)
         line = []
         for j in range(rows + 1):
             v = (j / rows * 2 - 1) * hw
             # concave across the middle, fading out up the kicks
-            fade = max(0.0, 1 - max(0.0, abs(u) - (FLAT - BEND)) / (half - FLAT + BEND))
+            fade = max(0.0, 1 - max(0.0, abs(u) - (FLAT - BEND)) / (end - FLAT + BEND))
             c = CONCAVE * (v / r) ** 2 * fade
             line.append(bm.verts.new((x, v, z + c)))
         grid.append(line)
@@ -181,11 +254,11 @@ def deck(mats):
             bm.faces.new((a[j], b[j], b[j + 1], a[j + 1]))
     n = len(bm.verts)
     ply = textured('plies', image('plies', 1, len(PLIES), lambda x, y: PLIES[len(PLIES) - 1 - y]))
-    ob = link('deck', bm, [mats['grip'], mats['deck'], ply, mats['gripbar']])
+    ob = link('deck', bm, [mats['grip'], mats['deck'], ply, mats['gripbar'], mats['decktop']])
     sol = ob.modifiers.new('wood', 'SOLIDIFY')
     sol.thickness = THICK
     sol.offset = -1
-    sol.use_even_offset = True
+    sol.use_even_offset = SHAPE == 'popsicle'  # even offset spikes out at the pointed noses' sharp corners
     sol.material_offset = 1
     sol.material_offset_rim = 2
     bpy.context.view_layer.objects.active = ob
@@ -197,13 +270,69 @@ def deck(mats):
     for p in me.polygons:  # the bar: the grip faces across it
         if p.material_index == 0 and BAR[0] < p.center.x < BAR[1]:
             p.material_index = 3
+        if split and p.material_index == 0 and GRIP_GAP[0] < p.center.x < GRIP_GAP[1]:
+            p.material_index = 4
     # the edge shows the plies: v runs from the bottom veneer to the top one
     uv = me.uv_layers.new(name='UVMap')
     for p in me.polygons:
         for li in p.loop_indices:
             vi = me.loops[li].vertex_index
             uv.data[li].uv = (0.5, 0.99 if vi < n else 0.01) if p.material_index == 2 else (0.5, 0.5)
-    return ob, at
+    return ob, at, halves
+
+
+def under(at, u, depth):
+    """The point `depth` under the deck's top at arc length u (centre line), and the deck's angle there."""
+    x, z, ang = at(u)
+    s = 1 if u >= 0 else -1
+    return Vector((x + s * math.sin(ang) * depth, 0, z - math.cos(ang) * depth)), ang * s
+
+
+def plastics(mats, at, halves):
+    """The Slab's blue plastic under the deck: two rails along the sides between the trucks, a guard round the nose
+    and a skid on the tail (zack's 80s deck, 2026-11-08)."""
+    bm = bmesh.new()
+    rail_w, rail_h = 0.016, 0.014
+    for side in (1, -1):  # rails: a strip under each edge, inset a little, square in section
+        pts = [i / 12 * 0.34 - 0.17 for i in range(13)]
+        ring = []
+        for u in pts:
+            p, _ = under(at, u, THICK)
+            y = side * (half_width(u, halves) - 0.03)
+            ring.append([bm.verts.new((p.x, y + dy, p.z + dz)) for dy, dz in ((-rail_w / 2, 0.001), (rail_w / 2, 0.001), (rail_w / 2, -rail_h), (-rail_w / 2, -rail_h))])
+        for a, b in zip(ring, ring[1:]):
+            for k in range(4):
+                bm.faces.new((a[k], b[k], b[(k + 1) % 4], a[(k + 1) % 4]))
+        bm.faces.new(ring[0][::-1])
+        bm.faces.new(ring[-1])
+    # nose guard: a band following the nose's outline under its edge
+    end = halves[0]
+    us = [end - 0.11 + i / 16 * 0.105 for i in range(17)]
+    edge = []
+    for u in us:
+        p, _ = under(at, u, THICK)
+        edge.append((u, p, half_width(u, halves)))
+    path = [(p.x, -w, p.z) for u, p, w in edge] + [(p.x, w, p.z) for u, p, w in edge[::-1]]
+    cx = under(at, end - 0.1, THICK)[0].x  # the nose's round end is about this far back: the band shrinks toward it
+    band = []
+    for px, py, pz in path:
+        ix, iy = cx + (px - cx) * 0.8, py * 0.8
+        band.append([bm.verts.new((px, py, pz + 0.001)), bm.verts.new((ix, iy, pz + 0.001)), bm.verts.new((ix, iy, pz - 0.009)), bm.verts.new((px, py, pz - 0.009))])
+    for a, b in zip(band, band[1:]):
+        for k in range(4):
+            bm.faces.new((a[k], b[k], b[(k + 1) % 4], a[(k + 1) % 4]))
+    bm.faces.new(band[0][::-1])
+    bm.faces.new(band[-1])
+    # tail skid: a squashed half capsule on the tail's underside, behind the back truck
+    p, ang = under(at, -(halves[1] - 0.06), THICK)
+    geom = bmesh.ops.create_uvsphere(bm, u_segments=14, v_segments=6, radius=1.0)
+    vs = geom['verts']
+    for v in vs:
+        v.co = Vector((v.co.x * 0.034, v.co.y * 0.085, min(v.co.z, 0.0) * 0.016))
+    bmesh.ops.rotate(bm, verts=vs, cent=(0, 0, 0), matrix=Matrix.Rotation(ang, 3, 'Y'))
+    bmesh.ops.translate(bm, verts=vs, vec=p)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return link('plastic', bm, [mats['plastic']])
 
 
 def prism(bm, pts, axis, a0, a1):
@@ -315,8 +444,8 @@ def build():
     mats = {k: material(k, v, 0.25 if k in ('metal', 'gold') else 0.85) for k, v in COLORS.items()}
     bpy.data.materials.remove(mats['wheel'])
     mats['wheel'] = textured('wheel', image('swirl', 128, 128, swirl))
-    board, _ = deck(mats)
-    parts = []
+    board, at, halves = deck(mats)
+    parts = [plastics(mats, at, halves)] if SHAPES[SHAPE].get('plastics') else []
     for x, s in ((BOLTS, 1), (-BOLTS, -1)):
         parts += truck(mats, x, s)
         parts.append(hardware(mats, x))
@@ -332,16 +461,19 @@ def build():
     return board
 
 
-def export():
-    os.makedirs(os.path.dirname(GLB), exist_ok=True)
+def export(glb, blend):
+    os.makedirs(os.path.dirname(glb), exist_ok=True)
     bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', use_selection=True, export_yup=True, export_apply=True)
-    bpy.ops.wm.save_as_mainfile(filepath=BLEND)
+    bpy.ops.export_scene.gltf(filepath=glb, export_format='GLB', use_selection=True, export_yup=True, export_apply=True)
+    if blend:
+        bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
 
 if __name__ == '__main__':
-    ob = build()
-    tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
-    print(f'Board: {len(ob.data.vertices)} verts, {tris} tris')
-    export()
-    print('wrote', GLB)
+    for name in [a for a in ARGS if a in SHAPES] or list(SHAPES):
+        SHAPE = name
+        ob = build()
+        tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+        print(f'{name}: {len(ob.data.vertices)} verts, {tris} tris')
+        export(glb_path(name), name == 'popsicle')  # board.blend stays the stock deck
+        print('wrote', glb_path(name))

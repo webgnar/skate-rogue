@@ -6,6 +6,10 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { inkify, setInkResolution } from '../../src/render/toon';
 import { StokenParticles } from '../../src/render/stoken-particle';
+import { boardFile } from '../../src/render/skater-rig';
+import { deckDecal } from '../../src/render/wear';
+import { deckTexture } from '../../src/render/deck-graphic';
+import { stockDeck, type DeckArt } from '../../src/board/deck-art';
 
 const SIZE = 320;
 const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -28,6 +32,7 @@ const shiny = (s: THREE.Scene) => {
 const loader = new GLTFLoader();
 const load = (f: string) => loader.loadAsync(`/models/${f}`).then((g) => g.scene);
 
+const DECK_PARTS = ['grip', 'gripbar', 'deck', 'plies', 'logo'];
 const matName = (o: THREE.Object3D) => ((o as THREE.Mesh).material as THREE.Material | undefined)?.name ?? '';
 
 // keep only some of a model: by material, and by where each triangle sits (in the model's own space)
@@ -106,7 +111,7 @@ async function main(): Promise<Record<string, string>> {
   const pickups = await load('pickups.glb');
   const named = (root: THREE.Object3D, n: string) => root.getObjectByName(n)!.clone(true);
   const out: Record<string, string> = {};
-  const deckOnly = (m: THREE.Mesh) => ['grip', 'gripbar', 'deck', 'plies', 'logo'].includes(matName(m));
+  const deckOnly = (m: THREE.Mesh) => DECK_PARTS.includes(matName(m));
   //the deck on its own, graphic side up and angled like it's leaning on the shop wall
   out.deck = shot(part(board, deckOnly), [-1.25, 0.2, 0.75]);
   //the whole board, three ways: cruising, popped (tail down) and mid-flip
@@ -150,7 +155,11 @@ async function main(): Promise<Record<string, string>> {
   const props = await load('props.glb');
   out.cone = shot(named(props, 'Cone'), [0.25, -0.5, 0], 0.8);
   for (const id of ['lou-gnar', 'webster', 'roxy', 'keanu', 'goldie']) out[`skater-${id}`] = portrait(await load(`${id}.glb`));
-  for (const [id, look] of Object.entries(DECKS)) out[`deck-${id}`] = shot(deckLook(part(board, deckOnly), look), [-1.25, 0.2, 1.05]);
+  //each deck in its own shape (art/board.py) and the paint and graphic it starts a run in (deck-art.ts stockDeck)
+  for (const id of ['popsicle', 'cruiser', 'bombhill', 'slab']) {
+    const deck = part(await load(boardFile(id)), (m) => [...DECK_PARTS, 'decktop', 'plastic'].includes(matName(m)));
+    out[`deck-${id}`] = shot(deckLook(deck, stockDeck(id)), [-1.25, 0.2, 1.05]);
+  }
   return out;
 }
 
@@ -182,25 +191,21 @@ function portrait(model: THREE.Object3D): string {
   return canvas.toDataURL('image/png');
 }
 
-// the decks only differ in play (src/run/meta.ts), so each gets its own look here: a colour for the graphic and a shape
-interface Look { deck: number; logo: number; w?: number; l?: number }
-const DECKS: Record<string, Look> = {
-  popsicle: { deck: 0xb8322a, logo: 0xf2e8d0 },
-  cruiser: { deck: 0x2fb8b0, logo: 0xffe23a, l: 0.86, w: 1.1 },
-  bombhill: { deck: 0x1c1c24, logo: 0xff3b4e, l: 1.12, w: 0.94 },
-  slab: { deck: 0x7a2fb8, logo: 0x4dff8a, w: 1.3 },
-};
-function deckLook(obj: THREE.Object3D, look: Look): THREE.Object3D {
+// a deck painted in its run-start colour, its graphic on the underside as in game (wear.ts deckDecal)
+function deckLook(obj: THREE.Object3D, art: DeckArt): THREE.Object3D {
   obj.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
     const name = matName(m);
+    m.userData.mat = name;
     const mat = (m.material as THREE.MeshStandardMaterial).clone();
-    if (name === 'deck' || name === 'plies') mat.color.setHex(look.deck);
-    if (name === 'logo') mat.color.setHex(look.logo);
+    if (name === 'deck') mat.color.setHex(art.base);
     m.material = mat;
   });
-  obj.scale.set(look.l ?? 1, 1, look.w ?? 1);
+  if (art.shape !== 'plain') {
+    const decal = deckDecal(obj, new THREE.MeshLambertMaterial({ map: deckTexture(art), alphaTest: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
+    if (decal) decal.userData.inked = true;
+  }
   return obj;
 }
 

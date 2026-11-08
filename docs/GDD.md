@@ -1033,7 +1033,7 @@ Oct 30), each worn by the thing it takes the beating from:
 
 Built Oct 24, 2026 (first version, src/run/meta.ts): an UNLOCKS screen off the run-over screen. Skaters cost 30
 to 60 Stoken with the passives above. Decks: Popsicle (stock, 3 slots), Cruiser (+10% speed, ollies 5% lower,
-25), Bombhill (+15% speed, gear wears 30% faster, 35), Slab (4 slots, ollies 8% lower, 45). Boon library: POP and
+25), Downhill (+15% speed, gear wears 30% faster, 35; called Bombhill till Nov 8), Slab (4 slots, ollies 8% lower, 45). Boon library: POP and
 GRIND to start; FLOW, COOL and LUCK packs (15 to 25) add their boons and their road signs; Curses (35) and
 Duos (40). Spots: the daily run (20; one seed per UTC day, its own best). Biome starts and gnar mode are still to
 come. See docs/overnight-decisions.md.
@@ -1042,6 +1042,14 @@ Reordered Nov 8, 2026 (zack): Webster is the free starter and Lou Gnar the last,
 took Lou's "baseline" (no passive) and Lou took Webster's 15% grind speed, so the free skater stays plain and each
 paid one is a small trade. Each kept their own first pick. Saves from before keep Lou and get back the 30 Stoken
 they paid for Webster (src/run/save.ts, moveCrew).
+
+Each deck has its own shape (Nov 8, 2026, from zack's references; art/board.py builds all four, board.glb and
+board-<id>.glb): the Popsicle as before; the Cruiser wide with a pointed nose and a square tail, orange underneath
+with a bolt; the Downhill a slalom deck, narrow, the nose tapering straight to a point, nearly flat, plain red with
+amber wheels; the Slab an 80s pool deck, wide with a waist above the tail, two grip patches with bare deck between,
+blue wheels and blue plastic underneath (rails, a nose guard, a tail skid), a red, blue and yellow sunburst. All keep
+the seven coloured plies on the edge. You ride your deck's shape; the shop's new deck graphics go on whichever
+you ride.
 
 ### The ship hub
 

@@ -325,13 +325,20 @@ export function deckDecal(board: THREE.Object3D, mat: THREE.Material): THREE.Mes
   const uv = new Float32Array(n * 2);
   const col = new Float32Array(n * 4).fill(1);
   const lift = 0.0015; // proud of the paint, outward
+  //the deck's own width and length (each deck has its own outline, art/board.py), so the picture fills it
+  let rail = 0;
+  let tip = 0;
+  for (const v of tris) {
+    rail = Math.max(rail, Math.abs(pos.getZ(v)));
+    tip = Math.max(tip, Math.abs(pos.getX(v)));
+  }
   tris.forEach((v, j) => {
     const [nx, ny, nz] = [nor.getX(v), nor.getY(v), nor.getZ(v)];
     const [x, y, z] = [pos.getX(v), pos.getY(v), pos.getZ(v)];
     p.set([x + nx * lift, y + ny * lift, z + nz * lift], j * 3);
     nn.set([nx, ny, nz], j * 3);
     //the picture's nose (its top) at +x; seen from below, across runs the way it reads
-    uv.set([0.5 - z / (2 * BOARD.rail), 0.5 + x / (2 * BOARD.tip)], j * 2);
+    uv.set([0.5 - z / (2 * (rail || BOARD.rail)), 0.5 + x / (2 * (tip || BOARD.tip))], j * 2);
   });
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));

@@ -11,7 +11,7 @@ import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
-import { deckChoices, STOCK_DECK, type DeckArt } from '../board/deck-art';
+import { deckChoices, STOCK_DECK, stockDeck, type DeckArt } from '../board/deck-art';
 import { RunScore, SCORE } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
 import { firstCloud, layerAct } from '../gen/clouds';
@@ -615,7 +615,7 @@ export class Game {
     this.gear = freshGear();
     this.bustedSec = noBustedTime();
     this.shopVisits = 0;
-    this.setDeckArt(STOCK_DECK);
+    this.setDeckArt(stockDeck(this.meta.loadout.deck));
     this.run = new RunScore();
     this.carry = 0;
     this.continuesLeft = CONTINUES;

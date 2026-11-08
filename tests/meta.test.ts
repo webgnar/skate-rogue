@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { boardFile } from '../src/render/skater-rig';
+import { STOCK_DECK, stockDeck } from '../src/board/deck-art';
 import { BOONS } from '../src/boons/defs';
 import { NO_MODS } from '../src/boons/mods';
 import { offerBoons } from '../src/boons/offer';
@@ -52,6 +54,17 @@ describe('meta progression', () => {
     expect(skaters.map((u) => u.id)).toEqual(['webster', 'roxy', 'keanu', 'goldie', 'lou-gnar']);
     expect(skaters.map((u) => u.cost)).toEqual([0, 30, 40, 50, 60]);
     expect(STOCK.skater).toBe('webster');
+  });
+
+  it('each deck rides its own model and starts in its own paint', async () => {
+    const fsId = 'node:fs';
+    const { existsSync } = (await import(/* @vite-ignore */ fsId)) as { existsSync(p: string): boolean };
+    expect(boardFile('popsicle')).toBe('board.glb');
+    expect(boardFile('slab')).toBe('board-slab.glb');
+    for (const u of UNLOCKS.filter((x) => x.branch === 'deck')) expect(existsSync(`public/models/${boardFile(u.id)}`)).toBe(true);
+    expect(UNLOCKS.find((u) => u.id === 'bombhill')!.name).toBe('Downhill');
+    expect(stockDeck('popsicle')).toBe(STOCK_DECK);
+    expect(stockDeck('cruiser').base).not.toBe(STOCK_DECK.base);
   });
 
   it('each skater leans the first pick to their type, if it is in the library', () => {

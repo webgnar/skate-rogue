@@ -476,7 +476,7 @@ async function start() {
   //the loading screen (src/ui/loading.ts): every model (the car-hop damage too), tile sheet and the skater, all at once
   //?models=new rides the Meshy rebuilds (DEV TOOLS MODELS), ?models=old the old skaters
   const meshy = meshyModels(params);
-  const rig = loading.track(SkaterRig.create(base, skater, meshy));
+  const rig = loading.track(SkaterRig.create(base, skater, meshy, deck));
   //the title screen (src/ui/title.ts) and its own scene (src/title/title-scene.ts), on a plain visit: Webster stands
   //at the bottom of it, so his rig loads too
   const titled = wantTitle(params, ['floor', 'seed', 'biome', 'daily', 'gnar', 'escape', 'boons', 'bot'].some((k) => params.has(k)));
