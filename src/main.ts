@@ -881,7 +881,8 @@ async function start() {
     app.classList.add('titled');
     return scene;
   };
-  game.playActBreak = (act, done) => playActBreak(act, done);
+  //?escape=N (act N's escape) plays act N's cutscene when it's cleared, every time, so the two can be watched together
+  game.playActBreak = (act, done) => playActBreak(act, done, act === escape);
   const shipLink = params.get('ship');
   const endingLink = params.get('ending');
   const cutLink = Number((params.get('cutscene') ?? '').replace(/^act/, '')) || 0;
