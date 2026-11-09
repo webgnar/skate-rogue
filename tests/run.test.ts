@@ -22,6 +22,13 @@ describe('the fork', () => {
     }
   });
 
+  it('always offers the skate shop at the end of act 2-1 (floor 4), before 2-2', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const f = rollFork(seed, 4);
+      expect([f.high.kind, f.low.kind]).toContain('shop');
+    }
+  });
+
   it('puts an overpass over the last street piece, up past a plain ollie, running past the gate', () => {
     const l = buildFloor(5, 2, undefined, { fork });
     const o = l.surfaces.find((s) => s.kind === 'overpass')!;

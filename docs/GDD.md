@@ -189,7 +189,7 @@ them), boons are about skate physics, and the run adds a shop and a board build 
             ▼                                                                          │
    Title → pick skater + deck → FLOOR → exit portal → pick 1 of 3 boons → FLOOR → … → bail (run over)
                                   ▲                                         │
-                                  └── every 3 floors: SKATE SHOP (spend run cash on board mods) ┘
+                                  └── every 3 floors + after 2-1: SKATE SHOP (board mods, gear) ┘
 ```
 
 1. **Floor** (30–90 s). Skate from the start to the exit portal across a generated stretch of street, rooftops,
@@ -237,7 +237,9 @@ Built Oct 24, 2026 (first version): the high road is an overpass 2 tiles up over
 on it), signs on a gantry before it, a gate on each road. Launch roads so far: boon street (POP or GRIND), cash
 street, hot street and Stoken stash. The skate shop followed the same day with board mods: it can turn up from the
 floor 2 fork and is always offered at the end of every third floor, beside a boon street; after shopping you skate
-that boon street. The underground spot comes with carried-over Heat. Built overnight Oct 24, 2026: Heat
+that boon street. Also always offered at the end of act 2-1 (floor 4's fork), before 2-2 (zack, Nov 9, 2026: by 2-2
+the player has about $600 and needs to replace 4 worn gear parts; the four dearest parts cost $320, so a board mod
+still fits). The underground spot comes with carried-over Heat. Built overnight Oct 24, 2026: Heat
 carries into the next floor at half, and the spot can turn up from the floor 3 fork (lay low, swap a boon, or
 remove a curse once curses exist), then you skate the boon street after it.
 
