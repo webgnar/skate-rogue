@@ -13,7 +13,7 @@ import { gripCardColor, gripDef } from './board/grips';
 import type { DeckArt } from './board/deck-art';
 import { deckArtUrl } from './render/deck-graphic';
 import { drawWires } from './ui/board-wires';
-import { GEAR_ORDER, HudView } from './ui/hud';
+import { actLabel, GEAR_ORDER, HudView } from './ui/hud';
 import { bindShopDrag } from './ui/shop-drag';
 import { boonArt, boonIcon, spotArt } from './ui/boon-art';
 import { gearArt, gearIcon, gripArt, modArt, slotArt } from './ui/shop-art';
@@ -406,7 +406,7 @@ function makeHud(): Hud {
       overEl.querySelector('b')!.textContent = result.won ? 'YOU ESCAPED!' : result.caught ? 'BUSTED' : 'DEAD';
       overEl.querySelector('.reached')!.textContent = result.won
         ? `Out of the city in ${result.floor} floors · escape #${result.wins}`
-        : `You made it to act ${result.act}, floor ${result.floor}`;
+        : `You made it to act ${actLabel(result.floor)}`;
       if (result.continues) overEl.querySelector('.reached')!.textContent += ` · ${result.continues} continue${result.continues === 1 ? '' : 's'} used`;
       overEl.querySelector('.final')!.textContent = `${result.score.toLocaleString()}${result.newBest ? ' · NEW BEST' : ''}`;
       overEl.querySelector('.best')!.textContent = `best ${result.best.toLocaleString()} · ${result.stoken} Stoken this run (${result.bank} banked)`;

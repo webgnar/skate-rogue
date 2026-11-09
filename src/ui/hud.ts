@@ -50,10 +50,16 @@ export function wearSegments(condition: number): number {
   return c > 0 ? Math.ceil((c / 100) * WEAR_SEGS) : 0;
 }
 
-// ACT 1-2 · FLOOR 2, or the act's escape
+// ACT 1-2 for floor 2, or the act's escape. The run's floor number isn't shown: it only counts up with the act label
+// (zack, 2026-11-09)
 export function floorText(n: number, road: Road): string {
   if (road.kind === 'escape') return `ACT ${road.act} · ESCAPE`;
-  return `ACT ${actOf(n)}-${((n - 1) % FLOORS_PER_ACT) + 1} · FLOOR ${n}`;
+  return `ACT ${actLabel(n)}`;
+}
+
+// "2-3": the act and the floor within it
+export function actLabel(n: number): string {
+  return `${actOf(n)}-${((n - 1) % FLOORS_PER_ACT) + 1}`;
 }
 
 // a DOM node that only writes when its value changes
