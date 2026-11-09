@@ -53,8 +53,7 @@ export const BOONS: Boon[] = [
   { id: 'railMagnet', type: 'GRIND', name: 'Rail Magnet', effect: 'Rails catch you from further away', note: '+48 px', max: 2 },
   { id: 'grease', type: 'GRIND', name: 'Ledge Butter', effect: 'Grind 25% faster', note: 'and hit full grind speed instantly', max: 2 }, // id kept from its old name, Grease
   {
-    id: 'railLaunch', type: 'GRIND', name: 'Full Sail', effect: 'Leave a rail and you launch harder',
-    note: 'higher the faster you grind', max: 1,
+    id: 'railLaunch', type: 'GRIND', name: 'Full Sail', effect: 'Grind speed adds to your pop', max: 1,
   }, // id kept from its old name, Rail Launch; took in Slingshot (2026-11-06)
   {
     id: 'ghostRail', type: 'GRIND', name: 'Ghost Rail', effect: 'Rails keep going 4 tiles past their end',
