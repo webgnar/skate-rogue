@@ -57,6 +57,21 @@ describe('GRIND boons on curved rails', () => {
       expect(caught('railMagnet')).toBe(true);
     });
 
+    it(`Rail Magnet: falling into the detector under ${kind}'s start pulls you on`, () => {
+      const caught = (...ids: BoonId[]) => {
+        //the board's side just inside the reach, feet already under the start, coming down
+        const rail = new CurvedRail(3 * TILE, street - 60, 20 * TILE, street - 60 + drop, 0);
+        const sk = new Skater({ ...base, rails: [rail], startX: 3 * TILE - 40 - PHYS.width / 2, startY: street - 50 }, skaterMods(held(...ids)));
+        sk.mode = 'air';
+        sk.hsp = 0;
+        sk.vsp = 1;
+        for (let f = 0; f < 10; f++) sk.step(idle);
+        return sk.events.some((e) => e.type === 'rail') || (sk.mode as string) === 'rail';
+      };
+      expect(caught()).toBe(false);
+      expect(caught('railMagnet')).toBe(true);
+    });
+
     it(`Full Sail: an ollie off ${kind} pops higher`, () => {
       const pop = (...ids: BoonId[]) => {
         const sk = onRail(drop, ids);

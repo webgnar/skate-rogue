@@ -113,6 +113,40 @@ describe('GRIND boons', () => {
     expect(magnet.events.some((e) => e.type === 'grind')).toBe(true);
   });
 
+  it('Rail Magnet: falling into its detector under the start pulls you on, like a car stomp', () => {
+    const fallInto = (gap: number, below: number, ...ids: BoonId[]) => {
+      const sk = skater(RAIL, ...ids);
+      const rail = sk.level.surfaces.find((s) => s.kind === 'rail')!;
+      //the board's front edge just inside the reach, feet already under the rail's height, coming down
+      sk.x = rail.x0 - gap - PHYS.width / 2;
+      sk.y = rail.y + below;
+      sk.hsp = 0;
+      sk.mode = 'air';
+      sk.vsp = 1;
+      run(sk, 10);
+      return sk.events.some((e) => e.type === 'grind');
+    };
+    expect(fallInto(40, 10)).toBe(false);
+    expect(fallInto(40, 10, 'railMagnet')).toBe(true);
+    //out of reach: too far back, or too far under
+    expect(fallInto(60, 10, 'railMagnet')).toBe(false);
+    expect(fallInto(10, 60, 'railMagnet')).toBe(false);
+    //two stacks reach twice as far
+    expect(fallInto(80, 10, 'railMagnet', 'railMagnet')).toBe(true);
+  });
+
+  it('Rail Magnet: rising through the detector does not catch you', () => {
+    const sk = skater(RAIL, 'railMagnet');
+    const rail = sk.level.surfaces.find((s) => s.kind === 'rail')!;
+    sk.x = rail.x0 - 20;
+    sk.y = rail.y + 30;
+    sk.hsp = 0;
+    sk.mode = 'air';
+    sk.vsp = -1;
+    sk.step({ pressed: false, held: false });
+    expect(sk.events.some((e) => e.type === 'grind')).toBe(false);
+  });
+
   it('Ledge Butter (grease): grind speed settles 25% higher, right away', () => {
     const speedAfter = (...ids: BoonId[]) => {
       const sk = skater(RAIL, ...ids);

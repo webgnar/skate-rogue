@@ -779,14 +779,23 @@ export class Skater {
     const sx = crossAt(0, this.level.streetY, 0);
     if (sx !== null && (this.streetUnder(sx) || this.streetUnder(x))) consider(this.level.streetY, () => this.touchDown(null));
     const magnet = this.mods.railMagnet;
+    const half = PHYS.width / 2;
     //mid-flip, the board isn't under your feet to lock onto a bar or a ledge: you fall past it (zack, 2026-11-02)
     const loose = (this.looseStep = this.caught < 1);
     for (const s of this.surfaces()) {
       if (loose && s.kind === 'rail') continue;
-      //Rail Magnet: rails reach out for you before their start
+      //Rail Magnet: falling into its detector before the start pulls you onto it, like a car stomp
+      if (s.kind === 'rail' && this.inMagnet(s.x0, surfaceY(s, s.x0), fy)) {
+        consider(surfaceY(s, s.x0), () => {
+          this.x = s.x0;
+          this.touchDown(s);
+        });
+        continue;
+      }
+      //Rail Magnet: rails reach out for you before their start, to the side of the board
       //flat ground catches a truck: you land with the other one hanging over the edge
       const r = truckReach(s);
-      if (!hits(s.x0, s.y, surfaceSlope(s), s.kind === 'rail' ? s.x0 - magnet : s.x0 - r, s.x1 + r)) continue;
+      if (!hits(s.x0, s.y, surfaceSlope(s), s.kind === 'rail' ? s.x0 - (magnet > 0 ? magnet + half : 0) : s.x0 - r, s.x1 + r)) continue;
       //touched down on it this step: if the step carried you past its far end, you land on the edge
       const lx = Math.min(Math.max(x, s.x0 - r), s.x1 + r);
       consider(surfaceY(s, Math.min(Math.max(lx, s.x0), s.x1)), () => {
@@ -794,7 +803,6 @@ export class Skater {
         this.touchDown(s);
       });
     }
-    const half = PHYS.width / 2;
     for (const car of this.cars()) {
       if (!hits(0, car.roof, 0, car.x0 - half, car.x1 + half, this.roofs.get(car) ?? car.roof)) continue;
       //Roof Rider: a parked roof is a ledge to grind
@@ -806,17 +814,21 @@ export class Skater {
     for (const rail of this.level.rails) {
       if (rail === this.railIgnore || loose) continue;
       const start = rail.at(0);
-      const near = magnet > 0 && x < start.x && x >= start.x - magnet;
+      //Rail Magnet: the side of the board within reach of its start counts
+      const near = magnet > 0 && x < start.x && x + half >= start.x - magnet;
       const ry = near ? start.y : rail.yAt(x);
       //last step's x before its start: its start's height (coming in under the start isn't landing on it: that
       //snapped a skater well below a high power line up onto it, zack 2026-10-25)
       const pry = near ? start.y : (rail.yAt(px) ?? start.y);
-      if (ry === undefined) continue;
+      //Rail Magnet: or falling into its detector, below the start (a stomp onto it, zack 2026-11-09)
+      const pulled = this.inMagnet(start.x, start.y, fy);
+      if (ry === undefined && !pulled) continue;
       //compare against the rail's height where we were last step too, so a sloped rail can't slip past (rising or falling)
-      if (py <= pry + 0.01 && fy >= ry && ry < bestY) {
-        bestY = ry;
+      if (pulled ? start.y < bestY : ry !== undefined && py <= pry + 0.01 && fy >= ry && ry < bestY) {
+        const snap = near || pulled;
+        bestY = pulled ? start.y : ry!;
         best = () => {
-          if (near) this.x = start.x;
+          if (snap) this.x = start.x;
           this.catchRail(rail);
         };
       }
@@ -968,6 +980,16 @@ export class Skater {
       this.crackStep = step;
       this.events.push({ type: 'clack', step });
     }
+  }
+
+  // Rail Magnet's detector at a rail's start: a box reaching railMagnet px back from the start and as far down under
+  // it. Falling (never rising) with the side of the board in it pulls you up onto the rail, the way falling into a
+  // car's side stomps it (zack, 2026-11-09). The reach is the boon's number.
+  inMagnet(x0: number, y0: number, feetY: number): boolean {
+    const m = this.mods.railMagnet;
+    if (m <= 0 || this.vsp <= 0) return false;
+    const half = PHYS.width / 2;
+    return this.x + half >= x0 - m && this.x - half <= x0 && feetY > y0 && feetY <= y0 + m;
   }
 
   // falling into a car's side: up onto its roof, and whatever its roof does (a hop, or a grind with Roof Rider)

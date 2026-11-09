@@ -248,6 +248,11 @@ export class CollisionDebug {
     //one-way surfaces: you land on them from above and pass through from below
     const current = sk.surface;
     const magnet = sk.mods.railMagnet;
+    //Rail Magnet's detector: falling into it with the side of the board pulls you onto the rail (Skater.inMagnet)
+    const magnetBox = (x0: number, y0: number, color: string) => {
+      line([P(x0 - magnet - PHYS.width / 2, y0), P(x0, y0)], color, 1, [2, 3]);
+      line([P(x0 - magnet, y0), P(x0 - magnet, y0 + magnet), P(x0, y0 + magnet), P(x0, y0)], color, 1, [2, 3]);
+    };
     const ghost = sk.ghost;
     const surfaces = ghost ? [...level.surfaces, ghost] : level.surfaces;
     for (const s of surfaces) {
@@ -262,7 +267,7 @@ export class CollisionDebug {
       //the ends, where a landing gets clamped to the edge
       line([[a[0], a[1] - 4], [a[0], a[1] + 4]], color, 1.5);
       line([[b[0], b[1] - 4], [b[0], b[1] + 4]], color, 1.5);
-      if (s.kind === 'rail' && magnet > 0) line([P(s.x0 - magnet, s.y), a], color, 1, [2, 3]);
+      if (s.kind === 'rail' && magnet > 0) magnetBox(s.x0, s.y, color);
       if (s.tow) arrow(P(s.x0 + (s.x1 - s.x0) * 0.3, surfaceY(s, s.x0 + (s.x1 - s.x0) * 0.3) - 10), P(s.x0 + (s.x1 - s.x0) * 0.7, surfaceY(s, s.x0 + (s.x1 - s.x0) * 0.7) - 10), '#fff', 1.5);
       if (s.conveyor) arrow(P((s.x0 + s.x1) / 2, s.y - 8), P((s.x0 + s.x1) / 2 + Math.sign(s.conveyor) * 24, s.y - 8), color, 1.5);
       const crumble = sk.crumbling.get(s);
@@ -279,7 +284,7 @@ export class CollisionDebug {
       line(pts, color, 3, ignored ? [4, 4] : []);
       ctx.fillStyle = color;
       if (scale >= 14) for (const [x, y] of pts) ctx.fillRect(x - 1, y - 1, 2, 2);
-      if (magnet > 0) line([P(rail.xs[0] - magnet, rail.ys[0]), pts[0]], color, 1, [2, 3]);
+      if (magnet > 0) magnetBox(rail.xs[0], rail.ys[0], color);
       label(`${rail.wire ? 'wire' : 'rail'} ${Math.round(rail.length)}px ${rail.material}${rail.top ? ' top' : ''}${ignored ? ` ignored ${sk.railIgnoreT}f` : ''}`, [pts[0][0] + 2, pts[0][1] - 5], color);
     }
 
