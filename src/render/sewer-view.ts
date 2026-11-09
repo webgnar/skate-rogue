@@ -158,16 +158,17 @@ export class SewerView {
       }
       const p = t.s.piece;
       if (p?.kind === 'subway' && t.train) {
-        //five of the L's cars (zack, 2026-11-08: "about 5 train cars long"), length along the line, as wide as the
-        //trench, their roofs an ollie over the tunnel's floor (SEWER.subwayRoof): you hop it as it crawls across
+        //five of the L's cars (zack, 2026-11-08: "about 5 train cars long", "taller and use the same model as the L
+        //track train"), scaled up whole to the trench's width, length along the line, their roofs an ollie over the
+        //tunnel's floor (SEWER.subwayRoof): you hop it as it crawls across
         const m = new THREE.Group();
         const n = SEWER_SIM.trainCars;
-        const wide = (p.x1 - p.x0) / TILE / CAR.w;
+        const k = SEWER_SIM.trainScale;
         for (let i = 0; i < n; i++) {
           const car = trainCar(i === 0);
           car.rotation.y = -Math.PI / 2; // (its front, +x, down the line toward the camera)
-          car.scale.z = wide; // (its width, across the tunnel)
-          car.position.z = -CAR.len / 2 - i * (CAR.len + EL.coupling / TILE);
+          car.scale.setScalar(k);
+          car.position.z = -k * (CAR.len / 2 + i * (CAR.len + EL.coupling / TILE));
           m.add(car);
         }
         //(the last car's cab faces back up the line)
@@ -176,17 +177,17 @@ export class SewerView {
           m.remove(tail);
           const back = trainCar(true);
           back.rotation.y = Math.PI / 2;
-          back.scale.z = wide;
+          back.scale.setScalar(k);
           back.position.copy(tail.position);
           m.add(back);
         }
         inkify(m);
         //its headlight down the line ahead of it
         const light = new THREE.Mesh(new THREE.ConeGeometry(1, 10, 16, 1, true).rotateX(-Math.PI / 2), this.beam);
-        light.position.set(0, CAR.h * 0.45, 5);
+        light.position.set(0, k * CAR.h * 0.45, 5);
         m.add(light);
         //(the nose is the group's origin: z = the sim's nose)
-        m.position.set((p.x0 + p.x1) / 2 / TILE, fy + SEWER.subwayRoof / TILE - CAR.h, SEWER_SIM.trainFrom);
+        m.position.set((p.x0 + p.x1) / 2 / TILE, fy + SEWER.subwayRoof / TILE - k * CAR.h, SEWER_SIM.trainFrom);
         m.visible = false;
         //the third rail's crackle, across the trench under the lane (sewer-kit.ts draws the rail)
         const arc = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 6), this.volt);

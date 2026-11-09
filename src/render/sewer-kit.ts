@@ -24,6 +24,7 @@ const STREET_BACK = -3.5;
 const ROCK = -9; // how deep the ground under the tunnel is drawn
 const DEEP_ROCK = -18; // and under the deep (as far down as the hill's ground goes: hillside.ts HILLSIDE.bottom)
 const SUBWAY_BACK = -40; // the subway line runs off this far into the city
+const SUBWAY_HEAD = 1.6; // tiles of headroom over the train's roof in the line's tunnel
 
 let tagTex: THREE.CanvasTexture | null = null;
 // a sheet of graffiti tags: bubble letters and throw-ups in a few colours, cut into panels along the wall
@@ -342,10 +343,19 @@ export function buildSewers(level: Level): THREE.Group {
     //(a hair past the street's slab and the hill's ground where they end in the same plane: no flicker between them)
     if (!before) box(x0 - 0.51, x0 + 0.01, deep - 0.3, roof, STREET_BACK, FRONT + 0.01, brick);
     if (!after) box(x1 - 0.01, x1 + 0.51, fy - 0.3, roof, STREET_BACK, FRONT + 0.01, brick);
+    //the subway line's tunnel mouth in the back wall: [x0, x1, its top] (the train's roof plus some)
+    const mouth = sub ? [X(sub.x0) - 0.3, X(sub.x1) + 0.3, fy + SEWER.subwayRoof / TILE + SUBWAY_HEAD] : null;
     const wallFoot = s.climbFrom !== undefined ? Math.min(deep, Y(s.climbFrom)) : deep; // (down the climb's foot too)
-    if (at > x0) box(x0, Math.min(at, x1), wallFoot, high, STREET_BACK, BACK, wall);
+    //(the subway line's mouth is a hole in it, so you see the train coming down its tunnel: zack, 2026-11-08)
+    const backWall = (a: number, b: number, y0: number, y1: number) => {
+      if (!mouth || mouth[1] <= a || mouth[0] >= b) return box(a, b, y0, y1, STREET_BACK, BACK, wall);
+      if (mouth[0] > a) box(a, mouth[0], y0, y1, STREET_BACK, BACK, wall);
+      if (mouth[1] < b) box(mouth[1], b, y0, y1, STREET_BACK, BACK, wall);
+      if (y1 > mouth[2]) box(Math.max(a, mouth[0]), Math.min(b, mouth[1]), mouth[2], y1, STREET_BACK, BACK, wall);
+    };
+    if (at > x0) backWall(x0, Math.min(at, x1), wallFoot, high);
     if (at < x1) {
-      box(at, x1, deep, low, STREET_BACK, BACK, wall);
+      backWall(at, x1, deep, low);
       //the deep's roof: the ground between it and the street (or the canal) over it (under the hill, the hill's own
       //ground comes down to it: hillside.ts), a brick lintel where it comes down
       for (let x = Math.floor(at); x < x1; ) {
@@ -572,9 +582,22 @@ export function buildSewers(level: Level): THREE.Group {
       box(a, b, Math.min(rock, bed - 1), bed, SUBWAY_BACK, FRONT, ballast);
       for (let z = SUBWAY_BACK + 0.5; z < FRONT; z += 0.7) box(a + 0.15, b - 0.15, bed, bed + 0.06, z, z + 0.25, sleeper);
       light(a + 0.3, b - 0.3, bed, fy + 1.2, 1.6);
-      box(a - 0.3, a, bed, fy - 0.3, SUBWAY_BACK, FRONT, brick);
-      box(b, b + 0.3, bed, fy - 0.3, SUBWAY_BACK, FRONT, brick);
-      box(a, b, fy + 0.5, roofAt(a), SUBWAY_BACK, BACK - 0.01, dark); // the line's tunnel mouth over the gap, back into the dark
+      box(a - 0.3, a, bed, fy - 0.3, BACK, FRONT, brick);
+      box(b, b + 0.3, bed, fy - 0.3, BACK, FRONT, brick);
+      //the line's own tunnel, back into the city through the mouth in the back wall (zack, 2026-11-08: "deepen the
+      //tunnel it comes out from so you can see it coming"): brick sides and a roof over the train, a lamp every few
+      //tiles down it, black at the far end. The train's headlight comes down it first (sewer-view.ts)
+      const top = mouth![2];
+      box(a - 0.3, a, bed, top, SUBWAY_BACK, BACK, brick);
+      box(b, b + 0.3, bed, top, SUBWAY_BACK, BACK, brick);
+      box(a - 0.3, b + 0.3, top, top + 0.3, SUBWAY_BACK, BACK, brick);
+      box(a, b, bed, top, SUBWAY_BACK - 0.3, SUBWAY_BACK, dark);
+      box(a - 0.45, b + 0.45, top, top + 0.35, BACK, BACK + 0.1, archBrick); // (its lintel)
+      for (const x of [a - 0.45, b + 0.3]) box(x, x + 0.15, fy, top, BACK, BACK + 0.1, archBrick);
+      for (let z = BACK - 3; z > SUBWAY_BACK + 2; z -= 5) {
+        box(a + 0.02, a + 0.08, fy + 0.9, fy + 1.05, z - 0.25, z + 0.25, spotLens);
+        box(b - 0.08, b - 0.02, fy + 0.9, fy + 1.05, z - 2.75, z - 2.25, spotLens);
+      }
       for (const x of [a + (b - a) * 0.3, a + (b - a) * 0.7]) box(x - 0.05, x + 0.05, bed, bed + 0.12, SUBWAY_BACK, FRONT, rail);
       //the third rail: on its insulators, its yellow guard board (the live crackle along it: sewer-view.ts)
       box(a + (b - a) * 0.88 - 0.06, a + (b - a) * 0.88 + 0.06, bed, bed + 0.2, SUBWAY_BACK, FRONT, yellow);
