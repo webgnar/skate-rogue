@@ -727,8 +727,13 @@ chase is what makes mistakes matter, so it has to be tight: always visible, alwa
   - **The escalation steps follow stoke, not Heat:** the siren layer, the cameras turning, the drone in front and the
     music thinning out come in as the detector fills; Heat keeps only the catch cues (the lights on screen, the
     pulsing edge and the vibration near 90, the cut-in at 100).
-  - **The HUD sells it:** the stoke meter is drawn as the AI's scan lock on you, a red grid filling toward TARGET:
-    STOKE DETECTED at full. Same meter, new skin, so the story is on screen every second.
+  - **The HUD sells it: one bar, two readings** (zack, Nov 9, 2026, picked over dropping the HEAT bar or keeping
+    both; not built). The two mirrored STOKE and HEAT bars become **one detector meter**. Its fill is stoke, drawn as
+    the AI's scan lock on you (a red grid filling toward TARGET: STOKE DETECTED at full). The cruiser rides along the
+    same bar as a marker, closing in from the left as Heat rises, with the wanted stars on the marker; marker meets
+    full fill = caught. One glance reads both how loud you are and how close it is, and it still works in portrait,
+    where the cruiser itself is often off screen. The separate HEAT bar goes; Heat keeps its world cues (the cruiser,
+    the lights, the siren, the edge pulse).
   - **The climb:** higher acts have fewer eyes, so the detector fills slower up there (one more reason to go up).
   - Numbers to tune on the bot: the slam range, the gnar-tier cruiser speed, the per-act detector rate.
 - **Escalation, not surprise.** Every step is readable at a glance. Today: at 50 Heat the siren layer comes in and
@@ -1442,7 +1447,8 @@ the cloud tops with the drones (shot 3).
   and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the
   Stoke meter into GNAR MODE and the Heat meter (the cruiser, 10 segments, stars at 25/50/75/90) under them; board
   mods bottom left and gear wear bottom right. The middle of the screen stays clear. Heat keeps its world cues
-  (sirens, light, edge glow) as well as the bar.
+  (sirens, light, edge glow) as well as the bar. **Decided Nov 9, 2026, not built:** the two bars merge into one
+  detector meter, fill = stoke, cruiser marker + stars = Heat (see The chase: Stoke raises the stakes).
 - **Boon pick:** three large cards, tap to pick, long-press to read. Reuse QFS's card layout and deal animation.
 - **Shop:** board slots across the top, mods below, drag to place. Must work with one thumb.
 - **Pause:** resume, settings, run summary (boons, mods), abandon run. Built Oct 24, 2026: sound and music sliders,
