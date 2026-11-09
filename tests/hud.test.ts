@@ -25,8 +25,8 @@ describe('hud', () => {
   });
 
   it('names the act, the floor in the act and the escape', () => {
-    expect(floorText(1, { kind: 'boon', boonType: 'POP', danger: 1 } as never)).toBe('ACT 1-1 · FLOOR 1');
-    expect(floorText(5, { kind: 'cash', danger: 1 } as never)).toBe('ACT 2-2 · FLOOR 5');
+    expect(floorText(1, { kind: 'boon', boonType: 'POP', danger: 1 } as never)).toBe('ACT 1-1');
+    expect(floorText(5, { kind: 'cash', danger: 1 } as never)).toBe('ACT 2-2');
     expect(floorText(3, { kind: 'escape', act: 1 } as never)).toBe('ACT 1 · ESCAPE');
   });
 
