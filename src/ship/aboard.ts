@@ -8,6 +8,7 @@ import { has } from '../run/meta';
 import { loadCrew } from './crew';
 import { HubScene } from './hub-scene';
 import { EndingScene, type EndingUi } from './ending-scene';
+import { ActBreakScene, type ActBreak, type CutsceneUi } from '../cutscene/act-breaks';
 
 export class Aboard {
   private hub: HubScene | null = null;
@@ -76,6 +77,26 @@ export class Aboard {
     const scene = new EndingScene(this.renderer, hub, full, ui);
     scene.onDone = () => {
       this.crew(hub); // the rider back in their spot
+      done();
+    };
+    return scene;
+  }
+
+  // an act cleared (1 to 4) for the first time: its act break, the rider played by their own model (null if the
+  // crew aren't loaded yet, or it's been seen; `force` plays it anyway, for the ?cutscene link, and isn't remembered)
+  actBreak(act: ActBreak, ui: CutsceneUi, done: () => void, force = false): ActBreakScene | null {
+    const hub = this.hub;
+    const rider = hub?.rider;
+    if (!hub || !rider) return null;
+    const save = loadSave();
+    const seen = save.actBreaks ?? [];
+    if (!force) {
+      if (seen.includes(act)) return null;
+      writeSave({ ...save, actBreaks: [...seen, act] });
+    }
+    const scene = new ActBreakScene(this.renderer, rider, () => hub.inkWidths(), act, ui);
+    scene.onDone = () => {
+      this.crew(hub); // the rider back aboard, in their spot
       done();
     };
     return scene;

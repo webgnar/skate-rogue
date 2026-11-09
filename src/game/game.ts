@@ -335,6 +335,9 @@ export class Game {
   cinema: { frame(dt: number): void; tap(): void } | null = null;
   // act 5 won: play the ending, then call done (main.ts makes it; null, or no ending ready: straight to the summary)
   playEnding: ((done: () => void, full?: boolean) => { frame(dt: number): void; tap(): void } | null) | null = null;
+  // acts 1 to 4 cleared: their act break the first time (src/cutscene/act-breaks.ts), then call done (main.ts makes
+  // it; null: none to play, skate straight on)
+  playActBreak: ((act: number, done: () => void) => { frame(dt: number): void; tap(): void } | null) | null = null;
   // what's drawn behind the run summary in place of the street (the ship hub, src/ship/hub-scene.ts); false: not ready
   backdrop: ((dt: number) => boolean) | null = null;
   titled = false; // held still under the title screen (src/ui/title.ts) until SKATE: the street drawn, the title music on
@@ -870,8 +873,21 @@ export class Game {
       }
       return this.endRun(now, false, true);
     }
-    this.advance();
-    this.hud.callout(`ACT ${act} CLEAR +$${cash} +${whole(stoken)} STOKEN`, 'good');
+    const on = () => {
+      this.advance();
+      this.hud.callout(`ACT ${act} CLEAR +$${cash} +${whole(stoken)} STOKEN`, 'good');
+    };
+    //the act break, the first time this act's cleared: the run holds still behind it, then skates on
+    const scene = this.autopilot ? null : this.playActBreak?.(act, () => {
+      this.cinema = null;
+      this.input.clear();
+      on();
+    });
+    if (scene) {
+      this.cinema = scene;
+      return;
+    }
+    on();
   }
 
   private rerollCost(): number {

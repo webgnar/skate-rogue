@@ -61,6 +61,7 @@ import { DicePanel } from './ui/dice-panel';
 import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 import { TitleScene } from './title/title-scene';
 import { Aboard } from './ship/aboard';
+import { isActBreak, type ActBreakScene, type CutsceneUi } from './cutscene/act-breaks';
 import { ON_CRAZYGAMES, breakAd, happyTime, initPortal, loadingDone, setPlaying, watchPortalMute } from './net/portal';
 
 const base = import.meta.env.BASE_URL;
@@ -829,8 +830,68 @@ async function start() {
     app.classList.add('titled');
     return scene;
   };
+  //the act breaks (src/cutscene/act-breaks.ts): after acts 1 to 4's escapes, the first time. ?cutscene=act1 (to act4)
+  //plays one on its own
+  const cutEl = document.getElementById('cutscene')!;
+  const cutBubble = cutEl.querySelector<HTMLElement>('.bubble')!;
+  const cutAi = cutEl.querySelector<HTMLElement>('.ai')!;
+  const cutSkip = cutEl.querySelector<HTMLButtonElement>('.skip')!;
+  const cutFlash = cutEl.querySelector<HTMLElement>('.flash')!;
+  let cutScene: ActBreakScene | null = null;
+  cutSkip.addEventListener('click', () => cutScene?.tap());
+  const cutUi: CutsceneUi = {
+    say: (text, at) => {
+      cutBubble.classList.toggle('on', !!text && !!at);
+      if (!text || !at) return;
+      if (cutBubble.firstElementChild!.textContent !== text) cutBubble.firstElementChild!.textContent = text;
+      //kept on screen: the bubble slides in from the edges, its tail still pointing at the speaker
+      const w = cutBubble.offsetWidth;
+      const h = cutBubble.offsetHeight;
+      const vw = cutEl.clientWidth;
+      const x = Math.min(vw - w / 2 - 10, Math.max(w / 2 + 10, at.x));
+      const y = Math.max(h + 34, at.y);
+      cutBubble.style.left = `${x}px`;
+      cutBubble.style.top = `${y}px`;
+      cutBubble.style.setProperty('--tail', `${Math.max(-w / 2 + 18, Math.min(w / 2 - 18, at.x - x))}px`);
+    },
+    ai: (text) => {
+      cutAi.classList.remove('on');
+      if (!text) return;
+      cutAi.textContent = text;
+      void cutAi.offsetWidth; // restart the glitch
+      cutAi.classList.add('on');
+      sound.aiTone();
+    },
+    skip: (show) => cutSkip.classList.toggle('on', show),
+    flash: (k) => {
+      cutFlash.style.opacity = String(Math.max(0, Math.min(1, k)));
+    },
+  };
+  const playActBreak = (act: number, done: () => void, force = false) => {
+    if (!isActBreak(act)) return null;
+    const scene = aboard.actBreak(act, cutUi, () => {
+      cutScene = null;
+      cutEl.hidden = true;
+      app.classList.remove('titled');
+      done();
+    }, force);
+    if (!scene) return null;
+    cutScene = scene;
+    cutEl.hidden = false;
+    app.classList.add('titled');
+    return scene;
+  };
+  game.playActBreak = (act, done) => playActBreak(act, done);
   const shipLink = params.get('ship');
   const endingLink = params.get('ending');
+  const cutLink = Number((params.get('cutscene') ?? '').replace(/^act/, '')) || 0;
+  if (isActBreak(cutLink)) {
+    await aboard.load(base, meshy);
+    game.cinema = playActBreak(cutLink, () => {
+      game.cinema = null;
+    }, true);
+    if (import.meta.env.DEV) Object.assign(window, { actBreak: game.cinema });
+  }
   if (shipLink !== null || endingLink !== null) {
     await aboard.load(base, meshy);
     const hub = aboard.ready!;

@@ -345,7 +345,7 @@ export class EndingScene {
 // ---- the pieces ----
 
 // the sky: day blue at the cloud tops, deep blue overhead, mixed to the black of space by uSpace
-function skyMaterial(): THREE.ShaderMaterial {
+export function skyMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
@@ -371,7 +371,7 @@ function skyMaterial(): THREE.ShaderMaterial {
   });
 }
 
-function stars(): THREE.Points {
+export function stars(): THREE.Points {
   const rng = makeRng(9);
   const n = 1200;
   const pos = new Float32Array(n * 3);
@@ -389,7 +389,7 @@ function stars(): THREE.Points {
 }
 
 // the cloud sea under the rider, seen from above: a soft white floor, and cloud cards lying flat on it, overlapping
-function clouds(): THREE.Group {
+export function clouds(): THREE.Group {
   const g = new THREE.Group();
   const rng = makeRng(21);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(900, 40), new THREE.MeshBasicMaterial({ color: 0xdfe6fa }));

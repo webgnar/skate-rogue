@@ -2110,3 +2110,34 @@ html, body {
 #ending .endcard[data-step='2'] .soon { display: block; font-size: clamp(24px, 6vw, 40px); color: #ff2fb4; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; text-shadow: 3px 3px 0 #000; }
 #ending .endcard.on { opacity: 1; }
 #ending .skip { position: absolute; right: max(14px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); font-size: 16px; color: #fff; opacity: 0.7; text-shadow: 2px 2px 0 #000; }
+/* the act breaks (src/cutscene/act-breaks.ts): the skater's speech bubble, the AI's red capitals, SKIP after a tap */
+#cutscene { position: absolute; inset: 0; pointer-events: none; z-index: 30; font-family: 'Bangers', 'Arial Black', sans-serif; letter-spacing: 0.04em; }
+#cutscene .flash { position: absolute; inset: 0; background: #fffaeb; opacity: 0; }
+#cutscene .ai {
+  position: absolute; left: 50%; top: max(9vh, calc(env(safe-area-inset-top) + 40px)); transform: translateX(-50%);
+  max-width: min(90vw, 680px); padding: 8px 16px; background: rgba(20, 4, 8, 0.9); border: 2px solid #ff2a2a; box-shadow: 0 0 18px rgba(255, 42, 42, 0.45);
+  color: #ff3a3a; font-family: Consolas, 'Courier New', monospace; font-weight: 700; font-size: clamp(15px, 3.6vw, 24px); letter-spacing: 0.08em; text-align: center;
+  opacity: 0; transition: opacity 0.2s;
+}
+#cutscene .ai.on { opacity: 1; animation: cutscene-glitch 0.35s steps(3) 1; }
+@keyframes cutscene-glitch { 0% { transform: translateX(-52%); } 50% { transform: translateX(-48%); } 100% { transform: translateX(-50%); } }
+#cutscene .bubble {
+  position: absolute; left: 0; top: 0; max-width: min(64vw, 380px); padding: 8px 16px; background: #fff; color: #120a16;
+  border: 3px solid #120a16; border-radius: 22px; box-shadow: 4px 4px 0 #120a16; font-size: clamp(18px, 4.4vw, 28px); text-align: center;
+  transform: translate(-50%, calc(-100% - 22px)); opacity: 0; transition: opacity 0.15s;
+}
+#cutscene .bubble.on { opacity: 1; }
+/* the tail, down to whoever's talking */
+#cutscene .bubble::after {
+  content: ''; position: absolute; left: calc(50% + var(--tail, 0px) - 10px); bottom: -19px; border: 10px solid transparent; border-top: 12px solid #120a16;
+  border-bottom: 0;
+}
+#cutscene .bubble::before {
+  content: ''; position: absolute; left: calc(50% + var(--tail, 0px) - 6px); bottom: -12px; border: 6px solid transparent; border-top: 9px solid #fff; border-bottom: 0;
+  z-index: 1;
+}
+#cutscene .skip {
+  position: absolute; right: max(14px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); pointer-events: auto;
+  padding: 6px 16px; font: inherit; font-size: 18px; color: #fff; background: rgba(18, 10, 22, 0.75); border: 2px solid #fff; border-radius: 4px; display: none;
+}
+#cutscene .skip.on { display: block; }

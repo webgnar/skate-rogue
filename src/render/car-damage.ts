@@ -57,7 +57,7 @@ function parkedGroup(level: Level, i: number, stage: Stage): THREE.Group {
 // act 4's ceiling (src/gen/escape.ts): one of the AI's gunships hanging in the line across the sky. A gunmetal
 // hull filling its box (you land on its back or slam into its nose), a red eye, cannon pods, rotor discs on stubs
 // over each end; a stomped one sags, its eye going dark
-function makeGunship(x0: number, x1: number, bottom: number, roof: number, stage: Stage): THREE.Group {
+export function makeGunship(x0: number, x1: number, bottom: number, roof: number, stage: Stage): THREE.Group {
   const g = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;
