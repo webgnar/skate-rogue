@@ -1372,11 +1372,27 @@ this is the plan, with the intro and the ending storyboarded below.)
 | # | Moment | Length | Plays | What it does |
 | --- | --- | --- | --- | --- |
 | 1 | **First launch intro** | ~15 s | First time the game is opened, after the first tap (sound needs a tap) | Sets up the world: the city asleep, the AI that can't read style, the ship above the clouds. Hands off to the title screen. Storyboard below. |
-| 2 | **Act breaks** | 3-5 s | After each act's escape set piece, the first time you clear that act | The hunt gets bigger: act 1's cruisers radio ahead, the chopper lifts off, the drones wake up, the gunships rise to the ceiling. Plays before the boon pick, while the game is already between floors. |
+| 2 | **Act breaks** | as long as each needs | After each act's escape set piece, the first time you clear that act (acts 1-4; act 5's is the ending) | You rise, then the AI answers with its next hunter. Plays before the boon pick, while the game is already between floors. Picked Nov 9, 2026: see The act breaks below. |
 | 3 | **A new route** | ~2 s | The first time you ever drop into the sky or the sewer route | A hint of what's down there: the camera tilts up into the cloud layer, or down into the dark of the storm drain with a drip and a rat. The sim holds still while it plays, so you never lose a line to it. |
 | 4 | **A new hunter** | 2-3 s | The first time each chaser shows up: the cruiser, the chopper, the drone swarm, the guards, the flood wave, the gunships | A quick reveal of the new threat (the chopper's spotlight swings onto you, the flood roars down the tunnel). It plays before the danger starts (at a floor or set-piece start), never in the middle of a line, so it can't cost you a slam. |
 | 5 | **Chapter 1 ending** | ~40 s | The first time you beat act 5 | The payoff: up out of the city into the beam, the crew aboard the ship, and the tease for Chapter 2. Storyboard below. Later wins get a 5 s version (the beam-up beat) and go straight to the summary. Built Nov 6, 2026 (below). |
 | 6 | **The shopkeeper** (optional) | ~3 s | Your first visit to the skate shop | A quick hello from whoever runs the shop, one caption, then the shop as normal. |
+
+### The act breaks (picked Nov 9, 2026)
+
+zack picked these from a brainstorm (thread "Brainstorm end-of-act cutscenes"); storyboards and dialogue come next
+**(not in the build yet)**. Each one is two beats: **you rise** (your skater reaches the new height and gets a
+breather) and **the AI answers** (it sends the next hunter). Length is whatever makes it good (zack: "length can go
+as long as we need them to"), so these break the 3-5 s rule above; they still play once and skip like the rest. The
+skater's lines are the same whoever you play; the cutscene uses the selected skater's mesh. They have dialogue, so
+the captions-only rule gives way here too.
+
+| Break | Height | You rise | The AI answers |
+| --- | --- | --- | --- |
+| Act 1 to 2 | Street to roofs | Your skater rides a fire escape up to a roof and looks down at the cruisers jammed in the roadblock. "Okay. Higher." | A spotlight lands on the cruisers from above: the chopper. |
+| Act 2 to 3 | Roofs to the wires and clouds | You grind onto a power line and it sparks. | Every billboard in the city flips to your face: STOKE DETECTED. The drones come out. |
+| Act 3 to 4 | Into the sky | You punch up through the cloud tops into stars and silence. | Red lights blink on one by one far above: the gunships forming the ceiling. |
+| Act 4 to 5 | Into space | You pop off the last blimp and keep floating; the board drifts and you grin. "...Whoa." (Shows the low gravity.) | The rocket, the AI's last launch, climbs up through the clouds after you. |
 
 ### Storyboard: the first-launch intro (~15 s)
 
