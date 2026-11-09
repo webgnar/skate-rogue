@@ -23,6 +23,7 @@ export interface Save {
   gnarPick: number; // the level the next run is at
   tutorialDone?: boolean; // the tutorial floor was cleared (or skipped by an old save)
   endingSeen?: boolean; // the Chapter 1 ending played in full once (src/ship/ending-scene.ts); later wins get the short one
+  actBreaks?: number[]; // the act breaks seen (src/cutscene/act-breaks.ts): each plays once, the first time its act is cleared
   missions: MissionSave; // the three missions showing and Skater Rank (src/run/missions.ts)
   headStart: HeadStart; // what the street dice won for the next run (src/run/dice.ts)
   crew?: number; // the skater order the save was made under: 2 = Webster free, Lou Gnar last (2026-11-08)
@@ -66,6 +67,7 @@ export function loadSave(): Save {
       ...(typeof s.tag === 'string' && s.tag ? { tag: s.tag } : {}),
       ...(s.tutorialDone ? { tutorialDone: true } : {}),
       ...(s.endingSeen ? { endingSeen: true } : {}),
+      ...(Array.isArray(s.actBreaks) ? { actBreaks: s.actBreaks.filter((n) => [1, 2, 3, 4].includes(n)) } : {}),
       ...(isGrip(s.tape) ? { tape: s.tape } : {}),
     };
   } catch {

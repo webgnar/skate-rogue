@@ -40,6 +40,25 @@ export class Sound {
 
   constructor(private readonly base: string) {}
 
+  // the AI's voice in a cutscene: a cold two-note synth blip under its red text (no voice acting yet)
+  aiTone(): void {
+    const ctx = this.ctx;
+    if (!ctx || this.away) return;
+    const t = ctx.currentTime;
+    for (const [i, f] of [196, 147].entries()) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(f, t + i * 0.13);
+      g.gain.setValueAtTime(0, t + i * 0.13);
+      g.gain.linearRampToValueAtTime(0.07, t + i * 0.13 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.13 + 0.22);
+      o.connect(g).connect(this.sfx);
+      o.start(t + i * 0.13);
+      o.stop(t + i * 0.13 + 0.25);
+    }
+  }
+
   // call from a user gesture: makes the context (or wakes it) and starts loading the samples
   unlock(): void {
     if (this.ctx) {
