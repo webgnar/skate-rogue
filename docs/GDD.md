@@ -1394,6 +1394,51 @@ the captions-only rule gives way here too.
 | Act 3 to 4 | Into the sky | You punch up through the cloud tops into stars and silence. | Red lights blink on one by one far above: the gunships forming the ceiling. |
 | Act 4 to 5 | Into space | You pop off the last blimp and keep floating; the board drifts and you grin. "...Whoa." (Shows the low gravity.) | The rocket, the AI's last launch, climbs up through the clouds after you. |
 
+How they speak (defaults until zack says otherwise): no voice acting. The skater talks in comic speech bubbles; the
+AI talks in its own red block capitals, on screens, billboards, the chopper's PA and the gunships, with a short
+synth tone under each line (no words in the audio). Each one ends by handing straight to the boon pick.
+
+#### Storyboard: act 1 to 2, "Okay. Higher." (~17 s)
+
+| Shot | Time | Picture | Sound | Words |
+| --- | --- | --- | --- | --- |
+| 1 | 0-3 s | Street level after the roadblock: the cruisers jammed nose to tail, lights spinning, the bus roof dented where you landed. Your skater rolls to a stop past them. A sleepwalker cop stands by a cruiser, reading off a phone. | Sirens, idling engines. | Cop: "Subject is non-compliant. Subject is... smiling?" |
+| 2 | 3-6 s | Your skater looks back up the avenue: more lights, more cruisers coming. | Sirens getting louder. | Skater: "Yeah, no." |
+| 3 | 6-10 s | Ollie onto a dumpster, onto the fire escape's ladder, then grind the fire escape's rails in a zigzag up the side of the building. | Wheels, the grind, the music building. | (none) |
+| 4 | 10-13 s | Pop over the parapet onto the roof, roll to the far edge, look down: the cruisers are small and stuck. | The sirens drop away below. | Skater: "They can't drive up here. Okay. Higher." |
+| 5 | 13-17 s | Wind gusts. A spotlight drops onto the cruisers, sweeps across the street and climbs the wall toward the skater, and the chopper rises over the roofline behind. | Rotors coming up, the synth tone. | AI (chopper PA): "STAY WHERE YOU ARE. YOU ARE SAFE." Skater: "Nope." (pushes off) |
+
+#### Storyboard: act 2 to 3, "STOKE DETECTED" (~17 s)
+
+| Shot | Time | Picture | Sound | Words |
+| --- | --- | --- | --- | --- |
+| 1 | 0-3 s | The last roof after the chopper chase, its spotlight sweeping behind. Power lines run off the roof up to a pylon, and the cloud layer hangs low above. | Rotors, wind. | (none) |
+| 2 | 3-7 s | Your skater ollies onto a power line and locks into a 50-50. Sparks shower off the trucks. | The line hums; the grind crackles. | Skater: "Don't look down. Don't look down." |
+| 3 | 7-9 s | The sparks run down the line into a substation, which flickers. | An electric buzz, then a glitch. | (none) |
+| 4 | 9-13 s | Across the city, billboard after billboard flips from STAY PREDICTABLE to your skater's face. On the street, every sleepwalker looks up at once, faces lit red. | A wave of glitches, billboard to billboard. | AI (billboards): "STOKE DETECTED. RAISING RESPONSE." |
+| 5 | 13-17 s | Hatches open on the tower tops and the drones pour out like bats, up toward the clouds. Your skater, at the top of the line, sees them coming. | A swarm's buzz rising. | Skater: "Oh, come on." (rides up into the clouds) |
+
+#### Storyboard: act 3 to 4, "No further." (~16 s)
+
+| Shot | Time | Picture | Sound | Words |
+| --- | --- | --- | --- | --- |
+| 1 | 0-3 s | Inside the cloud: white fog, the drones' red eyes behind in the mist. | The swarm's buzz, close. | (none) |
+| 2 | 3-6 s | Your skater pops off the top girder and punches up through the cloud tops: the stars, a moonlit sea of clouds below, slow motion at the top of the jump. | The buzz cuts off. Silence, then one soft note. | (none) |
+| 3 | 6-9 s | Land on a blimp's back, roll, sit down on the board to breathe. High above, one light that isn't a star (the ship, as in the intro). | Wind, breathing. | Skater: "...Quiet up here." |
+| 4 | 9-13 s | A red light blinks on above, then another, and another, in a line across the sky: the gunships hanging nose to tail, between the skater and the ship. | A low engine drone, one tone a light. | AI (gunships): "CEILING HOLDING. NO FURTHER." |
+| 5 | 13-16 s | Your skater stands, kicks the board up and grins. | The music comes back in. | Skater: "Every ceiling's got a gap." (pushes off) |
+
+#### Storyboard: act 4 to 5, "...Whoa." (~17 s)
+
+| Shot | Time | Picture | Sound | Words |
+| --- | --- | --- | --- | --- |
+| 1 | 0-3 s | After the ceiling: a gunship spins out of the broken line, and your skater races along the last blimp. | Engines, wind. | (none) |
+| 2 | 3-7 s | Pop off the blimp's nose, and keep floating, far longer than any jump. The board drifts off the feet; a toe catches it back. Earth's curve below. | The wind thins out. | Skater: "...Whoa." |
+| 3 | 7-9 s | A slow, giant flip, just because, and a laugh. | One guitar note per turn. | (none) |
+| 4 | 9-13 s | Down in the city center at night, a plaza splits open: a silo. Steam, then the rocket lights and lifts off. Every screen in the city shows the same line, and the sleepwalkers watch its trail. | Ignition roar, the synth tone. | AI (every screen): "FINAL MEASURE." |
+| 5 | 13-15 s | The rocket punches up through the clouds; its nose camera's red eye finds the skater. | The roar, rising. | (none) |
+| 6 | 15-17 s | Your skater sees the trail coming, then looks up: the ship's light, much closer now. | Music back in. | Skater: "Almost there." (pushes off) |
+
 ### Storyboard: the first-launch intro (~15 s)
 
 Lou Gnar stars (the lead skater, the AI's most wanted). It ends by rising into the sky, which is where the title
@@ -1586,7 +1631,7 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
 - **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
   chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until
   decided: the prices in that section, and chapters earnable for about the Stoken of all of Chapter 1's unlocks.
-- **Cutscenes** (plan decided Nov 2, 2026, see Cutscenes). Still open, with the defaults used until decided: who
+- **Cutscenes** (plan decided Nov 2, 2026, see Cutscenes). Still open, with the defaults used until decided: how the act breaks speak (default: speech bubbles for the skater, red AI text with a synth tone, no voice acting); who
   stars in the intro (default Lou Gnar, the lead; the title keeps Webster), whether captions stay or the cutscenes
   go wordless (default: a few comic captions), what the Chapter 1 ending teases (default: a radio signal from
   someone awake in another city).
