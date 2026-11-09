@@ -1994,7 +1994,11 @@ html, body {
 /* upright, SKATE and BEST come up just under the logo, above the flag on the shop, clear of Webster at the bottom
    (zack 2026-11-08). The logo's box keeps its full height under the scale, so the foot is pulled up into it */
 @media (orientation: portrait) {
-  #title.landed { justify-content: flex-start; }
+  #title.landed {
+    justify-content: flex-start;
+    /* lower than the press-start logo, so the name sits clear of the status bar's fade at the top (zack 2026-11-08) */
+    padding-top: calc(max(calc(var(--u) * 9), env(safe-area-inset-top)) + var(--u) * 8);
+  }
   #title.landed .foot { margin-top: calc(var(--u) * -9); }
 }
 /* sideways, SKATE sits in the bottom right, clear of Webster (who stands left of the middle) */
