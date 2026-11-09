@@ -163,11 +163,11 @@ describe('the skate shop', () => {
   });
 
   it('buys a mod into the chosen slot, replacing what was there, and only with the cash for it', () => {
-    let s = shop(200);
+    let s = shop(1000);
     const id = s.stock[0]!;
     s = buy(s, 0, 2)!;
     expect(s.board[2]).toBe(id);
-    expect(s.cash).toBe(200 - modDef(id).price);
+    expect(s.cash).toBe(1000 - modDef(id).price);
     expect(s.stock[0]).toBeNull();
     expect(buy(s, 0, 1)).toBeNull(); // sold
     const id2 = s.stock[1]!;
@@ -177,7 +177,7 @@ describe('the skate shop', () => {
   });
 
   it('swaps slots for free; sells a slot up to 5; restocks for more each time', () => {
-    let s = shop(500);
+    let s = shop(2000);
     s = buy(s, 0, 0)!;
     const cash = s.cash;
     s = swap(s, 0, 2);

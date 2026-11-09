@@ -17,24 +17,24 @@ export interface ModDef {
 }
 
 export const MOD_DEFS: ModDef[] = [
-  { id: 'onOllie', kind: 'trigger', name: 'On Ollie', short: 'OLLIE', text: 'Fires when you pop off the ground', price: 20 },
-  { id: 'onLand', kind: 'trigger', name: 'On Land', short: 'LAND', text: 'Fires when you land on your wheels', price: 20 },
-  { id: 'onGrind', kind: 'trigger', name: 'On Grind', short: 'GRIND', text: 'Fires when you lock onto a ledge or rail', price: 20 },
-  { id: 'onTrick', kind: 'trigger', name: 'On Trick', short: 'TRICK', text: 'Fires on every flip trick', price: 25 },
-  { id: 'doublePop', kind: 'effect', name: 'Double Pop', short: '2X POP', text: 'A second small ollie 0.2 s later, once a jump', price: 40 },
-  { id: 'speedKick', kind: 'effect', name: 'Speed Kick', short: 'KICK', text: '+2 speed, fading like rail speed', price: 35 },
-  { id: 'cashBurst', kind: 'effect', name: 'Cash Burst', short: '+$2', text: '+2 cash', price: 25 },
-  { id: 'shockwave', kind: 'effect', name: 'Shockwave', short: 'SHOCK', text: 'Cars near you pull out of the skate lane', price: 45 },
-  { id: 'patchJob', kind: 'effect', name: 'Patch Job', short: 'PATCH', text: '+5 to your most worn gear part (6 times a floor)', price: 40 },
-  { id: 'twice', kind: 'modifier', name: 'Times Two', short: '×2', text: 'The next effect fires twice', price: 45 },
-  { id: 'comboOnly', kind: 'modifier', name: 'Combo Only', short: 'COMBO 5+', text: 'The next effect fires only in a 5+ combo, and twice', price: 30 },
-  { id: 'coinFlip', kind: 'modifier', name: 'Coin Flip', short: '50/50', text: 'The next effect: half the time nothing, half the time three times', price: 25 },
+  { id: 'onOllie', kind: 'trigger', name: 'On Ollie', short: 'OLLIE', text: 'Fires when you pop off the ground', price: 100 },
+  { id: 'onLand', kind: 'trigger', name: 'On Land', short: 'LAND', text: 'Fires when you land on your wheels', price: 100 },
+  { id: 'onGrind', kind: 'trigger', name: 'On Grind', short: 'GRIND', text: 'Fires when you lock onto a ledge or rail', price: 100 },
+  { id: 'onTrick', kind: 'trigger', name: 'On Trick', short: 'TRICK', text: 'Fires on every flip trick', price: 125 },
+  { id: 'doublePop', kind: 'effect', name: 'Double Pop', short: '2X POP', text: 'A second small ollie 0.2 s later, once a jump', price: 200 },
+  { id: 'speedKick', kind: 'effect', name: 'Speed Kick', short: 'KICK', text: '+2 speed, fading like rail speed', price: 175 },
+  { id: 'cashBurst', kind: 'effect', name: 'Cash Burst', short: '+$2', text: '+2 cash', price: 125 },
+  { id: 'shockwave', kind: 'effect', name: 'Shockwave', short: 'SHOCK', text: 'Cars near you pull out of the skate lane', price: 225 },
+  { id: 'patchJob', kind: 'effect', name: 'Patch Job', short: 'PATCH', text: '+5 to your most worn gear part (6 times a floor)', price: 200 },
+  { id: 'twice', kind: 'modifier', name: 'Times Two', short: '×2', text: 'The next effect fires twice', price: 225 },
+  { id: 'comboOnly', kind: 'modifier', name: 'Combo Only', short: 'COMBO 5+', text: 'The next effect fires only in a 5+ combo, and twice', price: 150 },
+  { id: 'coinFlip', kind: 'modifier', name: 'Coin Flip', short: '50/50', text: 'The next effect: half the time nothing, half the time three times', price: 125 },
 ];
 
 export const BOARD = {
   startSlots: 3,
   maxSlots: 5,
-  slotPrice: 60,
+  slotPrice: 300, // zack 2026-11-09: board upgrades start at $100 at the first shop; mods and slot x5
   restockPrice: 10, // then +5 each
   doublePopFrames: 12,
   doublePop: 0.6, // share of an ollie
