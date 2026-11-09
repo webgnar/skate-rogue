@@ -44,8 +44,9 @@ minded. Then it started removing everything it couldn't predict. The city it bui
 robotaxis glide, Flock cameras turn on every corner, billboards remind you what your social credit is worth, and the
 people walk with their eyes on their phones, doing exactly what the feed tells them. They don't know they're asleep.
 Skating was one of the things the AI couldn't predict, so it outlawed it, and the few who kept skating found
-something out: when you're really in it, carving a line, popping a flip, locking into a grind, the cameras lose you.
-Style is the one signal the machine can't read, and it hates that. Shredtoshi Gnarlymoto called that feeling Stoken,
+something out: when you're really in it, carving a line, popping a flip, locking into a grind, the cameras can't
+predict you. Stoke is the one signal the machine can detect but never read ahead of, and it hates that: the louder
+your stoke, the harder it hunts, and the less it can guess where you'll be. Shredtoshi Gnarlymoto called that feeling Stoken,
 and whoever gets a taste of it wakes up. Lou Gnar is the one it wants most. The AI's reach ends where the ground
 does: its cameras, its cruisers and its sleepwalkers are all down on the street, and the higher you get the less of
 you it can see. Up past the chopper, past the drones, past the clouds and the thin air, a **Pleiadian ship** waits
@@ -68,8 +69,9 @@ What it means for the game:
   sky (act 4) and into space (act 5 and deep Endless): lower gravity, huge air, long hang time and top speeds, the sky
   route turned into the whole world. The same tap, the same tricks, just bigger. Boons that bend gravity get stronger
   the higher you are.
-- **Style lifts you.** Clean lines and combos are what get you higher (the gnar state, the kickers, NO GROUND), and
-  they are also what the cameras can't lock on to, so skating well is both the speed and the stealth.
+- **Style lifts you, and the AI hears it.** Clean lines and combos are what get you higher (the gnar state, the
+  kickers, NO GROUND). They also fill the AI's stoke detector (see The chase: Stoke raises the stakes): the better you
+  skate, the harder it hunts, but it only catches you when you slip.
 - **The chasers climb with you.** The cruiser owns the street, the chopper the rooftops, the drone swarm the clouds,
   and at the top the AI launches something after you. Heat is how close the ground is to pulling you back down.
   The sleepwalkers are the AI's eyes: pedestrians and cops on foot who stop, stare and point you out to the cameras.
@@ -712,9 +714,27 @@ chase is what makes mistakes matter, so it has to be tight: always visible, alwa
 
   So **three slams close together end the run**, two are a scare you can skate out of, and one is forgiven after
   about 8 seconds of clean skating (less with tricks and grinds).
-- **Escalation, not surprise.** At 50 the siren layer comes in and the cruiser's lights reach the screen. At 75 a
-  drone drops in front and the music thins out. At 90 the screen edge pulses and the phone vibrates. Every
-  step is readable at a glance.
+- **Stoke raises the stakes** (zack, Nov 9, 2026: "heat should build up in relation to the stoke meter in the sense
+  that the enemy is an ai that is detecting stoke and wants to ban that"; picked "Stoke raises the stakes" over Heat
+  rising with stoke directly; **not built yet**). The stoke meter (see Scoring and stoke) is the AI's **detector**:
+  how loud you are to it. Detection and catching are split: stoke sets how hard the hunt is, and mistakes still decide
+  whether it catches you, so a good line is never punished, it's a bigger wave where a fall costs more.
+  - **Slam Heat scales with stoke:** about +25 at an empty meter, up to +50 at a full one (replaces the flat +35).
+    Slow skating after a slam scales the same way. Cooling (tricks, grinds, clean skating) does not change.
+  - **Full stoke is the alarm, not a safe state.** The gnar state keeps its speed boost but **no longer makes slams
+    free**: it brings the hunt up a tier for its 8 seconds (the cruiser drives faster, the chopper lifts off or the
+    drones drop in, every camera snaps to you). One slam in gnar ends it (as now) and costs full Heat.
+  - **The escalation steps follow stoke, not Heat:** the siren layer, the cameras turning, the drone in front and the
+    music thinning out come in as the detector fills; Heat keeps only the catch cues (the lights on screen, the
+    pulsing edge and the vibration near 90, the cut-in at 100).
+  - **The HUD sells it:** the stoke meter is drawn as the AI's scan lock on you, a red grid filling toward TARGET:
+    STOKE DETECTED at full. Same meter, new skin, so the story is on screen every second.
+  - **The climb:** higher acts have fewer eyes, so the detector fills slower up there (one more reason to go up).
+  - Numbers to tune on the bot: the slam range, the gnar-tier cruiser speed, the per-act detector rate.
+- **Escalation, not surprise.** Every step is readable at a glance. Today: at 50 Heat the siren layer comes in and
+  the cruiser's lights reach the screen, at 75 a drone drops in front and the music thins out, at 90 the screen edge
+  pulses and the phone vibrates. With Stoke raises the stakes, the siren, cameras, drone and music move to the stoke
+  meter and Heat keeps the lights, the pulse and the vibration.
 - **Caught:** at 100 the cruiser cuts in and the run ends with a short camera beat (the board skidding away,
   the skater pinned in the headlights) before the run summary. Restart is one tap.
 - **Depth:** deeper floors make Heat decay slower and add a second chaser type (a drone swarm in High-Tech City,
@@ -1194,7 +1214,8 @@ is teased.
 - **Combo** builds with tricks, grinds and car-hops without touching the ground; landing banks it.
 - **Stoke meter** fills with the combo. Full stoke gives a short "gnar" state: speed up, and slams cost no Heat.
   A slam kills the meter (zack, Nov 3, 2026): it empties, and a slam in the gnar state ends it (that slam still
-  costs no Heat).
+  costs no Heat). **Decided Nov 9, 2026, not built:** the meter is also the AI's stoke detector (see The chase:
+  Stoke raises the stakes): slam Heat scales with it, gnar becomes the alarm tier and its free slams go away.
 - **Leaderboards:** deepest floor, high score, daily seed. Port `api/leaderboard.ts` and `leaderboard-service.ts` from excaliburSkate. Built Oct 24, 2026: api/leaderboard.ts over a Redis store (Upstash), boards for score, deepest floor and each day's daily run; it needs a store connected on Vercel.
 
 ## Presentation (3D)
