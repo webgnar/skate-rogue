@@ -966,11 +966,17 @@ in the slots; several stack (Times Two then Coin Flip is 0 or 6). Times Two fire
 later, Combo Only (COMBO 5+) fires it only in a combo of 5 or more and then twice, and Coin Flip (50/50) fires it
 not at all or three times. A trigger with nothing after it still does nothing.
 
-Built Oct 24, 2026 (light version): 3 slots (up to 5 at $60 each), 6 triggers and the 8 effects above. A trigger
+Built Oct 24, 2026 (light version): 3 slots (up to 5 at $300 each), 6 triggers and the 8 effects above. A trigger
 fires the effects to its right until the next trigger; an effect with no trigger to its left does nothing. The shop
-stocks 4 mods (at least one trigger and one effect) for $15 to $45, a slot and a restock ($10, then +5). Tap a mod
+stocks 4 mods (at least one trigger and one effect) for $100 to $225, a slot and a restock ($10, then +5). Tap a mod
 then a slot to buy it there; tap two slots to swap them for free. The board shows as a strip of slots bottom left,
 and a slot flashes when it fires. No Heat cool-down or boon reroll in the shop yet.
+
+Prices raised Nov 9, 2026 (zack: "the first time you get to the skate shop the lowest priced board upgrade should
+be $100"): every mod and the slot x5, so the order holds. Triggers $100 (On Trick $125), effects $125 to $225,
+modifiers $125 to $225, +1 Slot $300. Gear prices unchanged, so the first shop (about $260 for the bot) fixes worn
+parts first and buys at most one mod. Prices are flat across shops while income per floor roughly doubles by acts
+3-4, so mods get easier to afford later.
 
 ## Gear and wear
 
