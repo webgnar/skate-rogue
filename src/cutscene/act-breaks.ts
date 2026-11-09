@@ -27,7 +27,7 @@ export type ActBreak = 1 | 2 | 3 | 4;
 export const isActBreak = (n: number): n is ActBreak => n === 1 || n === 2 || n === 3 || n === 4;
 
 // how long each runs, seconds (the storyboards' timings)
-export const ACT_BREAK_LEN: Record<ActBreak, number> = { 1: 17, 2: 17, 3: 16, 4: 17 };
+export const ACT_BREAK_LEN: Record<ActBreak, number> = { 1: 20.5, 2: 17, 3: 16, 4: 17 };
 export const SKIP_SHOWN = 2.5; // seconds the SKIP button stays up after a tap
 
 export interface CutsceneUi {
@@ -360,7 +360,7 @@ export class ActBreakScene {
         //4: from behind them on the roof's edge, looking down at the cruisers stuck in the street
         this.ride(V(9, ROOF_Y, -4.8), -Math.PI / 2, clipAt('idle', t));
         this.shot(V(15, ROOF_Y + 2.8, -7), V(2, 12.5, 2), 52);
-      } else {
+      } else if (t < 17) {
         //5: wide from across the street: the chopper rises over the roofline, its light finds the cruisers and
         //climbs the wall to them; "Nope." and they push off along the roof
         const rise = smooth(12.8, 15, t);
@@ -373,6 +373,35 @@ export class ActBreakScene {
         const pose = go > 0 ? clipAt('push', t) : clipAt('idle', t);
         this.ride(V(11 - go * 8, ROOF_Y, -5.6), go > 0 ? Math.PI : -Math.PI / 2, pose);
         this.shot(V(18, 10, 44), V(5, 14, -6), 50);
+      } else {
+        //6: low from the street: they turn for the edge, ollie off the roof over the jammed cruisers, land in the
+        //street and roll off down it, the chopper's light a beat behind
+        const turn = smooth(17, 17.4, t);
+        const air = smooth(17.6, 19.1, t);
+        const away = smooth(19.25, 20.5, t);
+        let p: THREE.Vector3;
+        let pose: Pose;
+        let yaw = -Math.PI / 2;
+        if (t < 17.6) {
+          p = V(3, ROOF_Y, mix(-5.6, -4.4, smooth(17.2, 17.6, t)));
+          yaw = mix(Math.PI, -Math.PI / 2, turn);
+          pose = clipAt('ride', t);
+        } else if (t < 19.1) {
+          //off the parapet in a long arc, a little rise first, then the drop to the near lane
+          p = V(mix(3, 4, air), 0, mix(-4.4, 13.5, air));
+          p.y = mix(ROOF_Y, 0, air * air) + Math.sin(air * Math.PI) * 2.2;
+          pose = air < 0.35 ? clipAt('ollie', 0.08 + air * 1.1) : clipAt('air', t);
+        } else {
+          //down hard, the knees take it, and off along the street
+          p = V(mix(4, 16, away * away), 0, 13.5);
+          yaw = mix(-Math.PI / 2, 0, smooth(19.2, 19.7, t));
+          pose = t < 19.45 ? clipAt('land', (t - 19.1) * 0.9) : clipAt('push', t);
+        }
+        this.ride(p, yaw, pose);
+        heli.group.position.set(-14, 33, -16);
+        heli.aim(this.holder.position.clone().add(V(-2, 0, -2)), dt);
+        const look = this.holder.position.clone().add(V(0, 1, 0));
+        this.shot(V(mix(-1, 6, away), 1.5, 22), look, 52);
       }
     };
   }
