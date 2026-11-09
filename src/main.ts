@@ -61,7 +61,7 @@ import { DicePanel } from './ui/dice-panel';
 import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 import { TitleScene } from './title/title-scene';
 import { Aboard } from './ship/aboard';
-import { isActBreak, type ActBreakScene, type CutsceneUi } from './cutscene/act-breaks';
+import { isActBreak, type ActBreak, type ActBreakScene, type CutsceneUi } from './cutscene/act-breaks';
 import { ON_CRAZYGAMES, breakAd, happyTime, initPortal, loadingDone, setPlaying, watchPortalMute } from './net/portal';
 
 const base = import.meta.env.BASE_URL;
@@ -867,8 +867,33 @@ async function start() {
       cutFlash.style.opacity = String(Math.max(0, Math.min(1, k)));
     },
   };
-  const playActBreak = (act: number, done: () => void, force = false) => {
+  const playActBreak = (act: number, done: () => void, force = false): { frame(dt: number): void; tap(): void } | null => {
     if (!isActBreak(act)) return null;
+    if (!aboard.ready) {
+      //the crew's models aren't in yet (a fast escape, a slow phone): the run holds until they are, then it plays;
+      //if they never come, the run goes on without it
+      if (!force && (loadSave().actBreaks ?? []).includes(act)) return null;
+      void aboard.load(base, meshy).catch((err) => console.warn('ship hub', err));
+      let real: { frame(dt: number): void; tap(): void } | null = null;
+      let waited = 0;
+      let over = false;
+      return {
+        frame: (dt) => {
+          if (real) return real.frame(dt);
+          if (over) return;
+          waited += dt;
+          if (aboard.ready) real = startActBreak(act, done, force);
+          if (!real && (aboard.ready || waited > 25)) {
+            over = true;
+            done();
+          }
+        },
+        tap: () => real?.tap(),
+      };
+    }
+    return startActBreak(act, done, force);
+  };
+  const startActBreak = (act: ActBreak, done: () => void, force: boolean) => {
     const scene = aboard.actBreak(act, cutUi, () => {
       cutScene = null;
       cutEl.hidden = true;
@@ -916,7 +941,7 @@ async function start() {
     if (game.titled) return void setTimeout(boardShip, 2000);
     void aboard.load(base, meshy).catch((err) => console.warn('ship hub', err));
   };
-  if (!aboard.ready) setTimeout(boardShip, 4000);
+  if (!aboard.ready) setTimeout(boardShip, escape ? 0 : 4000); // ?escape: straight away, its cutscene is close
 
   //the portal hears when skating starts and stops (src/net/portal.ts): skating is no title and no card up
   const cards = ['title', 'paused', 'pick', 'under', 'shop', 'cont', 'dice', 'over', 'scores', 'meta']
