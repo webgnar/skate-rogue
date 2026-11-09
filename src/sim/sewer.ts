@@ -26,12 +26,15 @@ export const SEWER_SIM = {
   // crosses the tunnel on tracks raised to just under its floor, its roof an ollie over it (SEWER.subwayRoof) to hop
   // like a car's; between trains the tracks are bare and live, and down on them you're zapped
   trainCars: 5,
+  //(the L's own car, its true proportions, scaled up whole: zack, 2026-11-08, "train should be taller and use the
+  //same model as the L track train"; as wide as the trench, SEWER.subway, the tracks sunk so its roof stays an ollie up)
+  trainScale: 1.32,
   trainSpeed: 0.1, // tiles/frame along the line (6 a second): a slow crawl across
   trainHurry: [0.04, 0.3] as const, // tiles/frame: how slow or fast the first comes in, out of the city, timed to you
   trainFrom: -40, // z, tiles: where the line comes out of the city (its nose sets off from here)
   trainTo: 14, // and where it goes back into it, past the camera (the train's gone once its tail's past here)
   lane: [0.3, 1.9] as const, // z: the skate lane, which the train's in while any of it is across
-  bed: 14, // px under the floor: the rail heads, the train's wheels (its roof + the L car's height, EL.carH)
+  bed: 32, // px under the floor: the rail heads, the train's wheels (the scaled L car's height, EL.carH, less SEWER.subwayRoof)
   zapFrom: 4, // px under the floor (the board's middle over the tracks) and the third rail has you
   gatorWake: 5 * TILE, // the alligator opens its jaws as you come this close
   gatorLow: 14, // px: feet this close over the floor over it and it bites
@@ -78,8 +81,8 @@ export interface Train {
   on: boolean; // across the skate lane
 }
 
-// tiles of train, nose to tail: five of the L's cars
-export const TRAIN_LEN = (SEWER_SIM.trainCars * EL.carLen + (SEWER_SIM.trainCars - 1) * EL.coupling) / TILE;
+// tiles of train, nose to tail: five of the L's cars, scaled
+export const TRAIN_LEN = (SEWER_SIM.trainScale * (SEWER_SIM.trainCars * EL.carLen + (SEWER_SIM.trainCars - 1) * EL.coupling)) / TILE;
 // frames from setting off to its nose reaching the lane, and to its tail leaving the line
 export const TRAIN_ARRIVE = (SEWER_SIM.lane[0] - SEWER_SIM.trainFrom) / SEWER_SIM.trainSpeed;
 export const TRAIN_TRAVEL = (SEWER_SIM.trainTo - SEWER_SIM.trainFrom + TRAIN_LEN) / SEWER_SIM.trainSpeed;
