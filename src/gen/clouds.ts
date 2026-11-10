@@ -131,8 +131,10 @@ export const CLOUD_LINE = {
   most: { launch: 2, bridge: 3, hubba: 3, srail: 3, sbeam: 3 } as Partial<Record<CloudBeat, number>>, // a floor's most of each set
   // the clouds that blink out under you (zack, 2026-11-10: "use them sparingly in the harder parts of cloud act"):
   // none on the act's first floor, then at most this many a floor, and only past this share of the layer
-  thinMost: 2,
-  thinFrom: 0.5,
+  // (zack, later the same day: "i want fewer dissapearing clouds.. only in the later parts of the cloud level"): one a
+  // floor at most, in the last third, in act 4's clouds too
+  thinMost: 1,
+  thinFrom: 0.67,
 };
 
 // act 3's launch quarterpipes: roll up one and off its lip and it throws you straight up (at the same arc whatever
@@ -425,8 +427,9 @@ export function addClouds(level: Level, seed: number): void {
     const pieceX = x + CLOUD_ACT.pieceAt * (end - x);
     //(act 3: a cloud that blinks out only so often, and only in the floor's harder back half; none on floor 7)
     const hardX = x + CLOUD_LINE.thinFrom * (end - x);
-    let thins = act === 3 ? (floor === CLOUDS.from ? 0 : CLOUD_LINE.thinMost) : Infinity;
-    const thinOk = (at: number) => act !== 3 || (thins > 0 && at >= hardX);
+    const sparse = act === 3 || act === 4;
+    let thins = sparse ? (floor === CLOUDS.from ? 0 : CLOUD_LINE.thinMost) : Infinity;
+    const thinOk = (at: number) => !sparse || (thins > 0 && at >= hardX);
     while (x < end - 6 * TILE) {
       let beat: CloudBeat | CloudPiece = pick(rng, weights);
       //never two gaps or two rainbows running, and open with a cloud to land on

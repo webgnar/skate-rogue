@@ -65,7 +65,7 @@ describe('acts 4 and 5, above the clouds and space', () => {
     for (const act of [4, 5]) {
       let made = 0;
       let n = 0;
-      for (let seed = 1; seed <= 3; seed++) for (const f of act === 4 ? [10, 11, 12] : [13, 14, 15]) {
+      for (let seed = 1; seed <= 6; seed++) for (const f of act === 4 ? [10, 11, 12] : [13, 14, 15]) {
         const l = floorOf(seed * 53, f);
         for (const [a, b] of l.hillSpans!.slice(1)) {
           const [lip] = lipOf(l, a, b);

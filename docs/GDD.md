@@ -464,9 +464,9 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   - **Launch**: a run-up cloud into a skatepark quarterpipe that throws you straight up through a cloud bank, down
     onto a long steel downrail to a small flat cloud, and up a second quarterpipe and downrail onto a landing cloud
     (up to 2). The quarterpipe sets your speed for the throw, so you always make the rail.
-  **Clouds that blink out** (the thin clouds that go a moment after you land) are rare in act 3 (zack, Nov 10, 2026:
-  "use them sparingly in the harder parts of cloud act"): none on 3-1, at most two a floor on 3-2 and 3-3, and only
-  in the back half of the floor. Once you land on one it blinks, faster and faster, for a second, then puffs away
+  **Clouds that blink out** (the thin clouds that go a moment after you land) are rare (zack, Nov 10, 2026:
+  "use them sparingly in the harder parts of cloud act", then "fewer ... only in the later parts of the cloud level"):
+  none on 3-1, then at most one a floor in acts 3 and 4, and only in the last third of the floor. Once you land on one it blinks, faster and faster, for a second, then puffs away
   (every act). The drone bridge's far cloud stands 0.75 tiles under the one you leave, so a long jump over the drones
   still comes down on it.
   The girder staircase is gone from act 3: **the clouds are the only way through** (zack, Nov 10: "in order to pass act
