@@ -127,7 +127,8 @@ function landsSky(level: Level, near: Near, decks: Surface[], sk: Skater, x: num
     const ny = y - tuck.lift;
     x += sk.hsp;
     for (const s of [...near.surfaces, ...decks]) {
-      if (!sky(s) || x < s.x0 + EDGE || x > s.x1 - EDGE) continue;
+      //(not a station's steps, act 5: coming down on them is a slam)
+      if (!sky(s) || s.kind === 'stairs' || x < s.x0 + EDGE || x > s.x1 - EDGE) continue;
       const sy = surfaceY(s, x);
       if (by <= sy && ny >= sy) return true;
     }
@@ -234,6 +235,8 @@ export class Pilot {
       const on = sk.surface;
       if (on.launch) return false;
       if (level.surfaces.some((o) => o !== on && o.launch && Math.abs(o.x0 - on.x1) < 4 && Math.abs(o.y - on.y) < 8)) return false;
+      //act 5's ledges and flat rails along a station deck: ollie up onto one just ahead
+      if (near.rails.some((r) => (r.sky === 'ledge' || r.sky === 'deckrail') && r.xs[0] - sk.x > 0 && r.xs[0] - sk.x < 8 * sk.hsp && r.xs[0] - sk.x > 3 * sk.hsp && on.x1 > r.xs[0])) return true;
       //ollie off the end at the last few steps, as a good player does
       return on.x1 - sk.x < Math.max(12, 3 * sk.hsp);
     }

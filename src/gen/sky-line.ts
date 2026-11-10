@@ -39,7 +39,7 @@ interface Piece {
 }
 
 // (and act 3's sets: its hubbas, S-rails, S I-beams, quarterpipes and their big rails, src/gen/clouds.ts CLOUD_LINE)
-export const CLOUDY = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon', 'spire', 'hubba', 'srail', 'sbeam', 'qp', 'downrail']);
+export const CLOUDY = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon', 'spire', 'hubba', 'srail', 'sbeam', 'qp', 'downrail', 'stairs', 'landing', 'handrail', 'ledge', 'deckrail', 'gaprail']);
 
 // every piece of the sky line in [a, b], in order along it
 export function piecesOf(level: Level, a: number, b: number): Piece[] {

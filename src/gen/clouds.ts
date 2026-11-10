@@ -19,7 +19,7 @@ import { DRONE } from '../sim/drones';
 
 // spire, blimp: acts 4 and 5's own beats (HIGH): a skyscraper's crown up through the clouds, and a blimp of the fleet
 // hubba, srail, sbeam, bridge, launch: act 3's own sets (CLOUD_LINE), the cloud line as a line of its own
-export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb' | 'spire' | 'blimp' | 'beam' | 'hubba' | 'srail' | 'sbeam' | 'bridge' | 'launch';
+export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb' | 'spire' | 'blimp' | 'beam' | 'hubba' | 'srail' | 'sbeam' | 'bridge' | 'launch' | 'stairset' | 'double' | 'ledge' | 'gaprail';
 // act 3's set pieces, one a floor up in the layer (CLOUD_ACT): the sky route's blimp, crane jib and window washer's rig
 export type CloudPiece = 'blimp' | 'swing' | 'rig' | 'bust';
 
@@ -148,6 +148,37 @@ export const LAUNCH = {
   land: [9, 11], // tiles: the cloud the second rail runs down onto
 };
 
+// Act 5's station line (zack, 2026-11-10: "act 5 is space: THAT level needs to be built out... to the degree that
+// the sewer was. we are going to add a lot more little handrails like the sewer has with its little stairset"). The
+// station's own sets, strung along the floor between its decks, satellites and debris, the way act 3's cloud line
+// strings its sets: stair sets with a handrail over the steps (the sewer's, src/gen/sewer.ts: ollie the set or grind
+// the rail, roll onto the steps and you slam), double sets with a kinked rail, ledges and flat rails along the decks,
+// rails over open space between two modules, and act 3's hubba as a ledge down off a module's roof. In act 3's tiles
+// (1x gravity): highDials grows them for act 5's, so a set is about 3x the sewer's, the handrails' height kept a
+// handrail's
+export const STATION = {
+  // a stair set: a deck, the steps down off its end with a handrail over them, a deck at their foot
+  top: [5, 7], // tiles: the deck before the steps
+  run: [3, 4], // tiles of steps along
+  drop: 1.2, // tiles they fall
+  land: [7, 9], // tiles: the deck at their foot
+  railH: 0.9 * TILE, // px: the handrail over the steps' noses (a handrail's height, never grown)
+  // a double set: steps, a landing, steps, its rail kinked down, flat, down
+  run2: [2, 3], // tiles: each flight
+  drop2: 0.9, // tiles each falls
+  landing: [2, 3], // tiles: the landing between them
+  // a deck with ledges along it: ollie up onto one, grind it, drop back to the deck
+  deck: [14, 18], // tiles: the deck
+  ledge: [3, 4], // tiles: each ledge
+  ledges: 2, // the most on a deck
+  ledgeH: 0.5 * TILE, // px: a ledge's top over the deck (a flat rail stands railH)
+  // a gap rail: a rail across open space from one module's deck to the next, too far to jump
+  from: [5, 7], // tiles: the deck you leave from
+  gap: [5, 6], // tiles of open space under the rail
+  far: [7, 9], // tiles: the deck on the far side
+  most: { stairset: 6, double: 3, ledge: 3, gaprail: 3, hubba: 2 } as Partial<Record<CloudBeat, number>>, // a floor's most of each set
+};
+
 // Acts 4 and 5 (GDD: How a run ends, and the Roadmap's climb, step d; zack, 2026-11-06): the same floor as act 3's,
 // the layer the whole way from a start up over the run-up, built higher and spread out for the act's gravity. Every
 // gap and rise is scaled by 1 / gravity (an ollie and a flip carry you that much further and higher), so the line asks
@@ -171,7 +202,8 @@ export const HIGH = {
     floors: [13, 14, 15],
     over: 26,
     pieces: ['blimp', 'swing', 'rig'] as CloudPiece[],
-    beats: [['puff', 4], ['thin', 2], ['drift', 3], ['rainbow', 2], ['balloon', 3], ['gap', 2], ['fork', 2], ['hops', 1.5], ['climb', 1.5]] as [CloudBeat, number][],
+    //(the station line's sets come round often, the decks, satellites and debris between them: STATION)
+    beats: [['puff', 1.5], ['thin', 0.8], ['drift', 1], ['rainbow', 0.8], ['balloon', 1], ['gap', 0.5], ['fork', 0.6], ['hops', 0.6], ['climb', 0.6], ['stairset', 5], ['double', 3], ['ledge', 2.5], ['gaprail', 2], ['hubba', 2]] as [CloudBeat, number][],
   },
   spire: [5, 7], // tiles: a skyscraper's crown, a deck to land on
   beam: [5, 7], // tiles: a swinging I-beam (src/gen/sky-beats.ts SKY.beam), its sway either side kept clear
@@ -234,6 +266,11 @@ export function highDials<R>(floor: number, fn: () => R): R {
   set(CLOUDS as unknown as Record<string, unknown>, 'over', HIGH[act as 4 | 5].over);
   grow(CLOUD_ACT as unknown as Record<string, unknown>, ['startUp', 'entryUp', 'entryIn', 'meetUp', 'runOn', 'rigGap', 'blimpUp', 'swingUp']);
   grow(REACH as unknown as Record<string, unknown>, ['gap', 'min', 'max', 'rise']);
+  //(the station line's and the hubba's, act 5's: drops and gaps grown, lengths widened, the rails' heights kept)
+  grow(STATION as unknown as Record<string, unknown>, ['drop', 'drop2', 'gap']);
+  widen(STATION as unknown as Record<string, unknown>, ['top', 'run', 'land', 'run2', 'landing', 'deck', 'ledge', 'from', 'far']);
+  grow(CLOUD_LINE as unknown as Record<string, unknown>, ['hubbaUp', 'hubbaDrop']);
+  widen(CLOUD_LINE as unknown as Record<string, unknown>, ['hubbaTop', 'hubba', 'hubbaLand']);
   try {
     return fn();
   } finally {
@@ -456,9 +493,9 @@ export function addClouds(level: Level, seed: number): void {
         } else beat = 'puff';
       }
       //(act 3's sets: never the same one twice running)
-      if (beat === last && ['hubba', 'srail', 'sbeam', 'bridge', 'launch'].includes(beat)) beat = 'puff';
+      if (beat === last && ['hubba', 'srail', 'sbeam', 'bridge', 'launch', 'double', 'ledge', 'gaprail'].includes(beat)) beat = 'puff';
       //(and only so many of each a floor)
-      const most = act === 3 ? CLOUD_LINE.most[beat as CloudBeat] : undefined;
+      const most = act === 3 ? CLOUD_LINE.most[beat as CloudBeat] : act === 5 ? STATION.most[beat as CloudBeat] : undefined;
       if (most !== undefined && (sets[beat] ?? 0) >= most) beat = 'puff';
       if (beat === 'hubba') {
         //a cloud a flip up, a rainbow ledge off its end grinding down, and a cloud at its foot
@@ -480,6 +517,97 @@ export function addClouds(level: Level, seed: number): void {
           coins(hx + hw, hx + hw + lw, () => ly);
           x = hx + hw + lw;
           y = ly;
+        } else beat = 'puff';
+      }
+      if (beat === 'stairset' || beat === 'double') {
+        //a deck, the steps down off its end (one flight, or two with a landing between) under a handrail, and the
+        //deck at their foot
+        const one = beat === 'stairset';
+        const S = STATION;
+        const tw = range(rng, S.top) * TILE;
+        const flights = one ? [[range(rng, S.run) * TILE, S.drop * TILE]] : [[range(rng, S.run2) * TILE, S.drop2 * TILE], [range(rng, S.run2) * TILE, S.drop2 * TILE]];
+        const mid = one ? 0 : range(rng, S.landing) * TILE;
+        const lw = range(rng, S.land) * TILE;
+        const run = flights.reduce((a, [w]) => a + w, 0) + mid;
+        const fall = flights.reduce((a, [, d]) => a + d, 0);
+        //(where the layer's already as low as it may stand, the deck before the steps stands that much over it: a
+        //flip up onto it, never more than a staircase's step)
+        const up = Math.max(0, y + fall - lowest(x + tw + run));
+        if (up <= CLOUDS.stairRise * TILE) y -= up;
+        const foot = y + fall;
+        if (up <= CLOUDS.stairRise * TILE && fits(tw + run + lw) && !busy(level, x, x + tw + run + lw, y + fall / 2)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + tw, y, row: -1, sky: 'cloud' });
+          coins(x, x + tw, () => y);
+          //the flights, and the rail's line over their noses: a handrail's height over the top step's edge and the
+          //bottom one's, flat over the landing
+          let sx = x + tw;
+          let sy = y;
+          const pts: [number, number][] = [[sx - TILE / 2, sy - S.railH]];
+          flights.forEach(([w, d], i) => {
+            surfaces.push({ kind: 'stairs', x0: sx, x1: sx + w, y: sy, y1: sy + d, row: -1, sky: 'stairs' });
+            pts.push([sx + w, sy + d - S.railH]);
+            sx += w;
+            sy += d;
+            if (i === 0 && mid) {
+              surfaces.push({ kind: 'ledge', x0: sx, x1: sx + mid, y: sy, row: -1, sky: 'landing' });
+              sx += mid;
+              pts.push([sx, sy - S.railH]);
+            }
+          });
+          //(it runs half a tile on past the last step, over the deck at the foot, to come off onto)
+          pts[pts.length - 1] = [sx + TILE / 2, sy - S.railH];
+          const r = polyRail(pts);
+          r.sky = 'handrail';
+          rails.push(r);
+          coins(x + tw, sx, (cx) => (r.yAt(cx) ?? sy));
+          surfaces.push({ kind: 'ledge', x0: sx, x1: sx + lw, y: foot, row: -1, sky: 'cloud' });
+          coins(sx, sx + lw, () => foot);
+          x = sx + lw;
+          y = foot;
+        } else beat = 'puff';
+      }
+      if (beat === 'ledge') {
+        //a long deck with ledges and flat rails along it, an ollie up onto each, room between to come down and pop again
+        const S = STATION;
+        const w = range(rng, S.deck) * TILE;
+        if (fits(w) && !busy(level, x, x + w, y)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky: 'cloud' });
+          const n = 1 + Math.floor(rng() * S.ledges);
+          const slot = w / n;
+          for (let i = 0; i < n; i++) {
+            const lw = Math.min(range(rng, S.ledge) * TILE, slot * 0.55);
+            const lx = x + slot * i + slot * 0.35;
+            const rail = rng() < 0.5;
+            const ly = y - (rail ? S.railH : S.ledgeH);
+            const r = polyRail([[lx, ly], [lx + lw, ly]]);
+            r.sky = rail ? 'deckrail' : 'ledge';
+            if (!rail) r.material = 'concrete';
+            rails.push(r);
+            coins(lx, lx + lw, () => ly);
+          }
+          coins(x, x + slot * 0.3, () => y);
+          x += w;
+        } else beat = 'puff';
+      }
+      if (beat === 'gaprail') {
+        //a module's deck, a rail out across open space from its end to the next one's, too far to jump
+        const S = STATION;
+        const fw = range(rng, S.from) * TILE;
+        const gw = range(rng, S.gap) * TILE;
+        const lw = range(rng, S.far) * TILE;
+        const ry = y - S.railH;
+        if (fits(fw + gw + lw) && !busy(level, x, x + fw + gw + lw, y) && !busy(level, x + fw, x + fw + gw, ry)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + fw, y, row: -1, sky: 'cloud' });
+          coins(x, x + fw, () => y);
+          const r = polyRail([[x + fw - 2 * TILE, ry], [x + fw + gw + TILE, ry]]);
+          r.sky = 'gaprail';
+          rails.push(r);
+          coins(x + fw, x + fw + gw, () => ry);
+          if (rng() < CLOUDS.stoken) level.pickups.push({ kind: 'stoken', x: x + fw + gw / 2, y: ry - PICKUPS.arc });
+          (level.airways ??= []).push([x + fw, x + fw + gw]);
+          surfaces.push({ kind: 'ledge', x0: x + fw + gw, x1: x + fw + gw + lw, y, row: -1, sky: 'cloud' });
+          coins(x + fw + gw, x + fw + gw + lw, () => y);
+          x += fw + gw + lw;
         } else beat = 'puff';
       }
       if (beat === 'srail' || beat === 'sbeam') {

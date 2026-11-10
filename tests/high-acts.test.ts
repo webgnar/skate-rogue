@@ -16,7 +16,7 @@ import type { Level } from '../src/physics/level';
 
 declare const process: { env: Record<string, string | undefined>; stderr: { write(s: string): void } };
 const floorOf = (seed: number, floor: number): Level => validatedFloor(seed, floor, { hills: true, fork: rollFork(seed, floor), gravity: actGravity(actOf(floor)) }).level;
-const LAYER = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon', 'spire']);
+const LAYER = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon', 'spire', 'stairs', 'landing']);
 const upOn = (sim: FloorSim): string | undefined => {
   const sk = sim.skater;
   return sk.surface?.sky ?? sk.rail?.sky ?? (sim.sky.pieces.some((p) => p.ledge === sk.surface) ? 'mover' : undefined);
