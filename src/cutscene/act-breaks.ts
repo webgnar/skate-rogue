@@ -14,6 +14,7 @@ import { makeDrone } from '../render/drone-view';
 import { makeParkedCruiser } from '../render/kit';
 import { makeRocket } from '../render/chaser-view';
 import { makeGunship } from '../render/car-damage';
+import { Particles } from '../render/particles';
 import { inkify, setInkLens, setInkResolution } from '../render/toon';
 import { DUSK } from '../title/city';
 import { clouds as cloudSea, skyMaterial, stars as starField } from '../ship/ending-scene';
@@ -304,6 +305,13 @@ export class ActBreakScene {
     heli.group.scale.setScalar(2.6);
     this.scene.add(heli.group);
     const street = 15.5; // the near lane the rider rolls down
+    //the landing off the roof: the game's own landing dust and slam debris (src/render/particles.ts), in the street
+    const dust = new Particles();
+    const land = new THREE.Group();
+    land.position.z = 13.5;
+    land.add(dust.points);
+    this.scene.add(land);
+    let landed = false;
     const rail = ESCAPE.rail;
     const railZ = ESCAPE.z - 0.1;
     // the way up: a hop to the dumpster, up to the first landing's rail, along it, up to the second, back along it,
@@ -378,7 +386,7 @@ export class ActBreakScene {
         //street and roll off down it, the chopper's light a beat behind
         const turn = smooth(17, 17.4, t);
         const air = smooth(17.6, 19.1, t);
-        const away = smooth(19.25, 20.5, t);
+        const away = smooth(19.65, 20.5, t);
         let p: THREE.Vector3;
         let pose: Pose;
         let yaw = -Math.PI / 2;
@@ -395,14 +403,30 @@ export class ActBreakScene {
           //down hard, the knees take it, and off along the street
           p = V(mix(4, 16, away * away), 0, 13.5);
           yaw = mix(-Math.PI / 2, 0, smooth(19.2, 19.7, t));
-          pose = t < 19.45 ? clipAt('land', (t - 19.1) * 0.9) : clipAt('push', t);
+          //the big-drop landing: a deep squat, arms flung out, held, then up and pushing
+          pose = t < 19.7 ? clipAt('landBig', t - 19.1) : clipAt('push', t);
         }
+        //the impact: debris and a dust burst where the board hits, a quick flash and a hard shake
+        if (t >= 19.1 && !landed) {
+          landed = true;
+          dust.debris(4, 0, 1);
+          dust.dust(4, 0, 3.4);
+          dust.dust(4, 0, 3, true);
+        }
+        const hit = t >= 19.1 ? 1 - smooth(19.1, 19.55, t) : 0;
+        this.ui.flash(hit > 0.85 ? 0.35 : 0);
         this.ride(p, yaw, pose);
         heli.group.position.set(-14, 33, -16);
         heli.aim(this.holder.position.clone().add(V(-2, 0, -2)), dt);
         const look = this.holder.position.clone().add(V(0, 1, 0));
         this.shot(V(mix(-1, 6, away), 1.5, 22), look, 52);
+        if (hit > 0) this.camera.position.add(V((Math.random() - 0.5) * hit * 0.5, (Math.random() - 0.5) * hit * 0.4, 0));
       }
+      if (t < 19.1) {
+        landed = false;
+        dust.clear();
+      }
+      dust.update(dt, this.renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)));
     };
   }
 
