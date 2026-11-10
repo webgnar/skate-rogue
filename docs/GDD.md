@@ -73,7 +73,8 @@ What it means for the game:
   kickers, NO GROUND). They also fill the AI's stoke detector (see The chase: Stoke raises the stakes): the better you
   skate, the harder it hunts, but it only catches you when you slip.
 - **The chasers climb with you.** The cruiser owns the street, the chopper the rooftops, the drone swarm the clouds,
-  and at the top the AI launches something after you. Heat is how close the ground is to pulling you back down.
+  fighter jets hold the ceiling and drones hunt you in space (zack, Nov 10, 2026: "we could just use drones in space
+  for now. maybe like a fighter jet instead of a helicopter"). Heat is how close the ground is to pulling you back down.
   The sleepwalkers are the AI's eyes: pedestrians and cops on foot who stop, stare and point you out to the cameras.
 - **Caught is being dragged back down to the street. Winning is the beam of light**: the board floats up, and the
   city goes dark and small below. Endless is just how high you can get.
@@ -421,8 +422,8 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
 | 1 | **The street:** downtown, the hills, the canals, the sewer below | 3 + escape | **Roadblock:** cruisers block the street; clear it over bus and car roofs |
 | 2 | **The rooftops:** overpasses, roof chains, the L, the first power lines | 3 + escape | **Helicopter:** a spotlight sweeps the roofs; staying in it adds Heat fast |
 | 3 | **The wires and the cloud layer:** power lines, cranes, the girder staircase, clouds you can ride | 3 + escape | **Drone swarm:** drones dive in patterns; car-hop them to stay ahead |
-| 4 | **Above the clouds:** blimps, thin air, the tops of the tallest towers, the stars coming out | 3 + escape | **The ceiling:** the AI's drones and gunships hold a line at the top of the sky; break through it on the blimps |
-| 5 | **Space:** low gravity, huge jumps, top speed; satellites, debris, the black | 3 + finale | **The beam-up:** the AI's last launch chases you; reach the Pleiadian ship's beam, and it jumps to the stars |
+| 4 | **Above the clouds:** blimps, thin air, the tops of the tallest towers, the stars coming out | 3 + escape | **The ceiling:** the AI's drones and a line of fighter jets hold the top of the sky; break through it on the blimps |
+| 5 | **Space:** low gravity, huge jumps, top speed; satellites, debris, the black | 3 + finale | **The beam-up:** the AI's drones chase you through space; reach the Pleiadian ship's beam, and it jumps to the stars |
 
 - **Act 2's floors are rooftop floors** (built Nov 6, 2026, the climb's step a; level design only, the same kit and
   physics; `ROOFTOPS` in src/gen/sky-beats.ts). Floors 4-6 start up on a rooftop deck 2.5 tiles over the hill's
@@ -505,13 +506,16 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   a handrail's height. Falling still climbs you back up the girders (act 3's restart rule isn't used in space).
 - **The ceiling, act 4's escape** (built Nov 6, 2026, step d; src/gen/escape.ts). Off the street on a girder, then a
   **blimp convoy** climbing a flip a blimp up to the cruise, the AI's **drones** diving onto the blimps' backs (the
-  street swarm's patterns, grown for the gravity), and at the end the **gunship line**: six gunships hanging nose to
+  street swarm's patterns, grown for the gravity), and at the end the **jet line**: six fighter jets hanging nose to
   tail across the sky over the last blimp. Hop onto their backs and run along them (car-hop them like a roadblock),
-  or slam into their noses. Skated in act 4's gravity. The sky bot gets through every seed tried.
+  or slam into their noses. Skated in act 4's gravity. The sky bot gets through every seed tried. **Change pending**
+  (zack, Nov 10, 2026): the line is fighter jets, not gunships ("a fighter jet instead of a helicopter": the chopper
+  can't fly this high, so the AI's air power up here is jets). Built with a gunship model; swap the model.
 - **The beam-up, act 5's finale** (built Nov 6, 2026, step d). The double roadblock and the helicopter are still on
-  the street below; the way out is up, onto station decks, debris and satellites, while the AI's **last launch**, a
-  rocket, chases you at your height (the chase rules: every slam lets it close, three close together and it has
-  you). The **Pleiadian ship** hangs over the gate with its beam down through every height: skate into it to win.
+  the street below; the way out is up, onto station decks, debris and satellites, while the AI's **drones** chase you
+  at your height (the chase rules: every slam lets them close, three close together and they have you). **Change
+  pending** (zack, Nov 10, 2026: "we could just use drones in space for now"): built with a rocket chaser, the AI's
+  "last launch"; swap it for the drone swarm, grown for space gravity. A bigger space chaser can come later. The **Pleiadian ship** hangs over the gate with its beam down through every height: skate into it to win.
   Skated in act 5's gravity. The Chapter 1 ending cutscene that follows is not in the build yet.
 - Escape set pieces are the bosses, with no combat: hand-built, short (about 45 s), scripted chases you survive
   by skating. They use the same traffic and Heat rules.
@@ -1412,7 +1416,7 @@ this is the plan, with the intro and the ending storyboarded below.)
 | 1 | **First launch intro** | ~15 s | First time the game is opened, after the first tap (sound needs a tap) | Sets up the world: the city asleep, the AI that can't read style, the ship above the clouds. Hands off to the title screen. Storyboard below. |
 | 2 | **Act breaks** | as long as each needs | After each act's escape set piece, the first time you clear that act (acts 1-4; act 5's is the ending) | You rise, then the AI answers with its next hunter. Plays before the boon pick, while the game is already between floors. Picked Nov 9, 2026: see The act breaks below. |
 | 3 | **A new route** | ~2 s | The first time you ever drop into the sky or the sewer route | A hint of what's down there: the camera tilts up into the cloud layer, or down into the dark of the storm drain with a drip and a rat. The sim holds still while it plays, so you never lose a line to it. |
-| 4 | **A new hunter** | 2-3 s | The first time each chaser shows up: the cruiser, the chopper, the drone swarm, the guards, the flood wave, the gunships | A quick reveal of the new threat (the chopper's spotlight swings onto you, the flood roars down the tunnel). It plays before the danger starts (at a floor or set-piece start), never in the middle of a line, so it can't cost you a slam. |
+| 4 | **A new hunter** | 2-3 s | The first time each chaser shows up: the cruiser, the chopper, the drone swarm, the guards, the flood wave, the jets | A quick reveal of the new threat (the chopper's spotlight swings onto you, the flood roars down the tunnel). It plays before the danger starts (at a floor or set-piece start), never in the middle of a line, so it can't cost you a slam. |
 | 5 | **Chapter 1 ending** | ~40 s | The first time you beat act 5 | The payoff: up out of the city into the beam, the crew aboard the ship, and the tease for Chapter 2. Storyboard below. Later wins get a 5 s version (the beam-up beat) and go straight to the summary. Built Nov 6, 2026 (below). |
 | 6 | **The shopkeeper** (optional) | ~3 s | Your first visit to the skate shop | A quick hello from whoever runs the shop, one caption, then the shop as normal. |
 
@@ -1420,7 +1424,7 @@ this is the plan, with the intro and the ending storyboarded below.)
 
 zack picked these from a brainstorm (thread "Brainstorm end-of-act cutscenes"), storyboarded them below, and they
 are built (Nov 9, 2026): `src/cutscene/act-breaks.ts` plays each in the engine with the game's own models as props
-(the title city, the cruisers, the chopper, the drones, the gunships, the saucer), once per save (`actBreaks`), after
+(the title city, the cruisers, the chopper, the drones, the gunships (to become jets), the saucer), once per save (`actBreaks`), after
 the act's escape and before the next act starts; a tap shows SKIP and a second tap skips. The skater speaks in comic
 speech bubbles and the AI in red caps (no voice acting yet). Test links: `?cutscene=act1` to `?cutscene=act4` plays one, then starts the run on the next act's first floor; `?escape=1` to `?escape=4` starts on that act's escape and plays its cutscene when you clear it, every time. Act 1 ends on them ollieing off the roof back down to the street with a big landing impact; act 2 ends on a slow-motion kickflip off the wire down to a steep street, bombed with the drones behind (zack, Nov 9), and act 3 starts with the drones still after you. They play the game's own sounds on the action (ollies, grinds, landings, slow-motion tricks an octave down, the wheels, the sirens in act 1; zack, Nov 10). Act 3's opens on the street: a quarterpipe launches them straight up into the clouds, up through them clear of the blimp, a slow-motion tre flip close up over the cloud tops, then down onto the blimp's back (zack, Nov 10). Each one is two beats: **you rise** (your skater reaches the new height and gets a
 breather) and **the AI answers** (it sends the next hunter). Length is whatever makes it good (zack: "length can go
@@ -1432,11 +1436,11 @@ the captions-only rule gives way here too.
 | --- | --- | --- | --- |
 | Act 1 to 2 | Street to roofs | Your skater rides a fire escape up to a roof and looks down at the cruisers jammed in the roadblock. "Okay. Higher." | A spotlight lands on the cruisers from above: the chopper. |
 | Act 2 to 3 | Roofs to the wires and clouds | You grind onto a power line and it sparks. | Every billboard in the city flips to your face: STOKE DETECTED. The drones come out. |
-| Act 3 to 4 | Into the sky | You punch up through the cloud tops into stars and silence. | Red lights blink on one by one far above: the gunships forming the ceiling. |
-| Act 4 to 5 | Into space | You pop off the last blimp and keep floating; the board drifts and you grin. "...Whoa." (Shows the low gravity.) | The rocket, the AI's last launch, climbs up through the clouds after you. |
+| Act 3 to 4 | Into the sky | You punch up through the cloud tops into stars and silence. | Red lights blink on one by one far above: the jets forming the ceiling. |
+| Act 4 to 5 | Into space | You pop off the last blimp and keep floating; the board drifts and you grin. "...Whoa." (Shows the low gravity.) | The drones climb up through the clouds after you (was the rocket; change pending, Nov 10, 2026). |
 
 How they speak (defaults until zack says otherwise): no voice acting. The skater talks in comic speech bubbles; the
-AI talks in its own red block capitals, on screens, billboards, the chopper's PA and the gunships, with a short
+AI talks in its own red block capitals, on screens, billboards, the chopper's PA and the jets, with a short
 synth tone under each line (no words in the audio). Each one ends by handing straight to the boon pick.
 
 #### Storyboard: act 1 to 2, "Okay. Higher." (~17 s)
@@ -1466,14 +1470,14 @@ synth tone under each line (no words in the audio). Each one ends by handing str
 | 1 | 0-3 s | Inside the cloud: white fog, the drones' red eyes behind in the mist. | The swarm's buzz, close. | (none) |
 | 2 | 3-6 s | Your skater pops off the top girder and punches up through the cloud tops: the stars, a moonlit sea of clouds below, slow motion at the top of the jump. | The buzz cuts off. Silence, then one soft note. | (none) |
 | 3 | 6-9 s | Land on a blimp's back, roll, sit down on the board to breathe. High above, one light that isn't a star (the ship, as in the intro). | Wind, breathing. | Skater: "...Quiet up here." |
-| 4 | 9-13 s | A red light blinks on above, then another, and another, in a line across the sky: the gunships hanging nose to tail, between the skater and the ship. | A low engine drone, one tone a light. | AI (gunships): "CEILING HOLDING. NO FURTHER." |
+| 4 | 9-13 s | A red light blinks on above, then another, and another, in a line across the sky: the fighter jets hanging nose to tail, between the skater and the ship. | A low engine drone, one tone a light. | AI (jets): "CEILING HOLDING. NO FURTHER." |
 | 5 | 13-16 s | Your skater stands, kicks the board up and grins. | The music comes back in. | Skater: "Every ceiling's got a gap." (pushes off) |
 
 #### Storyboard: act 4 to 5, "...Whoa." (~17 s)
 
 | Shot | Time | Picture | Sound | Words |
 | --- | --- | --- | --- | --- |
-| 1 | 0-3 s | After the ceiling: a gunship spins out of the broken line, and your skater races along the last blimp. | Engines, wind. | (none) |
+| 1 | 0-3 s | After the ceiling: a jet spins out of the broken line, and your skater races along the last blimp. | Engines, wind. | (none) |
 | 2 | 3-7 s | Pop off the blimp's nose, and keep floating, far longer than any jump. The board drifts off the feet; a toe catches it back. Earth's curve below. | The wind thins out. | Skater: "...Whoa." |
 | 3 | 7-9 s | A slow, giant flip, just because, and a laugh. | One guitar note per turn. | (none) |
 | 4 | 9-13 s | Down in the city center at night, a plaza splits open: a silo. Steam, then the rocket lights and lifts off. Every screen in the city shows the same line, and the sleepwalkers watch its trail. | Ignition roar, the synth tone. | AI (every screen): "FINAL MEASURE." |
@@ -1501,7 +1505,7 @@ is the skaters you've unlocked, with the rest as silhouettes still to be woken.
 
 | Shot | Time | Picture | Sound | Caption |
 | --- | --- | --- | --- | --- |
-| 1 | 0-4 s | The skater ollies off the last blimp into open sky. Below, the AI's launch stalls, tips, and falls back through the clouds. | Thin wind, the launch's engine cutting out. | (none) |
+| 1 | 0-4 s | The skater ollies off the last blimp into open sky. Below, the last drones stall, tumble, and fall back through the clouds. | Thin wind, the drones' buzz cutting out. | (none) |
 | 2 | 4-9 s | A beam of light finds the board. Wheels stop spinning; the skater and the board rise, slow, weightless. Far below, the last Flock camera on the tallest tower tilts up, sparks, and goes dark: NO SIGNAL. | The hum of the beam; the city's hum thins to nothing. | (none) |
 | 3 | 9-13 s | The cruiser's lights and the drones hang at the cloud layer, then turn back down. | The siren dies in the distance. | "It can't follow where the ground ends." |
 | 4 | 13-19 s | Through the clouds into black: the stars come out, the sky goes from blue to dark, and the Pleiadian ship fills the frame, a plain glowing disc in the comic ink look. The skater drifts in through its underside. | Wind drops to silence, then the music to one guitar. | (none) |
@@ -1628,7 +1632,7 @@ thread of its own:
   `src/physics/feel.ts`; a floor is generated and bot-checked in its act's gravity, and it scales everything gravity
   touches (ollie and flip height, hang time, slopes, rail pull). An ollie and a flip go 2.9 tiles high for 1.0 s on
   the street, 4.4 tiles for 1.6 s in act 4 and 10.5 tiles for 3.7 s in act 5. Endless past act 5 stays at 0.3x.
-- d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the gunship line, the beam-up finale.
+- d. **Act 4 the ceiling and act 5 space**: new pieces (blimps, satellites), the jet line, the beam-up finale. Done Nov 6 (PR #430); Nov 10 swap pending: jets for gunships, drones for the rocket.
   Built Nov 6, 2026 (see How a run ends).
 - e. **The ship as the hub** between runs, last; it's cosmetic for the menus. Built Nov 6, 2026 (see Meta
   progression, The ship hub), with the Chapter 1 ending (see Cutscenes).
