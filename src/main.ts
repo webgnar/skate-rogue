@@ -931,6 +931,18 @@ async function start() {
   };
   //?escape=N (act N's escape) plays act N's cutscene when it's cleared, every time, so the two can be watched together
   game.playActBreak = (act, done) => playActBreak(act, done, act === escape);
+  //act 5's bail, lost in space: the fall to Earth, played by the rider's own model (or straight to the card if the
+  //crew aren't in yet)
+  game.playSpaceFall = (done) => {
+    const scene = aboard.spaceFall(() => {
+      app.classList.remove('titled');
+      done();
+    });
+    if (!scene) return null;
+    app.classList.add('titled');
+    if (import.meta.env.DEV) Object.assign(window, { spaceFall: scene });
+    return scene;
+  };
   const shipLink = params.get('ship');
   const endingLink = params.get('ending');
   const cutLink = Number((params.get('cutscene') ?? '').replace(/^act/, '')) || 0;

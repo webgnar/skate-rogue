@@ -42,7 +42,10 @@ const EDGE = 6;
 function continues(level: Level, rail: CurvedRail): boolean {
   const [x, y] = [rail.xs[rail.xs.length - 1], rail.ys[rail.ys.length - 1]];
   if (level.rails.some((r) => r !== rail && Math.abs(r.xs[0] - x) < 4 && Math.abs(r.ys[0] - y) < 8)) return true;
-  return level.surfaces.some((s) => Math.abs(s.x0 - x) < 4 && Math.abs(s.y - y) < 8);
+  if (level.surfaces.some((s) => Math.abs(s.x0 - x) < 4 && Math.abs(s.y - y) < 8)) return true;
+  //(act 5's handrails and rails end over a deck: drop off the end onto it, as a good player does, not an ollie that
+  //carries you on past it in the low gravity)
+  return !!rail.sky && level.surfaces.some((s) => s.sky && s.kind !== 'stairs' && s.x0 < x - 2 && s.x1 > x + 3 * TILE && s.y > y && s.y - y < 1.5 * TILE);
 }
 
 // the surfaces and rails a look-ahead from here could reach: every fall below runs at most 150 steps of hsp from the

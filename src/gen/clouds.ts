@@ -185,6 +185,11 @@ export const STATION = {
   from: [5, 7], // tiles: the deck you leave from
   gap: [5, 6], // tiles of open space under the rail
   far: [7, 9], // tiles: the deck on the far side
+  // falling off it (zack, 2026-11-10: "falling from this level should count as like a bail"): this many tiles under
+  // everything on the line from lostBack tiles behind you to lostAhead ahead, falling, and you're lost in space
+  lost: 3,
+  lostBack: 20,
+  lostAhead: 50,
   most: { stairset: 6, double: 3, ledge: 3, gaprail: 3, hubba: 2 } as Partial<Record<CloudBeat, number>>, // a floor's most of each set
 };
 
@@ -210,7 +215,8 @@ export const HIGH = {
   5: {
     floors: [13, 14, 15],
     over: 26,
-    pieces: ['blimp', 'swing', 'rig'] as CloudPiece[],
+    //(not the capsule since falling off is lost in space, zack 2026-11-10: it took you down off the line)
+    pieces: ['blimp', 'swing'] as CloudPiece[],
     //(the station line's sets come round often, the decks, satellites and debris between them: STATION)
     beats: [['puff', 1.5], ['thin', 0.8], ['drift', 1], ['rainbow', 0.8], ['balloon', 1], ['gap', 0.5], ['fork', 0.6], ['hops', 0.6], ['climb', 0.6], ['stairset', 5], ['double', 3], ['ledge', 2.5], ['gaprail', 2], ['hubba', 2]] as [CloudBeat, number][],
   },
@@ -430,6 +436,7 @@ export function addClouds(level: Level, seed: number): void {
   //the layer itself, from (x, y) on to the end of the floor
   const lay = (x: number, y: number, first: boolean, piece: CloudPiece | null = null) => {
     let last: CloudBeat | CloudPiece = 'gap';
+    let rose = false;
     const sets: Record<string, number> = {};
     const pieceX = x + CLOUD_ACT.pieceAt * (end - x);
     //(act 3: a cloud that blinks out only so often, and only in the floor's harder back half; none on floor 7)
@@ -453,11 +460,12 @@ export function addClouds(level: Level, seed: number): void {
       const fits = (w: number) => x + w <= end;
       if (beat === 'blimp' || beat === 'swing') {
         const w = (beat === 'blimp' ? CLOUD_ACT.blimp : CLOUD_ACT.swing) * TILE;
-        const by = y - (beat === 'blimp' ? CLOUD_ACT.blimpUp : CLOUD_ACT.swingUp) * TILE;
+        const by = y - (rose ? 0 : beat === 'blimp' ? CLOUD_ACT.blimpUp : CLOUD_ACT.swingUp) * TILE;
         if (fits(w) && !busy(level, x, x + w, by)) {
           movers.push({ kind: beat, x0: x, x1: x + w, y: by, cloud: true, ...(beat === 'swing' ? { mast: x + w * 0.25, phase: Math.floor(rng() * 300) } : {}) });
-          //(act 3: a low cloud under the jib, for when it's swung away: the clouds are the only way through there)
-          if (act === 3 && beat === 'swing' && y + CLOUD_ACT.swingLow * TILE <= lowest(x)) {
+          //(act 3: a low cloud under the jib, for when it's swung away: the clouds are the only way through there; act 5 too,
+          //a deck under the robot arm, since falling off is lost in space)
+          if (beat === 'swing' && ((act === 3 && y + CLOUD_ACT.swingLow * TILE <= lowest(x)) || act === 5)) {
             surfaces.push({ kind: 'ledge', x0: x + 2 * TILE, x1: x + w, y: y + CLOUD_ACT.swingLow * TILE, row: -1, sky: 'cloud' });
           }
           coins(x, x + w, () => by);
@@ -553,7 +561,7 @@ export function addClouds(level: Level, seed: number): void {
         const tw = range(rng, CLOUD_LINE.hubbaTop) * TILE;
         const hw = range(rng, CLOUD_LINE.hubba) * TILE;
         const lw = range(rng, CLOUD_LINE.hubbaLand) * TILE;
-        const ty = y - CLOUD_LINE.hubbaUp * TILE;
+        const ty = y - (rose ? 0 : CLOUD_LINE.hubbaUp) * TILE;
         const hx = x + tw;
         const ly = Math.min(ty + CLOUD_LINE.hubbaDrop * TILE, lowest(hx + hw));
         if (ly - ty >= 1.5 * TILE && fits(tw + hw + lw) && !busy(level, x, x + tw, ty) && !busy(level, hx, hx + hw + lw, ly)) {
@@ -584,9 +592,9 @@ export function addClouds(level: Level, seed: number): void {
         //(where the layer's already as low as it may stand, the deck before the steps stands that much over it: a
         //flip up onto it, never more than a staircase's step)
         const up = Math.max(0, y + fall - lowest(x + tw + run));
-        if (up <= CLOUDS.stairRise * TILE) y -= up;
+        if (up <= CLOUDS.stairRise * TILE && !rose) y -= up;
         const foot = y + fall;
-        if (up <= CLOUDS.stairRise * TILE && fits(tw + run + lw) && !busy(level, x, x + tw + run + lw, y + fall / 2)) {
+        if (up <= CLOUDS.stairRise * TILE && (!rose || !up) && fits(tw + run + lw) && !busy(level, x, x + tw + run + lw, y + fall / 2)) {
           surfaces.push({ kind: 'ledge', x0: x, x1: x + tw, y, row: -1, sky: 'cloud' });
           coins(x, x + tw, () => y);
           //the flights, and the rail's line over their noses: a handrail's height over the top step's edge and the
@@ -788,7 +796,7 @@ export function addClouds(level: Level, seed: number): void {
       }
       if (beat === 'balloon') {
         const w = CLOUDS.balloon * TILE;
-        const by = y - CLOUDS.balloonUp * TILE;
+        const by = y - (rose ? 0 : CLOUDS.balloonUp) * TILE;
         if (fits(w) && !busy(level, x, x + w, by)) {
           movers.push({ kind: 'balloon', x0: x, x1: x + w, y: by, phase: Math.floor(rng() * 240) });
           coins(x, x + w, () => by);
@@ -811,7 +819,7 @@ export function addClouds(level: Level, seed: number): void {
         const w = range(rng, CLOUDS.fork) * TILE;
         //(only where the layer's free to dip a tile: where the ground ahead climbs, the layer climbs too)
         const low = y + CLOUDS.forkLow * TILE;
-        const wy = y - CLOUDS.forkUp * TILE;
+        const wy = y - (rose ? 0 : CLOUDS.forkUp) * TILE;
         const high = low - CLOUDS.forkHigh * TILE;
         const ww = CLOUDS.forkWisp * TILE;
         if (low <= lowest(x) && fits(w) && !busy(level, x + 2 * TILE, x + w, low) && !busy(level, x, x + w, high) && !busy(level, x, x + ww, wy)) {
@@ -855,7 +863,7 @@ export function addClouds(level: Level, seed: number): void {
         //a climb: a few wisps, each a tile over the last, then the layer falls gently back again: a wave to ride
         if (y > lowest(x) - CLOUDS.climbMax * TILE && fits(CLOUDS.climbs * (CLOUDS.climb1 + 2) * TILE)) {
           for (let k = 0; k < CLOUDS.climbs; k++) {
-            const cy = y - CLOUDS.climbUp * TILE;
+            const cy = y - (k === 0 && rose ? 0 : CLOUDS.climbUp) * TILE;
             if (busy(level, x, x + CLOUDS.climb1 * TILE, cy)) break;
             y = cy;
             surfaces.push({ kind: 'ledge', x0: x, x1: x + CLOUDS.climb1 * TILE, y, row: -1, sky: 'wisp' });
@@ -882,7 +890,10 @@ export function addClouds(level: Level, seed: number): void {
       last = beat;
       x += range(rng, CLOUDS.between) * TILE;
       //(falling gently with the floor; where the ground ahead climbs, up again, a step at a time: a flip makes it)
+      const was = y;
       y = Math.max(y - CLOUDS.stairRise * TILE, Math.min(y + CLOUDS.step * TILE, lowest(x)));
+      //(act 5, where falling off is lost in space: a step up already, so the next piece doesn't stand up over it too)
+      rose = act === 5 && y < was - TILE;
     }
   };
   //a staircase from (x, y): deck after deck, each a step higher, the top half wisps of cloud (or, `until` it's in
@@ -978,7 +989,7 @@ export function addClouds(level: Level, seed: number): void {
     };
     //every later stretch: girders up off the lip (an ollie onto the first), a flip a step, until the layer's in reach
     //(not act 3's: the clouds are its only way through, so falling to the street loses the floor anyway)
-    for (const [c, d] of act === 3 ? [] : spans.slice(1)) {
+    for (const [c, d] of act === 3 || act === 5 ? [] : spans.slice(1)) {
       //(the first step's an ollie and a flip up off the lip, like the sky's way in, so it clears a rail run down the
       //hill off the lip: the first rise is that, from the lip's height)
       const [l, top] = lipOf(level, c, d);

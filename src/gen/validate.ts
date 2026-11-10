@@ -39,7 +39,8 @@ export function botRun(level: Level, boost: number | 'game' = 1, gear?: Gear): B
   };
   fixed(run ? 1 : (boost as number));
   const sk = sim.skater;
-  const pilot = new Pilot('ref');
+  //(act 5's floors: the station line is the only way through, so the sky bot flies it)
+  const pilot = new Pilot(sim.inSpace ? 'sky' : 'ref');
   let slams = 0;
   let maxHeat = 0;
   for (let f = 0; f < 60 * 120; f++) {

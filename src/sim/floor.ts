@@ -8,7 +8,8 @@ import { PHYS, TILE } from '../physics/constants';
 import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
 import { TOP } from '../gen/top-route';
-import { CLOUDS, layerAct } from '../gen/clouds';
+import { CLOUDS, layerAct, STATION } from '../gen/clouds';
+import { piecesOf } from '../gen/sky-line';
 import { Chaser } from './chaser';
 import { Shooter, type ShotEvent } from './shots';
 import { Swarm } from './drones';
@@ -35,6 +36,7 @@ export type FloorEvent =
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
+  | { type: 'lost' } // act 5: fell off the station line, out into space: a bail (see offStation)
   | { type: 'grounded' } // act 3: down off the clouds to the street, so the act starts over after this floor (see fell)
   | { type: 'bust'; index: number; x: number; y: number; mult: number } // burst through a sky billboard (level.busts)
   | { type: 'goldBird'; x: number; y: number } // cleared the golden pigeon: a spin token
@@ -112,6 +114,11 @@ export class FloorSim {
   // a test start (the level editor's "play from here"): coming down off the clouds doesn't cost the act
   practice = false;
   private flown = false; // been up on the clouds this floor
+  // act 5 (zack, 2026-11-10: "falling from this level should count as like a bail"): fell away under the station
+  // line, out into space, nothing left under you to come down on (see offStation)
+  lost = false;
+  private aboard = false; // act 5: been up on the station line yet
+  private line: { x0: number; x1: number; y: number }[] | null = null; // act 5's line, its lowest point per piece
   // the puddle at (x, y), once it's formed enough to splash through (the view's own test: Puddles.at)
   puddleAt(x: number, y: number): object | null {
     const t = this.frames / 60;
@@ -268,6 +275,7 @@ export class FloorSim {
       this.events.push({ type: 'bust', index: i, x: b.x, y: sk.y, mult: 1 });
     }
     this.offClouds();
+    this.offStation();
     this.chaser?.step(this.skater, skaterEvents);
     if (this.state === 'exit') return;
     if (this.skater.mode === 'bail') this.state = 'bail';
@@ -290,6 +298,38 @@ export class FloorSim {
   // an act 3 floor (not its escape), where the clouds are the only way through
   get mustFly(): boolean {
     return !this.level.escape && layerAct(this.level.layout.floor) === 3;
+  }
+
+  // an act 5 floor (not its escape, the beam-up, which has the street under it): fall off the station line and you're
+  // lost in space
+  get inSpace(): boolean {
+    return !this.level.escape && layerAct(this.level.layout.floor) === 5;
+  }
+
+  // act 5: falling, and under everything on the station line near you (by `STATION.lost` tiles), before its end near
+  // the gate: a bail, as a canal is (the game plays the fall to Earth, src/cutscene/space-fall.ts)
+  private offStation(): void {
+    if (this.lost || !this.inSpace || this.practice) return;
+    const sk = this.skater;
+    //(a floor starts on the street where the last gate let you out: you're only out in space once you've been up on
+    //the line, so skating the street under it is never a fall)
+    if (!this.aboard) {
+      const piece = sk.mode === 'rail' ? sk.rail?.sky : sk.surface?.sky;
+      this.aboard = !!piece || (!!sk.surface && this.sky.pieces.some((p) => p.ledge === sk.surface));
+      return;
+    }
+    if (sk.mode !== 'air' || sk.vsp <= 0) return;
+    const T = TILE;
+    this.line ??= piecesOf(this.level, 0, this.level.width).map((p) => ({ x0: p.x0, x1: p.x1, y: Math.max(p.y0, p.y1) }));
+    const end = Math.max(0, ...this.line.filter((p) => p.x1 < this.level.exitX).map((p) => p.x1));
+    if (sk.x >= end - T) return;
+    const near = this.line.filter((p) => p.x1 > sk.x - STATION.lostBack * T && p.x0 < sk.x + STATION.lostAhead * T);
+    //(moving decks too: the shuttle, the robot arm, where they are now)
+    const low = Math.max(...near.map((p) => p.y), ...this.sky.pieces.filter((p) => p.ledge.x1 > sk.x - 4 * T && p.ledge.x0 < sk.x + STATION.lostAhead * T).map((p) => p.ledge.y));
+    if (!Number.isFinite(low) || sk.y < low + STATION.lost * T) return;
+    this.lost = true;
+    sk.lose();
+    this.events.push({ type: 'lost' });
   }
 
   // act 3's floors: down on anything that isn't up in the clouds, before the layer's end near the gate, and the floor
