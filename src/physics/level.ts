@@ -232,6 +232,7 @@ export interface Level {
   sewers?: Sewer[]; // the sewer route under the street chases (src/gen/sewer.ts)
   skyMovers?: SkyMover[]; // the sky's moving set pieces (src/gen/sky-beats.ts, stepped by src/sim/sky.ts)
   busts?: SkyBust[]; // paper billboards across the lane up in the sky: skate through one and it bursts
+  handSets?: { name: string; x0: number; x1: number; y: number }[]; // zack's hand-made sets laid on the floor (src/gen/hand-sets.ts), px
 }
 
 // a sky set piece that moves (zack, 2026-10-31: "along with the set pieces"), px. x0..x1 and y are its deck as

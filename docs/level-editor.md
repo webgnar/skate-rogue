@@ -85,6 +85,7 @@ how long the bot spends down in the sewer.
 - With no dev server (a phone, the deployed site), save copies the edits as text. **Paste them to Claude** in the
   project and they go into level-edits.json and get merged. **copy edits** does the same any time.
 - **play in game** opens the game on this seed and floor with your unsaved edits (`?leveldrafts`).
+- Tap a spot on the floor and press **▶ play from here** to start the game right there (`?from=x,y`).
 - Unsaved edits stay in this browser, so a reload doesn't lose them.
 
 ## How it fits the generator
@@ -96,3 +97,5 @@ and `hillDials`; `descent.ts` reads the street piece count. A floor's `clouds` a
 `SEWER` dials by key while that floor is built (`withDials` in level-edits.ts), so a dial added to either object later
 just needs a line in the editor's `CLOUD_DIALS` / `SEWER_DIALS`. A floor with no entry is built exactly as before.
 Endless floors past 15 follow the floor whose recipe they reuse.
+
+Hand-made sets (drawn in `?sets`, docs/set-editor.md) come up on the cloud line as the `set` beat.

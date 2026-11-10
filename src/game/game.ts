@@ -266,6 +266,15 @@ export class Game {
   private floor = 1;
   private boons: Held[] = [];
   private state: State = 'skate';
+  // ?from=x,y (the level editor's "play from here", px on the floor): the first floor starts there, dropped in from
+  // just over it with a little speed (and, in act 3, coming down off the clouds doesn't start the act over). Only the
+  // first floor: the next starts from its own start
+  startFrom(x: number, y: number): void {
+    this.sim.practice = true;
+    Object.assign(this.sim.skater, { x, y: y - 4, mode: 'air', surface: null, rail: null, hsp: 5, carry: 5, vsp: 0 });
+    this.view.follow(this.skater.x, this.skater.y);
+  }
+
   // ?clouds: each new floor starts up on its cloud layer's first cloud, to try it without the climb
   startOnClouds(): void {
     this.cloudStart = true;

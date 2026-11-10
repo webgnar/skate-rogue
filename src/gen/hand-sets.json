@@ -1,0 +1,34 @@
+{
+  "sets": [
+    {
+      "name": "stairs to gap rail",
+      "acts": [3,5],
+      "on": false,
+      "weight": 3,
+      "most": 1,
+      "parts": [
+        {"kind":"deck","x0":0,"y0":0,"x1":10},
+        {"kind":"stairs","x0":10,"y0":0,"x1":14,"y1":-1.5},
+        {"kind":"deck","x0":14,"y0":-1.5,"x1":19},
+        {"kind":"rail","x0":17,"y0":-0.6,"x1":26,"y1":-0.6},
+        {"kind":"deck","x0":25,"y0":-1.5,"x1":32},
+        {"kind":"coins","x0":18,"y0":0,"x1":24,"y1":0},
+        {"kind":"stoken","x0":21.5,"y0":1.5}
+      ]
+    },
+    {
+      "name": "ledge drop ledge",
+      "acts": [3,5],
+      "on": false,
+      "weight": 3,
+      "most": 1,
+      "parts": [
+        {"kind":"deck","x0":0,"y0":0,"x1":14},
+        {"kind":"ledge","x0":4,"y0":0.5,"x1":9,"y1":0.5},
+        {"kind":"deck","x0":17,"y0":-1,"x1":30},
+        {"kind":"ledge","x0":20,"y0":-0.5,"x1":26,"y1":-1.5},
+        {"kind":"coins","x0":4,"y0":1,"x1":9,"y1":1}
+      ]
+    }
+  ]
+}

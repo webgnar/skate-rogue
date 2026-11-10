@@ -1,0 +1,30 @@
+/* the set editor (?sets): the level editor's look (levels.css), plus the tray, the drawing view and the steppers */
+#levels.sets .st-tray { display: flex; flex-wrap: wrap; gap: 6px; }
+#levels.sets .st-tray button { border-left: 4px solid var(--c); }
+#levels.sets .st-view { overflow: auto; max-height: 62vh; touch-action: pan-x pan-y; }
+#levels.sets .st-view svg { display: block; background: #120e1d; }
+#levels.sets .st-grid .g1 { stroke: #241c38; stroke-width: 1; }
+#levels.sets .st-grid .g5 { stroke: #3a2d5c; stroke-width: 1; }
+#levels.sets .st-num { fill: #6e6290; font-size: 10px; }
+#levels.sets .st-in { stroke: #6ee7a0; stroke-width: 2; fill: #6ee7a0; }
+#levels.sets .st-out { stroke: #ff3d9a; stroke-width: 2; stroke-dasharray: 4 3; fill: none; }
+#levels.sets .st-lab { fill: #ff3d9a; font-size: 11px; }
+#levels.sets .st-lab.in { fill: #6ee7a0; }
+#levels.sets .st-hit { stroke: transparent; stroke-width: 22; fill: transparent; cursor: grab; touch-action: none; }
+#levels.sets .st-part.on { filter: drop-shadow(0 0 4px #ffd23a); }
+#levels.sets .st-dot { fill: #ffd23a; stroke: #000; stroke-width: 2; cursor: grab; touch-action: none; }
+#levels.sets .st-bot { pointer-events: none; }
+#levels.sets .st-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#levels.sets .st-row output { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
+#levels.sets .st-row button { min-width: 36px; min-height: 32px; }
+#levels.sets .st-k { width: 96px; color: var(--dim); }
+#levels.sets .st-row input[type='text'] { flex: 1; min-width: 120px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 5px 9px; font: inherit; }
+#levels.sets .st-on b { color: var(--hot); }
+#levels.sets .st-legend { color: var(--dim); }
+#levels.sets .st-legend i { font-style: normal; margin-right: 8px; }
+#levels.sets .st-zoom button { min-width: 32px; }
+#levels.sets .st-empty { padding: 20px; }
+@media (pointer: coarse) {
+  #levels.sets .st-dot { r: 14; }
+}
+#levels.sets .lv-bar { position: static; }

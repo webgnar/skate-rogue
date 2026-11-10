@@ -22,6 +22,8 @@ owns it will pick it up.
 | `?debug` | Shows fps, draws and speed; exposes `window.game` |
 | `?editor` | The animation editor: keyframe Lou's clips (see docs/animation-editor.md). `?editor&clip=kickflip` opens a clip |
 | `?drafts` | Plays the editor's unsaved clips from this browser |
+| `?sets` | The set editor: draw hand-made sets for act 3 and act 5 (see docs/set-editor.md). `?playset=name` lays one every other beat |
+| `?from=x,y` | Starts the first floor at that spot (px), as ?levels' "play from here" does |
 | `?bot` | The playtest bot skates for you (`?bot=mash` presses at random, `&turbo=3` runs it 3x faster). See docs/playtest-bot.md |
 | `?escape=2` | Starts on act 2's escape |
 | `?boons=bigPop,bigPop,grease` | Starts holding those boons (repeat one for stacks) |
@@ -298,6 +300,15 @@ Quickest check: `?seed=5&floor=1`, then `floor=5`, `floor=8`, `floor=11` and `fl
 - [ ] **save** on the phone copies the edits; pasting them to Claude gets them merged. On `npm run dev`, save writes
       src/gen/level-edits.json.
 - [ ] *Feel:* can you make the floor you want with these knobs? What's missing?
+- [ ] Tap a spot on the floor, press **▶ play from here**: the game starts right there.
+
+## Set editor (?sets, docs/set-editor.md)
+
+- [ ] Open `?sets` on desktop: add a deck, a rail and stairs from the tray, drag and stretch them; the bot line and
+      result update after each change.
+- [ ] A gap too far to jump says the bot doesn't clear it, and **in floors** stays off.
+- [ ] **play it** opens act 3 (or act 5) with the set laid every other beat; it looks and skates as drawn.
+- [ ] On the phone: pick a piece, nudge it with the steppers, press play it.
 
 ## Gnar levels (harder runs after a win)
 

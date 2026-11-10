@@ -111,6 +111,8 @@ export class FloorSim {
   // gotta grind out that level on the surface and then it makes you restart act 3"): touched the street (or the hill
   // road, a roof down there, the sewer) before the cloud layer ends near the gate
   fell = false;
+  // a test start (the level editor's "play from here"): coming down off the clouds doesn't cost the act
+  practice = false;
   private flown = false; // been up on the clouds this floor
   skyLine = 0; // NO GROUND: sky pieces chained since you last touched the ground below (src/sim/sky.ts)
   private skyPiece: object | null = null; // the last of them
@@ -318,7 +320,7 @@ export class FloorSim {
   // act 3's floors: down on anything that isn't up in the clouds, before the layer's end near the gate, and the floor
   // is lost (the game starts the act over after it)
   private offClouds(): void {
-    if (this.fell || !this.mustFly) return;
+    if (this.fell || this.practice || !this.mustFly) return;
     const sk = this.skater;
     if (sk.mode === 'air' || sk.mode === 'exit' || sk.x >= this.level.exitX - CLOUDS.exitShort * TILE) return;
     const piece = sk.mode === 'rail' ? sk.rail?.sky : sk.surface?.sky;

@@ -22,11 +22,11 @@ import { spawnPlan } from '../traffic/traffic';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { BEATS, SKY_BEAT_LIST, formatLevelEdits, isLevelEdits, loadLevelDrafts, saveLevelDrafts } from './drafts';
-import { floorSVG, inClouds, silhouetteSVG, type BotLine, type Layers } from './draw';
+import { floorSVG, inClouds, silhouetteSVG, viewTop, type BotLine, type Layers } from './draw';
 import { CLOUDS, type CloudBeat } from '../gen/clouds';
 import { SEWER } from '../gen/sewer';
 import type { LayerEdit } from '../gen/level-edits';
-import { sewerAt } from '../physics/level';
+import { sewerAt, surfaceY } from '../physics/level';
 import './levels.css';
 
 const FLOORS = 15;
@@ -73,7 +73,7 @@ const SKY_HELP: Record<SkyBeat, string> = {
 
 // the cloud layer's beats (src/gen/clouds.ts), and the route layers' dials: keys of CLOUDS and SEWER, overlaid per
 // floor while it's built (withDials in level-edits.ts). `unit` is px per shown unit (TILE for a height kept in px)
-const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap', 'fork', 'hops', 'climb', 'spire', 'blimp', 'beam', 'hubba', 'srail', 'sbeam', 'bridge', 'launch', 'stairset', 'double', 'ledge', 'gaprail'];
+const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap', 'fork', 'hops', 'climb', 'spire', 'blimp', 'beam', 'hubba', 'srail', 'sbeam', 'bridge', 'launch', 'stairset', 'double', 'ledge', 'gaprail', 'set'];
 const CLOUD_HELP: Record<CloudBeat, string> = {
   puff: 'a cloud to land on',
   thin: 'a thin cloud that puffs away a moment after you land',
@@ -96,6 +96,7 @@ const CLOUD_HELP: Record<CloudBeat, string> = {
   double: 'act 5: a double set, a landing between two flights, its rail kinked down, flat, down',
   ledge: 'act 5: a long deck with ledges and flat rails along it to ollie up onto',
   gaprail: 'act 5: a rail across open space between two modules, too far to jump',
+  set: "acts 3 and 5: one of zack's hand-made sets that's on (made in the set editor, ?sets)",
 };
 interface LayerDial {
   key: string;
@@ -275,6 +276,7 @@ export function startLevels(): void {
       <button id="lv-save" type="button" class="hot">save</button>
     </header>
     <div class="lv-view" id="lv-view"></div>
+    <div class="lv-from" id="lv-from" hidden><span id="lv-fromat"></span><button id="lv-fromgo" type="button" class="hot">▶ play from here</button></div>
     <div class="lv-result" id="lv-result"></div>
     <div class="lv-panels">
       <section class="lv-panel">
@@ -836,6 +838,35 @@ export function startLevels(): void {
       //no dev server here (a phone, the deployed site): hand the edits over as text
       toast((await copy()) ? 'No dev server here, so the edits were copied instead. Paste them to Claude.' : 'No dev server here: copy the edits from the box below and paste them to Claude.');
     }
+  });
+  // play from here: tap a spot on the floor, then the button skates it from the ground or deck there (?from=x,y)
+  let fromAt: [number, number] | null = null;
+  $('lv-view').addEventListener('click', (ev) => {
+    const svg = $('lv-view').querySelector('svg');
+    if (!svg || !built) return;
+    const L = built.level;
+    const r = svg.getBoundingClientRect();
+    const x = (ev.clientX - r.left) / zoom - TILE;
+    const y = (ev.clientY - r.top - 34) / zoom + viewTop(L);
+    //what's there to land on: the deck, rail or street nearest the tap, at or under it
+    const under: number[] = [];
+    for (const s of L.surfaces) if (x >= s.x0 && x <= s.x1) under.push(surfaceY(s, x));
+    for (const rl of L.rails) {
+      const ry = rl.yAt(x);
+      if (ry !== undefined) under.push(ry);
+    }
+    if (L.street[Math.floor(x / TILE)]) under.push(L.streetY);
+    const best = under.filter((u) => u >= y - TILE).sort((a, b) => a - b)[0] ?? under.sort((a, b) => Math.abs(a - y) - Math.abs(b - y))[0];
+    if (best === undefined || x < 0 || x > L.width) return;
+    fromAt = [Math.round(x), Math.round(best)];
+    $('lv-fromat').textContent = `${Math.round(x / TILE)} tiles in`;
+    $('lv-from').hidden = false;
+  });
+  $('lv-fromgo').addEventListener('click', () => {
+    if (!fromAt) return;
+    saveLevelDrafts(edits);
+    const r = ROADS.find((x) => x.id === roadId)!.road;
+    location.href = `${location.pathname}?seed=${seed}&floor=${floor}&danger=${r.danger}&leveldrafts&from=${fromAt.join(',')}`;
   });
   $('lv-play').addEventListener('click', () => {
     saveLevelDrafts(edits);
