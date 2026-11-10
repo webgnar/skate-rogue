@@ -11,7 +11,7 @@ import { TILE } from '../physics/constants';
 import type { CurvedRail, Level, Surface } from '../physics/level';
 import type { Sky, SkyPieceSim } from '../sim/sky';
 import { groundAt } from '../gen/top-route';
-import { layerAct } from '../gen/clouds';
+import { layerAct, STATION } from '../gen/clouds';
 import { piecesOf } from '../gen/sky-line';
 import { toX, toY } from './kit';
 import { adTexture, adUv } from './sky-kit';
@@ -511,7 +511,7 @@ export class SkyPiecesView {
     const cl = new Parts();
     const group = new THREE.Group();
     for (const s of level.surfaces) {
-      if (s.sky !== 'cloud' && s.sky !== 'wisp' && s.sky !== 'thin') continue;
+      if (s.sky !== 'cloud' && s.sky !== 'wisp' && s.sky !== 'thin' && s.sky !== 'landing') continue;
       const w = T(s.x1 - s.x0);
       if (s.sky === 'thin') {
         const tp = new Parts();
@@ -557,6 +557,7 @@ export class SkyPiecesView {
       }
     }
     this.cloudLine(level, cl, group);
+    if (space) this.stationLine(level, cl);
     cl.into(group);
     inkify(group);
     //act 4, above the clouds: a sea of cloud a few tiles under the line, the whole floor long, so the city's a long way
@@ -591,7 +592,19 @@ export class SkyPiecesView {
       }
     };
     for (const r of level.rails) {
-      if (r.sky === 'hubba') {
+      if (r.sky === 'hubba' && layerAct(level.layout.floor) === 5) {
+        //act 5's: a hull ledge down off a module's roof, a hazard-striped steel coping along it, a docking node at its foot
+        for (const sg of segs(r)) {
+          cl.box(this.space.dark, sg.len, 0.9, 1.1, ...under(sg, 0.5), 0, sg.ang);
+          cl.box(this.gold, sg.len, 0.08, 1.14, ...under(sg, 0.04), 0, sg.ang);
+        }
+        const [hx, hy] = [toX(r.xs[0]), Y(r.ys[0])];
+        //(the module whose roof it runs off: a pressurised can under the deck before it)
+        cl.add(this.space.white, new THREE.CylinderGeometry(1.4, 1.4, 6, 16).rotateZ(Math.PI / 2), hx - 3.2, hy - 1.7, -0.6);
+        cl.box(this.space.dark, 0.3, 3, 3, hx - 0.15, hy - 1.7, -0.6);
+        const e = segs(r).at(-1)!;
+        cl.box(this.space.dark, 1.6, 1.2, 1.4, toX(r.xs.at(-1)!) - 0.6, e.ay - 1.2, -0.3);
+      } else if (r.sky === 'hubba') {
         //a hubba ledge in rainbow: six bands stacked under its top edge (red on top), a white coping along it
         for (const sg of segs(r)) {
           this.bands.forEach((m, k) => cl.box(m, sg.len, 0.17, 1.1, ...under(sg, 0.06 + 0.085 + k * 0.17), 0, sg.ang));
@@ -656,6 +669,86 @@ export class SkyPiecesView {
       c.into(cg);
       cg.position.set(x0 - 0.2, yb - 0.6, 0.5);
       group.add(cg);
+    }
+  }
+
+  // act 5's station line (src/gen/clouds.ts STATION): stair sets of hull plate with yellow nosing on every step and a
+  // handrail over them on posts down to the noses, flat rails and ledges along the decks, and the rails out across
+  // open space between two modules, a strut of truss under each
+  private stationLine(level: Level, cl: Parts): void {
+    const Y = (py: number) => toY(level, py);
+    const sm = this.space;
+    for (const s of level.surfaces) {
+      if (s.sky !== 'stairs') continue;
+      const [x0, x1, top, foot] = [toX(s.x0), toX(s.x1), Y(s.y), Y(s.y1 ?? s.y)];
+      const n = Math.max(3, Math.round((x1 - x0) / 1.1));
+      const sw = (x1 - x0) / n;
+      const rise = (top - foot) / n;
+      for (let i = 0; i < n; i++) {
+        //each step a slab under its tread (the flight floats free, a gangway of hull plate), its tread on the line
+        //through the noses
+        const tread = top - (i + 0.5) * rise;
+        const h = rise + 0.35;
+        const cx = x0 + (i + 0.5) * sw;
+        cl.box(sm.hull, sw + 0.02, h, 2.2, cx, tread - h / 2, -0.3);
+        cl.box(this.gold, 0.18, 0.05, 2.22, x0 + i * sw + 0.09, tread + 0.01, -0.3); // its nosing
+        cl.box(sm.dark, 0.04, h, 2.23, x0 + i * sw, tread - h / 2, -0.3); // the seam between steps
+      }
+      //its stringers under the flight, front and back, and a strut down off each to a node
+      for (const z of [0.6, -1.2]) cl.bar(sm.dark, [x0, top - 0.6, z], [x1, foot - 0.6, z], 0.16);
+      cl.bar(sm.dark, [(x0 + x1) / 2, (top + foot) / 2 - 0.6, -0.3], [(x0 + x1) / 2 + 0.6, (top + foot) / 2 - 2.6, -0.9], 0.12);
+      cl.box(sm.light, 0.2, 0.2, 0.2, x0 + 0.1, top - 0.6, 0.7);
+    }
+    //a rail's posts down to what's under it, every few tiles and at each end
+    const posts = (r: CurvedRail, down: (x: number) => number, every = 3) => {
+      const len = r.length;
+      const n = Math.max(1, Math.round(len / TILE / every));
+      for (let k = 0; k <= n; k++) {
+        const p = r.at(Math.min(len - 2, Math.max(2, (len * k) / n)));
+        const [x, y] = [toX(p.x), Y(p.y)];
+        const g = down(p.x);
+        if (y - g > 0.05) cl.box(sm.dark, 0.09, y - g, 0.09, x, (y + g) / 2, 0);
+      }
+    };
+    //the station's ground under a point: the highest deck, step or landing under it
+    const under = (px: number, py: number) => {
+      let best = -Infinity;
+      for (const s of level.surfaces) {
+        if (!s.sky || px < s.x0 || px > s.x1) continue;
+        const sy = s.y1 !== undefined ? s.y + ((s.y1 - s.y) * (px - s.x0)) / (s.x1 - s.x0) : s.y;
+        if (sy < py) continue;
+        best = Math.max(best, Y(sy));
+      }
+      return best;
+    };
+    for (const r of level.rails) {
+      if (r.sky !== 'handrail' && r.sky !== 'deckrail' && r.sky !== 'ledge' && r.sky !== 'gaprail') continue;
+      for (let i = 1; i < r.xs.length; i++) {
+        const [ax, ay, bx, by] = [toX(r.xs[i - 1]), Y(r.ys[i - 1]), toX(r.xs[i]), Y(r.ys[i])];
+        const len = Math.hypot(bx - ax, by - ay) + 0.03;
+        const ang = Math.atan2(by - ay, bx - ax);
+        const [mx, my] = [(ax + bx) / 2, (ay + by) / 2];
+        if (r.sky === 'ledge') {
+          //a hull ledge: a block from the deck up, a steel coping along its top edge
+          const h = STATION.ledgeH / TILE;
+          cl.box(sm.dark, len, h, 1.2, mx, my - h / 2, -0.1);
+          cl.box(this.gold, len, 0.06, 1.24, mx, my - 0.03, -0.1);
+          cl.box(this.alu, len, 0.08, 0.08, mx, my - 0.04, 0.5);
+          continue;
+        }
+        //a round steel rail, safety yellow
+        cl.box(this.gold, len, 0.12, 0.12, mx + Math.sin(ang) * 0.06, my - Math.cos(ang) * 0.06, 0, ang);
+      }
+      if (r.sky === 'ledge') continue;
+      const ok = (x: number) => under(x, r.yAt(x) ?? r.ys[0]);
+      if (r.sky === 'gaprail') {
+        //across open space: posts only where there's a deck under it, a strut of truss under the span
+        posts(r, (x) => {
+          const g = ok(x);
+          return g === -Infinity ? Y(r.yAt(x) ?? r.ys[0]) : g;
+        }, 2);
+        truss(cl, sm.dark, toX(r.xs[0]), toX(r.xs.at(-1)!), Y(r.ys[0]) - 1.1, 0, 0.5, 0.5, 0.05);
+      } else posts(r, (x) => Math.max(ok(x), Y(r.yAt(x) ?? r.ys[0]) - 1.2), r.sky === 'handrail' ? 2.5 : 3);
     }
   }
 

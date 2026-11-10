@@ -494,6 +494,15 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   are a station's ring; the staircase's girders float free as white truss. The set pieces are re-skinned for space
   rather than dropped: the blimp is a **shuttle**, the crane's jib a station's **robot arm**, the washer's rig a
   **capsule** that sinks under you (no billboards or I-beams up here). The sky bot stays up nearly the whole floor.
+- **Act 5's station line** (zack, Nov 10, 2026: "act 5 is space: THAT level needs to be built out... to the degree that
+  the sewer was. we are going to add a lot more little handrails like the sewer has with its little stairset"; built
+  Nov 10, 2026, `STATION` in src/gen/clouds.ts). The station's own sets, strung along each act 5 floor between its
+  decks, satellites and debris (6 to 8 a floor): **stair sets** of hull plate with yellow nosing and a handrail over
+  the steps (the sewer's rule: ollie the set or grind the rail, roll onto the steps and you slam), **double sets**
+  (two flights and a landing, the rail kinked down, flat, down), **decks with ledges and flat rails** along them to
+  ollie up onto, **gap rails** across open space between two modules too far to jump, and act 3's **hubba** as a
+  ledge running down off a module's roof. Sized for the act's 0.3x gravity (about 3x the sewer's), the handrails kept
+  a handrail's height. Falling still climbs you back up the girders (act 3's restart rule isn't used in space).
 - **The ceiling, act 4's escape** (built Nov 6, 2026, step d; src/gen/escape.ts). Off the street on a girder, then a
   **blimp convoy** climbing a flip a blimp up to the cruise, the AI's **drones** diving onto the blimps' backs (the
   street swarm's patterns, grown for the gravity), and at the end the **gunship line**: six gunships hanging nose to
@@ -1659,6 +1668,9 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   the meta tree buys little. Whether to add cards there, fold more types, or leave it lean is zack's call; default: leave it lean.
 - **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
   to each, and how each is designed for them.
+- **Act 5's station line** (built Nov 10, 2026): whether a fall in space should start the act over like act 3's
+  clouds (default: no, the girders climb you back up), and whether act 5 wants space set pieces of its own (an
+  airlock, a spinning ring, zero-g pipes) on top of the stair sets and rails (default: not yet).
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
 - **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
   chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until
