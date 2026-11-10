@@ -28,7 +28,7 @@ export type ActBreak = 1 | 2 | 3 | 4;
 export const isActBreak = (n: number): n is ActBreak => n === 1 || n === 2 || n === 3 || n === 4;
 
 // how long each runs, seconds (the storyboards' timings)
-export const ACT_BREAK_LEN: Record<ActBreak, number> = { 1: 20.5, 2: 17, 3: 16, 4: 17 };
+export const ACT_BREAK_LEN: Record<ActBreak, number> = { 1: 20.5, 2: 22.5, 3: 16, 4: 17 };
 export const SKIP_SHOWN = 2.5; // seconds the SKIP button stays up after a tap
 
 export interface CutsceneUi {
@@ -471,7 +471,7 @@ export class ActBreakScene {
     const boards = [
       { x: -12, y: ROOF_Y + 5.5, z: -8, w: 10 },
       { x: 3, y: ROOF_Y + 7, z: -10, w: 12 },
-      { x: 26, y: ROOF_Y + 9, z: -16, w: 10 },
+      { x: 14.5, y: ROOF_Y + 10, z: -3, w: 10 }, // clear of the wire's line out to the tall pylon
     ].map((o) => {
       const bb = billboard(o.w, o.w * 0.5, 'STAY PREDICTABLE', 'STOKE DETECTED', face.texture);
       bb.group.position.set(o.x, o.y, o.z);
@@ -509,6 +509,69 @@ export class ActBreakScene {
     });
     const along = (u: number) => up.curve.getPointAt(Math.min(1, Math.max(0, u)));
     const riderOn = (u: number) => along(u).add(V(0, 0.15, 0));
+    //the way down: a steep street under the wire (the cross street at z -40), from 10 up down to the ground
+    const HILL = { x0: 36, x1: 110, top: 10, z: -40, w: 18 };
+    const hillY = (x: number) => HILL.top * Math.min(1, Math.max(0, 1 - (x - HILL.x0) / (HILL.x1 - HILL.x0)));
+    const slope = Math.atan2(HILL.top, HILL.x1 - HILL.x0);
+    {
+      //a wedge of road with its sidewalks, solid underneath, so it reads as a hill and not a ramp
+      const len = Math.hypot(HILL.x1 - HILL.x0, HILL.top);
+      const road = new THREE.Mesh(new THREE.BoxGeometry(len, 0.3, 12), new THREE.MeshToonMaterial({ color: 0x34303e }));
+      const walkGeo = new THREE.BoxGeometry(len, 0.5, 3);
+      const walkMat = new THREE.MeshToonMaterial({ color: 0x6a6478 });
+      const deck = new THREE.Group();
+      deck.add(road);
+      for (const side of [-1, 1]) {
+        const w = new THREE.Mesh(walkGeo, walkMat);
+        w.position.set(0, 0.1, side * 7.5);
+        deck.add(w);
+      }
+      for (let i = 0; i < 6; i++) {
+        const dash = new THREE.Mesh(new THREE.BoxGeometry(3, 0.05, 0.25), new THREE.MeshBasicMaterial({ color: 0xe8c860 }));
+        dash.position.set(-len / 2 + 8 + i * (len - 16) / 5, 0.17, 0);
+        deck.add(dash);
+      }
+      deck.position.set((HILL.x0 + HILL.x1) / 2, HILL.top / 2 - 0.15, HILL.z);
+      deck.rotation.z = -slope;
+      const fill = new THREE.BufferGeometry();
+      const { x0, x1, top, z, w } = HILL;
+      const v = [
+        [x0, 0, z - w / 2], [x1, 0, z - w / 2], [x0, top, z - w / 2],
+        [x0, 0, z + w / 2], [x0, top, z + w / 2], [x1, 0, z + w / 2],
+        [x0, 0, z - w / 2], [x0, top, z - w / 2], [x0, top, z + w / 2],
+        [x0, 0, z - w / 2], [x0, top, z + w / 2], [x0, 0, z + w / 2],
+      ].flat();
+      fill.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+      fill.computeVertexNormals();
+      const under = new THREE.Mesh(fill, new THREE.MeshToonMaterial({ color: 0x4a3e48, side: THREE.DoubleSide }));
+      inkify(deck);
+      this.scene.add(deck, under);
+    }
+    //off the wire: where they kick off (where the drones' shot leaves them) and where the board comes down
+    const takeoff = riderOn(0.015 + (17 - 3.2) * 0.012);
+    const landAt = V(takeoff.x + 16, 0, HILL.z);
+    landAt.y = hillY(landAt.x);
+    const offDir = landAt.clone().sub(takeoff).setY(0).normalize();
+    const offYaw = -Math.atan2(offDir.z, offDir.x);
+    const hillDust = new Particles();
+    const hillLand = new THREE.Group();
+    hillLand.position.z = HILL.z;
+    hillLand.add(hillDust.points);
+    this.scene.add(hillLand);
+    let hillHit = false;
+    //where they are from 17 s: the slow kickflip off the wire (2.8 s of air), the big landing, then bombing the hill
+    const offWire = (t: number): { p: THREE.Vector3; yaw: number; roll: number; pose: Pose } => {
+      if (t < 19.8) {
+        const k = (t - 17) / 2.8;
+        const p = takeoff.clone().lerp(landAt, k);
+        p.y = mix(takeoff.y, landAt.y, k * k) + Math.sin(k * Math.PI) * 3;
+        return { p, yaw: offYaw, roll: 0, pose: clipAt('kickflip', Math.min(0.42, k * 0.6)) };
+      }
+      if (t < 20.4) return { p: landAt.clone(), yaw: mix(offYaw, 0, smooth(19.8, 20.3, t)), roll: -slope * smooth(19.8, 20.1, t), pose: clipAt('landBig', t - 19.8) };
+      const s = t - 20.4;
+      const x = landAt.x + s * 5 + s * s * 4;
+      return { p: V(x, hillY(x), HILL.z), yaw: 0, roll: -slope, pose: clipAt('ride', t) };
+    };
     return (t, dt) => {
       c.update(t, dt);
       sparks.update(dt);
@@ -559,7 +622,7 @@ export class ActBreakScene {
       //the drones: up out of the hatches and on toward the wire
       for (const d of drones) {
         const k = smooth(13 + d.k * 1.2, 16.2 + d.k * 1.2, t);
-        const goal = riderOn(u).add(V(-8 + d.side * 16, 6 + d.side * 6, 10 * d.side));
+        const goal = (t < 17 ? riderOn(u) : offWire(t).p).add(V(-8 + d.side * 16, 6 + d.side * 6, 10 * d.side));
         const p = d.from.clone().add(V(d.side * 6, 2 + k * 30, d.side * 4)).lerp(goal, k * k);
         d.d.group.position.copy(p);
         d.d.group.visible = t > 13 + d.k * 1.2;
@@ -579,11 +642,41 @@ export class ActBreakScene {
       } else if (t < 13) {
         //4: from the street: the billboards flip to the face, the sleepwalkers all look up, lit red
         this.shot(V(2, 1.4, 26), V(4, ROOF_Y + 2, -6), 56);
-      } else {
+      } else if (t < 17) {
         //5: wide, from behind the rider on the wire: the drones pouring out of the towers at them
         const p = riderOn(u);
         this.shot(p.clone().add(V(4, -2, 12)), p.clone().add(V(-6, 9, -16)), 58);
+      } else {
+        //6: slow motion, side on: a kickflip off the wire, the board turning under them all the way down to a steep
+        //street; the big landing, then they bomb the hill toward the camera with the drones behind
+        const o = offWire(t);
+        this.ride(o.p, o.yaw, o.pose, o.roll);
+        if (t >= 19.8 && !hillHit) {
+          hillHit = true;
+          hillDust.debris(landAt.x, landAt.y, 1);
+          hillDust.dust(landAt.x, landAt.y, 3.4);
+          hillDust.dust(landAt.x, landAt.y, 3, true);
+        }
+        const hit = t >= 19.8 ? 1 - smooth(19.8, 20.25, t) : 0;
+        this.ui.flash(hit > 0.85 ? 0.35 : 0);
+        if (t < 19.8) {
+          const k = (t - 17) / 2.8;
+          const side = V(-offDir.z, 0, offDir.x);
+          if (side.z < 0) side.negate();
+          const at = o.p.clone().add(side.multiplyScalar(6.5)).add(offDir.clone().multiplyScalar(mix(-2.5, 2.5, k))).add(V(0, 0.6, 0));
+          this.shot(at, o.p.clone().add(V(0, 0.9, 0)), 44);
+        } else {
+          //down the hill, backing away ahead of them
+          const cx = Math.max(landAt.x + 17, o.p.x + 11);
+          this.shot(V(cx, hillY(cx) + 1.6, HILL.z + 3), o.p.clone().add(V(0, 1, 0)), 48);
+          if (hit > 0) this.camera.position.add(V((Math.random() - 0.5) * hit * 0.5, (Math.random() - 0.5) * hit * 0.4, 0));
+        }
       }
+      if (t < 19.8) {
+        hillHit = false;
+        hillDust.clear();
+      }
+      hillDust.update(dt, this.renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)));
     };
   }
 
