@@ -5,7 +5,10 @@ import type { Level } from '../physics/level';
 import type { Road } from '../gen/roads';
 import { rollFork } from '../gen/roads';
 import { validatedFloor } from '../gen/validate';
-import { actOf, validatedEscape } from '../gen/escape';
+import { actOf, FLOORS_PER_ACT, validatedEscape } from '../gen/escape';
+import { cloudFloor } from '../gen/clouds';
+import { huntSpots } from '../sim/drones';
+import { makeRng } from '../gen/rng';
 import { actGravity } from '../physics/feel';
 import { tutorialLevel } from '../gen/tutorial';
 import { floorTwist } from '../gen/twists';
@@ -24,7 +27,7 @@ export interface FloorSpec {
 export function floorLevel(s: FloorSpec): Level {
   if (s.tutorial) return tutorialLevel(s.seed);
   if (s.road.kind === 'escape') return validatedEscape(s.seed, s.road.act);
-  return validatedFloor(s.seed, s.floor, {
+  const level = validatedFloor(s.seed, s.floor, {
     fork: rollFork(s.seed, s.floor, s.library.types),
     danger: gnarDanger(s.road.danger, s.gnar),
     short: s.road.kind === 'stash',
@@ -32,4 +35,10 @@ export function floorLevel(s: FloorSpec): Level {
     hills: true,
     gravity: actGravity(actOf(s.floor)),
   }).level;
+  //act 3's first floor: act 2's drones followed you up (src/sim/drones.ts huntSpots), over the clouds and steps
+  if (cloudFloor(s.floor) && s.floor % FLOORS_PER_ACT === 1) {
+    const pieces = level.surfaces.filter((p) => p.sky === 'cloud' || p.sky === 'step');
+    level.hunt = huntSpots(pieces, level.startX, makeRng(s.seed * 17 + s.floor * 811));
+  }
+  return level;
 }

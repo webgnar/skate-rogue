@@ -745,7 +745,8 @@ export class Game {
     }
     this.boonFx.setBoons(this.boons);
     this.floorStart = { run: Object.assign(new RunScore(), this.run), gear: { ...this.gear }, busted: { ...this.bustedSec }, carry: this.carry };
-    const roadHeat = this.road.kind === 'hot' ? ROADS.hotHeat : this.road.kind === 'escape' ? ESCAPE.startHeat : 0;
+    //(act 3's first floor starts hunted, as an escape does: the drones followed you up, src/sim/drones.ts huntSpots)
+    const roadHeat = Math.max(this.road.kind === 'hot' ? ROADS.hotHeat : 0, this.road.kind === 'escape' || this.level.hunt?.length ? ESCAPE.startHeat : 0);
     const mods = withGnar(withLoadout(skaterMods(this.boons), this.meta.loadout), this.gnar);
     this.run.cashScale = cashScale(this.meta.loadout);
     this.sim = new FloorSim(this.level, mods, startHeat(roadHeat, this.carry), this.board, this.gear);

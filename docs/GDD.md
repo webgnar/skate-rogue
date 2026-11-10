@@ -435,6 +435,11 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   gate on the high road on about three floors in four). There's no cloud layer over the roofs (it moved up to act 3),
   and the hill road and the sewer under them are unchanged. Endless reuses acts 4 and 5, so it
   never gets these floors.
+- **Act 3 starts hunted** (zack, Nov 10, 2026: "act 3 should start with heat because end of cutscene 2 ends with
+  the drones after him"). Act 3's first floor (floor 7) starts at an escape's Heat (30) and act 2's drone swarm
+  followed you up: patterns (a single, a pair, then any) hover over the clouds and girder steps along the floor, 8-12
+  tiles apart, none in the first 12 tiles. Stomp one as on act 2's escape. (`huntSpots` in src/sim/drones.ts,
+  `level.hunt`.) Floors 8 and 9 are as before.
 - **Act 3's floors are cloud floors** (built Nov 6, 2026, the climb's step b; level design only, the same clouds and
   physics; `CLOUD_ACT` in src/gen/clouds.ts). Floors 7-9 start on a big cloud 2.5 tiles over the hill's run-up, and
   the cloud layer is the floor: it climbs from there a flip at a time, then runs on over the hills, the chases and the
@@ -1384,7 +1389,7 @@ zack picked these from a brainstorm (thread "Brainstorm end-of-act cutscenes"), 
 are built (Nov 9, 2026): `src/cutscene/act-breaks.ts` plays each in the engine with the game's own models as props
 (the title city, the cruisers, the chopper, the drones, the gunships, the saucer), once per save (`actBreaks`), after
 the act's escape and before the next act starts; a tap shows SKIP and a second tap skips. The skater speaks in comic
-speech bubbles and the AI in red caps (no voice acting yet). Test links: `?cutscene=act1` to `?cutscene=act4` plays one, then starts the run on the next act's first floor; `?escape=1` to `?escape=4` starts on that act's escape and plays its cutscene when you clear it, every time. Act 1 ends on them ollieing off the roof back down to the street with a big landing impact; act 2 ends on a slow-motion kickflip off the wire down to a steep street, bombed with the drones behind (zack, Nov 9). Each one is two beats: **you rise** (your skater reaches the new height and gets a
+speech bubbles and the AI in red caps (no voice acting yet). Test links: `?cutscene=act1` to `?cutscene=act4` plays one, then starts the run on the next act's first floor; `?escape=1` to `?escape=4` starts on that act's escape and plays its cutscene when you clear it, every time. Act 1 ends on them ollieing off the roof back down to the street with a big landing impact; act 2 ends on a slow-motion kickflip off the wire down to a steep street, bombed with the drones behind (zack, Nov 9), and act 3 starts with the drones still after you. Act 3's opens on the street: a quarterpipe launches them straight up into the clouds, up through them clear of the blimp, a slow-motion tre flip close up over the cloud tops, then down onto the blimp's back (zack, Nov 10). Each one is two beats: **you rise** (your skater reaches the new height and gets a
 breather) and **the AI answers** (it sends the next hunter). Length is whatever makes it good (zack: "length can go
 as long as we need them to"), so these break the 3-5 s rule above; they still play once and skip like the rest. The
 skater's lines are the same whoever you play; the cutscene uses the selected skater's mesh. They have dialogue, so

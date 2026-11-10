@@ -507,7 +507,7 @@ async function start() {
   const startAt = escape ? escape * FLOORS_PER_ACT : cutAct ? cutAct * FLOORS_PER_ACT + 1 : Math.max(1, Math.floor(Number(params.get('floor')) || 1));
   const danger = Math.min(3, Math.max(1, Math.floor(Number(params.get('danger')) || 1)));
   //a new phone starts on the tutorial floor (?tutorial shows it again; a test URL skips it)
-  const testing = ['floor', 'seed', 'biome', 'daily', 'gnar', 'escape', 'boons', 'bot'].some((k) => params.has(k));
+  const testing = ['floor', 'seed', 'biome', 'daily', 'gnar', 'escape', 'boons', 'bot', 'cutscene'].some((k) => params.has(k));
   const tutorial = params.has('tutorial') || (!save.tutorialDone && save.best === 0 && !testing);
   //the Gnar level: what the save picked, up to what's been won (?gnar=3 forces one for testing); never on a daily run
   const urlGnar = params.get('gnar');
