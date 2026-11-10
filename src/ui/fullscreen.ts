@@ -3,7 +3,7 @@
 // has no Fullscreen API for pages, so there the switch explains Add to Home Screen: launched from the home screen
 // icon it runs as an app with no browser bars (public/manifest.webmanifest and the apple- meta tags in index.html).
 import { SETTINGS, saveSettings } from './settings';
-import { ON_CRAZYGAMES } from '../net/portal';
+import { STORE_BUILD } from '../net/portal';
 
 type WebkitDoc = Document & { webkitFullscreenEnabled?: boolean; webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => void };
 type WebkitEl = HTMLElement & { webkitRequestFullscreen?: () => void };
@@ -11,8 +11,9 @@ type WebkitEl = HTMLElement & { webkitRequestFullscreen?: () => void };
 const doc = document as WebkitDoc;
 
 // the page can go full screen itself
-// never on the portal: CrazyGames runs its own full screen and forbids a game's own button
-export const canFullscreen = (): boolean => !ON_CRAZYGAMES && !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
+// never on the portal (CrazyGames runs its own full screen and forbids a game's own button) or in the iOS app (already
+// full screen)
+export const canFullscreen = (): boolean => !STORE_BUILD && !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
 
 export const isFull = (): boolean => !!(doc.fullscreenElement || doc.webkitFullscreenElement);
 
