@@ -130,3 +130,4 @@
 #levels .lv-mixlab { color: var(--dim); font-size: 12px; margin-right: 4px; }
 #levels #lv-sewer .beat.lit { background: #7fd17a; }
 #levels #lv-clouds .beat.lit { background: #eef4ff; }
+#levels .lv-from { display: flex; gap: 10px; align-items: center; color: var(--dim); }

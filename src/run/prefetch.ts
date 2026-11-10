@@ -1,6 +1,7 @@
 // The next floor, built ahead of time so a run flows from floor to floor with no stop (src/game/game.ts). Floors
 // come from a worker (src/run/floor-worker.ts) while you skate; where there's no worker (tests, the bot's node
 // runs) they're built on the spot. Same spec, same floor: floorLevel is pure.
+import { forcedSet, handSets } from '../gen/hand-sets';
 import { CurvedRail, type Level } from '../physics/level';
 import { floorLevel, type FloorSpec } from './floor-level';
 import { levelEdits } from '../gen/level-edits';
@@ -56,7 +57,7 @@ export class FloorPrefetch {
     if (this.worker) {
       const id = ++this.id;
       this.waiting.set(id, key);
-      this.worker.postMessage({ id, spec, edits: levelEdits() });
+      this.worker.postMessage({ id, spec, edits: levelEdits(), sets: { sets: handSets() }, forced: forcedSet() });
     }
     return key;
   }

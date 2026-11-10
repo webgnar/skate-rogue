@@ -104,9 +104,15 @@ export function sectionNotes(level: Level): { x: number; y: number; text: string
   return notes;
 }
 
+// the highest point a floor's side view shows (px), and so where its drawing starts; floorSVG draws level px (x, y)
+// at ((x + TILE) * scale, (y - viewTop) * scale + 34)
+export function viewTop(L: Level): number {
+  return Math.min(L.startY, L.streetY, ...L.surfaces.map((s) => Math.min(s.y, s.y1 ?? s.y)), ...L.pickups.map((p) => p.y), ...(L.skyMovers ?? []).map((m) => m.y - 40)) - 70;
+}
+
 export function floorSVG(L: Level, scale: number, opts: { bot?: BotLine | null; spawns?: Spawn[]; layers?: Layers } = {}): string {
   const lay = opts.layers ?? ALL_LAYERS;
-  const minY = Math.min(L.startY, L.streetY, ...L.surfaces.map((s) => Math.min(s.y, s.y1 ?? s.y)), ...L.pickups.map((p) => p.y), ...(L.skyMovers ?? []).map((m) => m.y - 40)) - 70;
+  const minY = viewTop(L);
   const maxY = Math.max(L.streetY + 100, ...(lay.sewer ? (L.sewers ?? []).map((s) => s.y + 110) : []));
   const holeAt = (x: number) => (L.sewers ?? []).some((s) => (x >= s.drain[0] && x < s.drain[1]) || (x >= s.outlet[0] && x < s.outlet[1]));
   const showSky = (kind: string) => (inClouds(kind) ? lay.clouds : lay.sky);

@@ -95,9 +95,47 @@ function portalPage(): Plugin {
   };
 }
 
+// The set editor (?sets) saves its hand-made sets here the same way; game tabs reload to skate them.
+const HAND_SETS = fileURLToPath(new URL('./src/gen/hand-sets.json', import.meta.url));
+
+function setEditor(): Plugin {
+  return {
+    name: 'set-editor',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__hand-sets', (req, res) => {
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end();
+          return;
+        }
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            const ok = data && typeof data === 'object' && Array.isArray(data.sets) && data.sets.every((s: { name?: unknown; parts?: unknown }) => typeof s?.name === 'string' && Array.isArray(s.parts));
+            if (!ok) throw new Error('not a set of hand-made sets');
+            writeFileSync(HAND_SETS, body.endsWith('\n') ? body : `${body}\n`);
+            res.end('saved');
+          } catch (err) {
+            res.statusCode = 400;
+            res.end(String(err));
+          }
+        });
+      });
+    },
+    handleHotUpdate(ctx) {
+      if (ctx.file !== HAND_SETS) return;
+      ctx.server.ws.send({ type: 'custom', event: 'hand-sets' });
+      return [];
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   base: './',
-  plugins: [clipEditor(), levelEditor(), ...(mode === 'crazygames' ? [portalPage()] : [])],
+  plugins: [clipEditor(), levelEditor(), setEditor(), ...(mode === 'crazygames' ? [portalPage()] : [])],
   build: {
     target: 'es2022',
     assetsInlineLimit: 0,

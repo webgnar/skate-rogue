@@ -33,6 +33,8 @@ import { SkaterRig, isSkater } from './render/skater-rig';
 import { applyClipEdits } from './render/poses';
 import { loadDrafts } from './editor/drafts';
 import { loadLevelDrafts } from './levels/drafts';
+import { loadSetDrafts } from './sets/drafts';
+import { forceSet, handSets, useHandSets } from './gen/hand-sets';
 import { useLevelEdits } from './gen/level-edits';
 import { dailySeed, dayKey, FULL_LIBRARY, has, libraryOf, type UnlockId } from './run/meta';
 import { loadSave, writeSave } from './run/save';
@@ -441,6 +443,20 @@ async function start() {
     const { startLevels } = await import('./levels/levels');
     return startLevels();
   }
+  if (params.has('sets')) {
+    // the set editor (src/sets): draw hand-made sets for act 3's and act 5's lines
+    loading.remove();
+    const { startSets } = await import('./sets/sets');
+    return startSets();
+  }
+  // hand-made sets: ?setdrafts skates the set editor's unsaved ones; ?playset=name lays that one every other beat
+  import.meta.hot?.on('hand-sets', () => location.reload());
+  if (params.has('setdrafts')) {
+    const drafts = loadSetDrafts();
+    if (drafts) useHandSets(drafts);
+  }
+  const playSet = params.get('playset');
+  if (playSet) forceSet(handSets().find((h) => h.name === playSet) ?? null);
   // level edits saved from the editor: reload to skate them; ?leveldrafts skates the editor's unsaved ones
   import.meta.hot?.on('level-edits', () => location.reload());
   if (params.has('leveldrafts')) {
@@ -534,6 +550,9 @@ async function start() {
   built();
   //?bot hands the button to the playtest bot (src/bot): ?bot=mash presses at random, ?bot=high goes for the top route, ?turbo=4 runs it 4x faster
   if (params.has('clouds')) game.startOnClouds();
+  //?from=x,y: the level editor's "play from here" (px on the first floor)
+  const from = (params.get('from') ?? '').split(',').map(Number);
+  if (from.length === 2 && from.every((n) => isFinite(n))) game.startFrom(from[0], from[1]);
   //?sewer (or ?sewer=rats, surge, bowl, subway, gator, kick, gate) starts at the way into a sewer (src/gen/sewer.ts)
   if (params.has('sewer')) game.startInSewer(params.get('sewer') ?? '');
   if (params.has('shop')) game.startAtShop();

@@ -16,10 +16,12 @@ import { busy, clearAt, groundAt, TOP } from './top-route';
 import { CLOUDY, maxGap, openAt, piecesOf, REACH } from './sky-line';
 import { actGravity } from '../physics/feel';
 import { DRONE } from '../sim/drones';
+import { forcedSet, handSets, laySet, setShape, type HandSet } from './hand-sets';
 
 // spire, blimp: acts 4 and 5's own beats (HIGH): a skyscraper's crown up through the clouds, and a blimp of the fleet
 // hubba, srail, sbeam, bridge, launch: act 3's own sets (CLOUD_LINE), the cloud line as a line of its own
-export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb' | 'spire' | 'blimp' | 'beam' | 'hubba' | 'srail' | 'sbeam' | 'bridge' | 'launch' | 'stairset' | 'double' | 'ledge' | 'gaprail';
+// set: one of zack's hand-made sets (src/gen/hand-sets.ts), on act 3's and act 5's lines
+export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb' | 'spire' | 'blimp' | 'beam' | 'hubba' | 'srail' | 'sbeam' | 'bridge' | 'launch' | 'stairset' | 'double' | 'ledge' | 'gaprail' | 'set';
 // act 3's set pieces, one a floor up in the layer (CLOUD_ACT): the sky route's blimp, crane jib and window washer's rig
 export type CloudPiece = 'blimp' | 'swing' | 'rig' | 'bust';
 
@@ -398,7 +400,12 @@ export function addClouds(level: Level, seed: number): void {
   if (!spans?.length || floor < CLOUDS.from) return;
   const rng = makeRng(seed * 113 + floor * 7177 + 3);
   const act = layerAct(floor);
-  const weights = act >= 4 ? HIGH[act as 4 | 5].beats : act === 3 ? CLOUD_LINE.beats : BEATS;
+  let weights = act >= 4 ? HIGH[act as 4 | 5].beats : act === 3 ? CLOUD_LINE.beats : BEATS;
+  //zack's hand-made sets that are on for this act's line, as one more beat weighted by all of theirs together
+  //(src/gen/hand-sets.ts); and the editor's "play it": one set laid every other beat
+  const force = act === 3 || act === 5 ? forcedSet() : null;
+  const hand = act === 3 || act === 5 ? handSets().filter((h) => h.on && h.acts.includes(act) && h.parts.length) : [];
+  if (hand.length) weights = [...weights, ['set', hand.reduce((a, h) => a + h.weight, 0)]];
   const k = layerScale(floor);
   const surfaces: Surface[] = [];
   const rails: CurvedRail[] = [];
@@ -430,6 +437,9 @@ export function addClouds(level: Level, seed: number): void {
     const sparse = act === 3 || act === 4;
     let thins = sparse ? (floor === CLOUDS.from ? 0 : CLOUD_LINE.thinMost) : Infinity;
     const thinOk = (at: number) => !sparse || (thins > 0 && at >= hardX);
+    const laidSets: Record<string, number> = {};
+    let lastSet = '';
+    let beats = 0;
     while (x < end - 6 * TILE) {
       let beat: CloudBeat | CloudPiece = pick(rng, weights);
       //never two gaps or two rainbows running, and open with a cloud to land on
@@ -439,6 +449,7 @@ export function addClouds(level: Level, seed: number): void {
       first = false;
       //(act 3's set piece, once the layer's that far along; tried again on each beat until it fits)
       if (piece && x >= pieceX && last !== 'gap') beat = piece;
+      if (force && beats++ % 2 === 1) beat = 'set';
       const fits = (w: number) => x + w <= end;
       if (beat === 'blimp' || beat === 'swing') {
         const w = (beat === 'blimp' ? CLOUD_ACT.blimp : CLOUD_ACT.swing) * TILE;
@@ -510,6 +521,33 @@ export function addClouds(level: Level, seed: number): void {
       const most = act === 3 ? CLOUD_LINE.most[beat as CloudBeat] : act === 5 ? STATION.most[beat as CloudBeat] : undefined;
       if (most !== undefined && (sets[beat] ?? 0) >= most) beat = 'puff';
       if (beat === 'thin' && !thinOk(x)) beat = 'puff';
+      if (beat === 'set') {
+        //a hand-made set (src/gen/hand-sets.ts): never the same one twice running, no more than its most a floor
+        let h: HandSet | null = force;
+        if (!h) {
+          const ok = hand.filter((c) => c.name !== lastSet && (laidSets[c.name] ?? 0) < c.most);
+          let r = rng() * ok.reduce((a, c) => a + c.weight, 0);
+          h = ok.find((c) => (r -= c.weight) < 0) ?? null;
+        }
+        const sh = h ? setShape(h) : null;
+        if (h && sh && sh.length > 0) {
+          //(drawn in act 3's tiles; act 5's grown with its gravity, like the station's sets)
+          const T = TILE * k;
+          const w = sh.length * T;
+          //(where the layer's already as low as it may stand, the set stands that much higher: no more than a step)
+          const low = Math.min(lowest(x), lowest(x + w / 2), lowest(x + w));
+          const up = Math.max(0, y - sh.bottom * T - low);
+          const sy = y - up;
+          const clear = !busy(level, x, x + w, sy) && !busy(level, x, x + w, sy - sh.bottom * T) && !busy(level, x, x + w, sy - sh.top * T);
+          if (up <= CLOUDS.stairRise * TILE && fits(w) && clear) {
+            laySet(level, h, x, sy, act, k);
+            laidSets[h.name] = (laidSets[h.name] ?? 0) + 1;
+            lastSet = h.name;
+            x += w;
+            y = sy - sh.endY * T;
+          } else beat = 'puff';
+        } else beat = 'puff';
+      }
       if (beat === 'hubba') {
         //a cloud a flip up, a rainbow ledge off its end grinding down, and a cloud at its foot
         const tw = range(rng, CLOUD_LINE.hubbaTop) * TILE;

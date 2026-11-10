@@ -557,7 +557,8 @@ export class SkyPiecesView {
       }
     }
     this.cloudLine(level, cl, group);
-    if (space) this.stationLine(level, cl);
+    //(and its stair sets and handrails wherever one of zack's hand-made sets put them, act 3 too: src/gen/hand-sets.ts)
+    if (space || level.handSets?.length) this.stationLine(level, cl);
     cl.into(group);
     inkify(group);
     //act 4, above the clouds: a sea of cloud a few tiles under the line, the whole floor long, so the city's a long way
