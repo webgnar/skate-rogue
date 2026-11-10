@@ -238,9 +238,10 @@ Built Oct 24, 2026 (first version): the high road is an overpass 2 tiles up over
 on it), signs on a gantry before it, a gate on each road. Launch roads so far: boon street (POP or GRIND), cash
 street, hot street and Stoken stash. The skate shop followed the same day with board mods: it can turn up from the
 floor 2 fork and is always offered at the end of every third floor, beside a boon street; after shopping you skate
-that boon street. Also always offered at the end of act 2-1 (floor 4's fork), before 2-2 (zack, Nov 9, 2026: by 2-2
-the player has about $600 and needs to replace 4 worn gear parts; the four dearest parts cost $320, so a board mod
-still fits). The underground spot comes with carried-over Heat. Built overnight Oct 24, 2026: Heat
+that boon street. After act 2-1 (floor 4) the shop comes whichever road you take: both roads are normal roads,
+and after the floor's payout the shop opens, then you skate the road you picked into 2-2 (zack, Nov 9-10, 2026: by
+2-2 the player has about $600 and needs to replace 4 worn gear parts; the four dearest parts cost $320, so a board
+mod still fits). The underground spot comes with carried-over Heat. Built overnight Oct 24, 2026: Heat
 carries into the next floor at half, and the spot can turn up from the floor 3 fork (lay low, swap a boon, or
 remove a curse once curses exist), then you skate the boon street after it.
 

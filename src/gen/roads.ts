@@ -16,6 +16,7 @@ export type Road =
 export interface Fork {
   high: Road;
   low: Road;
+  shopAfter?: boolean; // the skate shop comes after this floor whichever road you take (ROADS.shopAfter)
 }
 
 export const ROADS = {
@@ -27,7 +28,7 @@ export const ROADS = {
   shopFrom: 2, // the shop can turn up from this floor's fork on
   shopEvery: 3, // and always does at the end of every third floor
   shopChance: 0.12,
-  shopAlso: [4] as number[], // and always at these floors' forks too: act 2-1, so worn gear can be replaced before 2-2 (zack, 2026-11-09)
+  shopAfter: [4] as number[], // after these floors the shop comes whichever road you take, before the next floor: act 2-1, so worn gear can be replaced before 2-2 (zack, 2026-11-09/10)
   spotFrom: 3, // the underground spot can turn up from this floor's fork on
   spotChance: 0.15,
   heatCarry: 0.5, // the share of your Heat that follows you to the next floor
@@ -61,9 +62,10 @@ export function rollFork(seed: number, floor: number, types: BoonType[] = BOON_T
   const rng = makeRng(seed * 13 + floor * 6151);
   const pick = (): BoonType => types[randInt(rng, types.length)];
   const boonStreet = (): Road => ({ kind: 'boon', boonType: pick(), danger: 1 + randInt(rng, 2) });
-  //the shop: always every third floor and at act 2-1's end, sometimes from floor 2; the other road is a boon street
-  const always = floor % ROADS.shopEvery === 0 || ROADS.shopAlso.includes(floor);
-  if (floor >= ROADS.shopFrom && (always || rng() < ROADS.shopChance)) {
+  //after act 2-1 the shop waits past both roads, so the fork is a normal one
+  if (ROADS.shopAfter.includes(floor)) return { ...normalFork(rng, floor, types, boonStreet), shopAfter: true };
+  //the shop: always every third floor, sometimes from floor 2; the other road is a boon street
+  if (floor >= ROADS.shopFrom && (floor % ROADS.shopEvery === 0 || rng() < ROADS.shopChance)) {
     const shop: Road = { kind: 'shop', boonType: pick(), danger: 1 + randInt(rng, 2) };
     const other = boonStreet();
     return rng() < 0.5 ? { high: shop, low: other } : { high: other, low: shop };
@@ -74,6 +76,10 @@ export function rollFork(seed: number, floor: number, types: BoonType[] = BOON_T
     const other = boonStreet();
     return rng() < 0.5 ? { high: spot, low: other } : { high: other, low: spot };
   }
+  return normalFork(rng, floor, types, boonStreet);
+}
+
+function normalFork(rng: () => number, floor: number, types: BoonType[], boonStreet: () => Road): Fork {
   const high = roll(rng, floor, types);
   //at least one road is a boon street, so a run keeps building
   const low = high.kind === 'boon' ? roll(rng, floor, types, high) : boonStreet();
