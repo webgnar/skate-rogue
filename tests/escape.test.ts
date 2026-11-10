@@ -169,7 +169,7 @@ describe('the ceiling and the beam-up', () => {
     return sim;
   };
 
-  it('the ceiling: a blimp convoy rising to the cruise, drones on their backs, then the gunship line', () => {
+  it('the ceiling: a blimp convoy rising to the cruise, drones on their backs, then the jet line', () => {
     const l = buildEscape(3, 4);
     expect(l.escape!.kind).toBe('ceiling');
     expect(l.gravity).toBe(0.7);
@@ -179,17 +179,17 @@ describe('the ceiling and the beam-up', () => {
     const drones = l.escape!.drones!;
     expect(drones.length).toBeGreaterThan(3);
     expect(drones.every((d) => d.base !== undefined && d.base < l.streetY)).toBe(true);
-    const guns = l.cars.filter((c) => c.model === 'gunship');
-    expect(guns).toHaveLength(UP_HIGH.gunships);
+    const guns = l.cars.filter((c) => c.model === 'jet');
+    expect(guns).toHaveLength(UP_HIGH.jets);
     //hanging in the sky over the last stretch, not parked on the street
     for (const g of guns) expect(g.bottom).toBeLessThan(l.streetY - 4 * TILE);
   });
 
-  it('the beam-up: a rocket after you at your height, the ship and its beam over the gate', () => {
+  it('the beam-up: the drone swarm after you at your height, the ship and its beam over the gate', () => {
     const l = buildEscape(3, 5);
     expect(l.escape!.kind).toBe('finale');
     expect(l.gravity).toBe(0.3);
-    expect(l.escape!.rocket).toBe(true);
+    expect(l.escape!.swarm).toBe(true);
     expect(l.escape!.beam!.x).toBe(l.exitX);
     expect(l.escape!.beam!.y).toBeLessThan(l.streetY - 10 * TILE);
     const sim = new FloorSim(l);

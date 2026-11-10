@@ -1663,7 +1663,7 @@ export class Game {
       const street = toY(this.level, this.level.streetY);
       const ch = this.sim.chopper;
       if (ch) this.escapeFx.chopper(toX(at(ch, 'x')), street, ch.lit, ch.covers.some((c) => ch.x >= c.x0 && ch.x <= c.x1), dt);
-      if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, this.chaserView.look === 'rocket' ? this.chaserView.group.position.y : street, this.chaserView.surging, dt);
+      if (this.sim.chaser && this.chaserView.look) this.escapeFx.chaser(this.chaserView.look, this.chaserView.x, (this.chaserView.look === 'rocket' || this.chaserView.look === 'swarm') ? this.chaserView.group.position.y : street, this.chaserView.surging, dt);
     }
     this.pedView.update(this.level, this.skater, dt, toX(this.skater.x), this.biome);
     this.phoneFx.update(this.pedView.phones());

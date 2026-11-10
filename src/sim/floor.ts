@@ -176,9 +176,9 @@ export class FloorSim {
     this.sewer = new SewerSim(level);
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX, esc.chopperTop) : null;
     this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : level.hunt?.length || level.bridges?.length ? new Swarm([...(level.hunt ?? []), ...(level.bridges ?? [])], level.streetY) : null;
-    this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX, !!esc.rocket) : null;
-    //(the guards shoot; the finale's rocket only runs you down)
-    this.shooter = this.chaser && !esc?.rocket ? new Shooter(level.layout.seed, level.streetY) : null;
+    this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX, !!esc.swarm) : null;
+    //(the guards shoot; the finale's drones only run you down)
+    this.shooter = this.chaser && !esc?.swarm ? new Shooter(level.layout.seed, level.streetY) : null;
     //traffic comes from the layout's own seed, so a re-rolled floor gets re-rolled traffic too
     this.traffic = new Traffic(level, level.tutorial ? [] : spawnPlan(level, level.layout.seed), level.crossings, level.busStops ?? [], level.doors ?? []);
     this.trains = (level.el ?? []).map((s) => new ElTrain(s));

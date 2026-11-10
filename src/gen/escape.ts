@@ -5,9 +5,9 @@
 // car, a CTA bus and a line of cruisers bumper to bumper, then a second bus: ollie onto the first car and car-hop
 // across the roofs (every hop refills your jumps), or slam into the side and lose your speed with the Heat climbing.
 // The helicopter (act 2) hunts you along the street. Act 4's is the ceiling (the climb, step d): a convoy of blimps
-// up over the street, the drone swarm (src/sim/drones.ts) diving onto their backs, and at the end the AI's gunships
+// up over the street, the drone swarm (src/sim/drones.ts) diving onto their backs, and at the end the AI's fighter jets
 // holding a line across the sky: hop up onto them and across their roofs, through it. Act 5's finale is the beam-up:
-// a line of station decks, satellites and debris up in space, the AI's last launch (a rocket) on your tail, and the
+// a line of station decks, satellites and debris up in space, the AI's drone swarm on your tail, and the
 // Pleiadian ship's beam over the gate: reach it and the run is won. Under both the street runs on as it was (the
 // finale's double roadblock under the helicopter), the way you go if you fall. Acts 4 and 5's escapes skate in their
 // act's gravity.
@@ -77,11 +77,11 @@ export const UP_HIGH = {
   debris: [6, 8], // a drifting piece of debris (a drifting cloud's mechanics)
   satellite: 2.5, // a satellite (a balloon's)
   drift: 1.5, // tiles a piece of debris wanders either way
-  gunships: 6, // act 4: gunships bumper to bumper in the line across the sky at the end
-  gunship: 2.5, // tiles each
-  gunshipGap: 0.5,
-  gunshipUp: 2, // the line's roof over the last blimp's back: past an ollie, an ollie and a flip (times the scale)
-  gunshipH: 1.5, // tiles deep: it blocks the blimps' level, so you hop up onto it or slam into it
+  jets: 6, // act 4: fighter jets nose to tail to bumper in the line across the sky at the end
+  jet: 2.5, // tiles each
+  jetGap: 0.5,
+  jetUp: 2, // the line's roof over the last blimp's back: past an ollie, an ollie and a flip (times the scale)
+  jetH: 1.5, // tiles deep: it blocks the blimps' level, so you hop up onto it or slam into it
   beamUp: 4, // the ship hangs this far over the cruise (tiles, not scaled: in the frame as you come in)
   chopperTop: 6, // act 5: tiles over the street the helicopter can't climb past (up in space, out of its reach)
 };
@@ -159,7 +159,7 @@ export function buildEscape(seed: number, act: number, kind: EscapeKind = escape
     return withProps({
       ...level,
       danger: 3,
-      escape: { kind, act, x0: blocks ? x0 : chopperFrom!, x1: blocks ? x - 10 * TILE : level.exitX, chopperFrom, chopperTop: level.streetY - UP_HIGH.chopperTop * TILE, covers, chaseFrom: CHUNK_W * TILE, rocket: true, beam: up.beam },
+      escape: { kind, act, x0: blocks ? x0 : chopperFrom!, x1: blocks ? x - 10 * TILE : level.exitX, chopperFrom, chopperTop: level.streetY - UP_HIGH.chopperTop * TILE, covers, chaseFrom: CHUNK_W * TILE, swarm: true, beam: up.beam },
     });
   }
   //the swarm: waves of drones over the flat street before the gate
@@ -182,7 +182,7 @@ export function buildEscape(seed: number, act: number, kind: EscapeKind = escape
 
 // the line up over an escape's street (act 4's ceiling, act 5's beam-up): a girder up off the street, then piece
 // after piece, each up to a flip higher, levelling off at the cruise. Act 4's are blimps, drones diving onto their
-// backs, and the gunships' line at the end; act 5's station decks, satellites and debris, under the ship
+// backs, and the jets' line at the end; act 5's station decks, satellites and debris, under the ship
 function upHigh(level: Level, kind: EscapeKind, rng: () => number): { x0: number; drones: { x: number; h: number; base: number }[]; beam?: { x: number; y: number } } {
   const k = 1 / (level.gravity ?? 1);
   const T = (tiles: number) => tiles * k * TILE;
@@ -201,7 +201,7 @@ function upHigh(level: Level, kind: EscapeKind, rng: () => number): { x0: number
   coins(x0, x0 + T(UP_HIGH.entryW), y);
   let x = x0 + T(UP_HIGH.entryW);
   const cruise = s - T(UP_HIGH.cruise);
-  const lineEnd = kind === 'ceiling' ? level.exitX - (UP_HIGH.gunships * (UP_HIGH.gunship + UP_HIGH.gunshipGap) + 6) * TILE : level.exitX + 2 * TILE;
+  const lineEnd = kind === 'ceiling' ? level.exitX - (UP_HIGH.jets * (UP_HIGH.jet + UP_HIGH.jetGap) + 6) * TILE : level.exitX + 2 * TILE;
   let n = 0;
   let last: Surface | SkyMover | null = null;
   while (true) {
@@ -252,14 +252,14 @@ function upHigh(level: Level, kind: EscapeKind, rng: () => number): { x0: number
   level.surfaces.push(...surfaces);
   level.skyMovers = [...(level.skyMovers ?? []), ...movers];
   if (kind === 'ceiling') {
-    //the gunships' line across the sky: bumper to bumper over the last stretch to the gate, its roof up over the
+    //the jets' line across the sky: bumper to bumper over the last stretch to the gate, its roof up over the
     //last blimp's back and deep enough to block its level. Hop up onto it and across, through it
-    const top = (last?.y ?? cruise) - T(UP_HIGH.gunshipUp);
+    const top = (last?.y ?? cruise) - T(UP_HIGH.jetUp);
     let gx = (last?.x1 ?? x) + T(2);
-    for (let i = 0; i < UP_HIGH.gunships; i++) {
-      level.cars.push({ x0: gx, x1: gx + UP_HIGH.gunship * TILE, roof: top, bottom: top + UP_HIGH.gunshipH * TILE, model: 'gunship' });
-      level.pickups.push({ kind: 'cash', x: gx + (UP_HIGH.gunship * TILE) / 2, y: top - PICKUPS.ride });
-      gx += (UP_HIGH.gunship + UP_HIGH.gunshipGap) * TILE;
+    for (let i = 0; i < UP_HIGH.jets; i++) {
+      level.cars.push({ x0: gx, x1: gx + UP_HIGH.jet * TILE, roof: top, bottom: top + UP_HIGH.jetH * TILE, model: 'jet' });
+      level.pickups.push({ kind: 'cash', x: gx + (UP_HIGH.jet * TILE) / 2, y: top - PICKUPS.ride });
+      gx += (UP_HIGH.jet + UP_HIGH.jetGap) * TILE;
     }
     level.pickups.push({ kind: 'stoken', x: gx + TILE, y: top - PICKUPS.arc });
     return { x0, drones };

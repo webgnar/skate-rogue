@@ -56,7 +56,7 @@ export interface Car {
   x1: number;
   roof: number; // y of the roof
   bottom: number;
-  model?: 'cruiser' | 'bus' | 'gunship'; // parked roadblock vehicles (a gunship: act 4's ceiling, hovering); plain parked cars leave it out
+  model?: 'cruiser' | 'bus' | 'jet'; // parked roadblock vehicles (a jet: act 4's ceiling, flying in the line); plain parked cars leave it out
   kicker?: number; // a box truck's dropped tailgate: this far behind x0 it launches you (px)
   skitch?: boolean; // a Chinatown cab (src/traffic/cab.ts): roll into its back bumper and you hang on, skitching
   ledge?: Surface; // an L train's car (src/traffic/el.ts): a one-way platform: its roof is a grind that moves with it, and it never hits you
@@ -185,7 +185,7 @@ export interface EscapeSite {
   covers: { x0: number; x1: number; y: number }[]; // L tracks overhead: the spotlight can't see under them
   chaseFrom?: number; // act 3's chaser joins here (src/sim/chaser.ts)
   drones?: { x: number; h: number; base?: number }[]; // the drone swarm: where each drone hovers, and its roof above the street (or a blimp's back)
-  rocket?: boolean; // act 5's finale: the chaser is the AI's last launch, a rocket flying at your height (src/sim/chaser.ts)
+  swarm?: boolean; // act 5's finale: the chaser is the AI's drone swarm, flying at your height (src/sim/chaser.ts)
   beam?: { x: number; y: number }; // act 5's finale: the Pleiadian ship's beam over the gate, the ship at y (px)
 }
 

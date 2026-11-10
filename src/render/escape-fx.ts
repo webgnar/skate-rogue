@@ -11,10 +11,11 @@ const FOAM = [hex(0xeaf8ff), hex(0xffffff), hex(0xbfe4ff)];
 const MIST = [hex(0xc8e8ff), hex(0xa8d4f0)];
 const DUST = [hex(0xd8c8a8), hex(0xb8a888)];
 const SPARK = [hex(0xffffff), hex(0xffe08a)];
+const SCAN = [hex(0xff3040), hex(0xff8090)];
 
 export const ESCAPE_FX = {
   wash: 40, // grit per second under the helicopter (twice that when its light has you)
-  front: { wave: 1.2, chariot: 1.6, guards: 0.6, rocket: 1.4 } as Record<ChaserLook, number>, // world units from its middle to its front
+  front: { wave: 1.2, chariot: 1.6, guards: 0.6, rocket: 1.4, swarm: 0.6 } as Record<ChaserLook, number>, // world units from its middle to its front
 };
 
 export class EscapeFx {
@@ -47,6 +48,9 @@ export class EscapeFx {
       //its exhaust: a trail of fire and smoke behind it, where it flies (ground is its height here)
       p.stream('exhaust', x - 1.5, ground, 40 * k, dt, { n: 0, colors: SPARK, life: [0.15, 0.3], size: [0.14, 0.22], speed: [3, 6], angle: [Math.PI - 0.15, Math.PI + 0.15], drag: 2 });
       p.stream('smoke', x - 1.8, ground, 14 * k, dt, { n: 0, colors: MIST, life: [0.6, 1], size: [0.2, 0.3], size1: 0.6, speed: [0.5, 1.2], angle: [Math.PI - 0.4, Math.PI + 0.4], jitter: 0.4, drag: 2, alpha: 0.5, fadeFrom: 0 });
+    } else if (look === 'swarm') {
+      //the drones' thrust: faint red sparks streaming back off the pack (ground is its height here)
+      p.stream('thrust', x - 0.8, ground + 0.3, 24 * k, dt, { n: 0, colors: SCAN, life: [0.2, 0.4], size: [0.06, 0.1], speed: [2, 4], angle: [Math.PI - 0.3, Math.PI + 0.3], jitter: 1.2, drag: 2, alpha: 0.7 });
     } else {
       p.stream('boots', fx, ground + 0.05, 14 * k, dt, { n: 0, colors: DUST, life: [0.3, 0.5], size: [0.1, 0.16], size1: 0.25, speed: [0.5, 1.4], angle: [Math.PI * 0.55, Math.PI * 0.95], jitter: 0.6, drag: 3, alpha: 0.6, fadeFrom: 0 });
     }
