@@ -1,5 +1,6 @@
 // Makes sure every floor can be cleared with no boons: a simple reference bot skates each generated layout, and
 // layouts it can't clear are re-rolled from a sub-seed, then generated one tier lower. Pure and deterministic.
+import { FLAT_STOKE } from '../heat/heat';
 import { RunScore, SCORE } from '../run/score';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
@@ -33,7 +34,8 @@ export function botRun(level: Level, boost: number | 'game' = 1, gear?: Gear): B
   const run = boost === 'game' ? new RunScore() : null;
   const fixed = (k: number) => {
     sim.skater.boost = k;
-    sim.heat.slamFree = k > 1; // the gnar state: slams cost no Heat either
+    sim.heat.slamFree = k > 1; // a check ride at gnar speed: is the line skateable, not is a slam affordable
+    sim.heat.stoke = FLAT_STOKE;
   };
   fixed(run ? 1 : (boost as number));
   const sk = sim.skater;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HEAT, Heat } from '../src/heat/heat';
+import { FLAT_STOKE, HEAT, Heat, slamHeat } from '../src/heat/heat';
 import { PHYS, TILE } from '../src/physics/constants';
 import { Skater } from '../src/physics/skater';
 import { validatedFloor } from '../src/gen/validate';
@@ -82,9 +82,11 @@ describe('traffic', () => {
 });
 
 describe('heat', () => {
-  function slamAt(frames: Set<number>, total: number): Heat {
+  function slamAt(frames: Set<number>, total: number, stoke = FLAT_STOKE, alarm = false): Heat {
     const sk = new Skater(levelOf(FLAT));
     const heat = new Heat();
+    heat.stoke = stoke;
+    heat.alarm = alarm;
     for (let f = 0; f < total && !heat.caught; f++) {
       sk.step(idle);
       const events = frames.has(f) ? [{ type: 'slam' as const }] : [];
@@ -93,8 +95,24 @@ describe('heat', () => {
     return heat;
   }
 
-  it('three slams within 4 seconds catch you', () => {
+  it('three slams within 4 seconds catch you with the detector part full', () => {
     expect(slamAt(new Set([0, 100, 200]), 240).caught).toBe(true);
+  });
+
+  it('stoke raises the stakes: a slam costs +25 at an empty detector up to +50 at a full one', () => {
+    expect(slamHeat(0)).toBe(HEAT.slamLow);
+    expect(slamHeat(1)).toBe(HEAT.slamHigh);
+    expect(slamHeat(FLAT_STOKE)).toBeCloseTo(35);
+    expect(slamHeat(0, true)).toBe(HEAT.slamHigh); // the gnar state is the alarm
+    //quiet: three quick slams are a scare; loud: two end it
+    expect(slamAt(new Set([0, 100, 200]), 240, 0).caught).toBe(false);
+    expect(slamAt(new Set([0, 100]), 140, 1).caught).toBe(true);
+  });
+
+  it('the gnar state is the alarm: no free slams, no cooling off, the cruiser creeps in', () => {
+    const h = slamAt(new Set(), 60 * 4, 0, true);
+    expect(h.value).toBeCloseTo(HEAT.alarmPerSec * 4, 0);
+    expect(slamAt(new Set([0]), 1, 0, true).value).toBeGreaterThanOrEqual(HEAT.slamHigh);
   });
 
   it('one slam is forgiven after about 10 seconds of clean skating', () => {
@@ -110,7 +128,7 @@ describe('heat', () => {
   it('the cruiser holds while the skater remounts', () => {
     const h = slamAt(new Set([0]), 1);
     expect(h.holdT).toBe(PHYS.slamFrames - 1);
-    expect(HEAT.slam).toBe(35);
+    expect(h.value).toBeCloseTo(35, 0);
   });
 
   it('a floor sim reports caught when Heat hits 100', () => {

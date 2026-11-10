@@ -748,7 +748,7 @@ chase is what makes mistakes matter, so it has to be tight: always visible, alwa
 
 | Event | Heat |
 | --- | --- |
-| Slam | +35 |
+| Slam | +25 at an empty stoke meter, up to +50 at a full one (see Stoke raises the stakes) |
 | Each second below base speed (recovering from a slam) | +10 |
 | Landed trick | −3 |
 | Grind, per second | −4 |
@@ -761,25 +761,30 @@ chase is what makes mistakes matter, so it has to be tight: always visible, alwa
   about 8 seconds of clean skating (less with tricks and grinds).
 - **Stoke raises the stakes** (zack, Nov 9, 2026: "heat should build up in relation to the stoke meter in the sense
   that the enemy is an ai that is detecting stoke and wants to ban that"; picked "Stoke raises the stakes" over Heat
-  rising with stoke directly; **not built yet**). The stoke meter (see Scoring and stoke) is the AI's **detector**:
+  rising with stoke directly; built Nov 10, 2026). The stoke meter (see Scoring and stoke) is the AI's **detector**:
   how loud you are to it. Detection and catching are split: stoke sets how hard the hunt is, and mistakes still decide
   whether it catches you, so a good line is never punished, it's a bigger wave where a fall costs more.
   - **Slam Heat scales with stoke:** about +25 at an empty meter, up to +50 at a full one (replaces the flat +35).
     Slow skating after a slam scales the same way. Cooling (tricks, grinds, clean skating) does not change.
   - **Full stoke is the alarm, not a safe state.** The gnar state keeps its speed boost but **no longer makes slams
     free**: it brings the hunt up a tier for its 8 seconds (the cruiser drives faster, the chopper lifts off or the
-    drones drop in, every camera snaps to you). One slam in gnar ends it (as now) and costs full Heat.
+    drones drop in, every camera snaps to you). One slam in gnar ends it (as now) and costs full Heat. Built: the
+    cruiser creeps in at +3 Heat a second and clean skating doesn't cool while it lasts, and the drone drops in front.
+    The chopper lifting off and the cameras snapping to you are **not in the build yet** (no street cameras exist).
   - **The escalation steps follow stoke, not Heat:** the siren layer, the cameras turning, the drone in front and the
     music thinning out come in as the detector fills; Heat keeps only the catch cues (the lights on screen, the
-    pulsing edge and the vibration near 90, the cut-in at 100).
+    pulsing edge and the vibration near 90, the cut-in at 100). Built: the siren layer comes in from half full and
+    the drone drops in front at 75%; the cruiser closing in keeps a quieter siren after a slam has emptied the meter.
+    The music thinning out is **not in the build yet**.
   - **The HUD sells it: one bar, two readings** (zack, Nov 9, 2026, picked over dropping the HEAT bar or keeping
-    both; not built). The two mirrored STOKE and HEAT bars become **one detector meter**. Its fill is stoke, drawn as
+    both; built Nov 10, 2026). The two mirrored STOKE and HEAT bars become **one detector meter**. Its fill is stoke, drawn as
     the AI's scan lock on you (a red grid filling toward TARGET: STOKE DETECTED at full). The cruiser rides along the
     same bar as a marker, closing in from the left as Heat rises, with the wanted stars on the marker; marker meets
     full fill = caught. One glance reads both how loud you are and how close it is, and it still works in portrait,
     where the cruiser itself is often off screen. The separate HEAT bar goes; Heat keeps its world cues (the cruiser,
     the lights, the siren, the edge pulse).
-  - **The climb:** higher acts have fewer eyes, so the detector fills slower up there (one more reason to go up).
+  - **The climb:** higher acts have fewer eyes, so the detector fills slower up there (one more reason to go up):
+    100% of the street rate in act 1, then 85%, 72%, 62% and 55% in act 5 (`SCORE.stokeByAct`).
   - Numbers to tune on the bot: the slam range, the gnar-tier cruiser speed, the per-act detector rate.
 - **Escalation, not surprise.** Every step is readable at a glance. Today: at 50 Heat the siren layer comes in and
   the cruiser's lights reach the screen, at 75 a drone drops in front and the music thins out, at 90 the screen edge
@@ -1268,10 +1273,10 @@ is teased.
 
 - **Score** = tricks × combo × speed multiplier + floor clear (`250 × floor`, QFS) + Stoken grabbed.
 - **Combo** builds with tricks, grinds and car-hops without touching the ground; landing banks it.
-- **Stoke meter** fills with the combo. Full stoke gives a short "gnar" state: speed up, and slams cost no Heat.
-  A slam kills the meter (zack, Nov 3, 2026): it empties, and a slam in the gnar state ends it (that slam still
-  costs no Heat). **Decided Nov 9, 2026, not built:** the meter is also the AI's stoke detector (see The chase:
-  Stoke raises the stakes): slam Heat scales with it, gnar becomes the alarm tier and its free slams go away.
+- **Stoke meter** fills with the combo. Full stoke gives a short "gnar" state: speed up, and the AI's alarm.
+  A slam kills the meter (zack, Nov 3, 2026): it empties, and a slam in the gnar state ends it. The meter is also
+  the AI's stoke detector (decided Nov 9, built Nov 10, 2026; see The chase: Stoke raises the stakes): slam Heat
+  scales with it, gnar is the alarm tier and its free slams are gone.
 - **Leaderboards:** deepest floor, high score, daily seed. Port `api/leaderboard.ts` and `leaderboard-service.ts` from excaliburSkate. Built Oct 24, 2026: api/leaderboard.ts over a Redis store (Upstash), boards for score, deepest floor and each day's daily run; it needs a store connected on Vercel.
 
 ## Presentation (3D)
@@ -1556,7 +1561,7 @@ the cloud tops with the drones (shot 3).
   and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the
   Stoke meter into GNAR MODE and the Heat meter (the cruiser, 10 segments, stars at 25/50/75/90) under them; board
   mods bottom left and gear wear bottom right. The middle of the screen stays clear. Heat keeps its world cues
-  (sirens, light, edge glow) as well as the bar. **Decided Nov 9, 2026, not built:** the two bars merge into one
+  (sirens, light, edge glow) as well as the bar. Since Nov 10, 2026 the two bars are one
   detector meter, fill = stoke, cruiser marker + stars = Heat (see The chase: Stoke raises the stakes).
 - **Boon pick:** three large cards, tap to pick, long-press to read. Reuse QFS's card layout and deal animation.
 - **Shop:** board slots across the top, mods below, drag to place. Must work with one thumb.

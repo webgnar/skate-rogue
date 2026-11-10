@@ -4,6 +4,7 @@
 // Edits are per floor and live in src/gen/level-edits.json, which the generator reads over the code (hills.ts).
 // Save writes that file through the dev server (npm run dev). Without one (the phone, the deployed site) it copies
 // the edits as text instead, to paste to Claude. Unsaved edits stay in this browser, and ?leveldrafts plays them.
+import { FLAT_STOKE } from '../heat/heat';
 import { FIRST_ROAD, rollFork, type Road } from '../gen/roads';
 import { floorRecipe, hillDials as hillOnly, recipe, type Beat } from '../gen/hills';
 import { topDials } from '../gen/top-route';
@@ -204,6 +205,7 @@ function ride(level: Level, boost: number, record: boolean): Built['cruise'] {
   const sim = new FloorSim(level);
   sim.skater.boost = boost;
   sim.heat.slamFree = boost > 1;
+  sim.heat.stoke = FLAT_STOKE;
   const pilot = new Pilot('ref');
   const bot: BotLine = { path: [], slams: [] };
   let grind = 0;
