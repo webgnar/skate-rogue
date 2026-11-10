@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
 SK = 'art/app-icon/skater-cutout.png'
-CHOSEN = 'B-electric-cyan'
+CHOSEN = 'C-toxic-slime'
 ICON = 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'
 N = 1024
 SS = 2  # supersample for the drawn shapes
