@@ -3,7 +3,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.webgnar.skateescape',
+  appId: 'skateescape',
   appName: 'Skate Escape',
   webDir: 'dist-ios',
   backgroundColor: '#120c1e',
