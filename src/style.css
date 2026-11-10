@@ -434,14 +434,14 @@ html, body {
 #pausebtn svg { height: 55%; }
 #pausebtn:active { transform: skewX(-10deg) translateY(2px); box-shadow: 0 0 0 2px var(--pink), 1px 2px 0 2px #000; }
 
-/* split (zack, 2026-11-06): STOKE on the left edge and HEAT mirrored on the right, the same width, so they sit
-   evenly either side of the score and the trick names in the middle */
-#meters { grid-column: 1 / 4; display: flex; justify-content: space-between; gap: calc(var(--u) * 1.2); min-width: 0; }
-#stoke, #heat { width: 36vw; box-sizing: border-box; }
-#heat { flex-direction: row-reverse; }
-#stoke .meter, #heat .meter { flex: 1; }
-#stoke .meter b, #heat .meter b { flex: 1; width: auto; }
-#stoke, #heat {
+/* the stoke detector (Stoke raises the stakes, zack, Nov 9, 2026): one bar, two readings. The fill is stoke, the AI's
+   scan lock on you, a red grid filling toward TARGET: STOKE DETECTED. The cruiser rides along the same bar as a
+   marker, closing in from the left as Heat rises, the wanted stars under it; marker at the far end = caught.
+   It replaced the mirrored STOKE and HEAT bars (zack, 2026-11-06) */
+#meters { grid-column: 1 / 4; display: flex; justify-content: flex-start; min-width: 0; }
+#detect {
+  width: 52vw;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: calc(var(--u) * 0.6);
@@ -459,11 +459,52 @@ html, body {
   text-shadow: 2px 2px 0 #000;
   transform: rotate(-4deg);
 }
-#heat .tag { color: #ff3a5a; }
+#detect .tag { color: #ff3a5a; }
+#detect .track { position: relative; flex: 1; min-width: 0; display: flex; }
+#detect .meter { flex: 1; }
+#detect .meter b { flex: 1; width: auto; }
 .meter { display: flex; gap: 2px; padding: 2px; background: #000; }
 .meter b { display: block; width: calc(var(--u) * 1.15); height: calc(var(--u) * 1.2); background: #3a3046; }
 .meter b.on { background: var(--c); }
-#stoke .badge {
+/* the scan grid: fine lines over the lit segments */
+#detect .meter b.on { background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.35) 1px, transparent 1px), linear-gradient(0deg, rgba(0, 0, 0, 0.35) 1px, transparent 1px); background-size: 4px 4px; }
+#detect .lock {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--u) * 1.15);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: #fff;
+  -webkit-text-stroke: 1px #000;
+  paint-order: stroke fill;
+  text-shadow: 1px 1px 0 #000;
+  opacity: 0;
+  pointer-events: none;
+}
+#detect[data-full='near'] .lock { opacity: 0.45; }
+#detect[data-gnar='1'] .lock { opacity: 1; color: var(--yellow); animation: lockblink 0.6s steps(2) infinite; }
+@keyframes lockblink { 50% { opacity: 0.55; } }
+#detect[data-gnar='1'] { border-color: #ff2a5a; box-shadow: 0 0 calc(var(--u) * 1.2) #ff2a5a; }
+/* the cruiser marker: rides the bar from the left as Heat climbs (--at 0..1) */
+#chase {
+  --at: 0;
+  position: absolute;
+  top: 50%;
+  left: calc(var(--at) * 100%);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.25s ease-out, opacity 0.3s;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(1px 1px 0 #000);
+}
+#detect[data-chase='1'] #chase { opacity: 1; }
+#detect .badge {
   display: flex;
   align-items: center;
   gap: calc(var(--u) * 0.3);
@@ -472,21 +513,23 @@ html, body {
   color: #8a7a9a;
   opacity: 0.85;
 }
-#stoke .badge svg { height: calc(var(--u) * 2.4); filter: grayscale(1) brightness(0.6); }
-#stoke[data-gnar='1'] { border-color: var(--yellow); box-shadow: 0 0 calc(var(--u) * 1.2) var(--pink); }
-#stoke[data-gnar='1'] .badge { color: var(--yellow); opacity: 1; }
-#stoke[data-gnar='1'] .badge svg { filter: none; animation: gnarbob 0.5s ease-in-out infinite alternate; }
+#detect .badge svg { height: calc(var(--u) * 2.4); filter: grayscale(1) brightness(0.6); }
+#detect[data-gnar='1'] .badge { color: var(--yellow); opacity: 1; }
+#detect[data-gnar='1'] .badge svg { filter: none; animation: gnarbob 0.5s ease-in-out infinite alternate; }
 @keyframes gnarbob { to { transform: scale(1.15) rotate(6deg); } }
-.cruiser svg { height: calc(var(--u) * 2); display: block; }
+.cruiser svg { height: calc(var(--u) * 2.2); display: block; }
 .cruiser .l1, .cruiser .l2 { opacity: 0.35; }
-#heat[data-hot='1'] .cruiser .l1 { opacity: 1; animation: siren 0.5s steps(2) infinite; }
-#heat[data-hot='1'] .cruiser .l2 { opacity: 1; animation: siren 0.5s steps(2) infinite reverse; }
+#detect:not([data-hot='0']) .cruiser .l1 { opacity: 1; animation: siren 0.5s steps(2) infinite; }
+#detect:not([data-hot='0']) .cruiser .l2 { opacity: 1; animation: siren 0.5s steps(2) infinite reverse; }
+#detect[data-hot='2'] #chase { animation: chasepulse 0.4s ease-in-out infinite alternate; }
 @keyframes siren { 50% { opacity: 0.2; } }
-#stars { display: flex; gap: 1px; font-size: calc(var(--u) * 1.6); line-height: 1; color: #3a3046; -webkit-text-stroke: 1px #000; font-family: system-ui, sans-serif; }
-#heat[data-stars='1'] #stars i:nth-child(-n + 1),
-#heat[data-stars='2'] #stars i:nth-child(-n + 2),
-#heat[data-stars='3'] #stars i:nth-child(-n + 3),
-#heat[data-stars='4'] #stars i:nth-child(-n + 4) { color: #ff2a3a; }
+@keyframes chasepulse { to { transform: translate(-50%, -50%) scale(1.15); } }
+#stars { display: flex; gap: 1px; margin-top: -2px; font-size: calc(var(--u) * 1.05); line-height: 1; color: #3a3046; -webkit-text-stroke: 1px #000; font-family: system-ui, sans-serif; }
+#detect[data-stars='0'] #stars { display: none; }
+#detect[data-stars='1'] #stars i:nth-child(-n + 1),
+#detect[data-stars='2'] #stars i:nth-child(-n + 2),
+#detect[data-stars='3'] #stars i:nth-child(-n + 3),
+#detect[data-stars='4'] #stars i:nth-child(-n + 4) { color: #ff2a3a; }
 
 /* bottom corners: board mods and gear wear */
 #board, #gear { bottom: var(--b); display: flex; flex-direction: column; gap: calc(var(--u) * 0.2); }
@@ -577,8 +620,8 @@ html, body {
   #center { justify-content: center; }
   #scorebox { min-width: calc(var(--u) * 8); padding: calc(var(--u) * 0.2) calc(var(--u) * 0.9) calc(var(--u) * 0.3); }
   #money { flex-direction: column; align-items: flex-start; gap: calc(var(--u) * 0.2); font-size: calc(var(--u) * 1.7); padding: calc(var(--u) * 0.3) calc(var(--u) * 0.9); }
-  #stoke, #heat { width: calc(50% - var(--u) * 0.6); }
-  #stoke .badge span, #heat .cruiser { display: none; }
+  #detect { width: 100%; }
+  #detect .badge span { display: none; }
   #board { bottom: calc(var(--b) + var(--u) * 6.8); }
   #board .tag, #gear .tag { font-size: calc(var(--u) * 1.3); }
   #gear { left: var(--l); }
@@ -644,12 +687,11 @@ html, body {
 #paused .settings .fshelp { grid-column: 1 / -1; padding: 6px 10px; font: 14px/1.35 system-ui, sans-serif; letter-spacing: 0; color: #fff; background: rgba(0, 0, 0, 0.6); border: 2px solid var(--trick); }
 #paused .settings .fshelp b { all: unset; font-weight: 700; color: var(--trick); }
 #quitrun { all: unset; cursor: pointer; padding: 6px 18px; font-size: 16px; color: #fff; background: #5a1a2a; border: 3px solid #000; transform: skewX(-10deg); }
-#app.calm #paused, #app.calm #stoke .badge svg { animation: none; }
+#app.calm #paused, #app.calm #detect .badge svg, #app.calm #detect .lock, #app.calm #chase { animation: none; }
 /* narrow landscape phones (iPhone SE): slimmer meters so Heat's stars fit */
 @media (max-width: 720px) {
   #gearbars .meter b { width: calc(var(--u) * 0.8); }
-  #stoke .tag, #heat .tag { font-size: calc(var(--u) * 1.5); }
-  #stars { font-size: calc(var(--u) * 1.3); }
+  #detect .tag { font-size: calc(var(--u) * 1.5); }
 }
 
 /* the unlock tree between runs (src/run/meta.ts) */

@@ -41,8 +41,8 @@ export const SKY = {
   balloonBobFrames: 200,
 };
 
-// NO GROUND (zack, 2026-10-31): chain sky pieces (wires, rooftops, billboards, booms, a blimp's back) without
-// touching the ground below and the coins you pick up up there multiply; touch down and the line banks
+// A line's coin multiplier, `n` pieces in: the sewer's DOWNSTREAM (src/sim/floor.ts). NO GROUND, the sky's own
+// line, used it too until zack cut it (Nov 10, 2026)
 export const SKY_LINE = { step: 0.5, max: 4 };
 
 // the coin multiplier `n` pieces into a line

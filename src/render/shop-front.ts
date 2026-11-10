@@ -22,7 +22,7 @@ export const SHOP_FRONT = {
 // shop: an escape (the road picked before it may be the shop's) and a floor with the shop at its fork
 export function shopSpot(level: Level): number | null {
   const fork = level.fork;
-  const shopFork = !!fork && [fork.high, fork.low, fork.sewer].some((r) => r?.kind === 'shop');
+  const shopFork = !!fork && (!!fork.shopAfter || [fork.high, fork.low, fork.sewer].some((r) => r?.kind === 'shop'));
   if (!level.escape && !shopFork) return null;
   return level.exitX / TILE + 0.5 + SHOP_FRONT.ahead;
 }
@@ -30,7 +30,7 @@ export function shopSpot(level: Level): number | null {
 // whether this floor's gate leads to the shop: the road it leads on to (an escape goes on by the road picked before
 // it; a floor that ends an act leads to its escape first)
 export function gateLeadsToShop(level: Level, next: Road | null): boolean {
-  return next?.kind === 'shop' && shopSpot(level) !== null;
+  return (next?.kind === 'shop' || (!level.escape && !!level.fork?.shopAfter)) && shopSpot(level) !== null;
 }
 
 // the sign: hand lettered in white on black (Bangers, the HUD's comic lettering), each letter a little off its

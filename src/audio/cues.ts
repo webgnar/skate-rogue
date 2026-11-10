@@ -157,6 +157,8 @@ export const LOOPS = {
   sirenFrom: 3, // the siren loop comes in at this Heat: where the cruiser stops giving up (traffic-view's CRUISER_AWAY)
   sirenMax: VOL.siren,
   sirenStart: 0.6, // the share of sirenMax it comes in at, so a chase is always heard
+  detectFrom: 0.5, // in a run the siren layer follows the stoke detector (Stoke raises the stakes): in from half full
+  heatShare: 0.5, // and the cruiser on your tail keeps it at this share of its Heat level, quieter
   music: 0.35,
   pauseDuck: 0.35, // the music's level under the pause card, of its own
 };
@@ -173,6 +175,13 @@ export function sirenGain(heat: number): number {
   //clear from the moment the cruiser gives chase, then up to full as it closes in at Heat 100
   const k = Math.min(1, (heat - LOOPS.sirenFrom) / (100 - LOOPS.sirenFrom));
   return LOOPS.sirenMax * (LOOPS.sirenStart + (1 - LOOPS.sirenStart) * k);
+}
+
+// the siren in a run: the stoke detector brings the siren layer in (the AI hears you), and the cruiser closing in
+// keeps a quieter one going after a slam has emptied the meter
+export function runSiren(heat: number, detect: number): number {
+  const d = detect < LOOPS.detectFrom ? 0 : LOOPS.sirenMax * (LOOPS.sirenStart + (1 - LOOPS.sirenStart) * Math.min(1, (detect - LOOPS.detectFrom) / (1 - LOOPS.detectFrom)));
+  return Math.max(d, sirenGain(heat) * LOOPS.heatShare);
 }
 
 // haptics (GDD: a short buzz on landing, a longer one on a slam): ms, or a pattern

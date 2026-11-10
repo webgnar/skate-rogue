@@ -170,6 +170,7 @@ export interface ForkSite {
   y: number;
   high: Road;
   low: Road;
+  shopAfter?: boolean; // the skate shop comes after this floor whichever road is taken (ROADS.shopAfter)
   sewer?: Road; // the sewer road: a tunnel that runs to the gate and comes up into the underground spot (src/gen/sewer.ts)
 }
 

@@ -1,5 +1,7 @@
 // The in-run HUD from zack's mockup (openspec/changes/ui1-hud): logo and floor, score and combo, cash and Stoken,
-// pause, Stoke into GNAR MODE, Heat with the cruiser and stars, board mods bottom left, gear wear bottom right.
+// pause, the stoke detector (one bar, two readings: the fill is stoke as the AI's scan lock on you, the cruiser marker
+// riding along it is Heat, with the wanted stars; Stoke raises the stakes, zack, Nov 9, 2026), board mods bottom
+// left, gear wear bottom right.
 //
 // Cheap on an old phone: the game calls most of this every frame, so every write goes through a cache and only
 // touches the DOM when what it shows changes. Meters move in whole segments, so a draining meter writes a few
@@ -13,9 +15,8 @@ import { gearIcon } from './shop-art';
 import { whole } from '../run/save';
 
 export const STOKE_SEGS = 10;
-export const HEAT_SEGS = 10;
 export const WEAR_SEGS = 5;
-export const NG_PIPS = 7; // NO GROUND's pieces to the cap (SKY_LINE, src/sim/sky.ts)
+export const NG_PIPS = 7; // a flow line's pieces to the cap (SKY_LINE, src/sim/sky.ts)
 export const HEAT_STARS = [25, 50, 75, 90]; // Heat for each star
 export const GEAR_ORDER: GearPart[] = ['deck', 'trucks', 'wheels', 'bearings', 'shoes']; // the mockup's order, bearings by the wheels
 
@@ -34,6 +35,14 @@ export function segments(v: number, n: number): number {
   if (!(v > 0)) return 0;
   return Math.max(1, Math.min(n, Math.round(v * n)));
 }
+
+// where the cruiser marker rides along the detector, 0..1 from the left, in whole percent so it writes rarely
+export function chaseAt(heat: number): number {
+  return Math.round(Math.max(0, Math.min(100, heat))) / 100;
+}
+
+// the cruiser marker shows once it gives chase (the siren's start: src/audio/cues.ts LOOPS.sirenFrom)
+export const CHASE_FROM = 3;
 
 export function stars(heat: number): number {
   return HEAT_STARS.filter((h) => heat >= h).length;
@@ -114,25 +123,25 @@ export class HudView {
   private readonly comboBox = new Cell($('combobox'));
   private readonly cash = new Cell($('cash'));
   private readonly stoken = new Cell($('stoken'));
-  private readonly stokeBox = new Cell($('stoke'));
-  private readonly heatBox = new Cell($('heat'));
+  private readonly detect = new Cell($('detect'));
+  private readonly chase = $('chase');
+  private chaseLast = -1;
   private readonly stoke: Meter;
-  private readonly heat: Meter;
   private readonly slotsEl = $('slots');
   private readonly ngBox = new Cell($('ngbox'));
   private readonly ngMult = new Cell($('ngmult'));
   private readonly ngBonus = new Cell($('ngbonus'));
   private readonly ngLabel = new Cell($('nglabel'));
-  private ngLabelText = 'NO GROUND';
+  private ngLabelText = 'DOWNSTREAM';
   private readonly ngPips: Meter;
   private ngLast = 0;
   private boardKey = '';
   private readonly gearBars: Partial<Record<GearPart, { meter: Meter; box: Cell }>> = {};
 
   constructor() {
-    this.stoke = new Meter($('stokebar'), STOKE_SEGS, (i) => mix([255, 226, 58], [255, 47, 180], i / (STOKE_SEGS - 1)));
+    //the scan lock: a dull red grid warming to hot red-pink as it closes in on TARGET
+    this.stoke = new Meter($('stokebar'), STOKE_SEGS, (i) => mix([150, 30, 60], [255, 40, 110], i / (STOKE_SEGS - 1)));
     this.ngPips = new Meter($('ngpips'), NG_PIPS, () => '');
-    this.heat = new Meter($('heatbar'), HEAT_SEGS, (i) => mix([255, 120, 70], [255, 30, 60], i / (HEAT_SEGS - 1)));
     $('stars').innerHTML = HEAT_STARS.map(() => '<i>★</i>').join('');
     const gear = $('gearbars');
     gear.innerHTML = GEAR_ORDER.map(
@@ -207,13 +216,15 @@ export class HudView {
       this.pending.text(`+ ${Math.round(pending).toLocaleString('en-US')}`);
     }
     const isGnar = gnar > 0;
-    this.stokeBox.data('gnar', isGnar ? '1' : '0');
+    this.detect.data('gnar', isGnar ? '1' : '0');
+    //in the gnar state the meter is full: the AI has you (it drains with the state's time left)
     this.stoke.set(segments(isGnar ? gnar : stoke, STOKE_SEGS));
+    this.detect.data('full', isGnar ? '1' : stoke >= 0.75 ? 'near' : '0');
   }
 
-  // NO GROUND: n sky pieces chained (shown from 2), the coin multiplier, the extra cash it's paid; banked holds
+  // DOWNSTREAM: n pieces chained (shown from 2), the coin multiplier, the extra cash it's paid; banked holds
   // the last line up a moment in gold after you touch down
-  setNoGround(n: number, mult: number, bonus: number, banked: boolean, label = 'NO GROUND'): void {
+  setNoGround(n: number, mult: number, bonus: number, banked: boolean, label = 'DOWNSTREAM'): void {
     if (label !== this.ngLabelText) {
       this.ngLabelText = label;
       this.ngLabel.text(label);
@@ -226,7 +237,7 @@ export class HudView {
       return;
     }
     this.ngMult.text(`x${mult}`);
-    this.ngBonus.text(banked ? `BANKED +$${bonus}` : bonus > 0 ? `+$${bonus} BONUS` : label === 'NO GROUND' ? 'LAND ON THE NEXT ONE' : 'KEEP IT ROLLING');
+    this.ngBonus.text(banked ? `BANKED +$${bonus}` : bonus > 0 ? `+$${bonus} BONUS` : 'KEEP IT ROLLING');
     this.ngPips.set(Math.min(NG_PIPS, n));
     //each step up, the multiplier pops
     if (n > this.ngLast && !banked) {
@@ -238,12 +249,16 @@ export class HudView {
     this.ngLast = n;
   }
 
+  // Heat: the cruiser marker slides along the detector from the left as it closes in; at the right end it has you
   setHeat(value: number): void {
-    const on = segments(value / 100, HEAT_SEGS);
-    this.heat.set(on);
-    const s = stars(value);
-    this.heatBox.data('stars', String(s));
-    this.heatBox.data('hot', value >= 50 ? '1' : '0');
+    const at = chaseAt(value);
+    if (at !== this.chaseLast) {
+      this.chaseLast = at;
+      this.chase.style?.setProperty('--at', String(at));
+    }
+    this.detect.data('chase', value >= CHASE_FROM ? '1' : '0');
+    this.detect.data('stars', String(stars(value)));
+    this.detect.data('hot', value >= 90 ? '2' : value >= 50 ? '1' : '0');
   }
 
   board(slots: Slots): void {

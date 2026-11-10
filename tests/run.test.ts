@@ -4,7 +4,8 @@ import { buildFloor, PICKUPS } from '../src/gen/descent';
 import { label, rollFork } from '../src/gen/roads';
 import { validatedFloor } from '../src/gen/validate';
 import { PHYS, TILE } from '../src/physics/constants';
-import { RunScore, SCORE } from '../src/run/score';
+import { RunScore, SCORE, stokeRate } from '../src/run/score';
+import { HEAT } from '../src/heat/heat';
 import { FloorSim } from '../src/sim/floor';
 
 const fork = { high: { kind: 'cash', danger: 2 }, low: { kind: 'boon', boonType: 'GRIND', danger: 1 } } as const;
@@ -22,10 +23,13 @@ describe('the fork', () => {
     }
   });
 
-  it('always offers the skate shop at the end of act 2-1 (floor 4), before 2-2', () => {
+  it('puts the skate shop after both roads at the end of act 2-1 (floor 4), before 2-2', () => {
     for (let seed = 1; seed <= 40; seed++) {
       const f = rollFork(seed, 4);
-      expect([f.high.kind, f.low.kind]).toContain('shop');
+      expect(f.shopAfter).toBe(true);
+      expect([f.high.kind, f.low.kind]).not.toContain('shop');
+      expect(f.high.kind === 'boon' || f.low.kind === 'boon').toBe(true);
+      expect(rollFork(seed, 5).shopAfter).toBeUndefined();
     }
   });
 
@@ -168,12 +172,24 @@ describe('score', () => {
     expect(s.gnar).toBe(false);
   });
 
-  it('gnar slams cost no Heat', () => {
+  it('gnar slams are not free: the gnar state is the alarm and a slam costs full Heat', () => {
     const l = buildFloor(9, 1);
     const sim = new FloorSim(l);
-    sim.heat.slamFree = true;
+    sim.heat.alarm = true;
     sim.heat.step(sim.skater, [{ type: 'slam' }]);
-    expect(sim.heat.value).toBe(0);
+    expect(sim.heat.value).toBeGreaterThanOrEqual(HEAT.slamHigh);
+  });
+
+  it('the detector fills slower higher up', () => {
+    const fill = (act: number) => {
+      const s = new RunScore();
+      s.fillScale = stokeRate(act);
+      s.onEvent({ type: 'trick', index: 0, name: 'kickflip', spin: 0, fakie: false }, PHYS.baseSpeed);
+      s.onEvent({ type: 'land' }, PHYS.baseSpeed);
+      return s.stoke;
+    };
+    expect(stokeRate(1)).toBe(1);
+    for (let a = 2; a <= 5; a++) expect(fill(a)).toBeLessThan(fill(a - 1));
   });
 
   it('pickups: coins are cash, Stoken adds to score', () => {

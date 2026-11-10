@@ -426,7 +426,7 @@ export class TrafficView {
   // heat 0..100; hold: don't creep closer during a remount; caught: pull level with the skater
   // skaterY (px) aims the searchlight; it defaults to the street
   // camera: the view's, to keep the cruiser drawn until it's off screen
-  chase(level: Level, skaterX: number, heat: number, hold: boolean, caught: boolean, dtMs: number, skaterY = level.streetY, camera?: THREE.Camera): void {
+  chase(level: Level, skaterX: number, heat: number, hold: boolean, caught: boolean, dtMs: number, skaterY = level.streetY, camera?: THREE.Camera, detect = heat / 100): void {
     this.t += dtMs;
     const target = caught ? 0.2 : 9 - 8.3 * (heat / 100);
     //cooled off: it drops back out of the frame instead of vanishing where it is
@@ -461,9 +461,9 @@ export class TrafficView {
     this.lights[0].getWorldPosition(this.bar);
     this.heatLights.update(this.bar, this.cruiser.visible, flash, heat, caught, dtMs / 1000);
 
-    //a drone drops in front at 75
+    //a drone drops in front as the stoke detector reaches 75% (Stoke raises the stakes; Heat 75 when there's none)
     const wasDrone = this.drone.visible;
-    this.drone.visible = heat >= 75 || caught;
+    this.drone.visible = detect >= DRONE_DETECT || caught;
     if (this.drone.visible) {
       //over the skater, never down in the hill in front of them, and in out of the sky
       const dx = toX(skaterX) + 3.5;
@@ -484,6 +484,8 @@ export class TrafficView {
     this.beams.droneScan(this.drone.visible ? this.eyeAt.copy(this.drone.position).add(DRONE_EYE) : null, this.droneY);
   }
 }
+
+export const DRONE_DETECT = 0.75; // the stoke detector's reading that drops the drone in front
 
 // the warning over a door car: a comic "!", yellow in a thick ink outline
 let bangTex: THREE.CanvasTexture | null = null;

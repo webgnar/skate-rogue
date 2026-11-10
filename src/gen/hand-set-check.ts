@@ -2,6 +2,7 @@
 // plain bot clears it): a floor of the act's line with the set laid every other beat, skated by the plain sky bot (no
 // boons) at cruising speed and in the gnar state (20% faster). Every time it comes round, the bot has to get from its
 // start past its end without a slam and without coming down off the line (onto the street or the hill under it).
+import { FLAT_STOKE } from '../heat/heat';
 import { TILE } from '../physics/constants';
 import type { Level } from '../physics/level';
 import { actGravity } from '../physics/feel';
@@ -63,6 +64,7 @@ function skate(level: Level, sets: LaidSet[], speed: number): SetRun {
   const sk = sim.skater;
   sk.boost = speed;
   sim.heat.slamFree = speed > 1;
+  sim.heat.stoke = FLAT_STOKE;
   let trace: TracePoint[] | null = null;
   let tracing: TracePoint[] | null = null;
   let [reached, cleared] = [0, 0];

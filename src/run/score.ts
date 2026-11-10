@@ -6,8 +6,10 @@
 //   late, or a drop too big to soak up) banks half; a heavy one (a big drop landed) adds a big-drop bonus.
 //   Popping right at the lip of the ground is a little style of its own.
 // - A long combo also pays cash when you land it (the stoke cash-out): greedy combos pay, slams pay nothing.
-// - Banked points fill the stoke meter. Full stoke is the gnar state: faster cruising, and slams cost no Heat.
-//   A slam empties the meter and ends the gnar state.
+// - Banked points fill the stoke meter. Full stoke is the gnar state: faster cruising, and the AI's alarm.
+//   A slam empties the meter and ends the gnar state. The meter is also the AI's stoke detector (Stoke raises the
+//   stakes, src/heat/heat.ts): the fuller it is, the more a slam costs in Heat. Higher acts have fewer eyes, so it
+//   fills slower up there (stokeRate).
 // - Clearing a floor pays 250 x floor (QFS). Stoken pickups add to the score too.
 import { PHYS } from '../physics/constants';
 import type { Mode } from '../physics/skater';
@@ -40,6 +42,7 @@ export const SCORE = {
   stokeDecayPerSec: 0.04, // the meter drains slowly when you aren't banking
   stokeIdle: 3, // seconds after a bank before it drains
   gnarSecs: 8,
+  stokeByAct: [1, 0.85, 0.72, 0.62, 0.55], // how fast the detector fills in each act: fewer eyes the higher you go
   gnarBoost: 1.2, // cruising speed in the gnar state
   sketchy: 0.5, // share of the combo a sketchy landing banks
   bigDrop: 100, // a heavy landing: a big drop, landed
@@ -47,6 +50,12 @@ export const SCORE = {
   manual: 120,
   clack: 15, // each step a firecracker's tail hits // landing into a manual on a manual pad: a trick, and the combo carries on
 };
+
+// how fast the stoke detector fills in an act (1 is street level)
+export function stokeRate(act: number): number {
+  const r = SCORE.stokeByAct;
+  return r[Math.max(0, Math.min(r.length - 1, act - 1))];
+}
 
 export interface Bank {
   points: number; // added to the score
@@ -68,6 +77,7 @@ export class RunScore {
   scoreScale = 1; // New Wheels: banked points
   stokenScale = 1; // Double Stoken
   cashScale = 1; // Goldie: more cash from every source
+  fillScale = 1; // the act's detector rate (stokeRate)
   private cashPart = 0; // the share of a dollar Goldie's cut has banked so far
 
   // cash from any source, scaled; returns the whole dollars it added
@@ -145,7 +155,7 @@ export class RunScore {
         this.gnarT = 0;
         break;
       case 'pickup':
-        //(NO GROUND's multiplier up in the sky: coins by it, Stoken by its whole part)
+        //(DOWNSTREAM's multiplier in the sewer: coins by it, Stoken by its whole part)
         if (e.kind === 'cash') this.addCash(SCORE.cashCoin * (e.mult ?? 1));
         else if (e.kind === 'spin') this.spins++;
         else {
@@ -184,7 +194,7 @@ export class RunScore {
     this.combo = 0;
     this.comboPoints = 0;
     this.idle = 0;
-    this.fill(points / SCORE.stokeFull);
+    this.fill((points / SCORE.stokeFull) * this.fillScale);
     return { points, count, cash, ...(how ? { how } : {}) };
   }
 

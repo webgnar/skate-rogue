@@ -181,6 +181,7 @@ function sewerPress(sim: FloorSim, railEnd: boolean): boolean {
 
 export class Pilot {
   private hold = 0;
+  private offSky = false; // last on the ground, it was a sky piece (so a fall off one isn't the street)
   private readonly rng: () => number;
 
   constructor(
@@ -192,6 +193,8 @@ export class Pilot {
 
   // the button for the sim's next step
   input(sim: FloorSim): StepInput {
+    const s = sim.skater;
+    if (s.mode !== 'air') this.offSky = !!(s.surface?.sky || s.surface?.top || s.rail?.sky || s.rail?.top);
     const pressed = this.style === 'mash' ? this.mash() : this.style === 'sky' ? this.sky(sim) : this.ref(sim);
     //hold through the pop: a flip let go at once is cut short, and the look-ahead counts on a full one
     if (this.style !== 'mash' && pressed) this.hold = sim.skater.grounded ? 30 : this.style === 'sky' ? Math.max(this.hold, 20) : 20;
@@ -301,7 +304,7 @@ export class Pilot {
       if (level.sewers?.some((w) => w.entry === 'shaft' && sk.x > w.drain[0] - 8 * TILE && sk.x < w.drain[1] + TILE)) pressed = false;
       //and up on act 2's rooftops (it starts on one, src/gen/sky-beats.ts ROOFTOPS): roll off the roof's end and
       //drop to the street under it, no ollie or flip on to the next roof
-      if (sk.surface?.sky || (sk.mode === 'air' && sim.skyLine > 0)) pressed = false;
+      if (sk.surface?.sky || (sk.mode === 'air' && this.offSky)) pressed = false;
       //and no big ollie off the top of a hill (that's the way up into the sky): roll on down where the hill goes on
       const on = sk.surface;
       if (on && sk.mode === 'roll' && !on.sky && !on.top && on.x1 - sk.x < 30 && level.surfaces.some((o) => o !== on && !o.sky && !o.top && o.kind !== 'rail' && o.x0 <= on.x1 + 4 && o.x1 > on.x1 + 4 && Math.abs(surfaceY(o, on.x1 + 4) - surfaceY(on, on.x1)) < 10)) pressed = false;

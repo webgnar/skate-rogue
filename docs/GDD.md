@@ -70,7 +70,7 @@ What it means for the game:
   route turned into the whole world. The same tap, the same tricks, just bigger. Boons that bend gravity get stronger
   the higher you are.
 - **Style lifts you, and the AI hears it.** Clean lines and combos are what get you higher (the gnar state, the
-  kickers, NO GROUND). They also fill the AI's stoke detector (see The chase: Stoke raises the stakes): the better you
+  kickers). They also fill the AI's stoke detector (see The chase: Stoke raises the stakes): the better you
   skate, the harder it hunts, but it only catches you when you slip.
 - **The chasers climb with you.** The cruiser owns the street, the chopper the rooftops, the drone swarm the clouds,
   fighter jets hold the ceiling and drones hunt you in space (zack, Nov 10, 2026: "we could just use drones in space
@@ -238,9 +238,10 @@ Built Oct 24, 2026 (first version): the high road is an overpass 2 tiles up over
 on it), signs on a gantry before it, a gate on each road. Launch roads so far: boon street (POP or GRIND), cash
 street, hot street and Stoken stash. The skate shop followed the same day with board mods: it can turn up from the
 floor 2 fork and is always offered at the end of every third floor, beside a boon street; after shopping you skate
-that boon street. Also always offered at the end of act 2-1 (floor 4's fork), before 2-2 (zack, Nov 9, 2026: by 2-2
-the player has about $600 and needs to replace 4 worn gear parts; the four dearest parts cost $320, so a board mod
-still fits). The underground spot comes with carried-over Heat. Built overnight Oct 24, 2026: Heat
+that boon street. After act 2-1 (floor 4) the shop comes whichever road you take: both roads are normal roads,
+and after the floor's payout the shop opens, then you skate the road you picked into 2-2 (zack, Nov 9-10, 2026: by
+2-2 the player has about $600 and needs to replace 4 worn gear parts; the four dearest parts cost $320, so a board
+mod still fits). The underground spot comes with carried-over Heat. Built overnight Oct 24, 2026: Heat
 carries into the next floor at half, and the spot can turn up from the floor 3 fork (lay low, swap a boon, or
 remove a curse once curses exist), then you skate the boon street after it.
 
@@ -258,13 +259,10 @@ find up there). Higher than the power line on each stretch of hill, from floor 4
 lay a run of rooftop decks, billboard catwalks, water towers, crane booms and scaffolds to land on. On top of that,
 built the same day (greybox, waiting on zack's reference images in the shared folder's `sky/refs/` for the art pass):
 
-- **NO GROUND.** Chain sky pieces (the wire, rooftops, decks, booms, a blimp's back) without touching the ground below
-  and the coins up there multiply: x1.5 at two pieces, up to x4 (Stoken by the whole part). Air between pieces keeps
-  the line; touching the ground below banks it ("SKY LINE x5!"); a bail loses it. It's the reason to stay up there.
-  It only runs where going up is a choice (zack, Nov 7, 2026: "might be irrelevant now"): acts 1 and 2, their
-  escapes, act 3's street chase and Endless. From act 3's cloud floors up you're off the ground the whole floor, so
-  it's off there, and on the ceiling and the beam-up. **(Waiting on zack's pick:** this is the recommended option;
-  the others were dropping it everywhere or leaving it on.**)**
+- **NO GROUND is cut** (zack, Nov 10, 2026: "no ground bonus is dumb we can remove it"). It was a coin multiplier
+  for chaining sky pieces without touching the ground; once the climb put you up off the ground most of the run it
+  was on nearly all the time and stopped meaning anything. Coins up top pay the same as anywhere. The sewer's
+  DOWNSTREAM line keeps its multiplier and meter.
 - **Set pieces, one a floor at most, from floor 5:** an **ad blimp** moored over the hill, its long back a calm
   cruise; a **window washer's rig** that drops under you once you land, so you pop off it quick onto the roof
   ahead; a **tower crane** whose jib slews out of the lane and back (land early, or it swings away under you); and a
@@ -275,7 +273,7 @@ built the same day (greybox, waiting on zack's reference images in the shared fo
   sagging wires with the washing on them, to chain.
 
 All of it is physics and tap-only: nothing lifts you up there (zack owns the way up). Code: `src/gen/sky-beats.ts`
-(placement and the SKY dials), `src/sim/sky.ts` (the moving decks, busts, golden pigeon, NO GROUND's multiplier),
+(placement and the SKY dials), `src/sim/sky.ts` (the moving decks, busts, golden pigeon, the line multiplier DOWNSTREAM uses),
 `src/render/sky-pieces-view.ts` and `src/render/sky-kit.ts` (drawing); the level editor lists the new beats.
 
 **The cloud layer** (zack, Oct 31, 2026: "i want sky route to go really tall. we could use the clouds and the rainbow...
@@ -326,10 +324,6 @@ by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9
   time where the ground ahead rises. A later hill with room still gets its own staircase up into it.
 - **Clouds are honest**: a cloud's puffs never draw past where you can land on it (its deck plus a truck's overhang).
 
-**The NO GROUND meter** (zack: "i need that to be visualy clear what its doing"). While a line is going, a panel under
-the combo shows NO GROUND, the live coin multiplier (it pops as it steps up), seven pips that turn gold at the x4 cap,
-and the bonus the line has added so far. Touch the ground and it reads BANKED +$N; the callout says SKY LINE x3! +$N.
-
 ### Three routes: sky, surface, sewer
 
 Decided Oct 31, 2026 (zack): the game has **three routes**, stacked vertically through every floor. Sky is built
@@ -343,7 +337,7 @@ for all three:
 
 | Route | Where | How you get on | Danger | Reward | Built |
 | --- | --- | --- | --- | --- | --- |
-| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and chips | Yes |
+| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, set pieces, stashes and chips | Yes |
 | **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
 | **Sewer** | One route under the floor: storm drains under the street, the deep under the hills and canals | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, a stair set with a handrail to grind, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's chips; the sewer road to the underground spot | Yes |
 
@@ -370,7 +364,7 @@ Under each street chase where the street is clear runs a brick storm tunnel, dra
 - **DOWNSTREAM** (the sewer's trade: the sky pays more, the sewer is faster): the runoff on the floor runs your way and
   its current pushes you past street speed (up to 6.8 px/frame; it still soaks the deck). Each new piece you ride down
   there (a pipe grind, a stretch of runoff, a rat pack or the alligator cleared, the bowl carved, the subway crossed)
-  adds to the line and multiplies the coins, as NO GROUND does up top; the same meter reads DOWNSTREAM. Coming back up
+  adds to the line and multiplies the coins, shown on the DOWNSTREAM meter. Coming back up
   banks it (FLOW LINE xN); a trip, a slam or the surge loses it.
 - **Kick-outs** (zack: "a quarterpipe up against a wall that shoots the player straight up through a one way platform to
   the street again. players will accidentally get shot back up, maybe try to go deeper next time"): a concrete
@@ -747,7 +741,7 @@ chase is what makes mistakes matter, so it has to be tight: always visible, alwa
 
 | Event | Heat |
 | --- | --- |
-| Slam | +35 |
+| Slam | +25 at an empty stoke meter, up to +50 at a full one (see Stoke raises the stakes) |
 | Each second below base speed (recovering from a slam) | +10 |
 | Landed trick | −3 |
 | Grind, per second | −4 |
@@ -760,25 +754,30 @@ chase is what makes mistakes matter, so it has to be tight: always visible, alwa
   about 8 seconds of clean skating (less with tricks and grinds).
 - **Stoke raises the stakes** (zack, Nov 9, 2026: "heat should build up in relation to the stoke meter in the sense
   that the enemy is an ai that is detecting stoke and wants to ban that"; picked "Stoke raises the stakes" over Heat
-  rising with stoke directly; **not built yet**). The stoke meter (see Scoring and stoke) is the AI's **detector**:
+  rising with stoke directly; built Nov 10, 2026). The stoke meter (see Scoring and stoke) is the AI's **detector**:
   how loud you are to it. Detection and catching are split: stoke sets how hard the hunt is, and mistakes still decide
   whether it catches you, so a good line is never punished, it's a bigger wave where a fall costs more.
   - **Slam Heat scales with stoke:** about +25 at an empty meter, up to +50 at a full one (replaces the flat +35).
     Slow skating after a slam scales the same way. Cooling (tricks, grinds, clean skating) does not change.
   - **Full stoke is the alarm, not a safe state.** The gnar state keeps its speed boost but **no longer makes slams
     free**: it brings the hunt up a tier for its 8 seconds (the cruiser drives faster, the chopper lifts off or the
-    drones drop in, every camera snaps to you). One slam in gnar ends it (as now) and costs full Heat.
+    drones drop in, every camera snaps to you). One slam in gnar ends it (as now) and costs full Heat. Built: the
+    cruiser creeps in at +3 Heat a second and clean skating doesn't cool while it lasts, and the drone drops in front.
+    The chopper lifting off and the cameras snapping to you are **not in the build yet** (no street cameras exist).
   - **The escalation steps follow stoke, not Heat:** the siren layer, the cameras turning, the drone in front and the
     music thinning out come in as the detector fills; Heat keeps only the catch cues (the lights on screen, the
-    pulsing edge and the vibration near 90, the cut-in at 100).
+    pulsing edge and the vibration near 90, the cut-in at 100). Built: the siren layer comes in from half full and
+    the drone drops in front at 75%; the cruiser closing in keeps a quieter siren after a slam has emptied the meter.
+    The music thinning out is **not in the build yet**.
   - **The HUD sells it: one bar, two readings** (zack, Nov 9, 2026, picked over dropping the HEAT bar or keeping
-    both; not built). The two mirrored STOKE and HEAT bars become **one detector meter**. Its fill is stoke, drawn as
+    both; built Nov 10, 2026). The two mirrored STOKE and HEAT bars become **one detector meter**. Its fill is stoke, drawn as
     the AI's scan lock on you (a red grid filling toward TARGET: STOKE DETECTED at full). The cruiser rides along the
     same bar as a marker, closing in from the left as Heat rises, with the wanted stars on the marker; marker meets
     full fill = caught. One glance reads both how loud you are and how close it is, and it still works in portrait,
     where the cruiser itself is often off screen. The separate HEAT bar goes; Heat keeps its world cues (the cruiser,
     the lights, the siren, the edge pulse).
-  - **The climb:** higher acts have fewer eyes, so the detector fills slower up there (one more reason to go up).
+  - **The climb:** higher acts have fewer eyes, so the detector fills slower up there (one more reason to go up):
+    100% of the street rate in act 1, then 85%, 72%, 62% and 55% in act 5 (`SCORE.stokeByAct`).
   - Numbers to tune on the bot: the slam range, the gnar-tier cruiser speed, the per-act detector rate.
 - **Escalation, not surprise.** Every step is readable at a glance. Today: at 50 Heat the siren layer comes in and
   the cruiser's lights reach the screen, at 75 a drone drops in front and the music thins out, at 90 the screen edge
@@ -1267,10 +1266,10 @@ is teased.
 
 - **Score** = tricks × combo × speed multiplier + floor clear (`250 × floor`, QFS) + Stoken grabbed.
 - **Combo** builds with tricks, grinds and car-hops without touching the ground; landing banks it.
-- **Stoke meter** fills with the combo. Full stoke gives a short "gnar" state: speed up, and slams cost no Heat.
-  A slam kills the meter (zack, Nov 3, 2026): it empties, and a slam in the gnar state ends it (that slam still
-  costs no Heat). **Decided Nov 9, 2026, not built:** the meter is also the AI's stoke detector (see The chase:
-  Stoke raises the stakes): slam Heat scales with it, gnar becomes the alarm tier and its free slams go away.
+- **Stoke meter** fills with the combo. Full stoke gives a short "gnar" state: speed up, and the AI's alarm.
+  A slam kills the meter (zack, Nov 3, 2026): it empties, and a slam in the gnar state ends it. The meter is also
+  the AI's stoke detector (decided Nov 9, built Nov 10, 2026; see The chase: Stoke raises the stakes): slam Heat
+  scales with it, gnar is the alarm tier and its free slams are gone.
 - **Leaderboards:** deepest floor, high score, daily seed. Port `api/leaderboard.ts` and `leaderboard-service.ts` from excaliburSkate. Built Oct 24, 2026: api/leaderboard.ts over a Redis store (Upstash), boards for score, deepest floor and each day's daily run; it needs a store connected on Vercel.
 
 ## Presentation (3D)
@@ -1555,7 +1554,7 @@ the cloud tops with the drones (shot 3).
   and floor top left; score and combo (with the combo's points) top middle; cash, Stoken and pause top right; the
   Stoke meter into GNAR MODE and the Heat meter (the cruiser, 10 segments, stars at 25/50/75/90) under them; board
   mods bottom left and gear wear bottom right. The middle of the screen stays clear. Heat keeps its world cues
-  (sirens, light, edge glow) as well as the bar. **Decided Nov 9, 2026, not built:** the two bars merge into one
+  (sirens, light, edge glow) as well as the bar. Since Nov 10, 2026 the two bars are one
   detector meter, fill = stoke, cruiser marker + stars = Heat (see The chase: Stoke raises the stakes).
 - **Boon pick:** three large cards, tap to pick, long-press to read. Reuse QFS's card layout and deal animation.
 - **Shop:** board slots across the top, mods below, drag to place. Must work with one thumb.
