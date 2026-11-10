@@ -38,7 +38,8 @@ interface Piece {
   cloud: boolean; // up in the cloud layer
 }
 
-export const CLOUDY = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon', 'spire']);
+// (and act 3's sets: its hubbas, S-rails, S I-beams, quarterpipes and their big rails, src/gen/clouds.ts CLOUD_LINE)
+export const CLOUDY = new Set(['cloud', 'thin', 'wisp', 'rainbow', 'balloon', 'spire', 'hubba', 'srail', 'sbeam', 'qp', 'downrail']);
 
 // every piece of the sky line in [a, b], in order along it
 export function piecesOf(level: Level, a: number, b: number): Piece[] {
@@ -95,6 +96,8 @@ export function bridgeSky(level: Level): void {
       let from = [...line.slice(0, i), ...bridges].filter((p) => p.x1 <= line[i].x0 + 1).sort((p, q) => q.x1 - p.x1)[0];
       if (!from) continue;
       const to = line[i];
+      //(a gap crossed some other way, a drone bridge or a launch quarterpipe's arc: nothing to bridge)
+      if (level.airways?.some(([a, b]) => to.x0 > a && to.x0 <= b + 1)) continue;
       let laid = false;
       for (let n = 0; n < 16 && !inReach(from, to); n++) {
         //the next deck: a gap of a few tiles on, a step toward the height you're heading for

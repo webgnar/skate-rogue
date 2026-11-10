@@ -51,6 +51,8 @@ describe('the sky line', () => {
           for (let i = 1; i < line.length; i++) {
             const from = line.slice(0, i).sort((p, q) => q.x1 - p.x1)[0];
             if (from.x1 >= line[i].x0) continue; // one over another: either way on
+            //(a gap crossed another way: a drone bridge, a launch quarterpipe's arc)
+            if (l.airways?.some(([a, b]) => line[i].x0 > a && line[i].x0 <= b + 1)) continue;
             const gap = (line[i].x0 - from.x1) / TILE;
             expect(gap).toBeLessThanOrEqual(maxGap((line[i].y0 - from.y1) / TILE) + layerScale(f));
           }

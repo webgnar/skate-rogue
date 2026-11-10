@@ -12,7 +12,7 @@ import { isFloorEdit } from '../src/levels/drafts';
 
 const chicago = (seed: number, floor: number) => buildFloor(seed, floor, undefined, { hills: true });
 // (the cloud layer and its staircase are their own, src/gen/clouds.ts)
-const LAYER = new Set(['cloud', 'thin', 'wisp', 'step', 'rainbow', 'spire']);
+const LAYER = new Set(['cloud', 'thin', 'wisp', 'step', 'rainbow', 'spire', 'hubba', 'srail', 'sbeam', 'qp', 'downrail']);
 const skyOf = (l: ReturnType<typeof chicago>) => [...l.surfaces.filter((s) => s.sky && !LAYER.has(s.sky)), ...l.rails.filter((r) => r.sky && !LAYER.has(r.sky))];
 
 afterEach(() => useLevelEdits(SAVED_EDITS));

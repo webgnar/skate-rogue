@@ -96,6 +96,7 @@ describe('the sky route', () => {
     //land on it just before it swings away
     const sim = new FloorSim({ ...l, skyMovers: [{ ...m, phase: SKY.swingHold - 20 }], startX: m.x0 + 8, startY: m.y - 4 });
     const jib = sim.sky.pieces[0];
+    sim.skater.mode = 'air'; // (dropped onto it: a floor's start rolls on at startY, over the street there)
     run(sim, 10);
     expect(sim.skater.surface).toBe(jib.ledge);
     run(sim, 40);

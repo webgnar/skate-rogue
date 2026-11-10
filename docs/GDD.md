@@ -447,13 +447,32 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   more than three quarters of it). There's no city sky in act 3 (no roofs, water towers or billboards: those are
   acts 2 and 4); between the clouds and the street are the power lines and the girders. The set pieces come up into
   the clouds instead (zack, Nov 6, 2026): one a floor, about a third of the way along the layer, out of the **blimp**
-  (a long back to cruise), the **crane's jib** (its mast up from the street through the clouds, slewing out of the
-  lane and back) and the **window washer's rig** (it drops under you, all the way down to the street if you ride it,
-  so pop off onto the cloud ahead). Fall off and
-  every later stretch has a **girder staircase** off its lip: a big ollie and a flip onto the first, a flip a step, up
-  through the layer until a cloud ahead is in reach (the sky bot climbs back up about 9 times in 10). The hill road
-  and the sewer under it are unchanged; where the layer ends, just before the gate, you drop onto the top route's roofs
-  and out over the overpass (the sky bot leaves on the high road).
+  (a long back to cruise) and the **crane's jib** (its mast up from the street through the clouds, slewing out of the
+  lane and back, with a low cloud under it for when it's swung away). The window washer's rig is gone from act 3 (it
+  drops you to the street, which is a fall here); it stays in act 4.
+- **Act 3's cloud line** (zack, Nov 10, 2026: "build out the cloud route even more ... it has to be more fun not
+  just an accent on the existing level"; `CLOUD_LINE` and `LAUNCH` in src/gen/clouds.ts). Between the plain clouds,
+  act 3 lays sets, never the same one twice running and only so many of each a floor:
+  - **Rainbow hubba**: a cloud a flip up, then a long concrete ledge with rainbow bands under it grinding down onto a
+    cloud at its foot (up to 3 a floor).
+  - **S-rail**: a long chrome rail that dips and kicks back up at its end, throwing you on to a cloud a little over
+    where it leaves you (up to 3).
+  - **S I-beam**: a red I-beam on cables stepping down in an S, flat to flat, straight onto the cloud at its foot (up
+    to 3).
+  - **Drone bridge**: a gap with 2 or 3 drones hovering across it at the cloud's height. Stomp from drone to drone; a
+    tap's hop makes the next one (up to 3).
+  - **Launch**: a run-up cloud into a skatepark quarterpipe that throws you straight up through a cloud bank, down
+    onto a long steel downrail to a small flat cloud, and up a second quarterpipe and downrail onto a landing cloud
+    (up to 2). The quarterpipe sets your speed for the throw, so you always make the rail.
+  The girder staircase is gone from act 3: **the clouds are the only way through** (zack, Nov 10: "in order to pass act
+  3, you gotta take the cloud route all the time, if you fall, u just gotta grind out that level on the surface and
+  then it makes you restart act 3"). Touch anything that isn't up in the layer (the street, the hill road, a roof,
+  the power lines, the sewer) before the layer ends near the gate and the floor is lost: a GROUNDED! ACT 3 STARTS
+  OVER callout, you skate the floor out on the surface, and the next floor is act 3's first again (after the shop or
+  the underground spot, if that's the road you took). Falling on floor 9 skips the act's escape. The run-up from the
+  last gate to the first cloud doesn't count, and act 3's escape floor is the street chase as before. Each time the
+  act starts over its floors are laid fresh (a new seed), so you don't learn one layout by heart. (`FloorSim.fell`,
+  the 'grounded' event, `Game.restartAct`.) The sky bot clears about 6 floors in 7 without a fall.
 - **Act 4's floors are above the clouds** (built Nov 6, 2026, the climb's step d; `HIGH` in src/gen/clouds.ts).
   Floors 10-12 start up in the cloud layer like act 3's, higher (about 16 tiles over the street), with a sea of
   clouds drawn under the lane and the stars coming out. Everything in the layer is grown for act 4's 0.7x gravity:
@@ -1654,9 +1673,12 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   so a player who never ollies off a roof's end skates the hill road as in act 1. Act 3's cloud floors (built Nov 6,
   2026) left these defaults: you start 2.5 tiles up on a cloud; the layer ends 10 tiles before the gate and you drop
   onto the top route's roofs for it; act 3 has no city sky beats, so the billboard bust and the water tower's stash crate
-  skip it (its blimp, crane jib and rig are up in the clouds, one a floor); each girder staircase's first step is a big
-  ollie and a flip off the lip (act 2's roofs are an ollie); and the escape after act 3 is unchanged (matching the
-  escapes to the new act heights is its own step). Act gravity (built Nov 6, 2026) left these defaults: the
+  skip it (its blimp and crane jib are up in the clouds, one a floor); and the escape after act 3 is unchanged (matching the
+  escapes to the new act heights is its own step). Act 3's cloud line (built Nov 10, 2026) left these defaults: a
+  fall restarts the act from its first floor with fresh layouts, keeping your cash, boons and Heat (no other penalty);
+  the power lines and the top route's roofs count as falling; the window washer's rig and the girder staircases are
+  out of act 3; the run-up from the gate to the first cloud is free; and the cloud line ends 10 tiles before the gate,
+  where touching down is fine. Act gravity (built Nov 6, 2026) left these defaults: the
   placeholders 1x / 0.7x / 0.3x as they are; acts 1-3's escapes keep street gravity (the ceiling and the beam-up
   skate in their act's, since step d); gravity drops in one step at the act gate rather than easing floor by floor; and the boons that bend
   gravity (Big Pop's float, Gravity Flip) keep their share of it, so they get bigger in absolute terms as you climb

@@ -115,10 +115,11 @@ function landsTop(level: Level, near: Near, sk: Skater, x: number, y: number, vs
 
 // follow a fall from the feet at (x, y) at vsp: does the board come down on a sky piece (a deck, a cloud, a wire,
 // a rainbow, or a moving deck's top)?
-function landsSky(level: Level, near: Near, decks: Surface[], sk: Skater, x: number, y: number, vsp: number, flip = false): boolean {
+// (clouds: act 3, where the clouds are the only way through: the top route's wires and roofs under them don't count)
+function landsSky(level: Level, near: Near, decks: Surface[], sk: Skater, x: number, y: number, vsp: number, flip = false, clouds = false): boolean {
   const tuck = sk.tuck.ahead(flip);
   let by = y - sk.tuck.lift;
-  const sky = (s: Surface) => !!(s.sky || s.top);
+  const sky = (s: Surface) => !!(s.sky || (s.top && !clouds));
   for (let f = 0; f < 150 && by < level.streetY; f++) {
     vsp = Math.min(vsp + sk.grav, PHYS.maxFall);
     y += vsp;
@@ -130,7 +131,7 @@ function landsSky(level: Level, near: Near, decks: Surface[], sk: Skater, x: num
       const sy = surfaceY(s, x);
       if (by <= sy && ny >= sy) return true;
     }
-    if (near.rails.some((r) => (r.sky || r.top) && r !== sk.railIgnore && (r.yAt(x) ?? -1e9) >= by && (r.yAt(x) ?? 1e9) <= ny)) return true;
+    if (near.rails.some((r) => (r.sky || (r.top && !clouds)) && r !== sk.railIgnore && (r.yAt(x) ?? -1e9) >= by && (r.yAt(x) ?? 1e9) <= ny)) return true;
     by = ny;
   }
   return false;
@@ -213,6 +214,10 @@ export class Pilot {
     const level = sim.level;
     const near = nearby(level, sk);
     const decks = sim.sky.pieces.map((p) => p.ledge).filter((l) => l.x1 > sk.x);
+    //act 3's drone bridges: a drone hovering (or on its way down to hover) is somewhere to come down on, and stomp
+    for (const d of sim.swarm?.drones ?? []) {
+      if ((d.state === 'dive' || d.state === 'hover') && d.box.x1 > sk.x) decks.push({ kind: 'ledge', x0: d.box.x0, x1: d.box.x1, y: d.streetY - d.spot.h, row: -1, sky: 'drone' });
+    }
     if (sk.mode === 'rail' && sk.rail) {
       if (sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) return true;
       return false;
@@ -224,14 +229,20 @@ export class Pilot {
     if (sk.grounded && hazards.some((c) => c.x0 - sk.x > 20 && c.x0 - sk.x < 70 && c.roof < sk.y && c.bottom > sk.y - PHYS.height)) return true;
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked(hazards, sk.x, sk.boardY)) return true;
     if (sk.grounded && sk.surface) {
+      //act 3's launch quarterpipes: roll up and off the lip and let it throw you (an ollie on it throws the launch away),
+      //and roll on off a cloud straight onto one
+      const on = sk.surface;
+      if (on.launch) return false;
+      if (level.surfaces.some((o) => o !== on && o.launch && Math.abs(o.x0 - on.x1) < 4 && Math.abs(o.y - on.y) < 8)) return false;
       //ollie off the end at the last few steps, as a good player does
-      return sk.surface.x1 - sk.x < Math.max(12, 3 * sk.hsp);
+      return on.x1 - sk.x < Math.max(12, 3 * sk.hsp);
     }
     //rolled off the end while the landing still had the knees bent: the ollie's still there a moment after the edge
     if (sk.mode === 'air' && sk.coyote > 0 && sk.jumps === sk.maxJumps) return true;
     if (sk.mode === 'air' && sk.jumps > 0 && sk.vsp > -2) {
-      if (landsSky(level, near, decks, sk, sk.x, sk.y, sk.vsp)) return false;
-      if (landsSky(level, near, decks, sk, sk.x, sk.y, sk.flipPop(), true)) return true;
+      const clouds = sim.mustFly;
+      if (landsSky(level, near, decks, sk, sk.x, sk.y, sk.vsp, false, clouds)) return false;
+      if (landsSky(level, near, decks, sk, sk.x, sk.y, sk.flipPop(), true, clouds)) return true;
       //nothing to make yet: hold the flip for later in the fall, unless it's now or never
       return sk.vsp > 3;
     }

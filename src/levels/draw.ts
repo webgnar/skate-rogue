@@ -74,7 +74,7 @@ const spanOf = (L: Level, x: number) => hillSpans(L).findIndex(([a, b]) => x >= 
 // the descent's sections, named from its surfaces in order
 export function sectionNotes(level: Level): { x: number; y: number; text: string; kind: string }[] {
   const ds = level.surfaces
-    .filter((s) => inHill(level, s.x0) && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank') && !s.side)
+    .filter((s) => inHill(level, s.x0) && (s.kind === 'roof' || s.kind === 'stairs' || s.kind === 'bank') && !s.side && s.sky !== 'qp')
     .sort((a, b) => a.x0 - b.x0);
   const notes: { x: number; y: number; text: string; kind: string }[] = [];
   for (let i = 0; i < ds.length; i++) {

@@ -32,6 +32,8 @@ export interface Surface {
   top?: boolean; // part of the top route (src/gen/top-route.ts): a rooftop up where the helicopter sees you
   sewer?: boolean; // the sewer route's floor and outlet ramp (src/gen/sewer.ts), drawn by src/render/sewer-kit.ts
   launch?: number; // a sewer kick-out (src/gen/sewer.ts): roll off its top and it throws you up at this vsp (px/frame)
+  launchHsp?: number; // and at this speed along (px/frame), whatever you came in at: act 3's launch quarterpipes
+  // (src/gen/clouds.ts LAUNCH) throw everyone on the same arc, so the rail they shoot you onto is always under it
 }
 
 // bars are steel; ledges, roofs, stairs, banks and the overpass are concrete
@@ -206,6 +208,8 @@ export interface Level {
   fork: ForkSite | null;
   danger: number; // traffic 1 (light) to 3 (rush hour)
   escape?: EscapeSite; // an escape floor
+  bridges?: { x: number; h: number; base?: number }[]; // act 3's drone bridges: drones hovering across a gap in the clouds, stomped across (src/gen/clouds.ts)
+  airways?: [number, number][]; // gaps in the sky line crossed some other way than a jump (a launch, a drone bridge): never bridged with a deck (src/gen/sky-line.ts)
   hunt?: { x: number; h: number; base?: number }[]; // act 3's first floor: the drones from act 2's escape still after you, over the clouds (src/sim/drones.ts huntSpots)
   props: Prop[]; // street props, scenery and smashables (src/gen/props.ts)
   crossings: Intersection[]; // cross streets with cross traffic (src/traffic/cross.ts)
