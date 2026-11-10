@@ -155,7 +155,7 @@ export class RunScore {
         this.gnarT = 0;
         break;
       case 'pickup':
-        //(NO GROUND's multiplier up in the sky: coins by it, Stoken by its whole part)
+        //(DOWNSTREAM's multiplier in the sewer: coins by it, Stoken by its whole part)
         if (e.kind === 'cash') this.addCash(SCORE.cashCoin * (e.mult ?? 1));
         else if (e.kind === 'spin') this.spins++;
         else {

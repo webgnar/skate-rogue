@@ -70,7 +70,7 @@ What it means for the game:
   route turned into the whole world. The same tap, the same tricks, just bigger. Boons that bend gravity get stronger
   the higher you are.
 - **Style lifts you, and the AI hears it.** Clean lines and combos are what get you higher (the gnar state, the
-  kickers, NO GROUND). They also fill the AI's stoke detector (see The chase: Stoke raises the stakes): the better you
+  kickers). They also fill the AI's stoke detector (see The chase: Stoke raises the stakes): the better you
   skate, the harder it hunts, but it only catches you when you slip.
 - **The chasers climb with you.** The cruiser owns the street, the chopper the rooftops, the drone swarm the clouds,
   fighter jets hold the ceiling and drones hunt you in space (zack, Nov 10, 2026: "we could just use drones in space
@@ -259,13 +259,10 @@ find up there). Higher than the power line on each stretch of hill, from floor 4
 lay a run of rooftop decks, billboard catwalks, water towers, crane booms and scaffolds to land on. On top of that,
 built the same day (greybox, waiting on zack's reference images in the shared folder's `sky/refs/` for the art pass):
 
-- **NO GROUND.** Chain sky pieces (the wire, rooftops, decks, booms, a blimp's back) without touching the ground below
-  and the coins up there multiply: x1.5 at two pieces, up to x4 (Stoken by the whole part). Air between pieces keeps
-  the line; touching the ground below banks it ("SKY LINE x5!"); a bail loses it. It's the reason to stay up there.
-  It only runs where going up is a choice (zack, Nov 7, 2026: "might be irrelevant now"): acts 1 and 2, their
-  escapes, act 3's street chase and Endless. From act 3's cloud floors up you're off the ground the whole floor, so
-  it's off there, and on the ceiling and the beam-up. **(Waiting on zack's pick:** this is the recommended option;
-  the others were dropping it everywhere or leaving it on.**)**
+- **NO GROUND is cut** (zack, Nov 10, 2026: "no ground bonus is dumb we can remove it"). It was a coin multiplier
+  for chaining sky pieces without touching the ground; once the climb put you up off the ground most of the run it
+  was on nearly all the time and stopped meaning anything. Coins up top pay the same as anywhere. The sewer's
+  DOWNSTREAM line keeps its multiplier and meter.
 - **Set pieces, one a floor at most, from floor 5:** an **ad blimp** moored over the hill, its long back a calm
   cruise; a **window washer's rig** that drops under you once you land, so you pop off it quick onto the roof
   ahead; a **tower crane** whose jib slews out of the lane and back (land early, or it swings away under you); and a
@@ -276,7 +273,7 @@ built the same day (greybox, waiting on zack's reference images in the shared fo
   sagging wires with the washing on them, to chain.
 
 All of it is physics and tap-only: nothing lifts you up there (zack owns the way up). Code: `src/gen/sky-beats.ts`
-(placement and the SKY dials), `src/sim/sky.ts` (the moving decks, busts, golden pigeon, NO GROUND's multiplier),
+(placement and the SKY dials), `src/sim/sky.ts` (the moving decks, busts, golden pigeon, the line multiplier DOWNSTREAM uses),
 `src/render/sky-pieces-view.ts` and `src/render/sky-kit.ts` (drawing); the level editor lists the new beats.
 
 **The cloud layer** (zack, Oct 31, 2026: "i want sky route to go really tall. we could use the clouds and the rainbow...
@@ -327,10 +324,6 @@ by a bot that skates it (`?bot=sky`, `tests/sky-line.test.ts`; it clears about 9
   time where the ground ahead rises. A later hill with room still gets its own staircase up into it.
 - **Clouds are honest**: a cloud's puffs never draw past where you can land on it (its deck plus a truck's overhang).
 
-**The NO GROUND meter** (zack: "i need that to be visualy clear what its doing"). While a line is going, a panel under
-the combo shows NO GROUND, the live coin multiplier (it pops as it steps up), seven pips that turn gold at the x4 cap,
-and the bonus the line has added so far. Touch the ground and it reads BANKED +$N; the callout says SKY LINE x3! +$N.
-
 ### Three routes: sky, surface, sewer
 
 Decided Oct 31, 2026 (zack): the game has **three routes**, stacked vertically through every floor. Sky is built
@@ -344,7 +337,7 @@ for all three:
 
 | Route | Where | How you get on | Danger | Reward | Built |
 | --- | --- | --- | --- | --- | --- |
-| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, NO GROUND's coin multiplier, set pieces, stashes and chips | Yes |
+| **Sky** | Power lines and rooftops high over the hills and chases | Speed, a big ollie and a flip at the top (cab skitch into a kicker in Chinatown) | The helicopter: Heat doesn't cool from clean skating; pigeons; a fall is a long drop | Long grinds, no traffic, set pieces, stashes and chips | Yes |
 | **Surface** | The street and the hill road | The default: keep rolling | Traffic, cops on foot and the cruiser | Cash, car hops, the most lines | Yes |
 | **Sewer** | One route under the floor: storm drains under the street, the deep under the hills and canals | Roll into a construction spot instead of ollieing it (at the foot of a hill, roll down its plank ramp) | A 5-tile drop in, a low roof (a quick double tap bonks your head), kick-outs that throw you back up to the street, a stair set with a handrail to grind, rats, the flood surge, the subway's gap, the alligator | No traffic, no helicopter, no bullets: the Heat cools fast; DOWNSTREAM: the runoff pushes you faster than the street and chained pieces multiply the coins; the alligator's and the DIY stash's chips; the sewer road to the underground spot | Yes |
 
@@ -371,7 +364,7 @@ Under each street chase where the street is clear runs a brick storm tunnel, dra
 - **DOWNSTREAM** (the sewer's trade: the sky pays more, the sewer is faster): the runoff on the floor runs your way and
   its current pushes you past street speed (up to 6.8 px/frame; it still soaks the deck). Each new piece you ride down
   there (a pipe grind, a stretch of runoff, a rat pack or the alligator cleared, the bowl carved, the subway crossed)
-  adds to the line and multiplies the coins, as NO GROUND does up top; the same meter reads DOWNSTREAM. Coming back up
+  adds to the line and multiplies the coins, shown on the DOWNSTREAM meter. Coming back up
   banks it (FLOW LINE xN); a trip, a slam or the surge loses it.
 - **Kick-outs** (zack: "a quarterpipe up against a wall that shoots the player straight up through a one way platform to
   the street again. players will accidentally get shot back up, maybe try to go deeper next time"): a concrete
