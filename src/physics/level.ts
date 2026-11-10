@@ -206,6 +206,7 @@ export interface Level {
   fork: ForkSite | null;
   danger: number; // traffic 1 (light) to 3 (rush hour)
   escape?: EscapeSite; // an escape floor
+  hunt?: { x: number; h: number; base?: number }[]; // act 3's first floor: the drones from act 2's escape still after you, over the clouds (src/sim/drones.ts huntSpots)
   props: Prop[]; // street props, scenery and smashables (src/gen/props.ts)
   crossings: Intersection[]; // cross streets with cross traffic (src/traffic/cross.ts)
   gravity?: number; // the district's gravity, a share of QFS's (BIOME_GRAVITY in src/physics/feel.ts); left out = 1

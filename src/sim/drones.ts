@@ -144,3 +144,30 @@ export function droneSpots(x0: number, x1: number, rnd: () => number): DroneSpot
   }
   return spots;
 }
+
+// act 3's first floor (zack 2026-11-10: "the drones should be after him when 3 starts"): act 2's escape and its
+// cutscene end with the drones on your tail, so they follow you up into the clouds. A pattern dives onto the
+// clouds and girder steps along the floor, hovering over the piece under it as act 4's do over a blimp's back
+export const HUNT = {
+  clear: 12 * TILE, // none this close to the start: a moment to get rolling first
+  edge: 3 * TILE, // room on the piece before and after a pattern
+  gap: [8, 12], // tiles between two patterns
+};
+
+export function huntSpots(pieces: readonly { x0: number; x1: number; y: number }[], startX: number, rnd: () => number): DroneSpot[] {
+  const order: (keyof typeof PATTERNS)[] = ['single', 'pair', 'step', 'wall'];
+  const spots: DroneSpot[] = [];
+  let next = startX + HUNT.clear;
+  let i = 0;
+  for (const p of [...pieces].sort((a, b) => a.x0 - b.x0)) {
+    const name = i < 2 ? order[i] : order[Math.floor(rnd() * order.length)];
+    const pat = PATTERNS[name];
+    const span = pat[pat.length - 1][0] * TILE + DRONE.w;
+    const at = Math.max(next, p.x0 + HUNT.edge);
+    if (at + span > p.x1 - HUNT.edge) continue;
+    for (const [dx, h] of pat) spots.push({ x: at + dx * TILE, h, base: p.y });
+    next = at + span + (HUNT.gap[0] + Math.floor(rnd() * (HUNT.gap[1] - HUNT.gap[0] + 1))) * TILE;
+    i++;
+  }
+  return spots;
+}

@@ -171,7 +171,7 @@ export class FloorSim {
     this.sky = new Sky(level);
     this.sewer = new SewerSim(level);
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX, esc.chopperTop) : null;
-    this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : null;
+    this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : level.hunt?.length ? new Swarm(level.hunt, level.streetY) : null;
     this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX, !!esc.rocket) : null;
     //(the guards shoot; the finale's rocket only runs you down)
     this.shooter = this.chaser && !esc?.rocket ? new Shooter(level.layout.seed, level.streetY) : null;

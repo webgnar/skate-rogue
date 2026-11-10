@@ -537,3 +537,30 @@ export class Sparks {
     }
   }
 }
+
+// a street quarterpipe: a quarter-circle transition of radius r rising toward +x from its foot at x 0, a deck behind
+// the coping, w wide (from z 0 to w)
+export function quarterpipe(r: number, w: number): THREE.Group {
+  const g = new THREE.Group();
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(r + 1.4, 0);
+  shape.lineTo(r + 1.4, r);
+  shape.lineTo(r, r);
+  //the transition: from the coping down round the quarter circle (centre at (0, r)) to the foot
+  shape.absarc(0, r, r, 0, -Math.PI / 2, true);
+  const ramp = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: w, bevelEnabled: false, curveSegments: 20 }), toon({ color: 0x8a8fa8 }));
+  g.add(ramp);
+  const coping = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, w, 10).rotateX(Math.PI / 2), toon({ color: 0xd8dce6 }));
+  coping.position.set(r, r, w / 2);
+  g.add(coping);
+  //the frame's legs under the deck at the back, and a strip of paint across the transition's foot
+  const leg = toon({ color: 0x4a4e66 });
+  for (const z of [0.15, w - 0.15]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, r, 0.16), leg);
+    post.position.set(r + 1.3, r / 2, z);
+    g.add(post);
+  }
+  inkify(g);
+  return g;
+}
