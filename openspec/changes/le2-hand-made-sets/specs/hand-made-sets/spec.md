@@ -25,9 +25,9 @@ than its cap, joined to the line before and after it.
 - **THEN** every floor is built exactly as before
 
 ### Requirement: Sets can be saved from a phone
-Saving on a device with no dev server SHALL keep the set without the user pasting text anywhere (as decided in
-design.md, decision 3).
+Saving on a device with no dev server SHALL copy the set as text to paste to Claude, and unsaved sets SHALL stay
+in the browser.
 
 #### Scenario: saving on the phone
 - **WHEN** a set is saved on skate-rogue.vercel.app/?sets
-- **THEN** it reaches the repo for review, and the editor says where
+- **THEN** the set is copied as text, and the editor says to paste it to Claude

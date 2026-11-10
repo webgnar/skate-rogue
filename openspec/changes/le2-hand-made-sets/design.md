@@ -42,7 +42,7 @@ The game's input is one button, so the editor is the only place with real contro
 | Look at any floor or set, play from any point | All of that |
 | Nudge what's there: drag an end, stretch a rail, move a gap, change a height with +/- | Draw new sets: palette, multi-select, box select |
 | Turn sets on and off, change a weight or cap | Keyboard: arrows, delete, ctrl+z, ctrl+d |
-| Save (decision 3) | Save straight to the repo on the dev server |
+| Save copies the set as text to paste to Claude (decision 3) | Save straight to the repo on the dev server |
 
 Handles are 44 px or bigger on touch, one finger pans, two pinch to zoom, and long press picks a piece.
 
@@ -52,9 +52,8 @@ Handles are 44 px or bigger on touch, one finger pans, two pinch to zoom, and lo
    floors stay a later phase (4).
 2. **Where do you build?** DECIDED (zack, 2026-11-10): desktop builds new sets; the phone plays from any point,
    nudges what's there and saves (the table above).
-3. **Saving from the phone.** Keep pasting to Claude (as `?levels` does now), a save button that commits to a
-   branch and opens a PR for Claude to check and merge (recommended), or sets saved online and live in the game
-   at once with no PR.
+3. **Saving from the phone.** DECIDED (zack, 2026-11-10): keep pasting to Claude, as `?levels` does now. Save
+   copies the set as text; Claude puts it in `src/gen/sets/`, checks it with the bot and merges.
 4. **Bot gate.** A set ships only if the plain bot clears it (recommended), or hard sets may need boons or skill
    and are marked as such.
 5. **Where do sets go first?** Act 3's cloud line and act 5's station line, which are already built from sets
