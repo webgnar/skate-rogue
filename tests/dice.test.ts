@@ -86,14 +86,69 @@ describe('chips (spin tokens)', () => {
   });
 });
 
-describe('3D dice', () => {
-  it('every result lands with its face pointing at you', async () => {
-    const THREE = await import('three');
-    const { restingQuat, DICE3D } = await import('../src/render/dice3d');
-    const normals: Record<number, [number, number, number]> = { 1: [0, 1, 0], 6: [0, -1, 0], 2: [1, 0, 0], 5: [-1, 0, 0], 3: [0, 0, 1], 4: [0, 0, -1] };
+describe('physics dice', () => {
+  it('opposite faces add up to 7, and the face up is read off how a die sits', async () => {
+    const { FACE_NORMAL, faceUp } = await import('../src/run/dice-physics');
+    const CANNON = await import('cannon-es');
     for (const f of [1, 2, 3, 4, 5, 6] as const) {
-      const n = new THREE.Vector3(...normals[f]).applyQuaternion(restingQuat(f, 0.3));
-      expect(n.dot(DICE3D.view)).toBeGreaterThan(0.999);
+      const n = FACE_NORMAL[f];
+      const o = FACE_NORMAL[(7 - f) as 1];
+      expect(n.map((v, i) => v + o[i])).toEqual([0, 0, 0]);
+      //turn the die so face f points up
+      const q = new CANNON.Quaternion();
+      q.setFromVectors(new CANNON.Vec3(...n), new CANNON.Vec3(0, 1, 0));
+      expect(faceUp(q).face).toBe(f);
+      expect(faceUp(q).up).toBeGreaterThan(0.999);
     }
+  });
+
+  it('thrown dice come to rest flat inside the street, every face about as often (they are fair)', async () => {
+    const { DicePhysics, faceUp, DICE_PHYS } = await import('../src/run/dice-physics');
+    const rng = makeRng(11);
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    const throws = 240;
+    let slowest = 0;
+    for (let k = 0; k < throws; k++) {
+      const bounds = { halfW: 3, back: -3.4, front: 3 };
+      const p = new DicePhysics(bounds, rng);
+      p.shuffle();
+      p.hold({ x: 0, y: 2.1, z: 1.6 });
+      p.throw({ x: (rng() - 0.5) * 8, y: 0, z: -8 - rng() * 18 });
+      let t = 0;
+      while (!p.advance(1 / 60) && t < 20) t += 1 / 60;
+      slowest = Math.max(slowest, t);
+      const faces = p.landed!;
+      expect(faces).toBeTruthy();
+      for (const [i, d] of p.dice.entries()) {
+        expect(faceUp(d.quaternion).face).toBe(faces[i]);
+        expect(Math.abs(d.position.x)).toBeLessThan(bounds.halfW);
+        expect(d.position.z).toBeGreaterThan(bounds.back);
+        expect(d.position.z).toBeLessThan(bounds.front);
+      }
+      for (const f of faces) counts[f]++;
+    }
+    expect(slowest).toBeLessThanOrEqual(DICE_PHYS.maxTime + 0.5);
+    //480 dice: 80 a face on average; a fair die stays well inside 50-110
+    for (let f = 1; f <= 6; f++) expect(counts[f]).toBeGreaterThan(50), expect(counts[f]).toBeLessThan(110);
+  });
+
+  it('a tap mid-tumble runs the same physics to the end at once', async () => {
+    const { DicePhysics } = await import('../src/run/dice-physics');
+    const p = new DicePhysics({ halfW: 3, back: -3.4, front: 3 }, makeRng(5));
+    p.shuffle();
+    p.hold({ x: 0, y: 2.1, z: 1.6 });
+    p.throw({ x: 1, y: 0, z: -15 });
+    p.advance(0.1);
+    const faces = p.finish();
+    expect(faces.every((f) => f >= 1 && f <= 6)).toBe(true);
+  });
+
+  it('a landed pair is paid as it landed, into the winnings', async () => {
+    const { settle } = await import('../src/run/dice');
+    const won = { head: { ...NO_HEAD_START }, stoken: 0, grip: 'black' as const };
+    expect(settle([3, 4], makeRng(1), won).prize).toEqual({ kind: 'stoken', n: DICE.seven });
+    expect(settle([5, 6], makeRng(1), won).prize).toEqual({ kind: 'cash', n: DICE.cash });
+    expect(settle([6, 6], makeRng(1), won).match).toBe(true);
+    expect(won).toMatchObject({ stoken: DICE.seven, head: { cash: DICE.cash, continues: DICE.match } });
   });
 });

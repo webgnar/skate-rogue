@@ -19,7 +19,7 @@ import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear'
 import { noBustedTime } from '../sim/supply';
 import { SupplyView } from '../render/supply-view';
 import { loadSave, whole, writeSave } from '../run/save';
-import { comboOf, NO_HEAD_START, prizeLabel, rollAll, rollName, rollsFor, type Combo, type PrizeLabel, type Roll } from '../run/dice';
+import { comboOf, DICE, NO_HEAD_START, prizeLabel, rollName, rollsFor, settle, type Combo, type Face, type PrizeLabel, type Roll } from '../run/dice';
 import { boonsOfType, Missions, PX_PER_M, statsOf, type MissionsView, type MissionTick, type Stat } from '../run/missions';
 import { gnarCards, gnarCarry, withGnar } from '../run/gnar';
 import { buzzFor, cueFor, MOMENT } from '../audio/cues';
@@ -206,12 +206,20 @@ export interface Hud {
   diceTap(): boolean; // a tap on the dice: throw, land, claim, next pair; true once the last prize is claimed
 }
 
-// the street dice: a pair per roll (one free, one per chip found), thrown one at a time
-export interface DiceView {
-  rolls: { dice: Roll['dice']; name: string; combo: Combo; prize: PrizeLabel; big: boolean; match: boolean }[];
+// the street dice: a pair per roll (one free, one per chip found), thrown one at a time with real physics
+// (src/render/dice3d.ts). How a pair lands is the roll: settle pays it into the save and says what it won
+export interface DiceRoll {
+  dice: Roll['dice'];
+  name: string;
+  combo: Combo;
+  prize: PrizeLabel;
+  big: boolean;
+  match: boolean;
 }
-
-export const DICE_MS = 1300; // a pair of dice tumbles this long before it lands (src/ui/dice-panel.ts)
+export interface DiceView {
+  rolls: number;
+  settle(dice: [Face, Face]): DiceRoll;
+}
 
 type State = 'skate' | 'caught' | 'cont' | 'pick' | 'shop' | 'under' | 'dice' | 'over';
 
@@ -1278,8 +1286,10 @@ export class Game {
       daily: daily ? { day: today, best: daily.best } : save.daily,
       missions: this.missionsKept(save),
     };
-    //the street dice: one free roll and one per chip; everything they pay is banked now, and shown before the summary
-    const rolls = this.autopilot ? [] : this.rollDice(next);
+    //the street dice: one free roll and one per chip (and any left unthrown last time). Each is paid into the save
+    //as it lands, and the rolls still owed are kept, so closing the app on the dice screen doesn't lose them
+    const rolls = this.autopilot ? 0 : Math.min(DICE.maxRolls * 2, rollsFor(this.run.spins) + (next.diceOwed ?? 0));
+    if (rolls) next.diceOwed = rolls;
     writeSave(next);
     this.hud.missions(this.missions.view(next.stoken));
     const result: RunResult = {
@@ -1297,33 +1307,35 @@ export class Game {
       daily,
       continues: CONTINUES - this.continuesLeft,
     };
-    if (!rolls.length) return this.hud.over(result);
+    if (!rolls) return this.hud.over(result);
     this.overResult = result;
     this.openMenu('dice', now);
-    this.hud.dice({
-      rolls: rolls.map((r) => ({
-        dice: r.dice,
-        name: rollName(r),
-        combo: comboOf(r.dice[0], r.dice[1]),
-        prize: prizeLabel(r.prize, (id) => gripDef(id).name, r.match, CONTINUES + (r.held ?? 0)),
-        big: r.dice[0] === r.dice[1],
-        match: r.match,
-      })),
-    });
+    this.hud.dice({ rolls, settle: (dice) => this.settleDice(dice) });
   }
 
-  // roll the street dice once, and once more per chip found; the winnings go into the save (Stoken, the next run's
-  // head start, a grip)
-  private rollDice(save: ReturnType<typeof loadSave>): Roll[] {
-    const won = rollAll(Math.random, rollsFor(this.run.spins), save.headStart, this.grip);
+  // a pair of street dice landed: what they show is paid into the save (Stoken, the next run's head start, a grip)
+  private settleDice(dice: [Face, Face]): DiceRoll {
+    const save = loadSave();
+    const won = { head: { ...save.headStart }, stoken: 0, grip: this.grip };
+    const r = settle(dice, Math.random, won);
     save.stoken += won.stoken;
     save.headStart = won.head;
+    save.diceOwed = Math.max(0, (save.diceOwed ?? 1) - 1);
     if (won.grip !== this.grip) {
       save.tape = won.grip;
       this.grip = won.grip;
       this.sprite.setGrip(gripDef(won.grip).color);
     }
-    return won.rolls;
+    writeSave(save);
+    if (this.overResult) this.overResult.bank = save.stoken;
+    return {
+      dice: r.dice,
+      name: rollName(r),
+      combo: comboOf(r.dice[0], r.dice[1]),
+      prize: prizeLabel(r.prize, (id) => gripDef(id).name, r.match, CONTINUES + (r.held ?? 0)),
+      big: r.dice[0] === r.dice[1],
+      match: r.match,
+    };
   }
 
   // the dice's taps go to the dice screen (src/ui/dice-panel.ts), one pair at a time; once the last prize is
@@ -1332,6 +1344,7 @@ export class Game {
     this.menuAt = now;
     if (!this.hud.diceTap()) return;
     this.hud.dice(null);
+    this.hud.missions(this.missions.view(loadSave().stoken));
     this.openMenu('over', now);
     if (this.overResult) this.hud.over(this.overResult);
     this.overResult = null;

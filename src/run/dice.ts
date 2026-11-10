@@ -2,7 +2,7 @@
 // of two dice on the curb, and each chip found on the run (a red casino chip, internally a 'spin' pickup) adds a
 // roll. Every roll pays something, so a run that ends badly still pays, and the combo decides how much: no combo a
 // single Stoken, a straight or a seven more, an eleven or doubles a head start for the next run. Boxcars (6-6) is the MATCH, like pinball's: rare (1 in 36) and big, the next run starts with two more
-// hearts. Pure: the game rolls, the save keeps it.
+// hearts. Pure: the dice are thrown with real physics (src/render/dice3d.ts), how they land is the roll, the save keeps it.
 import { GRIPS, RANK_GRIPS, type GripId } from '../board/grips';
 import { randInt } from '../gen/rng';
 
@@ -96,23 +96,38 @@ export function roll(rng: () => number, held: HeadStart, grip: GripId): Roll {
 // the rolls a run gets: one free, plus one per chip found
 export const rollsFor = (chips: number): number => Math.min(DICE.maxRolls, 1 + Math.max(0, chips));
 
-// every roll at once, each seeing the head start the ones before it won
+// what the street dice have won so far: Stoken, the next run's head start, the grip on the board
+export interface Winnings {
+  head: HeadStart;
+  stoken: number;
+  grip: GripId;
+}
+
+// two dice as they landed (src/render/dice3d.ts throws them with real physics), paid into the winnings
+export function settle(dice: [Face, Face], rng: () => number, won: Winnings): Roll {
+  const [a, b] = dice;
+  const r: Roll = { dice, prize: payout(a, b, rng, won.head, won.grip), match: a === 6 && b === 6 };
+  const z = r.prize;
+  if (z.kind === 'stoken') won.stoken += z.n;
+  else if (z.kind === 'cash') won.head.cash += z.n;
+  else if (z.kind === 'boon') won.head.boons++;
+  else if (z.kind === 'continue') won.head.continues += z.n;
+  else won.grip = z.grip;
+  r.held = won.head.continues;
+  return r;
+}
+
+// every roll at once, each seeing the head start the ones before it won (the bot and the tests; a player's dice land
+// one pair at a time, through settle)
 export function rollAll(rng: () => number, rolls: number, held: HeadStart, grip: GripId): { rolls: Roll[]; head: HeadStart; stoken: number; grip: GripId } {
-  const head = { ...held };
+  const won: Winnings = { head: { ...held }, stoken: 0, grip };
   const out: Roll[] = [];
-  let stoken = 0;
   for (let i = 0; i < rolls; i++) {
-    const r = roll(rng, head, grip);
-    out.push(r);
-    const z = r.prize;
-    if (z.kind === 'stoken') stoken += z.n;
-    else if (z.kind === 'cash') head.cash += z.n;
-    else if (z.kind === 'boon') head.boons++;
-    else if (z.kind === 'continue') head.continues += z.n;
-    else grip = z.grip;
-    r.held = head.continues;
+    const a = (1 + randInt(rng, 6)) as Face;
+    const b = (1 + randInt(rng, 6)) as Face;
+    out.push(settle([a, b], rng, won));
   }
-  return { rolls: out, head, stoken, grip };
+  return { rolls: out, ...won };
 }
 
 // the roll's name, called out over the dice (craps slang), so you know why it paid what it did
