@@ -45,6 +45,20 @@ listing, is in the project files (`app-store/checklist.md`).
 | Export rules | `ITSAppUsesNonExemptEncryption` is false (no encryption beyond the system's), so no export questions at upload. |
 | Privacy | `ios/App/App/PrivacyInfo.xcprivacy`: no tracking, no data collected. The policy is `public/privacy.html`, at https://skate-rogue.vercel.app/privacy.html, and the support page `public/support.html`. |
 
+## Xcode Cloud (how builds reach App Store Connect)
+
+Apple only takes uploads built with Xcode 26 or newer (Nov 2026), and zack's Mac has Xcode 16.2 on macOS 14, which
+can't run it. So the app is built in Xcode Cloud (zack, 2026-11-10), on Apple's machines with Xcode 26:
+
+- `ios/App/ci_scripts/ci_post_clone.sh` installs Node and runs `npm ci` and `npm run build:ios`, since the web build
+  (`ios/App/App/public`) isn't in git.
+- `ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme` is the shared scheme Xcode Cloud builds, and
+  `project.xcworkspace/xcshareddata/swiftpm/Package.resolved` pins Capacitor (Xcode Cloud won't resolve packages
+  itself). After a Capacitor upgrade, update the pin.
+- The workflow (made once in Xcode: Product > Xcode Cloud > Create Workflow) archives the `App` scheme for iOS with
+  "Latest Release" Xcode and hands it to App Store Connect, where it shows up under TestFlight. Xcode Cloud numbers
+  the builds itself.
+
 ## Screenshots
 
 ```
