@@ -9,8 +9,8 @@ import { DECK_SLOTS, FULL_LIBRARY, STOCK, withLoadout } from '../run/meta';
 import { newBoard } from '../board/mods';
 import { freshGear } from '../run/gear';
 import { withGnar } from '../run/gnar';
-import { RunScore, SCORE } from '../run/score';
-import { ACTS, endsAct, ESCAPE } from '../gen/escape';
+import { RunScore, SCORE, stokeRate } from '../run/score';
+import { ACTS, actOf, endsAct, ESCAPE } from '../gen/escape';
 import { FIRST_ROAD, type Road } from '../gen/roads';
 import { makeRng } from '../gen/rng';
 import { TILE } from '../physics/constants';
@@ -68,6 +68,7 @@ function skate(level: Level, p: FloorPlay): FloorReport & { fork: 'high' | 'low'
   const run = new RunScore();
   run.scoreScale = mods.scoreScale;
   run.stokenScale = mods.stokenScale;
+  run.fillScale = stokeRate(actOf(p.floor));
   const pilot = new Pilot(p.pilot, p.seed + p.floor);
   const checks = new FloorChecks(sim);
   let slams = 0;
@@ -75,7 +76,8 @@ function skate(level: Level, p: FloorPlay): FloorReport & { fork: 'high' | 'low'
   let f = 0;
   for (; f < CHECKS.maxFrames && sim.state === 'skate'; f++) {
     sim.skater.boost = run.gnar ? SCORE.gnarBoost : 1;
-    sim.heat.slamFree = run.gnar;
+    sim.heat.stoke = run.stoke;
+    sim.heat.alarm = run.gnar;
     sim.combo = run.combo;
     checks.before();
     sim.step(pilot.input(sim));

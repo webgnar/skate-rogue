@@ -12,7 +12,7 @@ import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
 import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { deckChoices, STOCK_DECK, stockDeck, type DeckArt } from '../board/deck-art';
-import { RunScore, SCORE } from '../run/score';
+import { RunScore, SCORE, stokeRate } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
 import { cloudFloor, firstCloud, layerAct } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
@@ -1512,9 +1512,11 @@ export class Game {
         this.prev = { x: this.skater.x, y: this.skater.y };
         this.keepForDrawing();
         this.fallSpeed = this.skater.mode === 'air' ? this.skater.vsp : 0;
-        //the gnar state: faster cruising, slams cost no Heat
+        //the gnar state: faster cruising, and the AI's alarm (src/heat/heat.ts: Stoke raises the stakes)
         this.skater.boost = this.run.gnar ? SCORE.gnarBoost : 1;
-        this.sim.heat.slamFree = this.run.gnar;
+        this.run.fillScale = stokeRate(actOf(this.floor));
+        this.sim.heat.stoke = this.run.stoke;
+        this.sim.heat.alarm = this.run.gnar;
         this.sim.combo = this.run.combo;
         this.floorFrames++;
         if (this.autopilot) {
@@ -1580,13 +1582,17 @@ export class Game {
     this.chinatownView.sync(this.level, this.sim.traffic);
     this.trafficView.syncStreet(this.level, this.sim.traffic);
     const heat = this.state === 'pick' || this.state === 'over' || this.state === 'dice' ? 0 : this.sim.heat.value;
-    this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y, this.view.camera);
+    //the stoke detector (Stoke raises the stakes): the siren layer and the drone in front follow it, Heat keeps the
+    //catch cues (the cruiser, its lights, the edge pulse)
+    const detect = heat === 0 && this.state !== 'skate' ? 0 : this.run.gnar ? 1 : this.run.stoke;
+    this.trafficView.chase(this.level, x, heat, this.sim.heat.holdT > 0, this.state === 'caught', dt * 1000, y, this.view.camera, detect);
     if (this.trafficView.cruiserShown) this.trafficView.jets.exhaust(this.particles, toY(this.level, this.level.streetY), dt);
     this.hud.heat(heat);
     this.sound?.update({
       mode: this.skater.mode,
       speed: Math.max(Math.abs(this.skater.hsp), this.skater.railV),
       heat,
+      detect,
       skating: this.state === 'skate',
       over: this.state === 'over' || this.state === 'dice',
       paused: false,

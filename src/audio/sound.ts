@@ -2,7 +2,7 @@
 // wheels and siren loops, and the soundtrack (MUSIC in cues.ts). Browsers only start audio after a
 // tap, so the context is made on the first press. Any failure (no Web Audio, a sample that won't load) is silent:
 // the game never waits on sound.
-import { COIN_VERB, coinMix, LOOPS, MUSIC, SAMPLES, rollGain, sampleFile, sirenGain, type Cue, type MusicId } from './cues';
+import { COIN_VERB, coinMix, LOOPS, MUSIC, SAMPLES, rollGain, runSiren, sampleFile, sirenGain, type Cue, type MusicId } from './cues';
 import { SETTINGS } from '../ui/settings';
 import { portalMuted } from '../net/portal';
 import { BandMeter, type Bands } from './bands';
@@ -11,6 +11,7 @@ export interface SoundFrame {
   mode: string; // the skater's mode
   speed: number; // px/frame
   heat: number;
+  detect?: number; // the stoke detector 0..1 in a run: the siren layer follows it (cutscenes leave it out)
   skating: boolean; // on a floor (not a menu, not busted)
   over: boolean; // the run summary: the title music
   paused: boolean;
@@ -291,7 +292,7 @@ export class Sound {
       //the wheels spin up a little with speed
       this.roll.src.playbackRate.setTargetAtTime(0.85 + 0.25 * Math.min(1, Math.max(0, f.speed) / 6), t, 0.1);
     }
-    if (this.siren) this.siren.gain.gain.setTargetAtTime(f.skating ? sirenGain(f.heat) : 0, t, 0.3);
+    if (this.siren) this.siren.gain.gain.setTargetAtTime(f.skating ? (f.detect === undefined ? sirenGain(f.heat) : runSiren(f.heat, f.detect)) : 0, t, 0.3);
     this.setMusic(f.over ? 'title' : 'gameplay');
   }
 
