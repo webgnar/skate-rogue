@@ -54,7 +54,7 @@ Handles are 44 px or bigger on touch, one finger pans, two pinch to zoom, and lo
    nudges what's there and saves (the table above).
 3. **Saving from the phone.** DECIDED (zack, 2026-11-10): keep pasting to Claude, as `?levels` does now. Save
    copies the set as text; Claude puts it in `src/gen/sets/`, checks it with the bot and merges.
-4. **Bot gate.** A set ships only if the plain bot clears it (recommended), or hard sets may need boons or skill
-   and are marked as such.
+4. **Bot gate.** DECIDED (zack, 2026-11-10): a set goes into floors only if the plain (no-boon) bot clears it at
+   cruising and gnar speed.
 5. **Where do sets go first?** Act 3's cloud line and act 5's station line, which are already built from sets
    (recommended), act 1's hills, or everywhere at once.
