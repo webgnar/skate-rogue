@@ -1286,7 +1286,7 @@ store art and Basic Launch submission are zack's, on the CrazyGames developer po
 
 ### The iPhone app: free on the App Store
 zack (Nov 10, 2026): "throw it up there for free". `npm run build:ios` builds the same game into a Capacitor iOS app
-(`ios/App`, bundle id `com.webgnar.skateescape`): iPhone only, portrait and landscape, full screen with the status
+(`ios/App`, bundle id `skateescape`): iPhone only, portrait and landscape, full screen with the status
 bar hidden, the home bar fading and edge swipes needing a second swipe so a tap never throws the player out of a
 run. Like the portal build it has no full screen switch, no Add to Home Screen tip, no dev tools and no leaderboard,
 so the app collects nothing (privacy policy at `/privacy.html` on the Vercel site, support at `/support.html`). No
