@@ -79,12 +79,12 @@ describe("act 3's cloud line", () => {
     expect(clean / n).toBeGreaterThan(0.7);
   }, 300000);
 
-  it('clouds that blink out are rare: none on 3-1, a couple at most later, only in the back half of the floor', () => {
-    for (let seed = 1; seed <= 6; seed++) for (const f of [7, 8, 9]) {
+  it('clouds that blink out are rare: none on 3-1, one at most a floor after (acts 3 and 4), only late in the floor', () => {
+    for (let seed = 1; seed <= 6; seed++) for (const f of [7, 8, 9, 10, 11, 12]) {
       const l = floorOf(seed * 37, f);
       const thin = l.surfaces.filter((s) => s.sky === 'thin');
       expect(thin.length).toBeLessThanOrEqual(f === 7 ? 0 : CLOUD_LINE.thinMost);
-      for (const s of thin) expect(s.x0 - l.startX).toBeGreaterThan(0.4 * (l.exitX - l.startX));
+      for (const s of thin) expect(s.x0 - l.startX).toBeGreaterThan(0.55 * (l.exitX - l.startX));
     }
   }, 120000);
 
