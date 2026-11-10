@@ -6,9 +6,10 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { inkify, setInkResolution } from '../../src/render/toon';
 import { StokenParticles } from '../../src/render/stoken-particle';
-import { boardFile } from '../../src/render/skater-rig';
+import { boardFile, SkaterRig, type SkaterId } from '../../src/render/skater-rig';
 import { deckDecal } from '../../src/render/wear';
 import { deckTexture } from '../../src/render/deck-graphic';
+import { BASE } from '../../src/render/poses';
 import { stockDeck, type DeckArt } from '../../src/board/deck-art';
 
 const SIZE = 320;
@@ -154,42 +155,44 @@ async function main(): Promise<Record<string, string>> {
   //for the unlocks screen (openspec ui6-unlocks-look): each skater's head and shoulders, the four decks, a cone
   const props = await load('props.glb');
   out.cone = shot(named(props, 'Cone'), [0.25, -0.5, 0], 0.8);
-  for (const id of ['lou-gnar', 'webster', 'roxy', 'keanu', 'goldie']) out[`skater-${id}`] = portrait(await load(`${id}.glb`));
+  for (const id of ['lou-gnar', 'webster', 'roxy', 'keanu', 'goldie'] as SkaterId[]) out[`skater-${id}`] = portrait(await SkaterRig.create('/', id));
   //each deck in its own shape (art/board.py) and the paint and graphic it starts a run in (deck-art.ts stockDeck)
   for (const id of ['popsicle', 'cruiser', 'bombhill', 'slab']) {
     const deck = part(await load(boardFile(id)), (m) => [...DECK_PARTS, 'decktop', 'plastic'].includes(matName(m)));
-    out[`deck-${id}`] = shot(deckLook(deck, stockDeck(id)), [-1.45, 0.6, 0.85]);
+    //underside up and nearly side on, so the outline and the graphic read at thumbnail size, tipped enough to show the
+    //7-ply edge along the top
+    out[`deck-${id}`] = shot(deckLook(deck, stockDeck(id)), [-0.9, -0.3, 0.22], 0.96);
   }
   return out;
 }
 
-// a skater from the shoulders up, turned a little toward the camera, framed on the head
-function portrait(model: THREE.Object3D): string {
-  const root = model; // not a clone: a cloned skinned mesh still follows the original's bones
-  root.traverse((o) => {
-    if (o.name === 'Board') o.visible = false;
-    if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).frustumCulled = false;
-  });
+// a skater from the chest up, through the game's own rig (SkaterRig: the same model, hair, toon shading and stance
+// as in a run), turned a little toward the camera and framed on the head
+function portrait(rig: SkaterRig): string {
+  const root = rig.mesh;
+  rig.boardGroup.visible = false;
   const scene = new THREE.Scene();
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445066, 1.6));
   const sun = new THREE.DirectionalLight(0xffffff, 2.4);
   sun.position.set(2, 4, 3);
   scene.add(sun);
-  root.rotation.y = 0.4; // a three-quarter view
+  //the stance, but body and head turned to the camera (in a run they look down the road): a three-quarter view
+  rig.preview({ ...BASE, yaw: 0.25, head: 0.05, nod: -0.05, armLRaise: 0.3, armRRaise: 0.3 });
   scene.add(root);
-  inkify(scene);
+  inkify(root, { toon: false });
   scene.updateMatrixWorld(true);
-  const head = root.getObjectByName('Head')!.getWorldPosition(new THREE.Vector3());
-  const chest = root.getObjectByName('Spine1')!.getWorldPosition(new THREE.Vector3());
-  const span = head.distanceTo(chest);
-  const c = head.clone().lerp(chest, 0.25).add(new THREE.Vector3(0, span * 0.35, 0));
-  const half = span * 1.25;
+  const head = root.localToWorld(rig.headAt());
+  const span = 0.5 * SCALE_OF(root); // neck to mid chest, in world units
+  const c = head.clone().add(new THREE.Vector3(0, span * 0.4, 0));
+  const half = span * 0.72;
   const cam = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, 100);
   cam.position.set(c.x, c.y, c.z + 10);
   cam.lookAt(c);
   renderer.render(scene, cam);
+  scene.remove(root);
   return canvas.toDataURL('image/png');
 }
+const SCALE_OF = (o: THREE.Object3D) => o.scale.y;
 
 // a deck painted in its run-start colour, its graphic on the underside as in game (wear.ts deckDecal)
 function deckLook(obj: THREE.Object3D, art: DeckArt): THREE.Object3D {

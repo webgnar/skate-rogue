@@ -14,20 +14,20 @@ export interface Unlock {
   id: UnlockId;
   branch: Branch;
   name: string;
-  line: string; // what it does, one short line
+  line: string; // what it does, one short line (the screen adds the first boons and the slots from the tables below)
   cost: number; // Stoken; 0 is open from the start
 }
 
 export const UNLOCKS: Unlock[] = [
-  { id: 'webster', branch: 'skater', name: 'Webster', line: 'The baseline. First pick: GRIND', cost: 0 },
-  { id: 'roxy', branch: 'skater', name: 'Roxy', line: 'Car-hops bounce 20% higher. First pick: GRIND', cost: 30 },
-  { id: 'keanu', branch: 'skater', name: 'Keanu', line: 'Heat cools 15% faster in the air. First pick: COOL', cost: 40 },
-  { id: 'goldie', branch: 'skater', name: 'Goldie', line: '+25% cash from everything. First pick: LUCK', cost: 50 },
-  { id: 'lou-gnar', branch: 'skater', name: 'Lou Gnar', line: 'Grinds 15% faster. First pick: POP', cost: 60 },
-  { id: 'popsicle', branch: 'deck', name: 'Popsicle', line: 'The stock deck: 3 slots', cost: 0 },
+  { id: 'webster', branch: 'skater', name: 'Webster', line: 'No perk: the plain ride', cost: 0 },
+  { id: 'roxy', branch: 'skater', name: 'Roxy', line: 'Car-hops bounce 20% higher', cost: 30 },
+  { id: 'keanu', branch: 'skater', name: 'Keanu', line: 'Heat cools 15% faster in the air', cost: 40 },
+  { id: 'goldie', branch: 'skater', name: 'Goldie', line: '+25% cash from everything', cost: 50 },
+  { id: 'lou-gnar', branch: 'skater', name: 'Lou Gnar', line: 'Grinds 15% faster', cost: 60 },
+  { id: 'popsicle', branch: 'deck', name: 'Popsicle', line: 'The stock deck', cost: 0 },
   { id: 'cruiser', branch: 'deck', name: 'Cruiser', line: '+10% speed, ollies 5% lower', cost: 25 },
   { id: 'bombhill', branch: 'deck', name: 'Downhill', line: '+15% speed, gear wears 30% faster', cost: 35 },
-  { id: 'slab', branch: 'deck', name: 'Slab', line: '4 slots, ollies 8% lower', cost: 45 },
+  { id: 'slab', branch: 'deck', name: 'Slab', line: 'An extra mod slot, ollies 8% lower', cost: 45 },
   { id: 'FLOW', branch: 'library', name: 'FLOW pack', line: 'Speed boons join the pool', cost: 15 },
   { id: 'COOL', branch: 'library', name: 'COOL pack', line: 'Heat boons join the pool', cost: 20 },
   { id: 'LUCK', branch: 'library', name: 'LUCK pack', line: 'Pickup and cash boons join the pool', cost: 25 },
