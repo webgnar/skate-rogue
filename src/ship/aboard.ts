@@ -6,6 +6,7 @@ import type { SkaterId } from '../render/skater-rig';
 import { loadSave, writeSave } from '../run/save';
 import { has } from '../run/meta';
 import { loadCrew } from './crew';
+import { loadPleiadians } from './pleiadians';
 import { HubScene } from './hub-scene';
 import { EndingScene, type EndingUi } from './ending-scene';
 import { SpaceFallScene } from '../cutscene/space-fall';
@@ -23,7 +24,7 @@ export class Aboard {
 
   // load the crew and build the hub, its shaders compiled before it's first drawn
   async load(base: string, meshy: boolean): Promise<void> {
-    this.rigs = await loadCrew(base, meshy);
+    [this.rigs] = await Promise.all([loadCrew(base, meshy), loadPleiadians(base)]);
     const hub = new HubScene(this.renderer);
     this.crew(hub);
     hub.setBank(loadSave().stoken, true);

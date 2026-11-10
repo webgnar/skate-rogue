@@ -17,6 +17,7 @@ import { glowTexture } from '../title/city';
 import { danceAt, dancePoses } from '../title/dance';
 import { makeRng } from '../gen/rng';
 import { batchStatic } from '../render/batch';
+import { CROWD, PLEIADIAN_HEIGHT, pleiadian, type Pleiadian } from './pleiadians';
 
 export const HUB = {
   floorR: 17, // the deck inside the dome
@@ -69,6 +70,7 @@ export class HubScene {
   private readonly electrons: THREE.Mesh[] = [];
   private readonly coreLight: THREE.PointLight;
   private members: Member[] = [];
+  private pleiadians: { p: Pleiadian; spot: (typeof CROWD)[number] }[] = [];
   private t = 0;
   private spin = 0;
   private fuel = 0; // the flame's size, 0 to 1, easing to the bank
@@ -121,6 +123,20 @@ export class HubScene {
     this.coreLight = new THREE.PointLight(0xff9a40, 18, 16, 1.6);
     this.coreLight.position.set(0, 2.5, -6.5);
     s.add(this.coreLight);
+    this.crowd();
+  }
+
+  // the ship's own crew, the Pleiadians, about the back of the deck (pleiadians.ts); none if their models aren't
+  // loaded
+  private crowd(): void {
+    const rng = makeRng(29);
+    for (const spot of CROWD) {
+      const p = pleiadian(spot.look, PLEIADIAN_HEIGHT * spot.tall, spot.clip, rng(), 0.85 + rng() * 0.3);
+      if (!p) continue;
+      p.root.rotation.y = spot.face;
+      this.scene.add(p.root);
+      this.pleiadians.push({ p, spot });
+    }
   }
 
   // the crew aboard: `rigs` for each skater (loaded by whoever made the hub), `awake` the unlocked ones, `rider`
@@ -197,6 +213,10 @@ export class HubScene {
       m.rig.mesh.rotation.y = at.face * squeeze;
       if (m.rider) m.rig.boardGroup.rotation.x = this.spin;
       m.rig.mesh.scale.setScalar(SCALE);
+    }
+    for (const { p, spot } of this.pleiadians) {
+      p.update(dt);
+      p.root.position.set(spot.x * squeeze, 0, spot.z);
     }
     //the core: the flame flickers and grows with the bank, the electrons ride their orbits
     const f = HUB.flameMin + (HUB.flameMax - HUB.flameMin) * this.fuel;

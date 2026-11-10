@@ -1156,6 +1156,14 @@ the dice, UNLOCKS, the daily run, the scores and the Gnar levels are all as they
 ones the game already ships; they load in the background a few seconds into the first run (before then the summary
 shows over the street, as it used to). `?ship` shows the hub on its own (`?ship=crew` framed on the crew).
 
+**The Pleiadians** (built Nov 10, 2026, from zack's two references) are the ship's own crew, about ten of them
+standing round the back of the deck behind the skaters: tall, long blond hair, a blue bodysuit with a high collar and
+the pink eight-point star on the heart, a pale blue cape, tall blue boots. Three looks so the deck isn't one person
+cloned (platinum hair and an orange sash; golden hair and pink cuffs; a woman with white-gold hair to the waist), and
+each one has their own height and idle: talking in pairs and threes, nodding along, looking up at the stars through
+the dome, one raising a palm to you. Cosmetic only. Built with the blender bot (`build_pleiadian.py`), under 600
+triangles each.
+
 Small permanent stat buffs are kept rare and capped (for example Heat starts 10% lower, a free reroll per run), so
 skill and builds stay the point, not grinding the tree. Unlocking is mostly *more variety*, not *more power*.
 
