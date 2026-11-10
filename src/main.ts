@@ -233,6 +233,7 @@ function makeHud(): Hud {
   const pausedEl = document.getElementById('paused')!;
   const view = new HudView();
   const dice = new DicePanel(document.getElementById('dice')!, () => FX.reduceMotion);
+  if (location.search.includes('debug')) Object.assign(window, { dicePanel: dice }); // ?debug: the dice screen, for the stills
   const drawMissions = bindMissions([...document.querySelectorAll<HTMLElement>('#paused .missions, #over .missions')], (i) => skipMission(i));
   let level = 0;
   let held: Held[] = [];

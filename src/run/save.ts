@@ -4,7 +4,7 @@ import type { SkaterId } from '../render/skater-rig';
 import { isGrip, type GripId } from '../board/grips';
 import { isDeck, isSkaterId, isUnlockId, type DeckId, type UnlockId } from './meta';
 import { cleanMissions, EMPTY_MISSIONS, type MissionSave } from './missions';
-import { cleanHeadStart, NO_HEAD_START, type HeadStart } from './dice';
+import { cleanHeadStart, DICE, NO_HEAD_START, type HeadStart } from './dice';
 import { store } from '../net/portal';
 
 const KEY = 'gnar-run-save';
@@ -26,6 +26,7 @@ export interface Save {
   actBreaks?: number[]; // the act breaks seen (src/cutscene/act-breaks.ts): each plays once, the first time its act is cleared
   missions: MissionSave; // the three missions showing and Skater Rank (src/run/missions.ts)
   headStart: HeadStart; // what the street dice won for the next run (src/run/dice.ts)
+  diceOwed?: number; // street dice rolls earned but not thrown yet (the app closed on the dice screen): added to the next run's
   crew?: number; // the skater order the save was made under: 2 = Webster free, Lou Gnar last (2026-11-08)
 }
 
@@ -69,6 +70,7 @@ export function loadSave(): Save {
       ...(s.endingSeen ? { endingSeen: true } : {}),
       ...(Array.isArray(s.actBreaks) ? { actBreaks: s.actBreaks.filter((n) => [1, 2, 3, 4].includes(n)) } : {}),
       ...(isGrip(s.tape) ? { tape: s.tape } : {}),
+      ...(Number(s.diceOwed) > 0 ? { diceOwed: Math.min(DICE.maxRolls * 2, Math.floor(Number(s.diceOwed))) } : {}),
     };
   } catch {
     return { ...EMPTY_SAVE, missions: cleanMissions(null) };

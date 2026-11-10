@@ -1,17 +1,19 @@
-// The end-of-run street dice (src/run/dice.ts): real 3D casino dice (src/render/dice3d.ts) on a strip of curb under
-// a street lamp. One big pair at a time (zack, 2026-11-06): the free roll first, then one per chip. Each pair rattles
-// in your hand until you shake the phone or tap ROLL, tumbles onto the curb and lands; the combo it made lights up
-// in the paytable under the title (zack, 2026-11-08: make the combos mean something), and its name and prize stamp in,
-// spelled out (what you got and what it's for). A tap claims it: the prize flies into its spot in the WON row, and if a chip's
-// left, it pops out of the chip count, flies down to your hand and turns into the next pair. Boxcars (the MATCH)
-// glows and flashes gold. A tap while the dice tumble lands them, a tap while a chip flies skips the flight.
-// Reduce motion: the throw and the chip just show where they end up.
+// The end-of-run street dice (src/run/dice.ts): real 3D casino dice thrown with real physics (src/render/dice3d.ts,
+// src/run/dice-physics.ts; zack, 2026-11-10) onto a patch of night street under a lamp. One pair at a time (zack,
+// 2026-11-06): the free roll first, then one per chip. Each pair is in your hand until you throw it: swipe it up the
+// street (it follows your finger and flies the way and as hard as you swiped), shake the phone, or tap (a tap, the ROLL
+// button or a key tosses it). It tumbles, bounces off the curb and the other die, and whatever lands face up is the roll:
+// the game pays it (DiceView.settle), the combo lights up in the paytable under the title (zack, 2026-11-08) and its
+// name and prize stamp in, spelled out. A tap claims it: the prize flies into its spot in the WON row, and if a chip's
+// left, it pops out of the chip count, flies down to your hand and turns into the next pair. Boxcars (the MATCH) glows
+// and flashes gold. A tap while the dice tumble runs the physics to the end at once (same physics, no waiting), a tap
+// while a chip flies skips the flight. Reduce motion: the throw lands at once, the chip just shows where it ends up.
 // Shaking (zack, 2026-11-04): devicemotion, which iOS only allows after a tap asks for it, so on an iPhone the first
-// ROLL tap asks, and shaking works from then on.
-import type { DiceView } from '../game/game';
-import { DICE_MS } from '../game/game';
+// tap or swipe asks, and shaking works from then on.
+import type { DiceRoll, DiceView } from '../game/game';
 import type { PrizeIcon } from '../run/dice';
-import { Dice3D, type DieSlot } from '../render/dice3d';
+import { Dice3D } from '../render/dice3d';
+import type { Face } from '../run/dice';
 import { STOKEN_SVG } from './stoken-icon';
 
 export const SHAKE = {
@@ -45,11 +47,14 @@ export class DicePanel {
   private timers: number[] = [];
   private view: DiceView | null = null;
   private dice3d: Dice3D | null = null;
+  private result: DiceRoll | null = null; // how the pair showing landed
   private at = 0; // the roll showing
   private phase: Phase = 'hand';
   private jolts: number[] = [];
   private last: { x: number; y: number; z: number } | null = null;
   private asked = false; // iOS's motion permission was asked for this session
+  private finger: number | null = null; // the pointer holding the pair, while you drag it
+  private fingerUp = -1e9; // when it let go (the game's tap for that same press is ignored)
   private readonly resize = new ResizeObserver(() => this.layout());
 
   constructor(
@@ -61,6 +66,12 @@ export class DicePanel {
     el.addEventListener('touchend', ask);
     el.addEventListener('click', ask);
     this.resize.observe(el);
+    //a finger on the street picks up the pair in your hand; the game's input captures the pointer, so its moves and
+    //its lift are watched on the window
+    el.querySelector('.table')!.addEventListener('pointerdown', (e) => this.down(e as PointerEvent));
+    window.addEventListener('pointermove', (e) => this.move(e));
+    window.addEventListener('pointerup', (e) => this.up(e));
+    window.addEventListener('pointercancel', (e) => this.up(e));
   }
 
   show(v: DiceView | null): void {
@@ -72,29 +83,34 @@ export class DicePanel {
     this.el.querySelector('.won')!.innerHTML = '';
     if (!this.dice3d) {
       this.dice3d = new Dice3D();
-      this.el.querySelector('.street')!.after(this.dice3d.canvas);
+      this.el.querySelector('.table')!.append(this.dice3d.canvas);
+      this.dice3d.onLand = (faces) => this.landedOn(faces);
     }
+    this.layout();
     this.roll(0, false);
     window.addEventListener('devicemotion', this.onMotion);
   }
 
-  // a tap: throws the pair in your hand, lands one tumbling, claims a landed one (then the next chip flies in), or
+  // a tap: tosses the pair in your hand, lands one tumbling, claims a landed one (then the next chip flies in), or
   // skips a chip's flight. True once the last prize is claimed: the summary's next
   tap(): boolean {
     if (!this.view) return true;
     switch (this.phase) {
       case 'hand':
+        //a press on the street is the finger's: it lifts as a swipe or a tap (up)
+        if (this.finger !== null || performance.now() - this.fingerUp < 350) return false;
         this.throw();
         return false;
       case 'tumble':
-        this.land();
+        if (performance.now() - this.fingerUp < 350) return false;
+        this.dice3d?.finish();
         return false;
       case 'chip':
         this.roll(this.at, false);
         return false;
       case 'landed':
         this.claim();
-        if (this.at + 1 < this.view.rolls.length) this.chipIn(this.at + 1);
+        if (this.at + 1 < this.view.rolls) this.chipIn(this.at + 1);
         else {
           //the last prize flies in too, and the whole WON row stays up until you go on
           this.phase = 'done';
@@ -113,60 +129,57 @@ export class DicePanel {
     this.stop();
     this.at = k;
     this.phase = 'hand';
-    const r = v.rolls[k];
-    const n = v.rolls.length;
+    this.result = null;
+    const n = v.rolls;
     this.el.classList.remove('thrown', 'landed', 'matched', 'flying', 'done');
     this.hit(null);
     this.el.querySelector('.title')!.textContent = n > 1 ? `ROLL ${k + 1} OF ${n}` : 'ROLL ’EM';
     this.el.querySelector('.sub')!.textContent = k === 0 ? 'THE FREE ROLL, EVERY RUN' : 'A CHIP ROLL';
     this.chips(n - 1 - k);
-    this.el.querySelector('.how')!.textContent = this.canShake() ? 'SHAKE YOUR PHONE OR TAP ROLL' : 'TAP ROLL';
+    this.el.querySelector('.how')!.textContent = this.canShake() ? 'SWIPE THE DICE OR SHAKE' : 'SWIPE THE DICE OR TAP ROLL';
     this.button('ROLL ▶', true);
-    this.el.querySelector('.curb')!.innerHTML =
-      `<div class="pair ${r.combo}${r.big ? ' big' : ''}${r.match ? ' match' : ''}">` +
-      `<div class="dice"><div class="die"></div><div class="die"></div></div>` +
-      `<div class="name">${r.name}</div>` +
-      `<div class="prize"><span class="icon">${ICON[r.prize.icon]}</span><span class="what"><b>${r.prize.main}</b><small>${r.prize.sub}</small></span></div></div>`;
-    this.dice3d!.set(r.dice, this.slots(), this.hand(), [DICE_MS - 60, DICE_MS], [r.match, r.match], pop && !this.calm());
-    this.layout();
+    this.el.querySelector('.result')!.innerHTML = '<div class="pair"><div class="name"></div><div class="prize"></div></div>';
+    this.dice3d!.set(pop && !this.calm());
   }
 
-  // the pair leaves your hand
-  private throw(): void {
+  // the pair leaves your hand: a toss (a tap, the button, a key), or a swipe the 3D view already threw. power: a hard
+  // shake throws harder
+  private throw(swiped = false, power = 1): void {
     if (this.phase !== 'hand') return;
     this.phase = 'tumble';
     this.el.classList.add('thrown');
     this.button('', false);
-    if (this.calm()) return this.land();
-    this.dice3d?.throwNow();
-    for (const sel of ['.name', '.prize'])
-      this.anims.push(
-        this.el.querySelector<HTMLElement>(`.pair ${sel}`)!.animate(
-          [
-            { opacity: 0, transform: 'scale(0.4)' },
-            { opacity: 1, transform: 'scale(1.2)', offset: 0.6 },
-            { opacity: 1, transform: 'scale(1)' },
-          ],
-          { duration: 260, delay: DICE_MS, fill: 'backwards' },
-        ),
-      );
-    this.timers.push(window.setTimeout(() => this.land(), DICE_MS + 180));
+    if (!swiped) this.dice3d?.toss(power);
+    if (this.calm()) this.dice3d?.finish();
   }
 
-  // the pair on its result, the prize showing
-  private land(): void {
-    if (this.phase !== 'tumble') return;
-    for (const a of this.anims) a.finish();
-    this.anims = [];
-    for (const t of this.timers) clearTimeout(t);
-    this.timers = [];
-    this.dice3d?.finish();
+  // the dice came to rest: what's face up is the roll, and the game pays it
+  private landedOn(faces: [Face, Face]): void {
+    if (this.phase !== 'tumble' || !this.view) return;
+    const r = this.view.settle(faces);
+    this.result = r;
     this.phase = 'landed';
-    const v = this.view!;
+    this.el.querySelector('.result')!.innerHTML =
+      `<div class="pair ${r.combo}${r.big ? ' big' : ''}${r.match ? ' match' : ''}">` +
+      `<div class="name">${r.name}</div>` +
+      `<div class="prize"><span class="icon">${ICON[r.prize.icon]}</span><span class="what"><b>${r.prize.main}</b><small>${r.prize.sub}</small></span></div></div>`;
+    if (!this.calm())
+      for (const sel of ['.name', '.prize'])
+        this.anims.push(
+          this.el.querySelector<HTMLElement>(`.pair ${sel}`)!.animate(
+            [
+              { opacity: 0, transform: 'scale(0.4)' },
+              { opacity: 1, transform: 'scale(1.2)', offset: 0.6 },
+              { opacity: 1, transform: 'scale(1)' },
+            ],
+            { duration: 260, fill: 'backwards' },
+          ),
+        );
     this.el.classList.add('landed');
-    this.el.classList.toggle('matched', v.rolls[this.at].match);
-    this.hit(v.rolls[this.at].combo);
-    this.button(this.at + 1 < v.rolls.length ? 'NEXT ROLL ▶' : 'COLLECT', true);
+    this.el.classList.toggle('matched', r.match);
+    this.dice3d?.glowing(r.match);
+    this.hit(r.combo);
+    this.button(this.at + 1 < this.view.rolls ? 'NEXT ROLL ▶' : 'COLLECT', true);
   }
 
   // the paytable lights the combo the pair landed on, so you see why it paid what it did
@@ -174,10 +187,41 @@ export class DicePanel {
     for (const e of this.el.querySelectorAll<HTMLElement>('.pays [data-combo]')) e.classList.toggle('hit', e.dataset.combo === combo);
   }
 
+  // a finger on the street: the pair in your hand goes under it
+  private down(e: PointerEvent): void {
+    if (this.phase !== 'hand' || !this.dice3d || this.dice3d.thrown) return;
+    this.finger = e.pointerId;
+    const p = this.onCanvas(e);
+    this.dice3d.hold(p.x, p.y, performance.now());
+  }
+
+  private move(e: PointerEvent): void {
+    if (e.pointerId !== this.finger || !this.dice3d) return;
+    const p = this.onCanvas(e);
+    this.dice3d.drag(p.x, p.y, performance.now());
+  }
+
+  // the finger lifts: a swipe throws the pair the way it went, a tap tosses it
+  private up(e: PointerEvent): void {
+    if (e.pointerId !== this.finger || !this.dice3d) return;
+    this.finger = null;
+    this.fingerUp = performance.now();
+    if (this.phase !== 'hand') return;
+    const p = this.onCanvas(e);
+    this.dice3d.drag(p.x, p.y, performance.now());
+    this.throw(this.dice3d.release(performance.now()));
+  }
+
+  private onCanvas(e: PointerEvent): { x: number; y: number } {
+    const r = this.dice3d!.canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
   // the prize lifts off the curb and flies into its spot in the WON row (zack, 2026-11-08: so you see what you're
   // earning), shrinking into the row's chip and popping it in as it lands
   private claim(): void {
-    const r = this.view!.rolls[this.at];
+    const r = this.result;
+    if (!r) return;
     const won = this.el.querySelector('.won')!;
     const item = document.createElement('span');
     item.className = 'item';
@@ -228,16 +272,16 @@ export class DicePanel {
     this.at = k;
     this.el.classList.remove('thrown', 'landed', 'matched');
     this.el.classList.add('flying');
-    const hand = this.hand(); // before the button hides: your hand is just above it
+    const hand = this.hand();
     this.button('', false);
-    this.dice3d?.set([], [], hand, [], []);
+    this.dice3d?.clear();
     const box = this.el.getBoundingClientRect();
     const from = this.el.querySelector<HTMLElement>('.chips .chip:last-of-type');
     const fr = from?.getBoundingClientRect() ?? { left: box.width / 2, top: 0, width: 30, height: 30 };
-    this.el.querySelector('.title')!.textContent = `ROLL ${k + 1} OF ${this.view!.rolls.length}`;
+    this.el.querySelector('.title')!.textContent = `ROLL ${k + 1} OF ${this.view!.rolls}`;
     this.el.querySelector('.sub')!.textContent = 'A CHIP ROLL';
     //the count drops by one as the chip leaves it
-    this.chips(this.view!.rolls.length - 1 - k);
+    this.chips(this.view!.rolls - 1 - k);
     if (this.calm()) return this.roll(k, false);
     const fly = document.createElement('div');
     fly.className = 'flychip';
@@ -265,31 +309,23 @@ export class DicePanel {
   // the chips left to roll, as a row of chips under the title
   private chips(left: number): void {
     const el = this.el.querySelector<HTMLElement>('.chips')!;
-    el.hidden = left <= 0 && (this.view?.rolls.length ?? 1) <= 1;
+    el.hidden = left <= 0 && (this.view?.rolls ?? 1) <= 1;
     el.innerHTML = `${CHIP.repeat(Math.max(0, left))}<span class="left">${left > 0 ? `×${left} CHIP${left > 1 ? 'S' : ''} LEFT` : 'NO CHIPS LEFT'}</span>`;
   }
 
-  // the pair's slots on the curb, in the panel's pixels
-  private slots(): DieSlot[] {
-    const box = this.el.getBoundingClientRect();
-    return [...this.el.querySelectorAll<HTMLElement>('.die')].map((d) => {
-      const r = d.getBoundingClientRect();
-      return { x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height / 2, size: r.width };
-    });
-  }
-
-  // your hand: just above the ROLL button
+  // your hand, in the panel's pixels: where the pair waits on the street
   private hand(): { x: number; y: number } {
     const box = this.el.getBoundingClientRect();
-    const b = this.el.querySelector<HTMLElement>('.btn')!.getBoundingClientRect();
-    const die = this.el.querySelector<HTMLElement>('.die')?.getBoundingClientRect().width ?? 80;
-    return { x: b.left - box.left + b.width / 2, y: b.top - box.top - die * 0.55 };
+    const c = this.dice3d?.canvas.getBoundingClientRect();
+    if (!this.dice3d || !c) return { x: box.width / 2, y: box.height / 2 };
+    const h = this.dice3d.handOnScreen();
+    return { x: c.left - box.left + h.x, y: c.top - box.top + h.y };
   }
 
   private layout(): void {
     if (!this.view || !this.dice3d) return;
-    const box = this.el.getBoundingClientRect();
-    this.dice3d.layout(box.width, box.height, this.slots(), this.hand());
+    const t = this.el.querySelector<HTMLElement>('.table')!.getBoundingClientRect();
+    this.dice3d.layout(t.width, t.height);
   }
 
   private stop(): void {
@@ -299,6 +335,7 @@ export class DicePanel {
     this.timers = [];
     this.jolts = [];
     this.last = null;
+    this.finger = null;
     for (const f of this.el.querySelectorAll('.flychip')) f.remove();
   }
 
@@ -322,7 +359,7 @@ export class DicePanel {
     ask.call(window.DeviceMotionEvent).catch(() => {});
   }
 
-  // three hard jolts in a row throw the pair in your hand; every jolt rattles it
+  // every hard jolt rattles the pair in your hand; three in a row throw it, as hard as you were shaking
   private readonly onMotion = (e: DeviceMotionEvent): void => {
     const a = e.accelerationIncludingGravity;
     if (!a || a.x === null || a.y === null || a.z === null || this.phase !== 'hand') return;
@@ -334,6 +371,6 @@ export class DicePanel {
     if (d < SHAKE.jolt) return;
     this.dice3d?.rattle(d / (SHAKE.jolt * 2));
     this.jolts = [...this.jolts.filter((t) => now - t < SHAKE.within), now];
-    if (this.jolts.length >= SHAKE.jolts) this.throw();
+    if (this.jolts.length >= SHAKE.jolts) this.throw(false, Math.min(1.5, Math.max(0.8, d / (SHAKE.jolt * 1.6))));
   };
 }

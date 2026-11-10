@@ -1170,7 +1170,7 @@ bot and the tutorial floor don't count.
 ### Street dice and the Match (the end-of-run payout)
 
 Changed Nov 3, 2026 (zack: the slot machine "reads very out of place", dice are street). Every run, won or lost, ends
-with a roll of **two dice on the curb** under a street lamp, before the summary. **Chips** (red casino chips, the old
+with a roll of **two dice on the street** under a street lamp, before the summary. **Chips** (red casino chips, the old
 spin tokens) turn up rarely in runs, and each one found adds a roll. The point is to give the player something even
 when they lose, and the **Match** (from pinball) is the rare roll that feels huge.
 
@@ -1194,18 +1194,29 @@ of red chips under the title ("ROLL 2 OF 4", "x2 CHIPS LEFT"). Once a pair lands
 curb and flies into its spot in the WON row at the bottom (zack, Nov 8, 2026: so you see what you're earning); then the next chip pops out of the row, flies down flipping to your hand and turns
 into the next pair of dice, so you can see what the chips are for. After the last prize flies in, the WON row stays up with CONTINUE, and a tap goes on to the summary.
 
-**Shake your phone or tap ROLL** to throw the pair (it rattles in your hand until then; zack, Nov 4, 2026), and a tap
-while it tumbles lands it. On an iPhone, motion needs a tap to allow it, so
-the first ROLL tap asks and shaking works from then on.
+**Real physics** (zack, Nov 10, 2026: "it would be cool if it was actual physics. like if there was a 3d ground, and
+the dice actually threw based on the players finger swipe or shaking the phone"). The dice are thrown onto a real 3D
+patch of night street: asphalt, the curb and the sidewalk along the back, under a sodium lamp that casts their
+shadows. They are two rigid bodies (cannon-es): they fly, tumble, bounce off the asphalt, the curb and each other, and
+**whatever lands face up is the roll**; nothing is decided ahead of the throw. Invisible walls at the edges of the view
+keep a hard throw on screen in portrait and landscape. A die that comes to rest cocked (leaning on the curb or on the
+other die) doesn't count, like on the street: it gets a nudge until it lies flat. The physics was tested fair: every
+face comes up about as often over hundreds of throws.
 
-The dice are **real 3D casino dice** (zack, Nov 4, 2026, with a casino dice photo): sharp-edged, see-through red with
-flush opaque white pips, glossy, the far side's pips showing faintly through. They tumble onto the curb from your
-hand, bounce twice and settle with the result facing you; the MATCH's dice glow a hotter red. Every prize is spelled
-out under its dice: an icon (the HUD's Stoken particle, $, a boon bolt, a heart, a grip), what you got in big letters
-("+5 STOKEN", "$40 HEAD START", "MATCH! +2 HEARTS") and a line on what it's for ("banked, for unlocks", "next run
-starts with 5 ♥"). The roll is decided and banked when the run ends, so closing the app doesn't lose it.
+Three ways to throw:
+- **Swipe**: put a finger on the street and the pair goes under it (it follows your finger while you hold); swipe up
+  the street and let go, and the dice fly the way you swiped and as hard (a short flick is a soft toss, a long fast
+  swipe a hard one; a swipe sideways or back still sends them up the street). Works with a mouse drag on a computer.
+- **Shake**: the pair rattles in your hand while you shake the phone; three hard jolts throw it, harder the harder you
+  shook (zack, Nov 4, 2026). On an iPhone motion needs a tap to allow it, so the first tap or swipe asks and shaking
+  works from then on.
+- **Tap**: a tap that doesn't swipe, the ROLL button or Space tosses the pair up the street (the desktop fallback).
+A tap while the dice tumble runs the same physics to the end at once (no waiting; the result is still the physics').
+Reduce motion does the same on every throw.
 
-Built Nov 3, 2026, 3D and shake Nov 4 (src/run/dice.ts, src/ui/dice-panel.ts, src/render/dice3d.ts; chips are placed by src/gen/spin-tokens.ts): one free roll
+On a phone held sideways the words and the paytable sit down the left and the street fills the right, top to bottom.
+
+Built Nov 3, 2026, 3D and shake Nov 4, physics Nov 10 (src/run/dice.ts, src/run/dice-physics.ts, src/ui/dice-panel.ts, src/render/dice3d.ts; chips are placed by src/gen/spin-tokens.ts): one free roll
 plus one per chip, 6 rolls at most. A chip is found in a smashed prop now and then (15% of floors), at the top of a
 side line a quarter of the time, on the top route, in the sky and DIY stashes, from the golden pigeon and the sewer
 alligator. Chips found on a floor you continue from are lost with the rest of that floor. No dice sound yet (the
