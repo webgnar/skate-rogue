@@ -1,6 +1,6 @@
-// Renders the icons from the HUD's SKATE ESCAPE mark: node scripts/make-icons.mjs
-// (the iOS app icon is the skater from the capsule art now: python3 scripts/ios/app-icon.py)
-//   public/icons/        the home screen icons of the web build
+// Renders the iOS launch screen from the HUD's SKATE ESCAPE mark: node scripts/make-icons.mjs
+// (the iOS app icon and the web home screen icons are the skater from the capsule art now:
+//  python3 scripts/ios/app-icon.py)
 //   ios/App/App/Assets.xcassets/Splash.imageset      the iOS launch screen (needs ffmpeg), 2732 px square, drawn like the loading
 //                                                    screen in index.html so the hand-off to it doesn't jump
 import { execFileSync } from 'node:child_process';
@@ -9,14 +9,6 @@ import { chromium } from 'playwright';
 
 const font = readFileSync(new URL('../node_modules/@fontsource/bangers/files/bangers-latin-400-normal.woff2', import.meta.url)).toString('base64');
 const face = `@font-face { font-family: Bangers; src: url(data:font/woff2;base64,${font}); }`;
-const icon = (size) => `<style>
-  ${face}
-  html, body { margin: 0; width: ${size}px; height: ${size}px; overflow: hidden; }
-  body { display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #4a2f80, #2a1d4a 70%); }
-  .mark { font: ${size * 0.22}px/0.86 Bangers; text-align: center; transform: skewX(-8deg) rotate(-6deg);
-    -webkit-text-stroke: ${size * 0.02}px #000; paint-order: stroke fill; text-shadow: ${size * 0.02}px ${size * 0.024}px 0 #000; }
-  .gnar { color: #ffe23a; display: block; } .run { color: #ff2fb4; display: block; }
-</style><div class="mark"><b class="gnar">SKATE</b><b class="run">ESCAPE</b></div>`;
 // the launch screen fills the phone's screen from the middle (scaleAspectFill), so only about the middle 1260 px of
 // the 2732 show on a phone, either way up: the mark sits well inside that
 const splash = (size) => `<style>
@@ -44,7 +36,6 @@ const shoot = async (html, size, path) => {
   await p.screenshot({ path });
   await p.close();
 };
-for (const [name, size] of [['apple-touch-icon.png', 180], ['icon-192.png', 192], ['icon-512.png', 512]]) await shoot(icon(size), size, `public/icons/${name}`);
 // one image for every screen scale (Splash.imageset/Contents.json): the launch screen is a backdrop, and three
 // copies would be 5 MB more app for nothing
 await shoot(splash(2732), 2732, `${ASSETS}/Splash.imageset/splash-2732x2732.png`);

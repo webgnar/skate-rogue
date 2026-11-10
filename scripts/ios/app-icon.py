@@ -1,6 +1,7 @@
 """Skate Escape's iOS app icon: the skater from zack's capsule art on a comic burst.
 
     python3 scripts/ios/app-icon.py               # the chosen option -> the iOS AppIcon (1024 px, no alpha)
+                                                  #   and the web home screen icons in public/icons/
     python3 scripts/ios/app-icon.py --all <dir>   # every color option, to compare
 
 The skater is art/app-icon/skater-cutout.png, cut from art/store-covers/capsule-original.png
@@ -116,4 +117,7 @@ if len(sys.argv) > 2 and sys.argv[1] == '--all':
     for name in OPTIONS:
         render(name).save(f'{sys.argv[2]}/{name}.png'); print(name)
 else:
-    render(CHOSEN).save(ICON); print(CHOSEN, '->', ICON)
+    im = render(CHOSEN); im.save(ICON); print(CHOSEN, '->', ICON)
+    # the web build's home screen icons are the same picture
+    for name, size in (('apple-touch-icon.png', 180), ('icon-192.png', 192), ('icon-512.png', 512)):
+        im.resize((size, size), Image.LANCZOS).save(f'public/icons/{name}'); print('->', f'public/icons/{name}')
