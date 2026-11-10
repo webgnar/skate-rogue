@@ -9,6 +9,7 @@
 //  4 to 5  "...Whoa."          off the last blimp into space, a slow flip, the rocket launches from the city
 import * as THREE from 'three';
 import { BASE, CLIPS, mix as mixPose, sample, type Pose } from '../render/poses';
+import type { SampleId } from '../audio/cues';
 import { SCALE, type SkaterRig } from '../render/skater-rig';
 import { makeDrone } from '../render/drone-view';
 import { makeParkedCruiser } from '../render/kit';
@@ -42,7 +43,16 @@ export interface CutsceneUi {
   skip(show: boolean): void;
   // a white flash over everything, 0 to 1
   flash(k: number): void;
+  // one of the game's sounds (src/audio/cues.ts), at its own level times `scale`, at a playback rate
+  sfx?(sample: SampleId, scale: number, rate: number): void;
 }
+
+// the cutscenes' sounds (zack 2026-11-10: "add sounds to the cutscenes using the existing sounds we have"): the
+// game's own one-shots on the action's beats, and its loops (wheels, grind, siren) while they ride. Slow motion plays
+// a sound an octave down (half rate), so it stays in key (cues.ts KEY)
+type Sfx = { at: number; s: SampleId; k: number; r: number };
+type LoopSpan = { from: number; to: number; mode: 'roll' | 'grind' | 'air'; speed: number; heat: number };
+const SLOW = 0.5;
 
 // a line of dialogue: who says it (a key into the scene's speakers), when, and what
 type Line = { from: number; to: number; who: string; text: string };
@@ -93,6 +103,39 @@ export class ActBreakScene {
   private readonly speakers = new Map<string, () => THREE.Vector3>();
   private readonly play: (t: number, dt: number) => void;
   private t = 0;
+  private sounds: Sfx[] = [];
+  private spans: LoopSpan[] = [];
+  private heard = -1; // the sounds are played up to here
+
+  // a sound at `at` s (scale on its level, rate on its pitch)
+  private sfx(at: number, s: SampleId, k = 1, r = 1): void {
+    this.sounds.push({ at, s, k, r });
+  }
+
+  // the wheels (speed in the game's px a frame, 6 is full) or the grind from `from` to `to`; heat brings the siren in
+  private loop(from: number, to: number, mode: LoopSpan['mode'], speed = 5, heat = 0): void {
+    this.spans.push({ from, to, mode, speed, heat });
+  }
+
+  // what the street's loops should be doing now (the game sets its sound from this while the cutscene plays)
+  loops(): { mode: string; speed: number; heat: number } | null {
+    if (this.done) return null;
+    const on = this.spans.filter((s) => this.t >= s.from && this.t < s.to);
+    if (!on.length) return { mode: 'air', speed: 0, heat: 0 };
+    const heat = Math.max(...on.map((s) => s.heat));
+    const ride = on.find((s) => s.mode !== 'air') ?? on[0];
+    return { mode: ride.mode, speed: ride.speed, heat };
+  }
+
+  // the one-shots the clock's just passed (none while held on a still)
+  private hear(): void {
+    if (this.held) {
+      this.heard = this.t;
+      return;
+    }
+    for (const c of this.sounds) if (c.at > this.heard && c.at <= this.t) this.ui.sfx?.(c.s, c.k, c.r);
+    this.heard = this.t;
+  }
   private done = false;
   private skipFor = 0;
   private said = '';
@@ -141,6 +184,7 @@ export class ActBreakScene {
   frame(dt: number): void {
     if (this.done) return;
     if (!this.held) this.t += dt;
+    this.hear();
     if (this.skipFor > 0) {
       this.skipFor -= dt;
       if (this.skipFor <= 0) this.ui.skip(false);
@@ -328,6 +372,21 @@ export class ActBreakScene {
       { t: 9.6, p: V(ESCAPE.x0 + 0.6, rail[1], railZ), leg: 'grind' },
       { t: 10.0, p: V(ESCAPE.x0 - 0.5, ROOF_Y, -6.5), leg: 'ollie' },
     ];
+    //the sounds: the sirens all the way, wheels in the near lane, up the fire escape (hops, grinds), the big ollie
+    //off the roof and its landing
+    this.loop(0, ACT_BREAK_LEN[1], 'air', 0, 80);
+    this.loop(0, 3.4, 'roll', 5);
+    for (const [i, h] of hops.entries()) {
+      if (h.leg === 'ollie' && i > 0) this.sfx(hops[i - 1].t, 'ollie', 0.9);
+      const next = hops[i + 1];
+      if (next?.leg === 'grind') this.loop(h.t, next.t, 'grind');
+      else if (h.leg !== 'grind' && i > 0) this.sfx(h.t, h.p.y > 5 ? 'impact' : 'clack', 0.6);
+    }
+    this.loop(15.9, 17.6, 'roll', 4);
+    this.sfx(17.6, 'ollie');
+    this.sfx(19.1, 'impact');
+    this.sfx(19.1, 'slam', 0.6);
+    this.loop(19.1, 20.5, 'roll', 5);
     return (t, dt) => {
       c.update(t, dt);
       for (const j of jam) j.flash(t);
@@ -575,6 +634,19 @@ export class ActBreakScene {
       const x = landAt.x + s * 5 + s * s * 4;
       return { p: V(x, hillY(x), HILL.z), yaw: 0, roll: -slope, pose: clipAt('ride', t) };
     };
+    //the sounds: onto the wire, the grind, the spark's bang in the substation, the billboards flipping, the slow
+    //kickflip off and the big landing, then bombing the hill
+    this.loop(0, 2.8, 'roll', 5);
+    this.sfx(2.8, 'ollie');
+    this.sfx(3.4, 'clack', 0.6);
+    this.loop(3.4, 17, 'grind');
+    this.sfx(8.4, 'smash', 0.9, SLOW);
+    for (let i = 0; i < 3; i++) this.sfx(9.2 + i * 0.35, 'mod', 0.6);
+    this.sfx(17, 'ollie', 1, SLOW);
+    this.sfx(17.1, 'trick', 1, SLOW);
+    this.sfx(19.8, 'impact');
+    this.sfx(19.8, 'slam', 0.5);
+    this.loop(19.8, 22.5, 'roll', 6);
     return (t, dt) => {
       c.update(t, dt);
       sparks.update(dt);
@@ -841,6 +913,19 @@ export class ActBreakScene {
       return { p: V(x, BACK, street), pose, roll: 0 };
     };
 
+    //the sounds: the run-in and the ramp, the pop off the coping, the slow tre, the landing on the blimp, the
+    //gunships' eyes coming on, and the kick-up at the end
+    this.loop(0, TQ, 'roll', 4.5);
+    this.loop(TQ, TUP, 'roll', 6);
+    this.sfx(TQ, 'kicker', 0.7);
+    this.sfx(TUP, 'ollie');
+    this.sfx(timeAt(TRE[0]), 'trick', 1, SLOW);
+    this.sfx(LAND, 'impact');
+    this.sfx(LAND, 'land_sketchy', 0.5);
+    this.loop(LAND, LAND + slide, 'roll', 4);
+    for (let i = 0; i < ships.length; i++) this.sfx(D + 9.4 + i * 0.35, 'gun_aim', 0.4);
+    this.sfx(D + 14.2, 'ollie', 0.7);
+    this.sfx(D + 14.8, 'impact', 0.4);
     return (t, dt) => {
       const shotNo = t < C1 ? 1 : t < C2 ? 2 : t < C3 ? 3 : t < C4 ? 4 : t < C5 ? 5 : t < C6 ? 6 : 7;
       const below = shotNo <= 2;
@@ -999,6 +1084,15 @@ export class ActBreakScene {
     });
     const cloudsAt = cloudLayer(0, { n: 90, r: 260 });
     this.scene.add(cloudsAt);
+    //the sounds: wheels on the blimp, off its nose, the toe catching the board, the slow flip, the silo, the rocket
+    this.loop(0, 3, 'roll', 6);
+    this.sfx(0.4, 'drone_down', 0.8);
+    this.sfx(3, 'ollie');
+    this.sfx(6.6, 'clack', 0.7);
+    this.sfx(7, 'trick', 1, SLOW);
+    this.sfx(9.2, 'door_slam', 0.8, SLOW);
+    this.sfx(10.2, 'car_wreck', 0.9, SLOW);
+    this.sfx(13, 'gun_shot', 0.6, SLOW);
     return (t, dt) => {
       const inCity = t >= 9 && t < 13;
       cityGroup.visible = inCity;

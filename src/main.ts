@@ -54,7 +54,7 @@ import { DevPanel } from './ui/dev-panel';
 import { BoardView } from './render/board-view';
 import { loadCityTiles } from './render/textures';
 import { Sound } from './audio/sound';
-import { MUSIC } from './audio/cues';
+import { cueOf, MUSIC } from './audio/cues';
 import { SETTINGS, buzz, loadSettings, saveSettings } from './ui/settings';
 import { tilt } from './render/tilt';
 import { SettingsPanel } from './ui/settings-panel';
@@ -883,19 +883,20 @@ async function start() {
       cutAi.classList.add('on');
       sound.aiTone();
     },
+    sfx: (sample, scale, rate) => sound.play(cueOf(sample, scale, rate)),
     skip: (show) => cutSkip.classList.toggle('on', show),
     flash: (k) => {
       cutFlash.style.opacity = String(Math.max(0, Math.min(1, k)));
     },
   };
-  const playActBreak = (act: number, done: () => void, force = false): { frame(dt: number): void; tap(): void } | null => {
+  const playActBreak = (act: number, done: () => void, force = false): Game['cinema'] => {
     if (!isActBreak(act)) return null;
     if (!aboard.ready) {
       //the crew's models aren't in yet (a fast escape, a slow phone): the run holds until they are, then it plays;
       //if they never come, the run goes on without it
       if (!force && (loadSave().actBreaks ?? []).includes(act)) return null;
       void aboard.load(base, meshy).catch((err) => console.warn('ship hub', err));
-      let real: { frame(dt: number): void; tap(): void } | null = null;
+      let real: Game['cinema'] = null;
       let waited = 0;
       let over = false;
       return {
@@ -910,6 +911,7 @@ async function start() {
           }
         },
         tap: () => real?.tap(),
+        loops: () => real?.loops?.() ?? null,
       };
     }
     return startActBreak(act, done, force);

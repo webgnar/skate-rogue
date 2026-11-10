@@ -341,12 +341,13 @@ export class Game {
   titleDraw: ((dt: number) => void) | null = null; // draws the title's own scene in place of the street (src/title)
   // a cutscene drawn in place of the street (the Chapter 1 ending, src/ship/ending-scene.ts): taps go to it, the run
   // waits for it
-  cinema: { frame(dt: number): void; tap(): void } | null = null;
+  // a cutscene playing over the run; `loops` is what its street sounds should be doing (wheels, grind, sirens)
+  cinema: { frame(dt: number): void; tap(): void; loops?(): { mode: string; speed: number; heat: number } | null } | null = null;
   // act 5 won: play the ending, then call done (main.ts makes it; null, or no ending ready: straight to the summary)
   playEnding: ((done: () => void, full?: boolean) => { frame(dt: number): void; tap(): void } | null) | null = null;
   // acts 1 to 4 cleared: their act break the first time (src/cutscene/act-breaks.ts), then call done (main.ts makes
   // it; null: none to play, skate straight on)
-  playActBreak: ((act: number, done: () => void) => { frame(dt: number): void; tap(): void } | null) | null = null;
+  playActBreak: ((act: number, done: () => void) => Game['cinema']) | null = null;
   // what's drawn behind the run summary in place of the street (the ship hub, src/ship/hub-scene.ts); false: not ready
   backdrop: ((dt: number) => boolean) | null = null;
   titled = false; // held still under the title screen (src/ui/title.ts) until SKATE: the street drawn, the title music on
@@ -1457,7 +1458,9 @@ export class Game {
     //a cutscene: a tap is its own (to skip), the run holds still behind it
     if (this.cinema) {
       if (this.input.takePress()) this.cinema.tap();
-      this.sound?.update({ mode: 'roll', speed: 0, heat: 0, skating: false, over: true, paused: false });
+      //(the cutscene's own wheels, grinds and sirens, under the title music)
+      const loops = this.cinema.loops?.() ?? null;
+      this.sound?.update({ mode: loops?.mode ?? 'roll', speed: loops?.speed ?? 0, heat: loops?.heat ?? 0, skating: !!loops, over: true, paused: false });
       this.cinema?.frame(realDt);
       return;
     }
