@@ -16,6 +16,10 @@ const config: CapacitorConfig = {
     // the game is one page; nothing should rubber-band or zoom
     preferredContentMode: 'mobile',
   },
+  plugins: {
+    // Capacitor's built-in system bars: hidden fades the home bar after a moment (and keeps the status bar off)
+    SystemBars: { hidden: true },
+  },
 };
 
 export default config;

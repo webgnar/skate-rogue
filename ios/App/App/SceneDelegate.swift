@@ -23,11 +23,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 
-// The game's screen: the Capacitor web view with the iPhone's system chrome kept out of a one-tap game's way. The
-// home bar fades after a moment and a swipe at a screen edge needs a second swipe, so a tap near the bottom or top
-// never throws the player out of a run. (The status bar is hidden for the whole app in Info.plist.)
+// The game's screen: the Capacitor web view with the iPhone's system chrome kept out of a one-tap game's way. A swipe
+// at a screen edge needs a second swipe, so a tap near the bottom or top never throws the player out of a run. The
+// home bar's fade is Capacitor's own (SystemBars hidden in capacitor.config.ts: Capacitor declares
+// prefersHomeIndicatorAutoHidden public, not open, so it can't be overridden here). The status bar is hidden for the
+// whole app in Info.plist.
 class GameViewController: CAPBridgeViewController {
-    override var prefersHomeIndicatorAutoHidden: Bool { true }
     override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { .all }
     override var prefersStatusBarHidden: Bool { true }
 }
