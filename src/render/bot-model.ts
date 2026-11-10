@@ -4,7 +4,7 @@
 // to face +x (the way the code-built animals faced), feet on y 0.
 // Loaded with the other models on the loading screen; when one fails, its caller falls back to what it drew before.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { gltfLoader } from './gltf';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { toon } from './toon';
 
@@ -27,7 +27,7 @@ export class BotModel {
 
   async load(base: string): Promise<void> {
     try {
-      const g = await new GLTFLoader().loadAsync(`${base}models/${this.file}`);
+      const g = await gltfLoader().loadAsync(`${base}models/${this.file}`);
       this.gltf = { scene: g.scene, animations: g.animations };
     } catch (err) {
       console.warn(`${this.file} failed to load, using the built-in one`, err);

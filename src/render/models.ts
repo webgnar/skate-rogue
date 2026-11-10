@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { DEPTH, depthStep } from './depth';
 import { railMetal } from './rail-metal';
 import { shareGeometry } from './dispose';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { gltfLoader } from './gltf';
 
 const parts = new Map<string, THREE.Mesh>();
 // parts asked for that no model had: drawn as the code-built fallback (or not at all); the playtest bot reports them
@@ -30,7 +30,7 @@ export const MODEL_FILES = [...FILES, ...LATER];
 
 // onFile: called as each file is in (or failed), for the loading screen's meter
 export async function loadModels(base: string, files = FILES, onFile?: () => void): Promise<void> {
-  const loader = new GLTFLoader();
+  const loader = gltfLoader();
   await Promise.all(
     files.map(async (file) => {
       try {

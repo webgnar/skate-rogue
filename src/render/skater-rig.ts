@@ -5,7 +5,7 @@
 // When the Blender model (public/models/lou-gnar.glb, built by art/lou_gnar.py) loads, the parts are hidden and
 // become drivers: each frame the model's bones copy the joints, so the clips pose the skinned suit the same way.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { gltfLoader } from './gltf';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { toon } from './toon';
 import { bearingCaps, deckDecal, deckPaint, paintDeckBase, paintGrip, wearBoard, wearShoes } from './wear';
@@ -270,7 +270,7 @@ export class SkaterRig {
     // ?v: the skater files at public/models/<name>.glb held the Meshy models for a day (PR #332) before the old ones
     // came back (#334); a new address keeps a phone from showing a cached Meshy model with MODELS on OLD
     const load = (file: string) =>
-      new GLTFLoader().loadAsync(`${base}models/${file}${file.startsWith('board') ? '' : `?v=${SKATER_FILES}`}`).catch((err) => {
+      gltfLoader().loadAsync(`${base}models/${file}${file.startsWith('board') ? '' : `?v=${SKATER_FILES}`}`).catch((err) => {
         console.warn(`${file} failed to load, using the built-in one`, err);
         return undefined;
       });

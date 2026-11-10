@@ -4,6 +4,7 @@
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { compressAll } from './meshopt.mjs';
 
 const DIR = 'dist-crazygames';
 const ZIP = 'dist-crazygames.zip';
@@ -35,6 +36,11 @@ for (const name of readdirSync(join(DIR, 'music')).filter((n) => n.endsWith('.mp
     console.warn(`ffmpeg unavailable or failed: ${name} kept at its full bitrate`);
   }
 }
+
+// the models' meshes, losslessly compressed (EXT_meshopt_compression, scripts/crazygames/meshopt.mjs); the game decodes
+// them through src/render/gltf.ts. About half the models' size
+const squeezed = await compressAll(join(DIR, 'models'));
+console.log(`meshes compressed: ${(squeezed.before / 1048576).toFixed(1)} MB -> ${(squeezed.after / 1048576).toFixed(1)} MB`);
 
 const files = [];
 const walk = (d) => {

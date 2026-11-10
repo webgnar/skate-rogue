@@ -3,7 +3,7 @@
 // game into public/models/gear.glb), the deck is the game's board (board.glb), and the bearing is built here. A gold
 // ring turns behind it so it stands out from the street.
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { gltfLoader } from './gltf';
 import type { GearPart } from '../run/gear';
 import { inkify } from './toon';
 
@@ -68,7 +68,7 @@ export class SupplyView {
 
   // the models, from the game's public folder
   async load(base: string): Promise<void> {
-    const loader = new GLTFLoader();
+    const loader = gltfLoader();
     const [gear, board] = await Promise.all([loader.loadAsync(`${base}models/gear.glb`).catch(() => null), loader.loadAsync(`${base}models/board.glb`).catch(() => null)]);
     const pick = (root: THREE.Object3D | undefined, name: string) => root?.getObjectByName(name)?.clone();
     const shoe = pick(gear?.scene, 'Shoe');
