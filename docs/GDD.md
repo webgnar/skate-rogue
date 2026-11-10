@@ -1136,8 +1136,8 @@ they paid for Webster (src/run/save.ts, moveCrew).
 
 Each deck has its own shape (Nov 8, 2026, from zack's references; art/board.py builds all four, board.glb and
 board-<id>.glb): the Popsicle as before; the Cruiser wide with a pointed nose and a square tail, orange underneath
-with a bolt; the Downhill a slalom deck, narrow, the nose tapering straight to a point, nearly flat, plain red with
-amber wheels; the Slab an 80s pool deck, wide with a waist above the tail, two grip patches with bare deck between,
+with a bolt; the Downhill a longboard (Nov 10), totally flat with no kicks and no concave, a pintail outline
+widest in the middle, a rounded point at the nose and a fuller round tail, plain red with amber wheels; the Slab an 80s pool deck, wide with a waist above the tail, two grip patches with bare deck between,
 blue wheels and blue plastic underneath (rails, a nose guard, a tail skid), a red, blue and yellow sunburst. All keep
 the seven coloured plies on the edge. You ride your deck's shape; the shop's new deck graphics go on whichever
 you ride.

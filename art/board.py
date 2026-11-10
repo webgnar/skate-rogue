@@ -31,8 +31,9 @@ SHAPES = {
     'popsicle': {'width': 1.0, 'nose_kick': 0.3},
     # a Zip Zinger style cruiser: wide, a pointed nose with a flat tip, a square tail with round corners
     'cruiser': {'width': 1.12, 'nose_kick': 0.14, 'wheel': 0xF1E6CF},
-    # Downhill: a slalom deck, narrow, the nose tapering straight to a point, a round tail, nearly flat, amber wheels
-    'bombhill': {'width': 0.88, 'nose_kick': 0.07, 'wheel': 0xF2B233},
+    # Downhill: a longboard, totally flat (no kicks, no concave), a long pintail outline widest at the middle that
+    # tapers in to a rounded point at the nose and a fuller round tail, amber wheels (zack, 2026-11-10)
+    'bombhill': {'width': 1.06, 'nose_kick': 0.0, 'tail_kick': 0.0, 'concave': 0.0, 'wheel': 0xF2B233},
     # Slab: an 80s pool deck, wide, a waist above the tail, a round nose, two grip patches with the deck bare
     # between them, and blue plastic under it: a nose guard, two rails and a tail skid (zack: "with the plastic
     # accents on the bottom")
@@ -147,10 +148,11 @@ def link(name, bm, mats):
 
 def centreline():
     """The deck's profile: flat, a curve of 2·BEND into the kick, then straight out to x = ±TAIL. The tail always
-    kicks KICK (the pop poses strike it on the ground); the nose kicks the deck's own nose_kick. Returns
+    kicks KICK (the pop poses strike it on the ground) unless the deck sets its own tail_kick (the flat Downhill); the
+    nose kicks the deck's own nose_kick. Returns
     (arc length of each half: (nose, tail), f(u) -> (x, z, angle)), u + toward the nose."""
     ends = {}
-    for side, kick in ((1, SHAPES[SHAPE]['nose_kick']), (-1, KICK)):
+    for side, kick in ((1, SHAPES[SHAPE]['nose_kick']), (-1, SHAPES[SHAPE].get('tail_kick', KICK))):
         ends[side] = half_line(kick)
 
     def at(u):
@@ -215,10 +217,9 @@ def half_width(u, halves):
         over = a - (end - tip)
         return arch if over <= 0 else min(arch, math.sqrt(max(tip * tip - over * over, 0.0)))
     if SHAPE == 'bombhill':
-        if u < 0:
-            return cap(r, 0.75 * r)
-        t = max(0.0, (a - 0.24) / (end - 0.24))
-        return 0.26 * r + (r - 0.26 * r) * (1 - t)
+        # a pintail: an oval, sharper toward the nose and fuller toward the tail, both ends rounding in smoothly
+        k, p = (1.8, 0.7) if u >= 0 else (3.0, 0.5)
+        return r * max(1 - (a / end) ** k, 0.0) ** p
     if SHAPE == 'slab':
         if u >= 0:  # tapering a little into a round nose
             c = r * (1 - 0.1 * smooth((a - 0.02) / 0.36))
@@ -256,7 +257,7 @@ def deck(mats):
             v = (j / rows * 2 - 1) * hw
             # concave across the middle, fading out up the kicks
             fade = max(0.0, 1 - max(0.0, abs(u) - (FLAT - BEND)) / (end - FLAT + BEND))
-            c = CONCAVE * (v / r) ** 2 * fade
+            c = shape.get('concave', CONCAVE) * (v / r) ** 2 * fade
             line.append(bm.verts.new((x, v, z + c)))
         grid.append(line)
     for a, b in zip(grid, grid[1:]):
