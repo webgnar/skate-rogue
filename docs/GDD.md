@@ -1384,7 +1384,7 @@ zack picked these from a brainstorm (thread "Brainstorm end-of-act cutscenes"), 
 are built (Nov 9, 2026): `src/cutscene/act-breaks.ts` plays each in the engine with the game's own models as props
 (the title city, the cruisers, the chopper, the drones, the gunships, the saucer), once per save (`actBreaks`), after
 the act's escape and before the next act starts; a tap shows SKIP and a second tap skips. The skater speaks in comic
-speech bubbles and the AI in red caps (no voice acting yet). Test links: `?cutscene=act1` to `?cutscene=act4` plays one alone; `?escape=1` to `?escape=4` starts on that act's escape and plays its cutscene when you clear it, every time. Act 1 ends on them ollieing off the roof back down to the street (zack, Nov 9). Each one is two beats: **you rise** (your skater reaches the new height and gets a
+speech bubbles and the AI in red caps (no voice acting yet). Test links: `?cutscene=act1` to `?cutscene=act4` plays one, then starts the run on the next act's first floor; `?escape=1` to `?escape=4` starts on that act's escape and plays its cutscene when you clear it, every time. Act 1 ends on them ollieing off the roof back down to the street (zack, Nov 9). Each one is two beats: **you rise** (your skater reaches the new height and gets a
 breather) and **the AI answers** (it sends the next hunter). Length is whatever makes it good (zack: "length can go
 as long as we need them to"), so these break the 3-5 s rule above; they still play once and skip like the rest. The
 skater's lines are the same whoever you play; the cutscene uses the selected skater's mesh. They have dialogue, so

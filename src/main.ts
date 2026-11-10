@@ -502,7 +502,9 @@ async function start() {
   const input = new OneButton(document.getElementById('app')!);
   //test URLs (src/bot/repro.ts): ?escape=2 starts on act 2's escape, ?boons=bigPop,grease holds those, ?danger=3 is rush-hour traffic
   const escape = Math.min(ACTS, Math.max(0, Math.floor(Number(params.get('escape')) || (params.has('shop') ? 1 : 0)))); // ?shop: act 1's escape, to the shop
-  const startAt = escape ? escape * FLOORS_PER_ACT : Math.max(1, Math.floor(Number(params.get('floor')) || 1));
+  //?cutscene=actN: the act break plays first, then the run starts on the next act's first floor
+  const cutAct = Math.min(ACTS - 1, Math.max(0, Number((params.get('cutscene') ?? '').replace(/^act/, '')) || 0));
+  const startAt = escape ? escape * FLOORS_PER_ACT : cutAct ? cutAct * FLOORS_PER_ACT + 1 : Math.max(1, Math.floor(Number(params.get('floor')) || 1));
   const danger = Math.min(3, Math.max(1, Math.floor(Number(params.get('danger')) || 1)));
   //a new phone starts on the tutorial floor (?tutorial shows it again; a test URL skips it)
   const testing = ['floor', 'seed', 'biome', 'daily', 'gnar', 'escape', 'boons', 'bot'].some((k) => params.has(k));
