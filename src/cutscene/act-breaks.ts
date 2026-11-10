@@ -16,6 +16,7 @@ import { makeParkedCruiser } from '../render/kit';
 import { makeRocket } from '../render/chaser-view';
 import { makeGunship } from '../render/car-damage';
 import { Particles } from '../render/particles';
+import { Impacts } from '../render/impact';
 import { inkify, setInkLens, setInkResolution } from '../render/toon';
 import { DUSK } from '../title/city';
 import { clouds as cloudSea, skyMaterial, stars as starField } from '../ship/ending-scene';
@@ -53,6 +54,8 @@ export interface CutsceneUi {
 type Sfx = { at: number; s: SampleId; k: number; r: number };
 type LoopSpan = { from: number; to: number; mode: 'roll' | 'grind' | 'air'; speed: number; heat: number };
 const SLOW = 0.5;
+// the game's bursts are sized to its own world (a tile a unit); the cutscenes are in metres, the skater bigger
+const BURST_SCALE = 2.6;
 
 // a line of dialogue: who says it (a key into the scene's speakers), when, and what
 type Line = { from: number; to: number; who: string; text: string };
@@ -106,6 +109,27 @@ export class ActBreakScene {
   private sounds: Sfx[] = [];
   private spans: LoopSpan[] = [];
   private heard = -1; // the sounds are played up to here
+  private beats: { at: number; fn: () => void }[] = []; // effects on the clock (the landings' impact bursts)
+  private bursts: Impacts | null = null;
+
+  // the game's landing burst (src/render/impact.ts, the inked cylinder) at `at` s, round `where`, size as in the game
+  private boom(at: number, where: THREE.Vector3, size: number): void {
+    this.bursts ??= new Impacts(() => this.renderer.getPixelRatio());
+    if (!this.bursts.group.parent) this.scene.add(this.bursts.group);
+    const b = this.bursts;
+    const p = where.clone();
+    this.beats.push({
+      at,
+      fn: () => {
+        b.spawn(p.x, p.y, size * BURST_SCALE);
+        const m = b.group.children.at(-1)!;
+        m.position.copy(p);
+        //(the game draws it in a pass over the street; here it's one scene, and it writes no depth, so it draws after
+        //the solid things or whatever's behind it paints over it)
+        m.renderOrder = 10;
+      },
+    });
+  }
 
   // a sound at `at` s (scale on its level, rate on its pitch)
   private sfx(at: number, s: SampleId, k = 1, r = 1): void {
@@ -134,6 +158,7 @@ export class ActBreakScene {
       return;
     }
     for (const c of this.sounds) if (c.at > this.heard && c.at <= this.t) this.ui.sfx?.(c.s, c.k, c.r);
+    for (const b of this.beats) if (b.at > this.heard && b.at <= this.t) b.fn();
     this.heard = this.t;
   }
   private done = false;
@@ -185,6 +210,7 @@ export class ActBreakScene {
     if (this.done) return;
     if (!this.held) this.t += dt;
     this.hear();
+    this.bursts?.update(this.held ? 0 : dt);
     if (this.skipFor > 0) {
       this.skipFor -= dt;
       if (this.skipFor <= 0) this.ui.skip(false);
@@ -380,11 +406,19 @@ export class ActBreakScene {
       if (h.leg === 'ollie' && i > 0) this.sfx(hops[i - 1].t, 'ollie', 0.9);
       const next = hops[i + 1];
       if (next?.leg === 'grind') this.loop(h.t, next.t, 'grind');
-      else if (h.leg !== 'grind' && i > 0) this.sfx(h.t, h.p.y > 5 ? 'impact' : 'clack', 0.6);
+      else if (h.leg !== 'grind' && i > 0) {
+        this.sfx(h.t, h.p.y > 5 ? 'impact' : 'clack', 0.6);
+        this.boom(h.t, h.p, h.p.y > 5 ? 0.7 : 0.5);
+      }
     }
     this.loop(15.9, 17.6, 'roll', 4);
     this.sfx(17.6, 'ollie');
     this.sfx(19.1, 'impact');
+    this.boom(19.1, V(4, 0, 13.5), 1.3);
+    //the sparks off the trucks up the fire escape's rails
+    const sparks = new Sparks(120, 0.7);
+    this.scene.add(sparks.group);
+    const grinds = this.spans.filter((s) => s.mode === 'grind');
     this.sfx(19.1, 'slam', 0.6);
     this.loop(19.1, 20.5, 'roll', 5);
     return (t, dt) => {
@@ -489,6 +523,8 @@ export class ActBreakScene {
         dust.clear();
       }
       dust.update(dt, this.renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)));
+      sparks.update(dt);
+      if (grinds.some((g) => t >= g.from && t < g.to) && Math.random() < 0.9) sparks.emit(this.holder.position.clone().add(V(0, 0.1, 0.3)), 5, 6);
     };
   }
 
@@ -645,6 +681,7 @@ export class ActBreakScene {
     this.sfx(17, 'ollie', 1, SLOW);
     this.sfx(17.1, 'trick', 1, SLOW);
     this.sfx(19.8, 'impact');
+    this.boom(19.8, landAt, 1.3);
     this.sfx(19.8, 'slam', 0.5);
     this.loop(19.8, 22.5, 'roll', 6);
     return (t, dt) => {
@@ -921,11 +958,13 @@ export class ActBreakScene {
     this.sfx(TUP, 'ollie');
     this.sfx(timeAt(TRE[0]), 'trick', 1, SLOW);
     this.sfx(LAND, 'impact');
+    this.boom(LAND, V(LANDX, BACK, street), 1);
     this.sfx(LAND, 'land_sketchy', 0.5);
     this.loop(LAND, LAND + slide, 'roll', 4);
     for (let i = 0; i < ships.length; i++) this.sfx(D + 9.4 + i * 0.35, 'gun_aim', 0.4);
     this.sfx(D + 14.2, 'ollie', 0.7);
     this.sfx(D + 14.8, 'impact', 0.4);
+    this.boom(D + 14.8, W(2, 4.05, 0), 0.4);
     return (t, dt) => {
       const shotNo = t < C1 ? 1 : t < C2 ? 2 : t < C3 ? 3 : t < C4 ? 4 : t < C5 ? 5 : t < C6 ? 6 : 7;
       const below = shotNo <= 2;
