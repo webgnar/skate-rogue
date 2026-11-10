@@ -33,6 +33,12 @@ A set that would leave the floor too low or too high is skipped for that slot, t
 - Undo, copy, mirror height, snap to tiles. Unsaved sets stay in the browser (localStorage), like the clip
   editor's drafts.
 
+## The tray (zack, 2026-11-10: "use the assets we already have... add them as we go")
+
+Start with the basic pieces: flat ground, one-way platform (ledge / roof / cloud deck), rail (flat, sloped,
+curved), stairs with a handrail, gap, kicker, plus coins and Stoken. The rest of what the game has (I-beam, launch,
+drone, car, glass) joins as zack needs it, and any new piece type is added to the tray when a set calls for it.
+
 ## Phone and desktop
 
 The game's input is one button, so the editor is the only place with real controls.
