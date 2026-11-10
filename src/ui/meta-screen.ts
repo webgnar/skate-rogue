@@ -1,12 +1,31 @@
 // The unlock tree between runs: opened from the run-over screen. Tap a locked unlock to buy it with banked Stoken,
 // tap an owned skater or deck to ride it. A change takes effect on the next run; a new skater needs the page
 // reloaded (its model loads at start), so closing after a change reloads.
-import { BRANCH_NAMES, buy, has, UNLOCKS, type Branch, type Unlock, type UnlockId } from '../run/meta';
+import { BOON_COLORS, BOONS, CURSES_FROM, type BoonType } from '../boons/defs';
+import { BRANCH_NAMES, buy, DECK_SLOTS, has, LEAN, UNLOCKS, type Branch, type DeckId, type Unlock, type UnlockId } from '../run/meta';
+import type { SkaterId } from '../render/skater-rig';
 import { loadSave, writeSave, type Save } from '../run/save';
 import { glyph, pic, type Pic } from './shop-art';
 import { STOKEN_INLINE } from './stoken-icon';
 
 const BRANCHES: Branch[] = ['skater', 'deck', 'library', 'spot'];
+
+// the facts under each line, read off the game's own tables so they can't go stale: a skater's first boon street
+// (meta.ts LEAN), a deck's mod slots, how many boons a pack, the curses and the duos bring
+function chips(u: Unlock): string {
+  const chip = (text: string, color = '') => `<span class="chip"${color ? ` style="--k:${color}"` : ''}>${text}</span>`;
+  if (u.branch === 'skater') {
+    const t = LEAN[u.id as SkaterId];
+    return chip(`1ST BOONS <b>${t}</b>`, BOON_COLORS[t]);
+  }
+  if (u.branch === 'deck') return chip(`${DECK_SLOTS[u.id as DeckId]} SLOTS`);
+  if (u.branch !== 'library') return '';
+  const plain = BOONS.filter((b) => !b.cursed && !b.duo);
+  const n =
+    u.id === 'curses' ? BOONS.filter((b) => b.cursed).length : u.id === 'duos' ? BOONS.filter((b) => b.duo).length : plain.filter((b) => b.type === (u.id as BoonType)).length;
+  const extra = u.id === 'curses' ? ` · FLOOR ${CURSES_FROM}+` : '';
+  return chip(`${n} BOONS${extra}`, u.id in BOON_COLORS ? BOON_COLORS[u.id as BoonType] : '');
+}
 
 // each unlock's picture (openspec ui6-unlocks-look): the skaters and decks rendered from the game's models
 // (art/cards), the packs by what they bring
@@ -97,6 +116,6 @@ export class MetaScreen {
     const on = (u.branch === 'skater' && save.skater === u.id) || (u.branch === 'deck' && save.deck === u.id);
     const cls = ['item', owned ? 'owned' : '', on ? 'on' : '', !owned && save.stoken < u.cost ? 'poor' : ''].filter(Boolean).join(' ');
     const tag = on ? 'RIDING' : owned ? (u.branch === 'skater' || u.branch === 'deck' ? 'RIDE' : 'OWNED') : `${STOKEN_INLINE}${u.cost}`;
-    return `<button class="${cls}" data-unlock="${u.id}">${art(u)}<span class="body"><span class="name">${u.name}</span><span class="line">${u.line}</span></span><span class="tag">${tag}</span></button>`;
+    return `<button class="${cls}" data-unlock="${u.id}">${art(u)}<span class="body"><span class="name">${u.name}</span><span class="line">${u.line}</span>${chips(u)}</span><span class="tag">${tag}</span></button>`;
   }
 }

@@ -7,6 +7,12 @@
 // and both resolve at once without asking the SDK. CrazyGames' Basic Launch forbids ads anyway; turning them on is
 // zack's call at Full Launch.
 export const ON_CRAZYGAMES = import.meta.env.VITE_PORTAL === 'crazygames';
+// The iOS app (npm run build:ios, docs/APP_STORE.md): the same game in a Capacitor shell, built with VITE_PORTAL=ios.
+export const ON_IOS_APP = import.meta.env.VITE_PORTAL === 'ios';
+// A build that goes out through a store or portal rather than our own site: no DEV TOOLS, no own full screen switch,
+// no Add to Home Screen tip, and no leaderboard (it lives on our Vercel server, and free-typed player tags would need
+// moderation there).
+export const STORE_BUILD = ON_CRAZYGAMES || ON_IOS_APP;
 export const ADS_ENABLED = false;
 
 const SDK_URL = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';

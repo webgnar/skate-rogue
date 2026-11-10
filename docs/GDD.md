@@ -11,7 +11,7 @@ grind, and Noita-style builds and unlock trees give each run its own shape.
 | | |
 | --- | --- |
 | Genre | 3D side-scrolling (2.5D) roguelike skate platformer |
-| Platforms | Mobile web first (iOS Safari, Android Chrome, installable PWA), desktop browser, itch.io |
+| Platforms | Mobile web first (iOS Safari, Android Chrome, installable PWA), desktop browser, itch.io, the CrazyGames portal, and a free iPhone app on the App Store (Capacitor) |
 | Engine | Three.js + TypeScript + Vite; custom kinematic physics (Excalibur, which the old runner uses, is 2D only) |
 | Input | Touch first; keyboard and gamepad supported |
 | Session length | A floor is 30–90 s; a good run is 10–25 min; a bad run can be 2 min |
@@ -1136,8 +1136,8 @@ they paid for Webster (src/run/save.ts, moveCrew).
 
 Each deck has its own shape (Nov 8, 2026, from zack's references; art/board.py builds all four, board.glb and
 board-<id>.glb): the Popsicle as before; the Cruiser wide with a pointed nose and a square tail, orange underneath
-with a bolt; the Downhill a slalom deck, narrow, the nose tapering straight to a point, nearly flat, plain red with
-amber wheels; the Slab an 80s pool deck, wide with a waist above the tail, two grip patches with bare deck between,
+with a bolt; the Downhill a longboard (Nov 10), totally flat with no kicks and no concave, a pintail outline
+widest in the middle, a rounded point at the nose and a fuller round tail, plain red with amber wheels; the Slab an 80s pool deck, wide with a waist above the tail, two grip patches with bare deck between,
 blue wheels and blue plastic underneath (rails, a nose guard, a tail skid), a red, blue and yellow sunburst. All keep
 the seven coloured plies on the edge. You ride your deck's shape; the shop's new deck graphics go on whichever
 you ride.
@@ -1155,6 +1155,14 @@ moves the camera in on the crew, and a skater bought there wakes up in their spo
 the dice, UNLOCKS, the daily run, the scores and the Gnar levels are all as they were. The skaters' models are the
 ones the game already ships; they load in the background a few seconds into the first run (before then the summary
 shows over the street, as it used to). `?ship` shows the hub on its own (`?ship=crew` framed on the crew).
+
+**The Pleiadians** (built Nov 10, 2026, from zack's two references) are the ship's own crew, about ten of them
+standing round the back of the deck behind the skaters: tall, long blond hair, a blue bodysuit with a high collar and
+the pink eight-point star on the heart, a pale blue cape, tall blue boots. Three looks so the deck isn't one person
+cloned (platinum hair and an orange sash; golden hair and pink cuffs; a woman with white-gold hair to the waist), and
+each one has their own height and idle: talking in pairs and threes, nodding along, looking up at the stars through
+the dome, one raising a palm to you. Cosmetic only. Built with the blender bot (`build_pleiadian.py`), under 600
+triangles each.
 
 Small permanent stat buffs are kept rare and capped (for example Heat starts 10% lower, a free reroll per run), so
 skill and builds stay the point, not grinding the tree. Unlocking is mostly *more variety*, not *more power*.
@@ -1275,6 +1283,16 @@ their SDK wired in: loading and gameplay start/stop, a celebration on an escape 
 saves through their Data module. On the portal the game has no full screen switch, no leaderboard and no dev tools.
 The ad calls are in place but switched off (ads still paused). Details and limits: `docs/CRAZYGAMES.md`. The upload,
 store art and Basic Launch submission are zack's, on the CrazyGames developer portal **(not submitted yet)**.
+
+### The iPhone app: free on the App Store
+zack (Nov 10, 2026): "throw it up there for free". `npm run build:ios` builds the same game into a Capacitor iOS app
+(`ios/App`, bundle id `com.webgnar.skateescape`): iPhone only, portrait and landscape, full screen with the status
+bar hidden, the home bar fading and edge swipes needing a second swipe so a tap never throws the player out of a
+run. Like the portal build it has no full screen switch, no Add to Home Screen tip, no dev tools and no leaderboard,
+so the app collects nothing (privacy policy at `/privacy.html` on the Vercel site, support at `/support.html`). No
+in-app purchases and no ads in this first version: the paid chapters and Stoken bundles come later, as an update.
+The Xcode archive and the upload need zack's Mac and Apple account **(not submitted yet)**. Details, the store
+listing text and the screenshot sizes: `docs/APP_STORE.md`.
 
 ### Chapters (story packs)
 
@@ -1667,7 +1685,7 @@ thread of its own:
     machine; it now only compiles in the background); and the hub's still pieces are merged (about 200 draws down to
     160).
 11. Release on ad-supported web game portals (zack still picks which).
-12. App store builds with Capacitor, if wanted.
+12. App store builds with Capacitor: the iPhone app is built (`npm run build:ios`, docs/APP_STORE.md) **(not submitted yet)**; Android not started.
 
 ## Milestones
 
@@ -1698,6 +1716,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   spinning ring, zero-g pipes) on top of the stair sets and rails (default: not yet). A fall in space is now a bail
   (see Act 5's station line); whether the scene should play every time or only the first few (default: every time,
   a tap skips it).
+- **The iPhone app** (built Nov 10, 2026, see The iPhone app): whether to support iPad too (default: iPhone only, so no
+  iPad screenshots are needed), and whether the app keeps the leaderboard (default: off, as on the portal).
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
 - **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
   chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until

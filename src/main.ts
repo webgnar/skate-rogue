@@ -64,7 +64,7 @@ import { TitleScreen, skipTitleOnce, wantTitle } from './ui/title';
 import { TitleScene } from './title/title-scene';
 import { Aboard } from './ship/aboard';
 import { isActBreak, type ActBreak, type ActBreakScene, type CutsceneUi } from './cutscene/act-breaks';
-import { ON_CRAZYGAMES, breakAd, happyTime, initPortal, loadingDone, setPlaying, watchPortalMute } from './net/portal';
+import { ON_CRAZYGAMES, STORE_BUILD, breakAd, happyTime, initPortal, loadingDone, setPlaying, watchPortalMute } from './net/portal';
 
 const base = import.meta.env.BASE_URL;
 
@@ -543,8 +543,8 @@ async function start() {
     if (result) aboard.summary();
     if (result && (result.won || (result.newBest && result.act > 1))) happyTime();
     if (result) void breakAd((on) => sound.sleep(on)); // between runs; a no-op while ads are paused
-    //the leaderboard lives on our own server, so it stays off on the portal (docs/CRAZYGAMES.md)
-    if (result && !ON_CRAZYGAMES) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
+    //the leaderboard lives on our own server, so it stays off on the portal and in the app (docs/CRAZYGAMES.md)
+    if (result && !STORE_BUILD) void scores.runEnded({ score: result.score, floor: result.floor, ...(day ? { day } : {}), ...(gnar ? { gnar } : {}) });
   };
   const game = new Game(seed, fixedSeed > 0, view, sprite, input, hud, startAt, { loadout: { skater, deck }, library, daily, tutorial, gnar, boons: parseBoons(params.get('boons')), danger, escape });
   skipMission = (i) => game.skipMission(i);
@@ -688,11 +688,11 @@ async function start() {
       /* private mode: this session only */
     }
   };
-  if (!ON_CRAZYGAMES && params.has('dev')) saveDevTools(true);
-  let devTools = !ON_CRAZYGAMES && (import.meta.env.DEV || params.has('dev') || params.has('debug') || devSaved());
+  if (!STORE_BUILD && params.has('dev')) saveDevTools(true);
+  let devTools = !STORE_BUILD && (import.meta.env.DEV || params.has('dev') || params.has('debug') || devSaved());
   const devHead = document.getElementById('devhead')!;
   devHead.hidden = !devTools;
-  if (!ON_CRAZYGAMES) {
+  if (!STORE_BUILD) {
     let taps: number[] = [];
     document.querySelector('#paused .title')?.addEventListener('pointerdown', (e) => {
       e.stopPropagation();

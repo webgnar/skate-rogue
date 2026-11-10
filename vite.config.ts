@@ -83,6 +83,7 @@ function levelEditor(): Plugin {
 
 // The CrazyGames build (npm run build:crazygames, docs/CRAZYGAMES.md): the same game into dist-crazygames/, without the
 // home screen app tags (the portal frames the game and runs its own full screen). .env.crazygames sets VITE_PORTAL.
+// The iOS app build (npm run build:ios, docs/APP_STORE.md) drops the same tags into dist-ios/: it is an app already.
 function portalPage(): Plugin {
   return {
     name: 'portal-page',
@@ -135,12 +136,12 @@ function setEditor(): Plugin {
 
 export default defineConfig(({ mode }) => ({
   base: './',
-  plugins: [clipEditor(), levelEditor(), setEditor(), ...(mode === 'crazygames' ? [portalPage()] : [])],
+  plugins: [clipEditor(), levelEditor(), setEditor(), ...(mode === 'crazygames' || mode === 'ios' ? [portalPage()] : [])],
   build: {
     target: 'es2022',
     assetsInlineLimit: 0,
     chunkSizeWarningLimit: 800,
-    ...(mode === 'crazygames' ? { outDir: 'dist-crazygames' } : {}),
+    ...(mode === 'crazygames' ? { outDir: 'dist-crazygames' } : mode === 'ios' ? { outDir: 'dist-ios' } : {}),
   },
   test: { include: ['tests/**/*.test.ts'] },
 }));
