@@ -1576,6 +1576,9 @@ html, body {
 #meta .item .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 #meta .item .name { font-size: calc(var(--u) * 1.9); line-height: 1; color: #fff; -webkit-text-stroke: 0.5px #000; text-shadow: 1px 2px 0 #000; }
 #meta .item .line { font: 600 calc(var(--u) * 1.1)/1.25 system-ui, sans-serif; letter-spacing: 0; opacity: 0.85; }
+/* the facts under the line (meta-screen.ts chips): a skater's first boons in that type's colour, a deck's slots */
+#meta .item .chip { align-self: flex-start; margin-top: 1px; padding: 1px calc(var(--u) * 0.5); font-size: max(10px, calc(var(--u) * 1.05)); line-height: 1.25; letter-spacing: 0.04em; color: #fff; background: rgba(0, 0, 0, 0.45); border-left: 3px solid var(--k, #7a6a99); white-space: nowrap; }
+#meta .item .chip b { font-weight: normal; color: var(--k, #fff); }
 #meta .item .tag { font-size: calc(var(--u) * 2.4); color: #c08cff; white-space: nowrap; }
 #meta .item .tag i { font-style: normal; color: #a23cff; margin-right: 2px; }
 #meta .item.owned .tag { font-size: calc(var(--u) * 1.5); color: #fff; opacity: 0.6; }
@@ -1583,7 +1586,7 @@ html, body {
 #meta .item.on .tag { font-size: calc(var(--u) * 1.5); padding: 2px calc(var(--u) * 0.7); color: #4dff8a; opacity: 1; border: 2px solid #4dff8a; transform: skewX(-8deg); }
 #meta .item.poor { opacity: 1; }
 #meta .item.poor .tag { opacity: 0.5; }
-#meta .item.poor .art .pic { filter: grayscale(0.7) brightness(0.7); }
+#meta .item.poor .art .pic { filter: grayscale(0.3) brightness(0.85) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.6)); }
 #meta .row { position: sticky; bottom: 0; width: 100%; max-width: 1100px; margin: auto auto 0; padding: calc(var(--u) * 0.8) 0 calc(var(--u) * 0.4); background: linear-gradient(transparent, #120c22 40%); }
 #meta .note { font-size: calc(var(--u) * 1.2); color: #d8cce8; }
 #meta .done {
@@ -1611,7 +1614,7 @@ html, body {
   #meta .item .line { font-size: calc(var(--u) * 1.2); }
 }
 #meta .done { white-space: nowrap; flex: none; }
-#meta .branch.deck .item .art .pic { transform: scale(0.95); }
+#meta .branch.deck .item .art .pic { transform: none; }
 #meta .branches { padding-bottom: calc(var(--u) * 2); }
 @media (orientation: portrait) {
   #meta .done { font-size: calc(var(--u) * 2.4); }
