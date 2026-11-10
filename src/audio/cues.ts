@@ -63,6 +63,8 @@ export interface Cue {
 }
 
 const cue = (sample: SampleId, scale = 1, rate = 1): Cue => ({ sample, vol: VOL[sample] * scale, rate });
+// a sample at its own level times `scale` (the cutscenes' sounds, src/cutscene/act-breaks.ts)
+export const cueOf = cue;
 
 // The music and zack's pitched sounds are in C major (the musician, 2026-11-02). A pitched sound is only ever
 // moved by an interval that keeps it on the scale (an octave, a fifth...), never by an odd rate, or it clashes.
