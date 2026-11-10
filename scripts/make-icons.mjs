@@ -1,7 +1,7 @@
 // Renders the icons from the HUD's SKATE ESCAPE mark: node scripts/make-icons.mjs
+// (the iOS app icon is the skater from the capsule art now: python3 scripts/ios/app-icon.py)
 //   public/icons/        the home screen icons of the web build
-//   ios/App/App/Assets.xcassets/AppIcon.appiconset   the iOS app icon, 1024 px with no alpha (App Store rule; needs ffmpeg)
-//   ios/App/App/Assets.xcassets/Splash.imageset      the iOS launch screen, 2732 px square, drawn like the loading
+//   ios/App/App/Assets.xcassets/Splash.imageset      the iOS launch screen (needs ffmpeg), 2732 px square, drawn like the loading
 //                                                    screen in index.html so the hand-off to it doesn't jump
 import { execFileSync } from 'node:child_process';
 import { readFileSync, renameSync } from 'node:fs';
@@ -29,7 +29,7 @@ const splash = (size) => `<style>
   .gnar { color: #ffe23a; } .run { color: #ff2fb4; margin-left: 0.15em; }
 </style><div class="mark"><b class="gnar">SKATE</b><b class="run">ESCAPE</b></div>`;
 
-// a PNG with its alpha channel taken out (App Store Connect rejects an app icon that has one, even fully opaque)
+// a PNG with its alpha channel taken out (iOS wants its launch and icon images opaque)
 const opaque = (path) => {
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', path, '-pix_fmt', 'rgb24', `${path}.rgb.png`]);
   renameSync(`${path}.rgb.png`, path);
@@ -45,8 +45,6 @@ const shoot = async (html, size, path) => {
   await p.close();
 };
 for (const [name, size] of [['apple-touch-icon.png', 180], ['icon-192.png', 192], ['icon-512.png', 512]]) await shoot(icon(size), size, `public/icons/${name}`);
-await shoot(icon(1024), 1024, `${ASSETS}/AppIcon.appiconset/AppIcon-512@2x.png`);
-opaque(`${ASSETS}/AppIcon.appiconset/AppIcon-512@2x.png`);
 // one image for every screen scale (Splash.imageset/Contents.json): the launch screen is a backdrop, and three
 // copies would be 5 MB more app for nothing
 await shoot(splash(2732), 2732, `${ASSETS}/Splash.imageset/splash-2732x2732.png`);
