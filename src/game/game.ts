@@ -446,6 +446,7 @@ export class Game {
   private shop: ShopState | null = null;
   private shopPick: ShopPick = null;
   private shopVisits = 0;
+  private shoppedAfter = -1; // the floor whose shopAfter shop was last visited, so leaving it skates on
   private deckArt: DeckArt = STOCK_DECK; // the graphic under the board this run (a new deck brings a new one)
   private shopDecks: DeckArt[] = []; // the graphics this shop's new deck comes in
   private deckPick: DeckArt[] | null = null; // open while you pick the new deck's graphic
@@ -649,6 +650,7 @@ export class Game {
     this.gear = freshGear();
     this.bustedSec = noBustedTime();
     this.shopVisits = 0;
+    this.shoppedAfter = -1;
     this.setDeckArt(stockDeck(this.meta.loadout.deck));
     this.run = new RunScore();
     this.carry = 0;
@@ -950,8 +952,11 @@ export class Game {
     if (this.restartAct && !['shop', 'spot'].includes(this.nextRoad.kind)) return this.goTo(first, this.nextRoad);
     //an act ends with its escape, before the road picked at the third floor's fork
     if (endsAct(this.floor) && this.road.kind !== 'escape') return this.goTo(this.floor, { kind: 'escape', act: actOf(this.floor), danger: 3 });
-    //the shop road: shop first, then the boon street after it; the same for the underground spot
-    if (this.nextRoad.kind === 'shop') {
+    //the shop road: shop first, then the boon street after it; the same for the underground spot. After act 2-1
+    //the shop comes whichever road you took (fork.shopAfter), then that road's floor
+    const shopAfter = !!this.level.fork?.shopAfter && this.road.kind !== 'escape' && this.shoppedAfter !== this.floor;
+    if (shopAfter) this.shoppedAfter = this.floor;
+    if (this.nextRoad.kind === 'shop' || shopAfter) {
       this.openShop();
       return;
     }
@@ -1192,7 +1197,8 @@ export class Game {
     this.board = this.shop.board;
     this.shop = null;
     this.hud.shop(null);
-    this.nextRoad = floorRoad(this.nextRoad);
+    //(after a shopAfter shop the road picked stands, the underground spot too)
+    if (this.nextRoad.kind === 'shop') this.nextRoad = floorRoad(this.nextRoad);
     this.advance();
   }
 

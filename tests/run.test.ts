@@ -22,10 +22,13 @@ describe('the fork', () => {
     }
   });
 
-  it('always offers the skate shop at the end of act 2-1 (floor 4), before 2-2', () => {
+  it('puts the skate shop after both roads at the end of act 2-1 (floor 4), before 2-2', () => {
     for (let seed = 1; seed <= 40; seed++) {
       const f = rollFork(seed, 4);
-      expect([f.high.kind, f.low.kind]).toContain('shop');
+      expect(f.shopAfter).toBe(true);
+      expect([f.high.kind, f.low.kind]).not.toContain('shop');
+      expect(f.high.kind === 'boon' || f.low.kind === 'boon').toBe(true);
+      expect(rollFork(seed, 5).shopAfter).toBeUndefined();
     }
   });
 
