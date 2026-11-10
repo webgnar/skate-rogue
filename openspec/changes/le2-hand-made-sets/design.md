@@ -46,7 +46,7 @@ The game's input is one button, so the editor is the only place with real contro
 
 Handles are 44 px or bigger on touch, one finger pans, two pinch to zoom, and long press picks a piece.
 
-## Decisions for zack
+## Decisions (all made by zack, 2026-11-10)
 
 1. **What's hand-made?** DECIDED (zack, 2026-11-10): sets dropped into generated floors. Whole hand-made
    floors stay a later phase (4).
@@ -56,5 +56,5 @@ Handles are 44 px or bigger on touch, one finger pans, two pinch to zoom, and lo
    copies the set as text; Claude puts it in `src/gen/sets/`, checks it with the bot and merges.
 4. **Bot gate.** DECIDED (zack, 2026-11-10): a set goes into floors only if the plain (no-boon) bot clears it at
    cruising and gnar speed.
-5. **Where do sets go first?** Act 3's cloud line and act 5's station line, which are already built from sets
-   (recommended), act 1's hills, or everywhere at once.
+5. **Where do sets go first?** DECIDED (zack, 2026-11-10): act 3's cloud line and act 5's station line, which
+   already pick from code sets (hubba, stair set...). Act 1's hills and the sewer come later.

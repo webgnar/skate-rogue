@@ -8,7 +8,7 @@
 - [ ] 1.4 Save on the dev server; elsewhere save copies the set as text to paste to Claude; drafts in the browser
 
 ## 2. Sets in floors
-- [ ] 2.1 `set` beat for the hill recipe, the cloud line and the station line; tags, weight, cap, joining heights
+- [ ] 2.1 `set` beat for act 3's cloud line and act 5's station line (hills and sewer later); tags, weight, cap, joining heights
 - [ ] 2.2 `?levels` draws hand-made sets and turns them on and off per floor
 - [ ] 2.3 Tests: no sets = same floors; a tagged set appears within its cap; floors still validate
 

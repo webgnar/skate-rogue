@@ -22,7 +22,8 @@ wanted; the generator still adds traffic, props, coins and dressing on top.
   (street, ledge, roof, stairs, handrail, flat / sloped / curved rail, I-beam, gap, kicker, launch quarterpipe,
   parked car, cloud, drone, glass, coins, Stoken), placed on the tile grid, dragged and stretched, with the bot's
   line redrawn on every change and a "play it" button that drops you into the real game on that set.
-- **Sets in the generator**: a `set` beat in the hill recipe, the cloud line and the station line. Each set is
+- **Sets in the generator**: a `set` beat in act 3's cloud line and act 5's station line first (decided), the
+  hill recipe and the sewer later. Each set is
   tagged with which acts and routes it may appear on, a weight and a cap a floor, and the generator joins its ends
   to whatever is around it.
 - **Hand-made floors** (later phase): a floor whose whole line is a list of sets, laid end to end.
@@ -35,7 +36,7 @@ wanted; the generator still adds traffic, props, coins and dressing on top.
 | --- | --- | --- |
 | 0 | Play from here: tap any point on a `?levels` floor and play from it; retry in one tap | S, 1 PR |
 | 1 | Set editor: palette, grid, drag and stretch, bot line, play it, save sets to `src/gen/sets/*.json` | L, 2-3 PRs |
-| 2 | Sets in floors: the `set` beat, tags, weights, caps, joining heights; drawn in `?levels` | M, 1-2 PRs |
+| 2 | Sets in floors (act 3 clouds, act 5 station): the `set` beat, tags, weights, caps, joining heights; drawn in `?levels` | M, 1-2 PRs |
 | 4 | Hand-made floors: a floor as a list of sets, for signature floors and escapes | M, 1-2 PRs |
 | 5 | Moving pieces in sets (blimp, swinging beam, rig, drone bridge) and turning code sets into editable ones | L, 2-3 PRs |
 
