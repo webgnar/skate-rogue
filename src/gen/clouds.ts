@@ -36,7 +36,7 @@ export const CLOUDS = {
   // (longer platforms, zack 2026-11-02: "there need to be longer platforms")
   puff: [10, 14], // tiles: a cloud
   thin: [5, 7],
-  thinFrames: 40, // a thin cloud puffs away this long after you land (time to take the knock and pop off it)
+  thinFrames: 60, // a thin cloud blinks, faster and faster, and puffs away this long after you land (zack, 2026-11-10)
   drift: [6, 8],
   driftBy: 1.5, // tiles a drifting cloud wanders either way
   rainbow: [14, 18], // tiles across
@@ -127,7 +127,12 @@ export const CLOUD_LINE = {
   bridgeFar: 2, // and from the last drone to the cloud on the far side
   bridgeFrom: [6, 8], // tiles: the cloud you leave from
   bridgeLand: [8, 10], // tiles: the one on the far side
+  bridgeDrop: 0.75, // tiles it stands under the one you left (a long jump over the drones still comes down on it)
   most: { launch: 2, bridge: 3, hubba: 3, srail: 3, sbeam: 3 } as Partial<Record<CloudBeat, number>>, // a floor's most of each set
+  // the clouds that blink out under you (zack, 2026-11-10: "use them sparingly in the harder parts of cloud act"):
+  // none on the act's first floor, then at most this many a floor, and only past this share of the layer
+  thinMost: 2,
+  thinFrom: 0.5,
 };
 
 // act 3's launch quarterpipes: roll up one and off its lip and it throws you straight up (at the same arc whatever
@@ -381,6 +386,10 @@ export function addClouds(level: Level, seed: number): void {
     let last: CloudBeat | CloudPiece = 'gap';
     const sets: Record<string, number> = {};
     const pieceX = x + CLOUD_ACT.pieceAt * (end - x);
+    //(act 3: a cloud that blinks out only so often, and only in the floor's harder back half; none on floor 7)
+    const hardX = x + CLOUD_LINE.thinFrom * (end - x);
+    let thins = act === 3 ? (floor === CLOUDS.from ? 0 : CLOUD_LINE.thinMost) : Infinity;
+    const thinOk = (at: number) => act !== 3 || (thins > 0 && at >= hardX);
     while (x < end - 6 * TILE) {
       let beat: CloudBeat | CloudPiece = pick(rng, weights);
       //never two gaps or two rainbows running, and open with a cloud to land on
@@ -460,6 +469,7 @@ export function addClouds(level: Level, seed: number): void {
       //(and only so many of each a floor)
       const most = act === 3 ? CLOUD_LINE.most[beat as CloudBeat] : undefined;
       if (most !== undefined && (sets[beat] ?? 0) >= most) beat = 'puff';
+      if (beat === 'thin' && !thinOk(x)) beat = 'puff';
       if (beat === 'hubba') {
         //a cloud a flip up, a rainbow ledge off its end grinding down, and a cloud at its foot
         const tw = range(rng, CLOUD_LINE.hubbaTop) * TILE;
@@ -535,9 +545,11 @@ export function addClouds(level: Level, seed: number): void {
           }
           if (rng() < CLOUDS.stoken) level.pickups.push({ kind: 'stoken', x: gx + span / 2, y: y - PICKUPS.high });
           (level.airways ??= []).push([gx, gx + span]);
-          surfaces.push({ kind: 'ledge', x0: gx + span, x1: gx + span + lw, y, row: -1, sky: 'cloud' });
-          coins(gx + span, gx + span + lw, () => y);
+          const ly = Math.max(y, Math.min(y + CLOUD_LINE.bridgeDrop * TILE, lowest(gx + span)));
+          surfaces.push({ kind: 'ledge', x0: gx + span, x1: gx + span + lw, y: ly, row: -1, sky: 'cloud' });
+          coins(gx + span, gx + span + lw, () => ly);
           x = gx + span + lw;
+          y = ly;
         } else beat = 'puff';
       }
       if (beat === 'launch') {
@@ -644,7 +656,8 @@ export function addClouds(level: Level, seed: number): void {
           for (let k = 0; hx + 5 * TILE <= x + w; k++) {
             let hw = Math.min(range(rng, CLOUDS.forkPiece) * TILE, x + w - hx);
             if (x + w - (hx + hw + 2 * TILE) < 5 * TILE) hw = x + w - hx;
-            const thin = k % 2 === 1 && hx + hw < x + w;
+            const thin = k % 2 === 1 && hx + hw < x + w && thinOk(hx);
+            if (thin) thins--;
             surfaces.push({ kind: 'ledge', x0: hx, x1: hx + hw, y: high, row: -1, sky: thin ? 'thin' : 'cloud', ...(thin ? { crumble: true, crumbleFrames: CLOUDS.thinFrames } : {}) });
             coins(hx, hx + hw, () => high);
             hx += hw + 2 * TILE;
@@ -692,6 +705,7 @@ export function addClouds(level: Level, seed: number): void {
         }
         if (fits(w) && !busy(level, x, x + w, y)) {
           surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky: beat === 'thin' ? 'thin' : 'cloud', ...(beat === 'thin' ? { crumble: true, crumbleFrames: CLOUDS.thinFrames } : {}) });
+          if (beat === 'thin') thins--;
           coins(x, x + w, () => y);
         }
         x += w;

@@ -5,7 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import { validatedFloor } from '../src/gen/validate';
 import { rollFork } from '../src/gen/roads';
-import { CLOUD_LINE } from '../src/gen/clouds';
+import { CLOUD_LINE, CLOUDS } from '../src/gen/clouds';
+import { thinBlink } from '../src/render/sky-pieces-view';
 import { FloorSim } from '../src/sim/floor';
 import { Pilot } from '../src/bot/pilot';
 import { TILE } from '../src/physics/constants';
@@ -77,4 +78,24 @@ describe("act 3's cloud line", () => {
     }
     expect(clean / n).toBeGreaterThan(0.7);
   }, 300000);
+
+  it('clouds that blink out are rare: none on 3-1, a couple at most later, only in the back half of the floor', () => {
+    for (let seed = 1; seed <= 6; seed++) for (const f of [7, 8, 9]) {
+      const l = floorOf(seed * 37, f);
+      const thin = l.surfaces.filter((s) => s.sky === 'thin');
+      expect(thin.length).toBeLessThanOrEqual(f === 7 ? 0 : CLOUD_LINE.thinMost);
+      for (const s of thin) expect(s.x0 - l.startX).toBeGreaterThan(0.4 * (l.exitX - l.startX));
+    }
+  }, 120000);
+
+  it('a thin cloud blinks faster and faster once you land on it', () => {
+    const T = CLOUDS.thinFrames;
+    const flips: number[] = [];
+    for (let left = T; left > 0; left--) if (thinBlink(T, left) !== thinBlink(T, left + 1)) flips.push(T - left);
+    expect(thinBlink(T, T)).toBe(true);
+    expect(flips.length).toBeGreaterThanOrEqual(8);
+    //(each blink shorter than the last, near enough)
+    const gaps = flips.slice(1).map((f, i) => f - flips[i]);
+    expect(gaps.at(-1)!).toBeLessThan(gaps[0]);
+  });
 });
