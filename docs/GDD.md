@@ -487,8 +487,8 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   black, starry sky over the Earth, every piece grown for 0.3x gravity the same way. The clouds become **station
   decks**, **solar panels** and **junk plates**; drifting clouds are **debris**; balloons are **satellites**; rainbows
   are a station's ring; the staircase's girders float free as white truss. The set pieces are re-skinned for space
-  rather than dropped: the blimp is a **shuttle**, the crane's jib a station's **robot arm**, the washer's rig a
-  **capsule** that sinks under you (no billboards or I-beams up here). The sky bot stays up nearly the whole floor.
+  rather than dropped: the blimp is a **shuttle**, the crane's jib a station's **robot arm** (no billboards, I-beams
+  or capsule up here). The sky bot stays up nearly the whole floor.
 - **Act 5's station line** (zack, Nov 10, 2026: "act 5 is space: THAT level needs to be built out... to the degree that
   the sewer was. we are going to add a lot more little handrails like the sewer has with its little stairset"; built
   Nov 10, 2026, `STATION` in src/gen/clouds.ts). The station's own sets, strung along each act 5 floor between its
@@ -497,7 +497,17 @@ acts**, about 20 minutes when you win, and each act is higher than the last:
   (two flights and a landing, the rail kinked down, flat, down), **decks with ledges and flat rails** along them to
   ollie up onto, **gap rails** across open space between two modules too far to jump, and act 3's **hubba** as a
   ledge running down off a module's roof. Sized for the act's 0.3x gravity (about 3x the sewer's), the handrails kept
-  a handrail's height. Falling still climbs you back up the girders (act 3's restart rule isn't used in space).
+  a handrail's height.
+- **Falling off in space is a bail: lost in space** (zack, Nov 10, 2026: "i think falling from this level should count
+  as like a bail... we could make a new scene with a sphereical earth below him. camera could show him falling down to
+  that and fades out"; built Nov 10, 2026, `FloorSim.offStation`, src/cutscene/space-fall.ts). Falling 3 tiles under
+  every piece of the station line near you (from 20 tiles behind to 50 ahead, moving decks too) calls "LOST IN SPACE!"
+  and costs a life like any bail. A short scene plays (about 4 s, a tap skips it): the skater tumbles away, arms out,
+  the board spinning off on its own, down toward the whole round Earth; the camera holds above and watches them go,
+  then it fades to black and the continue card comes up, which restarts the floor as usual. Not on the beam-up
+  finale, practice starts or the line's last stretch before the gate. Act 5 has no girder staircase or capsule any
+  more (nothing to climb back on), and the bot test asks it to clear at least 8 floors in 9. The balance bot flies act 5
+  on the sky bot in the act's own gravity: about 107 s a floor (other floors are held under 90 s).
 - **The ceiling, act 4's escape** (built Nov 6, 2026, step d; src/gen/escape.ts). Off the street on a girder, then a
   **blimp convoy** climbing a flip a blimp up to the cruise, the AI's **drones** diving onto the blimps' backs (the
   street swarm's patterns, grown for the gravity), and at the end the **jet line**: six fighter jets hanging nose to
@@ -1684,9 +1694,10 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   the meta tree buys little. Whether to add cards there, fold more types, or leave it lean is zack's call; default: leave it lean.
 - **Build-driven paths** (future direction under Run structure): whole sky, street and sewer acts; which boons lead
   to each, and how each is designed for them.
-- **Act 5's station line** (built Nov 10, 2026): whether a fall in space should start the act over like act 3's
-  clouds (default: no, the girders climb you back up), and whether act 5 wants space set pieces of its own (an
-  airlock, a spinning ring, zero-g pipes) on top of the stair sets and rails (default: not yet).
+- **Act 5's station line** (built Nov 10, 2026): whether act 5 wants space set pieces of its own (an airlock, a
+  spinning ring, zero-g pipes) on top of the stair sets and rails (default: not yet). A fall in space is now a bail
+  (see Act 5's station line); whether the scene should play every time or only the first few (default: every time,
+  a tap skips it).
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
 - **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
   chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until

@@ -50,6 +50,7 @@ describe("act 5's station line", () => {
     let n = 0;
     let grinds = 0;
     let slams = 0;
+    let made = 0;
     for (let seed = 1; seed <= 3; seed++) for (const f of [13, 14, 15]) {
       const sim = new FloorSim(floorOf(seed * 61, f));
       const pilot = new Pilot('sky');
@@ -64,10 +65,45 @@ describe("act 5's station line", () => {
         n++;
         if (sk.surface?.sky || sk.rail?.sky) up++;
       }
-      expect(sim.state).toBe('exit');
+      if (sim.state === 'exit') made++;
     }
+    expect(made).toBeGreaterThanOrEqual(8);
     expect(up / n).toBeGreaterThan(0.8);
     expect(grinds).toBeGreaterThan(15);
     expect(slams).toBeLessThan(3);
   }, 300000);
+
+  it('falling off it is a bail: lost in space (not act 4, not the beam-up)', () => {
+    const fall = (l: Level, x: number, up = true) => {
+      const sim = new FloorSim(l);
+      (sim as unknown as { aboard: boolean }).aboard = up; // been up on the line
+      //off the end of a deck, out into the open: dropped well under the line, still falling
+      const deck = l.surfaces.filter((s) => s.sky === 'cloud' && s.x0 > x).sort((p, q) => p.x0 - q.x0)[0];
+      const sk = sim.skater;
+      sk.x = (deck.x0 + deck.x1) / 2;
+      sk.y = deck.y + 12 * TILE;
+      sk.mode = 'air';
+      sk.surface = null;
+      sk.vsp = 2;
+      for (let k = 0; k < 5 && sim.state === 'skate'; k++) sim.step({ pressed: false, held: false });
+      return sim;
+    };
+    for (const f of [13, 14, 15]) {
+      const l = floorOf(61, f);
+      const sim = fall(l, l.width * 0.4);
+      expect(sim.lost).toBe(true);
+      expect(sim.state).toBe('bail');
+    }
+    //never been up (skating the street under the line, as a floor starts): not lost
+    expect(fall(floorOf(61, 13), floorOf(61, 13).width * 0.4, false).lost).toBe(false);
+    //act 4's girders still bring you back up: nothing's lost there
+    const four = fall(floorOf(61, 11), floorOf(61, 11).width * 0.4);
+    expect(four.lost).toBe(false);
+    //and act 5 has no girder staircases or capsule any more
+    for (const f of [13, 14, 15]) {
+      const l = floorOf(122, f);
+      expect(l.surfaces.filter((s) => s.sky === 'step')).toHaveLength(0);
+      expect((l.skyMovers ?? []).filter((m) => m.kind === 'rig')).toHaveLength(0);
+    }
+  }, 120000);
 });

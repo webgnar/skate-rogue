@@ -61,8 +61,9 @@ describe('acts 4 and 5, above the clouds and space', () => {
     expect(spires).toBeGreaterThan(9);
   }, 120000);
 
+  //(act 4 only: falling off act 5's line is lost in space, tests/station-line.test.ts)
   it('a good player who falls climbs the girders back up', () => {
-    for (const act of [4, 5]) {
+    for (const act of [4]) {
       let made = 0;
       let n = 0;
       for (let seed = 1; seed <= 6; seed++) for (const f of act === 4 ? [10, 11, 12] : [13, 14, 15]) {

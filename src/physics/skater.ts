@@ -1140,6 +1140,15 @@ export class Skater {
     this.events.push({ type: 'kicker' });
   }
 
+  // act 5: fallen away under the station line, out into space (src/sim/floor.ts offStation): a bail, held where it
+  // happened (the game plays the fall to Earth from there)
+  lose(): void {
+    this.mode = 'bail';
+    this.hsp = 0;
+    this.vsp = 0;
+    this.events.push({ type: 'bail' });
+  }
+
   // down on the sewer subway's live tracks (src/sim/sewer.ts): the third rail, and that's a bail (no pads save it)
   zap(y: number): void {
     this.y = y;

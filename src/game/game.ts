@@ -358,6 +358,8 @@ export class Game {
   playActBreak: ((act: number, done: () => void) => Game['cinema']) | null = null;
   // what's drawn behind the run summary in place of the street (the ship hub, src/ship/hub-scene.ts); false: not ready
   backdrop: ((dt: number) => boolean) | null = null;
+  // act 5's bail: lost in space, the skater falling away to Earth (src/cutscene/space-fall.ts); done brings up the card
+  playSpaceFall: ((done: () => void) => Game['cinema']) | null = null;
   titled = false; // held still under the title screen (src/ui/title.ts) until SKATE: the street drawn, the title music on
   sound: Sound | null = null; // set by main once the page is up
   private menuAt = 0;
@@ -1570,7 +1572,16 @@ export class Game {
     } else if (this.state === 'skate' && this.sim.state === 'bail') {
       //into the canal: the splash, and he goes under before the continue card comes up (on the subway's live tracks
       //he's electrocuted instead: sewerFx 'zap')
-      if (this.zap) {
+      if (this.sim.lost) {
+        //act 5: off the station line, out into space: the fall to Earth (src/cutscene/space-fall.ts), then the card
+        const scene = this.autopilot ? null : this.playSpaceFall?.(() => {
+          this.cinema = null;
+          this.input.clear();
+          this.fell(performance.now(), false);
+        });
+        if (scene) this.cinema = scene;
+        else this.fell(now, false);
+      } else if (this.zap) {
         if (this.zap.at < 0) this.zap.at = now;
         if (now - this.zap.at >= ZAP.wait * 1000) this.fell(now, false);
       } else {
@@ -2235,6 +2246,12 @@ export class Game {
       this.particles.shards(x, y);
       this.words.spawn(x, y + 0.3, 'CRNCH!');
       this.hud.gearTick('wheels');
+      return;
+    }
+    if (e.type === 'lost') {
+      //act 5: off the station line and out into space, a bail; the fall to Earth plays (frame), then the continue card
+      this.hud.callout('LOST IN SPACE!', 'bad');
+      buzz(120);
       return;
     }
     if (e.type === 'grounded') {

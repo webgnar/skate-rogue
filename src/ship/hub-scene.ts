@@ -546,7 +546,7 @@ function earthTexture(): THREE.Texture {
   return t;
 }
 
-function earth(): THREE.Group {
+export function earth(): THREE.Group {
   const g = new THREE.Group();
   g.name = 'earth';
   const R = 220;

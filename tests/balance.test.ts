@@ -2,7 +2,8 @@
 // and its escapes, and the numbers are held to the targets. `npm run balance` prints the table.
 import { describe, expect, it } from 'vitest';
 import { botRun, validatedFloor, type BotRun } from '../src/gen/validate';
-import { validatedEscape } from '../src/gen/escape';
+import { actOf, validatedEscape } from '../src/gen/escape';
+import { actGravity } from '../src/physics/feel';
 import { floorTwist } from '../src/gen/twists';
 import { freshGear, GEAR, GEAR_PARTS } from '../src/run/gear';
 
@@ -15,27 +16,30 @@ const avg = (rs: BotRun[], f: (r: BotRun) => number) => rs.reduce((n, r) => n + 
 function floorRuns(floor: number): BotRun[] {
   return Array.from({ length: SEEDS }, (_, s) => {
     const seed = (s + 1) * 7919;
-    return botRun(validatedFloor(seed, floor, { twist: floorTwist(seed, floor), hills: true, danger: 2 }).level);
+    //(in the act's own gravity, as the game builds them: act 5's station line is sized for 0.3x)
+    return botRun(validatedFloor(seed, floor, { twist: floorTwist(seed, floor), hills: true, danger: 2, gravity: actGravity(actOf(floor)) }).level);
   });
 }
 
 describe('balance (bot runs)', () => {
   it('floors: cleared, 25 to 90 seconds, Heat in hand', () => {
-    const checks: { sec: number; worn: number; heat: number }[] = [];
+    const checks: { sec: number; worn: number; heat: number; floor: number }[] = [];
     const rows: string[] = ['floor   sec  coins  stoken  slams  maxHeat  wornest'];
     for (let floor = 1; floor <= 15; floor++) {
       const rs = floorRuns(floor);
       for (const r of rs) expect(r.result).toBe('exit');
       const row = { sec: avg(rs, (r) => r.frames / 60), coins: avg(rs, (r) => r.cash), stoken: avg(rs, (r) => r.stoken), slams: avg(rs, (r) => r.slams), heat: avg(rs, (r) => r.maxHeat), worn: avg(rs, wornest) };
       rows.push(`${floor}`.padEnd(6) + Object.values(row).map((v) => v.toFixed(1).padStart(7)).join(' '));
-      checks.push(row);
+      checks.push({ ...row, floor });
     }
     if (process.env.BALANCE) process.stderr.write(rows.join('\n') + '\n');
     for (const row of checks) {
       //two or three stretches of hill with street chases between (2026-10-24: zack wanted longer floors)
       //(25: the top route's power line is a faster way down a hill than the street, and the bot often takes it)
       expect(row.sec).toBeGreaterThan(25);
-      expect(row.sec).toBeLessThan(90);
+      //(act 5, 120: the sky bot flies the whole station line in 0.3x gravity, long hang time on every jump: about 107 s
+      //once it was measured in the act's own gravity, 2026-11-10)
+      expect(row.sec).toBeLessThan(actOf(row.floor) === 5 ? 120 : 90);
       //(two or three street chases a floor give slams more chances to bunch up: 60 before the longer floors)
       //(55, 2026-10-31: zack's ollie and kickflip keys in ?editor change where the board rides in the air (tuck.ts),
       //and the bot's one extra slam on floor 8 over six seeds took it from 48.5 to 51.6)

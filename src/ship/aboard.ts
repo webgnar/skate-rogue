@@ -8,6 +8,7 @@ import { has } from '../run/meta';
 import { loadCrew } from './crew';
 import { HubScene } from './hub-scene';
 import { EndingScene, type EndingUi } from './ending-scene';
+import { SpaceFallScene } from '../cutscene/space-fall';
 import { ActBreakScene, type ActBreak, type CutsceneUi } from '../cutscene/act-breaks';
 
 export class Aboard {
@@ -95,6 +96,19 @@ export class Aboard {
       writeSave({ ...save, actBreaks: [...seen, act] });
     }
     const scene = new ActBreakScene(this.renderer, rider, () => hub.inkWidths(), act, ui);
+    scene.onDone = () => {
+      this.crew(hub); // the rider back aboard, in their spot
+      done();
+    };
+    return scene;
+  }
+
+  // act 5's bail: lost in space, the rider falling away to Earth (null if the crew aren't loaded yet)
+  spaceFall(done: () => void): SpaceFallScene | null {
+    const hub = this.hub;
+    const rider = hub?.rider;
+    if (!hub || !rider) return null;
+    const scene = new SpaceFallScene(this.renderer, rider, () => hub.inkWidths());
     scene.onDone = () => {
       this.crew(hub); // the rider back aboard, in their spot
       done();
