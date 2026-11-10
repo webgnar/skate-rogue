@@ -29,14 +29,12 @@ export type FloorState = 'skate' | 'bail' | 'exit' | 'caught';
 
 export type FloorEvent =
   | SkaterEvent
-  | { type: 'pickup'; kind: PickupKind; index: number; mult?: number } // mult: NO GROUND's coin multiplier (src/sim/sky.ts)
+  | { type: 'pickup'; kind: PickupKind; index: number; mult?: number } // mult: DOWNSTREAM's coin multiplier (the sewer's flow line)
   | { type: 'mod'; effect: EffectId; slot: number } // a board mod fired
   | { type: 'patch'; part: GearPart } // Patch Job put a little back on this part
   | { type: 'drone'; index: number } // stomped a drone out of the sky
   | { type: 'near' } // a close call: cleared a vehicle by a few px without touching it
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
-  | { type: 'skyChain'; n: number; mult: number } // NO GROUND: another sky piece on the line, n pieces in
-  | { type: 'skyBank'; n: number; mult: number } // and down on the ground again, the line banked
   | { type: 'grounded' } // act 3: down off the clouds to the street, so the act starts over after this floor (see fell)
   | { type: 'bust'; index: number; x: number; y: number; mult: number } // burst through a sky billboard (level.busts)
   | { type: 'goldBird'; x: number; y: number } // cleared the golden pigeon: a spin token
@@ -114,8 +112,6 @@ export class FloorSim {
   // a test start (the level editor's "play from here"): coming down off the clouds doesn't cost the act
   practice = false;
   private flown = false; // been up on the clouds this floor
-  skyLine = 0; // NO GROUND: sky pieces chained since you last touched the ground below (src/sim/sky.ts)
-  private skyPiece: object | null = null; // the last of them
   // the puddle at (x, y), once it's formed enough to splash through (the view's own test: Puddles.at)
   puddleAt(x: number, y: number): object | null {
     const t = this.frames / 60;
@@ -269,9 +265,8 @@ export class FloorSim {
     if (this.sky.gold) this.events.push({ type: 'goldBird', x: sk.x, y: sk.y });
     for (const i of this.sky.burst(sk, px)) {
       const b = this.sky.busts[i];
-      this.events.push({ type: 'bust', index: i, x: b.x, y: sk.y, mult: skyMult(this.skyLine) });
+      this.events.push({ type: 'bust', index: i, x: b.x, y: sk.y, mult: 1 });
     }
-    this.noGround();
     this.offClouds();
     this.chaser?.step(this.skater, skaterEvents);
     if (this.state === 'exit') return;
@@ -284,26 +279,6 @@ export class FloorSim {
       //up out of the tunnel that runs to the gate: the sewer road
       if (fork?.sewer && (this.down ? sewerAt(this.level, this.skater.x)?.gate : this.upFrom?.s.gate && this.frames - this.upFrom.frame < 120)) this.road = 'sewer';
     } else if (this.heat.caught || this.chaser?.caught) this.state = 'caught';
-  }
-
-  // NO GROUND: each new sky piece you land on or catch adds to the line; the air between keeps it going; the
-  // ground below banks it (a bail just loses it). Only where going up is a choice: from act 3 the climb is the
-  // floor (the cloud layer, the sky, space; the ceiling and the beam-up), so it's off there (zack, Nov 7, 2026)
-  private noGround(): void {
-    if (!skyBonus(this.level)) return;
-    const sk = this.skater;
-    if (sk.mode === 'air') return;
-    const piece = sk.mode === 'rail' ? (sk.rail && (sk.rail.top || sk.rail.sky) ? sk.rail : null) : sk.surface && (sk.surface.top || sk.surface.sky) ? sk.surface : null;
-    if (piece && sk.mode !== 'bail' && sk.mode !== 'exit') {
-      if (piece === this.skyPiece) return;
-      this.skyPiece = piece;
-      this.skyLine++;
-      if (this.skyLine >= 2) this.events.push({ type: 'skyChain', n: this.skyLine, mult: skyMult(this.skyLine) });
-      return;
-    }
-    if (this.skyLine >= 2 && sk.mode !== 'bail') this.events.push({ type: 'skyBank', n: this.skyLine, mult: skyMult(this.skyLine) });
-    this.skyLine = 0;
-    this.skyPiece = null;
   }
 
   // where the cloud a floor starts on ends (src/gen/clouds.ts CLOUD_ACT): the start of the line
@@ -661,7 +636,7 @@ export class FloorSim {
       const dy = p.y - (sk.y - BODY);
       if ((p.x - sk.x) ** 2 + dy * dy > r2) return;
       this.taken[i] = true;
-      const mult = Math.max(skyMult(this.skyLine), this.down ? skyMult(this.flowLine) : 1);
+      const mult = this.down ? skyMult(this.flowLine) : 1;
       this.events.push({ type: 'pickup', kind: p.kind, index: i, ...(mult > 1 ? { mult } : {}) });
     });
   }
@@ -669,12 +644,4 @@ export class FloorSim {
 
 function isGrind(mode: Mode): boolean {
   return mode === 'grind' || mode === 'rail';
-}
-
-// whether NO GROUND pays on this floor: the street and rooftop acts and their escapes (and Endless, which keeps the
-// optional cloud layer), not the climb acts where you're up off the ground the whole floor
-export function skyBonus(level: Level): boolean {
-  const esc = level.escape?.kind;
-  if (esc) return esc !== 'ceiling' && esc !== 'finale';
-  return layerAct(level.layout.floor) === 0;
 }

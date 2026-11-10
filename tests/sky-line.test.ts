@@ -27,7 +27,7 @@ function skate(l: Level, [a, b]: [number, number], v: number): number | null {
     const sk = sim.skater;
     const up = !!(sk.surface?.sky || sk.surface?.top || sk.rail?.sky || sk.rail?.top || sim.sky.pieces.some((p) => p.ledge === sk.surface));
     if (up) on = sk.x;
-    //(touched the ground: NO GROUND's line can't say so, it's off in the climb acts)
+    //(touched the ground)
     if (!up && sk.mode !== 'air' && f > 30) break;
   }
   return Math.min(1, (on - decks[0].x0) / Math.max(1, last - decks[0].x0));

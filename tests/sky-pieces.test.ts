@@ -1,4 +1,4 @@
-// The sky route's set pieces, finds and NO GROUND (zack, 2026-10-31, src/gen/sky-beats.ts, src/sim/sky.ts): a blimp,
+// The sky route's set pieces and finds (NO GROUND was cut Nov 10, 2026) (zack, 2026-10-31, src/gen/sky-beats.ts, src/sim/sky.ts): a blimp,
 // a window washer's rig that drops under you, a crane jib that swings out of the lane, paper billboards to burst,
 // a stash crate, the golden pigeon and Chinatown's clotheslines; chaining sky pieces multiplies the coins up there.
 import { describe, expect, it } from 'vitest';
@@ -49,7 +49,7 @@ describe('the sky route', () => {
     expect([...seen].sort()).toEqual(['blimp', 'bust', 'rig', 'swing']);
   }, 30000); // (132 floors built, each with its cloud layer the whole way)
 
-  it('NO GROUND: chaining sky pieces multiplies the coins, and the ground banks it', () => {
+  it('a line multiplies coins (the sewer DOWNSTREAM); up in the sky a billboard bursts with no bonus (NO GROUND is cut)', () => {
     expect(skyMult(0)).toBe(1);
     expect(skyMult(1)).toBe(1);
     expect(skyMult(2)).toBe(1.5);
@@ -59,7 +59,7 @@ describe('the sky route', () => {
     score.onEvent({ type: 'pickup', kind: 'stoken', index: 1, mult: 2.5 }, 3.5);
     expect(score.cash).toBe(2);
     expect(score.stoken).toBe(2);
-    //jump the bust's gap from its first deck to its second: through the billboard, two pieces on the line
+    //jump the bust's gap from its first deck to its second: through the billboard
     const l = find((x) => !!x.busts?.length, 9); // (act 4's bust is jumped in its own gravity)
     const b = l.busts![0];
     const first = l.surfaces.find((s) => s.sky && s.x1 < b.x && b.x - s.x1 < 3 * TILE)!;
@@ -68,9 +68,8 @@ describe('the sky route', () => {
     sim.skater.hsp = sim.skater.carry = 6;
     const events = run(sim, 600, (s) => s.skater.grounded && s.skater.x > first.x1 - 30 && s.skater.x < first.x1);
     expect(events.some((e) => e.type === 'bust')).toBe(true);
-    expect(events.some((e) => e.type === 'skyChain' && e.n === 2 && e.mult === 1.5)).toBe(true);
-    const after = events.findIndex((e) => e.type === 'skyChain');
-    expect(events.slice(after).some((e) => e.type === 'pickup' && e.mult === 1.5)).toBe(true);
+    expect(events.some((e) => e.type === 'bust' && e.mult === 1)).toBe(true);
+    expect(events.some((e) => e.type === 'pickup' && (e.mult ?? 1) > 1)).toBe(false);
   });
 
   it("the window washer's rig drops once you land on it", () => {
@@ -143,22 +142,4 @@ describe('the sky route', () => {
     sim.sky.stepPieces(sim.skater);
     expect(sim.skater.x - before).toBeCloseTo(p.x - at, 5);
   });
-});
-
-describe('NO GROUND only where going up is a choice', () => {
-  it('pays on the street and rooftop acts and Endless, not in the climb acts or their escapes', async () => {
-    const { skyBonus } = await import('../src/sim/floor');
-    const { buildEscape } = await import('../src/gen/escape');
-    for (const f of [2, 5]) expect(skyBonus(chicago(53, f))).toBe(true);
-    for (const f of [8, 11, 14]) expect(skyBonus(chicago(53, f))).toBe(false);
-    expect(skyBonus(buildEscape(3, 3))).toBe(true);
-    for (const act of [4, 5]) expect(skyBonus(buildEscape(3, act))).toBe(false);
-    //in act 3 the cloud layer never builds a line
-    const l = chicago(53, 8);
-    const cloud = l.surfaces.find((s) => s.sky)!;
-    const sim = new FloorSim({ ...l, startX: cloud.x0 + 8, startY: cloud.y });
-    const events = run(sim, 300);
-    expect(events.some((e) => e.type === 'skyChain')).toBe(false);
-    expect(sim.skyLine).toBe(0);
-  }, 60000);
 });

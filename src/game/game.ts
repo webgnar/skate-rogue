@@ -187,7 +187,7 @@ export interface Hud {
   over(result: RunResult | null): void;
   money(cash: number, stoken: number): void;
   score(score: number, combo: number, stoke: number, gnar: number, pending: number): void; // stoke and gnar 0..1; pending: the live combo's points
-  noGround?(n: number, mult: number, bonus: number, banked: boolean, label?: string): void; // NO GROUND's meter (src/sim/sky.ts), or DOWNSTREAM's (src/sim/floor.ts)
+  noGround?(n: number, mult: number, bonus: number, banked: boolean, label?: string): void; // DOWNSTREAM's meter (src/sim/floor.ts)
   pause(paused: boolean): void; // show or hide the pause card
   heat(value: number): void;
   warn(show: boolean): void; // an oncoming car is on its way
@@ -333,7 +333,7 @@ export class Game {
     if (c) Object.assign(this.sim.skater, { x: c.x0 + 8, y: c.y - 2, mode: 'air', hsp: 5, carry: 5, vsp: 0 });
   }
 
-  private skyBonus = 0; // NO GROUND: extra cash the live line has paid
+  private skyBonus = 0; // DOWNSTREAM: extra cash the live line has paid
   private skyBanked: { n: number; mult: number; bonus: number; t: number; label?: string } | null = null; // the last line, held up a moment
   private sewerStart = ''; // ?sewer: each new floor starts at the way into a sewer
   private cloudStart = false; // ?clouds: each new floor starts up on its cloud layer (src/gen/clouds.ts)
@@ -1672,15 +1672,15 @@ export class Game {
     this.focus.update(realDt, this.view.camera, this.sprite.mesh.position);
     this.flowFx(dt);
     this.hud.score(this.run.score, this.run.combo, this.run.stoke, this.run.gnarT / SCORE.gnarSecs, this.run.comboPoints * this.run.combo);
-    //NO GROUND's meter: the live line, or the one just banked for a moment after
+    //DOWNSTREAM's meter (the sewer's flow line): the live line, or the one just banked for a moment after
     //(down in the sewer the same meter is DOWNSTREAM's)
     const flow = this.sim.down ? this.sim.flowLine : 0;
-    const line = Math.max(this.sim.skyLine, flow);
-    const label = flow > this.sim.skyLine ? 'DOWNSTREAM' : 'NO GROUND';
+    const line = flow;
+    const label = 'DOWNSTREAM';
     if (line >= 2) this.hud.noGround?.(line, skyMult(line), this.skyBonus, false, label);
     else if (this.skyBanked && this.skyBanked.t > 0) {
       this.skyBanked.t -= dt;
-      this.hud.noGround?.(this.skyBanked.n, this.skyBanked.mult, this.skyBanked.bonus, true, this.skyBanked.label ?? 'NO GROUND');
+      this.hud.noGround?.(this.skyBanked.n, this.skyBanked.mult, this.skyBanked.bonus, true, this.skyBanked.label ?? 'DOWNSTREAM');
     } else this.hud.noGround?.(0, 1, 0, false, label);
     if (line === 0) this.skyBonus = 0;
     this.hud.gear(this.sim.gear);
@@ -2212,22 +2212,11 @@ export class Game {
       this.hud.gearTick('wheels');
       return;
     }
-    if (e.type === 'skyChain') {
-      //NO GROUND: another sky piece on the line, the coins up here worth more
-      this.hud.callout(`NO GROUND! COINS x${e.mult}`, 'trick');
-      return;
-    }
     if (e.type === 'grounded') {
       //act 3: off the clouds and down to the street. Skate the floor out down here, then the act starts over
       this.hud.callout(`GROUNDED! ACT ${actOf(this.floor)} STARTS OVER`, 'bad');
       this.act3Retries++;
       this.wantAhead();
-      return;
-    }
-    if (e.type === 'skyBank') {
-      this.hud.callout(`SKY LINE x${e.mult}! +$${this.skyBonus}`, 'good');
-      this.skyBanked = { n: e.n, mult: e.mult, bonus: this.skyBonus, t: 1.6 };
-      this.skyBonus = 0;
       return;
     }
     if (e.type === 'bust') return this.bustFx(e);

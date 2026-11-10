@@ -15,7 +15,7 @@ import { whole } from '../run/save';
 export const STOKE_SEGS = 10;
 export const HEAT_SEGS = 10;
 export const WEAR_SEGS = 5;
-export const NG_PIPS = 7; // NO GROUND's pieces to the cap (SKY_LINE, src/sim/sky.ts)
+export const NG_PIPS = 7; // a flow line's pieces to the cap (SKY_LINE, src/sim/sky.ts)
 export const HEAT_STARS = [25, 50, 75, 90]; // Heat for each star
 export const GEAR_ORDER: GearPart[] = ['deck', 'trucks', 'wheels', 'bearings', 'shoes']; // the mockup's order, bearings by the wheels
 
@@ -123,7 +123,7 @@ export class HudView {
   private readonly ngMult = new Cell($('ngmult'));
   private readonly ngBonus = new Cell($('ngbonus'));
   private readonly ngLabel = new Cell($('nglabel'));
-  private ngLabelText = 'NO GROUND';
+  private ngLabelText = 'DOWNSTREAM';
   private readonly ngPips: Meter;
   private ngLast = 0;
   private boardKey = '';
@@ -211,9 +211,9 @@ export class HudView {
     this.stoke.set(segments(isGnar ? gnar : stoke, STOKE_SEGS));
   }
 
-  // NO GROUND: n sky pieces chained (shown from 2), the coin multiplier, the extra cash it's paid; banked holds
+  // DOWNSTREAM: n pieces chained (shown from 2), the coin multiplier, the extra cash it's paid; banked holds
   // the last line up a moment in gold after you touch down
-  setNoGround(n: number, mult: number, bonus: number, banked: boolean, label = 'NO GROUND'): void {
+  setNoGround(n: number, mult: number, bonus: number, banked: boolean, label = 'DOWNSTREAM'): void {
     if (label !== this.ngLabelText) {
       this.ngLabelText = label;
       this.ngLabel.text(label);
@@ -226,7 +226,7 @@ export class HudView {
       return;
     }
     this.ngMult.text(`x${mult}`);
-    this.ngBonus.text(banked ? `BANKED +$${bonus}` : bonus > 0 ? `+$${bonus} BONUS` : label === 'NO GROUND' ? 'LAND ON THE NEXT ONE' : 'KEEP IT ROLLING');
+    this.ngBonus.text(banked ? `BANKED +$${bonus}` : bonus > 0 ? `+$${bonus} BONUS` : 'KEEP IT ROLLING');
     this.ngPips.set(Math.min(NG_PIPS, n));
     //each step up, the multiplier pops
     if (n > this.ngLast && !banked) {
