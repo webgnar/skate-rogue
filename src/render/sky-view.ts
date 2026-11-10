@@ -171,9 +171,9 @@ export class SkyView {
     for (const h of m.children) if (h instanceof THREE.InstancedMesh) h.count = n;
   }
 
-  update(level: Level, sky: Sky, skaterX: number, skaterY: number, up: boolean, dt: number, gone?: ReadonlySet<Surface>): void {
+  update(level: Level, sky: Sky, skaterX: number, skaterY: number, up: boolean, dt: number, gone?: ReadonlySet<Surface>, crumbling?: ReadonlyMap<Surface, number>): void {
     this.t += dt;
-    this.pieces.update(level, skaterX, gone);
+    this.pieces.update(level, skaterX, gone, crumbling);
     if (this.poses) {
       this.updatePosed(level, sky, skaterX);
     } else {

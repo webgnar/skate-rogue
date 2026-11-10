@@ -154,6 +154,14 @@ function solarPanel(p: Parts, m: SpaceMats, w: number): void {
   p.box(m.foil, w + 0.3, 0.14, 0.14, w / 2, -0.18, -1.3); // the spar it hangs off, behind
 }
 
+// a thin cloud's blink once you've landed on it, `left` frames of `total` from going: off a moment, faster and faster
+// (the blinks' rate climbs steadily, about five of them, the last few frames apart)
+export function thinBlink(total: number, left: number): boolean {
+  const e = Math.max(0, total - left);
+  const cycles = (e * e) / (total * total) * 5 + e / total;
+  return cycles % 1 < 0.6;
+}
+
 // a sheet of junk that breaks off once you've stood on it (a thin cloud's): bent rusty plates, a snapped strut
 function junkPlate(p: Parts, m: SpaceMats, w: number, seed: number): void {
   const n = Math.max(2, Math.round(w / 2));
@@ -671,14 +679,16 @@ export class SkyPiecesView {
     return g;
   }
 
-  update(level: Level, skaterX: number, gone?: ReadonlySet<Surface>): void {
-    //a thin cloud you've stood on breaks up: it puffs out and is gone
+  update(level: Level, skaterX: number, gone?: ReadonlySet<Surface>, crumbling?: ReadonlyMap<Surface, number>): void {
+    //a thin cloud you've stood on blinks, faster and faster (zack, 2026-11-10), then puffs out and is gone
     for (const t of this.thin) {
       const g = gone?.has(t.s) ?? false;
+      const left = crumbling?.get(t.s);
       if (!g) {
-        t.g.visible = true;
         t.g.scale.setScalar(1);
-      } else if (t.g.visible) {
+        t.g.visible = left === undefined || thinBlink(t.s.crumbleFrames ?? left, left);
+      } else if (t.g.visible || t.g.scale.x === 1) {
+        t.g.visible = true;
         const k = t.g.scale.x * 1.06;
         t.g.scale.set(k, k * 0.8, k);
         if (k > 1.5) t.g.visible = false;
