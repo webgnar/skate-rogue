@@ -38,7 +38,7 @@ listing, is in the project files (`app-store/checklist.md`).
 | Leaderboard | Off: it is our Vercel server's (`/api/leaderboard`), which the app doesn't serve, and free-typed player tags would need a report and block flow under the App Store's rules for user content. So the app sends nothing anywhere. |
 | Safe areas | `viewport-fit=cover` and the `env(safe-area-inset-*)` padding already in `src/style.css`; `capacitor.config.ts` sets `contentInset: 'never'` so the web view runs under the notch and home bar and the page does the padding. |
 | Orientation | Portrait and both landscapes (`Info.plist`), as on the web. |
-| System chrome | The status bar is hidden (`Info.plist`), the home bar fades and an edge swipe needs a second swipe (`GameViewController` in `ios/App/App/SceneDelegate.swift`), so a tap at the bottom of the screen never leaves the game. |
+| System chrome | The status bar is hidden (`Info.plist`), the home bar fades (`SystemBars` hidden in `capacitor.config.ts`) and an edge swipe needs a second swipe (`GameViewController` in `ios/App/App/SceneDelegate.swift`), so a tap at the bottom of the screen never leaves the game. |
 | Audio | Unlocked on the first tap, as on the web (`Sound.unlock`). After a phone call, an alarm or Siri iOS leaves the audio "interrupted"; the game wakes it like a suspended one. The silent switch mutes the game (iOS does that to web audio by default). |
 | Icon and launch screen | `node scripts/make-icons.mjs` renders the 1024 px icon (no alpha, as App Store Connect wants) and the launch screen, drawn like the loading screen so the hand-off doesn't jump. |
 | Devices | iPhone only (`TARGETED_DEVICE_FAMILY = 1`), iOS 15 and up. iPads can still run it as an iPhone app. Turning on iPad needs iPad screenshots too. |
