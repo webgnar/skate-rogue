@@ -48,8 +48,8 @@ Handles are 44 px or bigger on touch, one finger pans, two pinch to zoom, and lo
 
 ## Decisions for zack
 
-1. **What's hand-made?** Sets dropped into generated floors (recommended), whole hand-made floors, or both from
-   the start.
+1. **What's hand-made?** DECIDED (zack, 2026-11-10): sets dropped into generated floors. Whole hand-made
+   floors stay a later phase (4).
 2. **Where do you build?** Phone first (every tool sized for touch), desktop first with phone for nudging and
    playing (recommended), or desktop only.
 3. **Saving from the phone.** Keep pasting to Claude (as `?levels` does now), a save button that commits to a
