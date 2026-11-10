@@ -91,9 +91,9 @@
   "fsBoardslide": {
     "loop": true,
     "keys": [
-      {"t":0,"pose":{"yaw":-1.2,"hipY":0.5996,"hipZ":-0.1994,"lean":0.1,"bend":0.14,"head":1.4,"armLRaise":1.4,"armLElbow":0.35,"armRRaise":1.2,"armRElbow":0.4,"boardY":-0.09,"boardYaw":-1.5708}},
+      {"t":0,"pose":{"yaw":-0.2967,"hipX":0.1711,"hipY":0.788,"hipZ":-0.2076,"lean":0.1,"bend":-0.0489,"head":1.4,"armLRaise":1.4,"armLElbow":0.35,"armRRaise":1.2,"armRElbow":0.4,"footFTurn":1.1519,"boardY":-0.09,"boardYaw":-1.5708}},
       {"t":0.3,"pose":{"yaw":-1.2,"hipY":0.5574,"hipZ":-0.1578,"lean":0.13,"bend":0.16,"head":1.4,"armLRaise":1.3,"armLElbow":0.4,"armRRaise":1.3,"armRElbow":0.3,"boardY":-0.09,"boardYaw":-1.5708}},
-      {"t":0.6,"pose":{"yaw":-1.2,"hipY":0.5996,"hipZ":-0.1994,"lean":0.1,"bend":0.14,"head":1.4,"armLRaise":1.4,"armLElbow":0.35,"armRRaise":1.2,"armRElbow":0.4,"boardY":-0.09,"boardYaw":-1.5708}}
+      {"t":0.6,"pose":{"yaw":-0.2967,"hipX":0.1711,"hipY":0.788,"hipZ":-0.2076,"lean":0.1,"bend":-0.0489,"head":1.4,"armLRaise":1.4,"armLElbow":0.35,"armRRaise":1.2,"armRElbow":0.4,"footFTurn":1.1519,"boardY":-0.09,"boardYaw":-1.5708}}
     ]
   },
   "fsFlip": {
@@ -121,9 +121,9 @@
   "grind2": {
     "loop": true,
     "keys": [
-      {"t":0,"pose":{"yaw":1.5882,"hipY":0.72,"lean":-0.1,"head":0.2,"armLRaise":0.2692,"armLFwd":-1.348,"armLElbow":0.5213,"armLTwist":0.344,"armRRaise":2.9951,"armRFwd":-1.8865,"armRElbow":0.6072,"armRTwist":2.9396,"boardY":-0.09,"boardYaw":1.5708}},
+      {"t":0,"pose":{"yaw":1.5882,"hipY":0.72,"lean":-0.1,"bend":0.4398,"head":0.2,"armLRaise":0.2692,"armLFwd":-1.348,"armLElbow":0.5213,"armLTwist":0.344,"armRRaise":2.9951,"armRFwd":-1.8865,"armRElbow":0.6072,"armRTwist":2.9396,"boardY":-0.09,"boardYaw":1.5708}},
       {"t":0.3,"pose":{"yaw":1.2,"hipY":0.69,"lean":-0.13,"bend":0.14,"head":0.2,"armLRaise":1.4,"armLElbow":0.3,"armRRaise":1.3,"armRElbow":0.4,"boardY":-0.09,"boardYaw":1.5708}},
-      {"t":0.6,"pose":{"yaw":1.5882,"hipY":0.72,"lean":-0.1,"head":0.2,"armLRaise":0.2692,"armLFwd":-1.348,"armLElbow":0.5213,"armLTwist":0.344,"armRRaise":2.9951,"armRFwd":-1.8865,"armRElbow":0.6072,"armRTwist":2.9396,"boardY":-0.09,"boardYaw":1.5708}}
+      {"t":0.6,"pose":{"yaw":1.5882,"hipY":0.72,"lean":-0.1,"bend":0.4398,"head":0.2,"armLRaise":0.2692,"armLFwd":-1.348,"armLElbow":0.5213,"armLTwist":0.344,"armRRaise":2.9951,"armRFwd":-1.8865,"armRElbow":0.6072,"armRTwist":2.9396,"boardY":-0.09,"boardYaw":1.5708}}
     ]
   },
   "heelflip": {
