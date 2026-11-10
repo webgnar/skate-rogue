@@ -1,0 +1,7 @@
+- [x] The five sets laid in act 3's cloud layer, capped per floor, never two the same running
+- [x] Launch quarterpipe with its own throw speed; airways kept clear of bridging decks
+- [x] Off the clouds before the layer's end: fell, GROUNDED callout, the act starts over with fresh layouts
+- [x] Girder staircases and the rig out of act 3; a low cloud under the crane jib
+- [x] Sky bot: drones as decks, no ollie on a launch, no power lines in act 3 (clears about 6 floors in 7)
+- [x] The new pieces drawn: rainbow hubba, chrome S-rail, red S I-beam, steel downrail, quarterpipe
+- [x] Tests (tests/cloud-line.test.ts, tests/cloud-act.test.ts), in-game stills, the restart checked in the browser

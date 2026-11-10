@@ -609,12 +609,17 @@ export class Skater {
         const fromRail = this.mode === 'grind';
         const slope = this.surface ? surfaceSlope(this.surface) : 0;
         const launch = this.mode === 'roll' ? this.surface?.launch : undefined;
+        const launchHsp = launch ? this.surface?.launchHsp : undefined;
         this.leaveGround();
         this.vsp = slope * this.hsp;
         if (!fromRail) this.coyote = PHYS.coyoteFrames;
         //a sewer kick-out: up its quarterpipe and straight up through the grate overhead, back to the street
         if (launch) {
           this.vsp = launch;
+          if (launchHsp) {
+            this.hsp = launchHsp;
+            this.carry = 0;
+          }
           this.kicked = true;
           this.coyote = 0;
           this.jumps = this.maxJumps;

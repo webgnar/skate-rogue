@@ -6,7 +6,7 @@ import { skaterMods } from '../boons/mods';
 import { offerBoons } from '../boons/offer';
 import { floorLevel, type FloorSpec } from '../run/floor-level';
 import { FloorPrefetch, specKey } from '../run/prefetch';
-import { ACTS, actOf, endsAct, ESCAPE } from '../gen/escape';
+import { ACTS, actOf, endsAct, ESCAPE, FLOORS_PER_ACT } from '../gen/escape';
 import { FIRST_ROAD, floorRoad, label, ROADS, type Road } from '../gen/roads';
 import { BOARD, newBoard, type EffectId, type Slots } from '../board/mods';
 import { buy, buyGrip, buySlot, restock, restockPrice, rollStock, swap, type ShopState } from '../board/shop';
@@ -14,7 +14,7 @@ import { GRIP, gripDef, gripFor, type GripId } from '../board/grips';
 import { deckChoices, STOCK_DECK, stockDeck, type DeckArt } from '../board/deck-art';
 import { RunScore, SCORE } from '../run/score';
 import { SKY, skyMult } from '../sim/sky';
-import { firstCloud, layerAct } from '../gen/clouds';
+import { cloudFloor, firstCloud, layerAct } from '../gen/clouds';
 import { freshGear, GEAR, replace, type Gear, type GearPart } from '../run/gear';
 import { noBustedTime } from '../sim/supply';
 import { SupplyView } from '../render/supply-view';
@@ -379,6 +379,7 @@ export class Game {
   private readonly twistView = new TwistView();
   private floorStoken = 0; // Stoken at the floor's start, for a bounty
   private continuesLeft = CONTINUES;
+  private act3Retries = 0; // times act 3 has started over this run (fallen off its clouds): its floors' seeds
   private contCaught = false; // the continue card is up after a bust (not a bail)
   // the run as it was when this floor started: a continue puts it back
   private floorStart: { run: RunScore; gear: Gear; busted: Gear; carry: number } | null = null;
@@ -609,7 +610,7 @@ export class Game {
 
   private makeLevel(): Level {
     return floorLevel({
-      seed: this.seed,
+      seed: this.floorSeed(this.floor),
       floor: this.floor,
       road: this.road,
       library: this.meta.library,
@@ -618,8 +619,20 @@ export class Game {
     });
   }
 
+  // the seed a floor's built from: the run's, or for act 3's floors a fresh one each time the act starts over (fall
+  // off the clouds and you go round its three floors again, not the same three)
+  private floorSeed(floor: number): number {
+    return this.act3Retries && cloudFloor(floor) ? this.seed + this.act3Retries * 104729 : this.seed;
+  }
+
+  // act 3's floors: down off the clouds (the sim's fell), so the act starts over at its first floor after this one
+  private get restartAct(): boolean {
+    return this.road.kind !== 'escape' && !this.tutorial && this.sim.mustFly && this.sim.fell;
+  }
+
   private newRun(): void {
     if (!this.fixedSeed) this.seed = Math.floor(Math.random() * 1e6);
+    this.act3Retries = 0;
     this.floor = this.startAt;
     this.boons = this.meta.boons ?? [];
     this.board = newBoard(DECK_SLOTS[this.meta.loadout.deck]);
@@ -922,6 +935,9 @@ export class Game {
   }
 
   private advance(): void {
+    //act 3, fallen off the clouds: round its floors again, from its first (by the road picked at the gate, as ever)
+    const first = (actOf(this.floor) - 1) * FLOORS_PER_ACT + 1;
+    if (this.restartAct && !['shop', 'spot'].includes(this.nextRoad.kind)) return this.goTo(first, this.nextRoad);
     //an act ends with its escape, before the road picked at the third floor's fork
     if (endsAct(this.floor) && this.road.kind !== 'escape') return this.goTo(this.floor, { kind: 'escape', act: actOf(this.floor), danger: 3 });
     //the shop road: shop first, then the boon street after it; the same for the underground spot
@@ -952,6 +968,7 @@ export class Game {
   // the run's first floor, the third floor of an act to its escape, the shop and the spot to the boon street after
   private next(road: Road): { floor: number; road: Road } {
     if (this.tutorial || this.tutorialOut) return { floor: this.startAt, road: this.firstRoad() };
+    if (this.restartAct) return { floor: (actOf(this.floor) - 1) * FLOORS_PER_ACT + 1, road: floorRoad(road) };
     if (endsAct(this.floor) && this.road.kind !== 'escape') return { floor: this.floor, road: { kind: 'escape', act: actOf(this.floor), danger: 3 } };
     return { floor: this.floor + 1, road: floorRoad(road) };
   }
@@ -965,7 +982,7 @@ export class Game {
   }
 
   private spec(n: { floor: number; road: Road }): FloorSpec {
-    return { seed: this.seed, floor: n.floor, road: n.road, library: this.meta.library, gnar: this.gnar, tutorial: false };
+    return { seed: this.floorSeed(n.floor), floor: n.floor, road: n.road, library: this.meta.library, gnar: this.gnar, tutorial: false };
   }
 
   // start building every floor this one can lead to, in the background
@@ -2186,6 +2203,13 @@ export class Game {
     if (e.type === 'skyChain') {
       //NO GROUND: another sky piece on the line, the coins up here worth more
       this.hud.callout(`NO GROUND! COINS x${e.mult}`, 'trick');
+      return;
+    }
+    if (e.type === 'grounded') {
+      //act 3: off the clouds and down to the street. Skate the floor out down here, then the act starts over
+      this.hud.callout(`GROUNDED! ACT ${actOf(this.floor)} STARTS OVER`, 'bad');
+      this.act3Retries++;
+      this.wantAhead();
       return;
     }
     if (e.type === 'skyBank') {

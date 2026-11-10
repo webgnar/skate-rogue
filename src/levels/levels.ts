@@ -73,7 +73,7 @@ const SKY_HELP: Record<SkyBeat, string> = {
 
 // the cloud layer's beats (src/gen/clouds.ts), and the route layers' dials: keys of CLOUDS and SEWER, overlaid per
 // floor while it's built (withDials in level-edits.ts). `unit` is px per shown unit (TILE for a height kept in px)
-const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap', 'fork', 'hops', 'climb', 'spire', 'blimp', 'beam'];
+const CLOUD_BEATS: CloudBeat[] = ['puff', 'thin', 'drift', 'rainbow', 'balloon', 'gap', 'fork', 'hops', 'climb', 'spire', 'blimp', 'beam', 'hubba', 'srail', 'sbeam', 'bridge', 'launch'];
 const CLOUD_HELP: Record<CloudBeat, string> = {
   puff: 'a cloud to land on',
   thin: 'a thin cloud that puffs away a moment after you land',
@@ -87,6 +87,11 @@ const CLOUD_HELP: Record<CloudBeat, string> = {
   spire: "act 4: a skyscraper's crown up through the clouds",
   blimp: 'act 4: a blimp of the fleet, its long back to cruise',
   beam: 'act 4: a steel I-beam on a crane cable, swinging slowly along the lane',
+  hubba: 'act 3: a cloud a flip up, then a rainbow hubba ledge grinding down onto a cloud',
+  srail: 'act 3: a chrome S-rail that dips and kicks you up off its end onto a cloud',
+  sbeam: 'act 3: a red S I-beam on crane cables, stepping down flat to flat onto a cloud',
+  bridge: 'act 3: a gap with no cloud under it, drones hovering across it to stomp over',
+  launch: 'act 3: a quarterpipe up through a cloud onto a big down rail, a flat, then again',
 };
 interface LayerDial {
   key: string;

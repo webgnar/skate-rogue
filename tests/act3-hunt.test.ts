@@ -29,7 +29,8 @@ describe("act 3's first floor: the drones followed you up", () => {
         expect(under).toBeDefined();
       }
       const sim = new FloorSim(l);
-      expect(sim.swarm?.drones.length).toBe(hunt.length);
+      //(and the drone bridges' drones: src/gen/clouds.ts)
+      expect(sim.swarm?.drones.length).toBe(hunt.length + (l.bridges?.length ?? 0));
     }
   }, 60000);
 

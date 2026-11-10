@@ -8,7 +8,7 @@ import { PHYS, TILE } from '../physics/constants';
 import { Heat, HEAT } from '../heat/heat';
 import { Chopper, CHOPPER } from './chopper';
 import { TOP } from '../gen/top-route';
-import { layerAct } from '../gen/clouds';
+import { CLOUDS, layerAct } from '../gen/clouds';
 import { Chaser } from './chaser';
 import { Shooter, type ShotEvent } from './shots';
 import { Swarm } from './drones';
@@ -37,6 +37,7 @@ export type FloorEvent =
   | { type: 'birds' } // a bird strike on the top route (src/sim/sky.ts)
   | { type: 'skyChain'; n: number; mult: number } // NO GROUND: another sky piece on the line, n pieces in
   | { type: 'skyBank'; n: number; mult: number } // and down on the ground again, the line banked
+  | { type: 'grounded' } // act 3: down off the clouds to the street, so the act starts over after this floor (see fell)
   | { type: 'bust'; index: number; x: number; y: number; mult: number } // burst through a sky billboard (level.busts)
   | { type: 'goldBird'; x: number; y: number } // cleared the golden pigeon: a spin token
   | { type: 'repair'; part: GearPart } // a sky stash's fresh gear part, fitted
@@ -106,6 +107,11 @@ export class FloorSim {
   private later: { effect: EffectId; slot: number; t: number }[] = []; // board effects waiting to fire
   private patches = 0; // Patch Jobs fired this floor
   combo = 0; // the run's live combo count, set by the game each step (Combo Only reads it)
+  // act 3 (zack, 2026-11-10: "in order to pass act 3, you gotta take the cloud route all the time, if you fall, u just
+  // gotta grind out that level on the surface and then it makes you restart act 3"): touched the street (or the hill
+  // road, a roof down there, the sewer) before the cloud layer ends near the gate
+  fell = false;
+  private flown = false; // been up on the clouds this floor
   skyLine = 0; // NO GROUND: sky pieces chained since you last touched the ground below (src/sim/sky.ts)
   private skyPiece: object | null = null; // the last of them
   // the puddle at (x, y), once it's formed enough to splash through (the view's own test: Puddles.at)
@@ -171,7 +177,7 @@ export class FloorSim {
     this.sky = new Sky(level);
     this.sewer = new SewerSim(level);
     this.chopper = esc?.chopperFrom !== undefined ? new Chopper(esc.chopperFrom, esc.covers, level.startX, esc.chopperTop) : null;
-    this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : level.hunt?.length ? new Swarm(level.hunt, level.streetY) : null;
+    this.swarm = esc?.drones ? new Swarm(esc.drones, level.streetY) : level.hunt?.length || level.bridges?.length ? new Swarm([...(level.hunt ?? []), ...(level.bridges ?? [])], level.streetY) : null;
     this.chaser = esc?.chaseFrom !== undefined ? new Chaser(esc.chaseFrom, level.startX, !!esc.rocket) : null;
     //(the guards shoot; the finale's rocket only runs you down)
     this.shooter = this.chaser && !esc?.rocket ? new Shooter(level.layout.seed, level.streetY) : null;
@@ -264,6 +270,7 @@ export class FloorSim {
       this.events.push({ type: 'bust', index: i, x: b.x, y: sk.y, mult: skyMult(this.skyLine) });
     }
     this.noGround();
+    this.offClouds();
     this.chaser?.step(this.skater, skaterEvents);
     if (this.state === 'exit') return;
     if (this.skater.mode === 'bail') this.state = 'bail';
@@ -295,6 +302,37 @@ export class FloorSim {
     if (this.skyLine >= 2 && sk.mode !== 'bail') this.events.push({ type: 'skyBank', n: this.skyLine, mult: skyMult(this.skyLine) });
     this.skyLine = 0;
     this.skyPiece = null;
+  }
+
+  // where the cloud a floor starts on ends (src/gen/clouds.ts CLOUD_ACT): the start of the line
+  private get startCloudEnd(): number {
+    const l = this.level;
+    return l.surfaces.find((s) => s.sky === 'cloud' && s.x0 <= l.startX && s.x1 > l.startX)?.x1 ?? 0;
+  }
+
+  // an act 3 floor (not its escape), where the clouds are the only way through
+  get mustFly(): boolean {
+    return !this.level.escape && layerAct(this.level.layout.floor) === 3;
+  }
+
+  // act 3's floors: down on anything that isn't up in the clouds, before the layer's end near the gate, and the floor
+  // is lost (the game starts the act over after it)
+  private offClouds(): void {
+    if (this.fell || !this.mustFly) return;
+    const sk = this.skater;
+    if (sk.mode === 'air' || sk.mode === 'exit' || sk.x >= this.level.exitX - CLOUDS.exitShort * TILE) return;
+    const piece = sk.mode === 'rail' ? sk.rail?.sky : sk.surface?.sky;
+    //(a drone's roof, a blimp's back or a crane's jib up in the layer is the sky too)
+    const mover = !!sk.surface && this.sky.pieces.some((p) => p.ledge === sk.surface);
+    if (piece || mover) {
+      this.flown = true;
+      return;
+    }
+    //(a floor starts on the street where the last one's gate let you out: the first cloud's an ollie and a flip up off
+    //the run-up, so the street only counts once you've been up, or once you've skated on past that first cloud)
+    if (sk.mode === 'bail' || (!this.flown && sk.x < this.startCloudEnd)) return;
+    this.fell = true;
+    this.events.push({ type: 'grounded' });
   }
 
   // which road the skater is on right now, once they reach the fork's overpass (null before it, or no fork)

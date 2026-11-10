@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { at } from '../game/interp';
 import { TILE } from '../physics/constants';
-import type { Level, Surface } from '../physics/level';
+import type { CurvedRail, Level, Surface } from '../physics/level';
 import type { Sky, SkyPieceSim } from '../sim/sky';
 import { groundAt } from '../gen/top-route';
 import { layerAct } from '../gen/clouds';
@@ -548,6 +548,7 @@ export class SkyPiecesView {
         group.add(cg);
       }
     }
+    this.cloudLine(level, cl, group);
     cl.into(group);
     inkify(group);
     //act 4, above the clouds: a sea of cloud a few tiles under the line, the whole floor long, so the city's a long way
@@ -555,6 +556,99 @@ export class SkyPiecesView {
     if (layerAct(level.layout.floor) === 4) group.add(this.cloudSea(level));
     this.clouds = group;
     this.group.add(group);
+  }
+
+  // act 3's cloud line (src/gen/clouds.ts CLOUD_LINE, LAUNCH): rainbow hubbas, chrome S-rails, red S I-beams on crane
+  // cables, the launch quarterpipes and their big rails down
+  private cloudLine(level: Level, cl: Parts, group: THREE.Group): void {
+    const Y = (py: number) => toY(level, py);
+    //each segment of a rail's line, in tiles: its middle, length and angle
+    const segs = (r: CurvedRail) => {
+      const out: { mx: number; my: number; len: number; ang: number; ax: number; ay: number }[] = [];
+      for (let i = 1; i < r.xs.length; i++) {
+        const [ax, ay, bx, by] = [toX(r.xs[i - 1]), Y(r.ys[i - 1]), toX(r.xs[i]), Y(r.ys[i])];
+        out.push({ mx: (ax + bx) / 2, my: (ay + by) / 2, len: Math.hypot(bx - ax, by - ay) + 0.03, ang: Math.atan2(by - ay, bx - ax), ax, ay });
+      }
+      return out;
+    };
+    //(the rail's line is its top: things hang under it by `off` tiles, square to it)
+    const under = (sg: { mx: number; my: number; ang: number }, off: number): [number, number] => [sg.mx + Math.sin(sg.ang) * off, sg.my - Math.cos(sg.ang) * off];
+    //cables from points along a rail up out of the top of the frame, to the crane or the blimp holding it
+    const cables = (r: CurvedRail, n: number, up = 9) => {
+      for (let k = 0; k < n; k++) {
+        const p = r.at((r.length * (k + 0.5)) / n);
+        const [x, y] = [toX(p.x), Y(p.y)];
+        cl.bar(this.rope, [x, y, 0], [x + 0.3, y + up, 0], 0.04);
+        cl.box(this.steel, 0.24, 0.16, 0.24, x, y + 0.08, 0);
+      }
+    };
+    for (const r of level.rails) {
+      if (r.sky === 'hubba') {
+        //a hubba ledge in rainbow: six bands stacked under its top edge (red on top), a white coping along it
+        for (const sg of segs(r)) {
+          this.bands.forEach((m, k) => cl.box(m, sg.len, 0.17, 1.1, ...under(sg, 0.06 + 0.085 + k * 0.17), 0, sg.ang));
+          cl.box(this.white, sg.len, 0.06, 1.14, ...under(sg, 0.03), 0, sg.ang);
+        }
+        //its foot: a puff of cloud it stands in
+        const e = segs(r).at(-1)!;
+        const c = new Parts();
+        cloud(c, this.puff, this.puffUnder, 2.2, Math.round(r.xs[0]), true);
+        const cg = new THREE.Group();
+        c.into(cg);
+        cg.position.set(toX(r.xs.at(-1)!) - 1.6, e.ay - 1.2, 0.4);
+        group.add(cg);
+      } else if (r.sky === 'srail') {
+        //a chrome round rail on cables
+        for (const sg of segs(r)) {
+          cl.box(this.alu, sg.len, 0.13, 0.13, ...under(sg, 0.065), 0, sg.ang);
+          cl.box(this.steel, sg.len, 0.04, 0.05, ...under(sg, 0.15), 0, sg.ang);
+        }
+        cables(r, 3);
+      } else if (r.sky === 'sbeam') {
+        //a red I-beam: its top flange (what you grind), the web, the bottom flange, on two crane cables
+        for (const sg of segs(r)) {
+          cl.box(this.girder, sg.len, 0.07, 0.55, ...under(sg, 0.035), 0, sg.ang);
+          cl.box(this.girder, sg.len, 0.34, 0.12, ...under(sg, 0.24), 0, sg.ang);
+          cl.box(this.girder, sg.len, 0.07, 0.55, ...under(sg, 0.44), 0, sg.ang);
+        }
+        cables(r, 2);
+      } else if (r.sky === 'downrail') {
+        //the big rail down off a launch: a fat steel tube on posts hung from cables, a yellow stripe down it
+        for (const sg of segs(r)) {
+          cl.box(this.alu, sg.len, 0.2, 0.2, ...under(sg, 0.1), 0, sg.ang);
+          cl.box(this.yellow, sg.len, 0.05, 0.21, ...under(sg, 0.18), 0, sg.ang);
+        }
+        cables(r, 4, 6);
+      }
+    }
+    for (const s of level.surfaces) {
+      if (s.sky !== 'qp') continue;
+      //a quarterpipe on a cloud: its transition a quarter circle from the foot up to vertical at the lip, a steel
+      //coping on the lip, the deck behind it, and its frame down into the cloud
+      const [x0, yb, x1, yt] = [toX(s.x0), Y(s.y), toX(s.x1), Y(s.y1 ?? s.y)];
+      const R = Math.min(x1 - x0, yt - yb);
+      const n = 10;
+      let [px, py] = [x0, yb];
+      for (let k = 1; k <= n; k++) {
+        const f = ((Math.PI / 2) * k) / n;
+        const [qx, qy] = [x0 + R * Math.sin(f), yt - R * Math.cos(f)];
+        const len = Math.hypot(qx - px, qy - py) + 0.02;
+        const ang = Math.atan2(qy - py, qx - px);
+        cl.box(this.white, len, 0.12, 1.4, (px + qx) / 2 + Math.sin(ang) * 0.06, (py + qy) / 2 - Math.cos(ang) * 0.06, 0, ang);
+        //(its side: a slat down to the foot's height)
+        cl.box(this.navy, len * 0.9, Math.max(0.05, (qy + py) / 2 - yb), 0.06, (px + qx) / 2, (yb + (qy + py) / 2) / 2, 0.7);
+        [px, py] = [qx, qy];
+      }
+      cl.box(this.alu, 0.16, 0.16, 1.5, x1 + 0.04, yt + 0.02, 0); // the coping
+      cl.box(this.navy, 0.9, 0.12, 1.4, x1 + 0.5, yt - 0.06, 0); // the deck
+      cl.box(this.navy, 0.12, yt - yb, 1.3, x1 + 0.9, (yt + yb) / 2, 0); // its back
+      const c = new Parts();
+      cloud(c, this.puff, this.puffUnder, 3.4, Math.round(s.x0), true);
+      const cg = new THREE.Group();
+      c.into(cg);
+      cg.position.set(x0 - 0.2, yb - 0.6, 0.5);
+      group.add(cg);
+    }
   }
 
   // the sea of cloud under act 4's line (see reset): big soft heaps every few tiles, merged into two meshes

@@ -90,7 +90,7 @@ export function applyTwist(level: Level, twist: Twist | undefined, seed: number)
       if (c) p.y = Math.max(p.y, c.y + 14);
     }
   } else if (twist === 'columns') {
-    for (const s of level.surfaces) if (s.kind === 'ledge' && rng() < TWIST.ruin.chance) s.crumble = true;
+    for (const s of level.surfaces) if (s.kind === 'ledge' && !s.sky && rng() < TWIST.ruin.chance) s.crumble = true;
   } else if (twist === 'conveyors') {
     for (const s of level.surfaces) {
       if (s.kind !== 'rail' || inHill(level, s.x0) || rng() >= TWIST.conveyor.chance) continue;

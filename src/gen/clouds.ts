@@ -7,7 +7,7 @@
 // of sky pieces"): partway down each stretch the sky beats give way to a staircase, scaffold decks and then wisps
 // of cloud each a little higher than the last, an ollie apart, up into the layer.
 import { TILE } from '../physics/constants';
-import { CurvedRail, type Level, type SkyBust, type SkyMover, type Surface } from '../physics/level';
+import { CurvedRail, polyRail, type Level, type SkyBust, type SkyMover, type Surface } from '../physics/level';
 import { SKY_SWAY } from '../sim/sky';
 import { PICKUPS } from './descent';
 import { editFloor } from './hills';
@@ -15,9 +15,11 @@ import { makeRng, type Rng } from './rng';
 import { busy, clearAt, groundAt, TOP } from './top-route';
 import { CLOUDY, maxGap, openAt, piecesOf, REACH } from './sky-line';
 import { actGravity } from '../physics/feel';
+import { DRONE } from '../sim/drones';
 
 // spire, blimp: acts 4 and 5's own beats (HIGH): a skyscraper's crown up through the clouds, and a blimp of the fleet
-export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb' | 'spire' | 'blimp' | 'beam';
+// hubba, srail, sbeam, bridge, launch: act 3's own sets (CLOUD_LINE), the cloud line as a line of its own
+export type CloudBeat = 'puff' | 'drift' | 'thin' | 'rainbow' | 'balloon' | 'gap' | 'fork' | 'hops' | 'climb' | 'spire' | 'blimp' | 'beam' | 'hubba' | 'srail' | 'sbeam' | 'bridge' | 'launch';
 // act 3's set pieces, one a floor up in the layer (CLOUD_ACT): the sky route's blimp, crane jib and window washer's rig
 export type CloudPiece = 'blimp' | 'swing' | 'rig' | 'bust';
 
@@ -82,6 +84,7 @@ export const CLOUD_ACT = {
   blimpUp: 0.5, // tiles over the layer
   swing: 12, // tiles: the crane's jib, slewing out of the lane and back (land early, or it swings away under you)
   swingUp: 1, // tiles over the layer
+  swingLow: 1.5, // tiles under the layer: the cloud under it (act 3), for when it's swung away
   rig: 4, // tiles: the window washer's rig, that drops under you (all the way to the street, if you ride it)
   rigGap: 2, // tiles of open sky to the cloud you pop up onto off it
   rigCloud: [8, 11], // tiles: that cloud
@@ -89,6 +92,60 @@ export const CLOUD_ACT = {
   meetUp: 1.5, // tiles: the layer's in reach of a step up to this far over it (an ollie and a flip from its end)
   meetRoom: 4, // tiles of it past the step's end, to land on (and it starts ahead: nothing to catch overhead)
   runOn: 4, // tiles a step may run on toward a layer piece just out of its reach
+};
+
+// Act 3's cloud line (zack, 2026-11-10: "in order to pass act 3, you gotta take the cloud route ... it has to be more
+// fun not just an accent on the existing level. so rainbow Hubbas, S shaped rails. S shaped I Beam... stomping the
+// drones is great ... quarterpipes ... ramps that shoot you straight up, through a cloud, land on a big ass rail going
+// down to a little flat then up again via quarterpipe"). The layer's cloud beats stay as the filler between sets of
+// its own: the clouds are the only way through act 3 (fall to the street and the act starts over, src/game/game.ts),
+// so every set is in reach of the one before, and the sky bot clears them (tests/cloud-line.test.ts)
+export const CLOUD_LINE = {
+  // the act's beats by weight: the sets come round often, the layer's clouds between them
+  beats: [['puff', 3], ['thin', 1], ['drift', 1], ['rainbow', 1], ['fork', 1.2], ['hops', 0.8], ['climb', 0.8], ['gap', 0.5], ['hubba', 2.5], ['srail', 2], ['sbeam', 1.5], ['bridge', 2], ['launch', 1.6]] as [CloudBeat, number][],
+  // a rainbow hubba: a cloud a flip up over the layer, then a rainbow ledge off its end, grinding down onto a cloud
+  hubbaUp: 2, // tiles that cloud stands over the layer
+  hubbaTop: [5, 6], // tiles: that cloud
+  hubba: [9, 12], // tiles the hubba runs along
+  hubbaDrop: 4, // tiles it falls, from that cloud (less where the layer can't go that low)
+  hubbaLand: [7, 9], // tiles: the cloud at its foot
+  // an S-rail: a chrome rail that dips and kicks back up at its end, throwing you on to a cloud ahead
+  srail: [14, 18], // tiles along
+  srailDip: 3.5, // tiles down to its lowest, about two thirds of the way along
+  srailKick: 1.5, // tiles its end stands back up over its lowest
+  srailGap: 3, // tiles of open sky to the cloud after it
+  srailLand: [7, 9],
+  // an S I-beam: a red steel beam hung off crane cables, flat, then down, then flat again, onto a cloud
+  sbeam: [14, 18],
+  sbeamDrop: 3,
+  sbeamLand: [7, 9],
+  // a drone bridge: a gap too wide to jump with no cloud under it, the drones hovering across it at the layer's height:
+  // stomp from one to the next (each stomp gives you your jumps back)
+  bridge: [2, 3], // drones
+  bridgePitch: 3.25, // tiles from one drone to the next (a stomp's bounce, tapped, carries about 2.6 at cruising speed, 4 fast)
+  bridgeEdge: 3, // tiles of open sky from the cloud's edge to the first drone (an ollie off the edge comes down about there)
+  bridgeFar: 2, // and from the last drone to the cloud on the far side
+  bridgeFrom: [6, 8], // tiles: the cloud you leave from
+  bridgeLand: [8, 10], // tiles: the one on the far side
+  most: { launch: 2, bridge: 3, hubba: 3, srail: 3, sbeam: 3 } as Partial<Record<CloudBeat, number>>, // a floor's most of each set
+};
+
+// act 3's launch quarterpipes: roll up one and off its lip and it throws you straight up (at the same arc whatever
+// your speed, launchHsp), up through a cloud bank and down onto a big rail running down to a little flat, then a
+// second quarterpipe and a second rail down onto the layer. Ollie on the ramp instead and you've thrown it away
+export const LAUNCH = {
+  run: [11, 13], // tiles: the cloud you roll up to it on (long: come in fast off a rail and you still land before it)
+  qp: 2, // tiles: the quarterpipe
+  qpUp: 2, // tiles its lip stands over its foot
+  vsp: -13, // px/frame up off the lip (about 10.5 tiles of air over it)
+  hsp: 4.5, // px/frame along, every time (the arc tops out about 7.3 tiles past the lip)
+  bank: 6, // tiles: the cloud bank you shoot up through
+  bankUp: 5, // tiles over the lip
+  railAt: 7.5, // tiles past the lip the big rail starts, just past the top of the arc
+  railUp: 10, // tiles over the lip it starts
+  rail: 20, // tiles it runs down
+  flat: [5, 6], // tiles: the little flat at its foot
+  land: [9, 11], // tiles: the cloud the second rail runs down onto
 };
 
 // Acts 4 and 5 (GDD: How a run ends, and the Roadmap's climb, step d; zack, 2026-11-06): the same floor as act 3's,
@@ -297,12 +354,13 @@ export function addClouds(level: Level, seed: number): void {
   if (!spans?.length || floor < CLOUDS.from) return;
   const rng = makeRng(seed * 113 + floor * 7177 + 3);
   const act = layerAct(floor);
-  const weights = act >= 4 ? HIGH[act as 4 | 5].beats : BEATS;
+  const weights = act >= 4 ? HIGH[act as 4 | 5].beats : act === 3 ? CLOUD_LINE.beats : BEATS;
   const k = layerScale(floor);
   const surfaces: Surface[] = [];
   const rails: CurvedRail[] = [];
   const movers: SkyMover[] = [];
   const busts: SkyBust[] = [];
+  const bridges: { x: number; h: number; base: number }[] = [];
   let spin = rng() < CLOUDS.spin;
   const coins = (x0: number, x1: number, y: (x: number) => number) => {
     for (let c = x0 + TILE; c < x1 - TILE / 2; c += 2 * TILE) level.pickups.push({ kind: 'cash', x: c, y: y(c) - PICKUPS.ride });
@@ -321,6 +379,7 @@ export function addClouds(level: Level, seed: number): void {
   //the layer itself, from (x, y) on to the end of the floor
   const lay = (x: number, y: number, first: boolean, piece: CloudPiece | null = null) => {
     let last: CloudBeat | CloudPiece = 'gap';
+    const sets: Record<string, number> = {};
     const pieceX = x + CLOUD_ACT.pieceAt * (end - x);
     while (x < end - 6 * TILE) {
       let beat: CloudBeat | CloudPiece = pick(rng, weights);
@@ -337,6 +396,10 @@ export function addClouds(level: Level, seed: number): void {
         const by = y - (beat === 'blimp' ? CLOUD_ACT.blimpUp : CLOUD_ACT.swingUp) * TILE;
         if (fits(w) && !busy(level, x, x + w, by)) {
           movers.push({ kind: beat, x0: x, x1: x + w, y: by, cloud: true, ...(beat === 'swing' ? { mast: x + w * 0.25, phase: Math.floor(rng() * 300) } : {}) });
+          //(act 3: a low cloud under the jib, for when it's swung away: the clouds are the only way through there)
+          if (act === 3 && beat === 'swing' && y + CLOUD_ACT.swingLow * TILE <= lowest(x)) {
+            surfaces.push({ kind: 'ledge', x0: x + 2 * TILE, x1: x + w, y: y + CLOUD_ACT.swingLow * TILE, row: -1, sky: 'cloud' });
+          }
           coins(x, x + w, () => by);
           x += w;
           if (beat === piece) piece = null;
@@ -392,6 +455,133 @@ export function addClouds(level: Level, seed: number): void {
           piece = null;
         } else beat = 'puff';
       }
+      //(act 3's sets: never the same one twice running)
+      if (beat === last && ['hubba', 'srail', 'sbeam', 'bridge', 'launch'].includes(beat)) beat = 'puff';
+      //(and only so many of each a floor)
+      const most = act === 3 ? CLOUD_LINE.most[beat as CloudBeat] : undefined;
+      if (most !== undefined && (sets[beat] ?? 0) >= most) beat = 'puff';
+      if (beat === 'hubba') {
+        //a cloud a flip up, a rainbow ledge off its end grinding down, and a cloud at its foot
+        const tw = range(rng, CLOUD_LINE.hubbaTop) * TILE;
+        const hw = range(rng, CLOUD_LINE.hubba) * TILE;
+        const lw = range(rng, CLOUD_LINE.hubbaLand) * TILE;
+        const ty = y - CLOUD_LINE.hubbaUp * TILE;
+        const hx = x + tw;
+        const ly = Math.min(ty + CLOUD_LINE.hubbaDrop * TILE, lowest(hx + hw));
+        if (ly - ty >= 1.5 * TILE && fits(tw + hw + lw) && !busy(level, x, x + tw, ty) && !busy(level, hx, hx + hw + lw, ly)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: hx, y: ty, row: -1, sky: 'cloud' });
+          coins(x, hx, () => ty);
+          const r = polyRail([[hx, ty], [hx + hw, ly]]);
+          r.sky = 'hubba';
+          r.material = 'concrete';
+          rails.push(r);
+          coins(hx, hx + hw, (cx) => r.yAt(cx) ?? ly);
+          surfaces.push({ kind: 'ledge', x0: hx + hw, x1: hx + hw + lw, y: ly, row: -1, sky: 'cloud' });
+          coins(hx + hw, hx + hw + lw, () => ly);
+          x = hx + hw + lw;
+          y = ly;
+        } else beat = 'puff';
+      }
+      if (beat === 'srail' || beat === 'sbeam') {
+        //an S: the chrome rail dips and kicks back up at its end (off it into open sky, onto the cloud ahead); the red
+        //I-beam steps down flat to flat, straight onto the cloud at its foot
+        const s3 = beat === 'srail';
+        const w = range(rng, s3 ? CLOUD_LINE.srail : CLOUD_LINE.sbeam) * TILE;
+        const want = (s3 ? CLOUD_LINE.srailDip : CLOUD_LINE.sbeamDrop) * TILE;
+        const dip = Math.min(want, lowest(x + w * 0.6) - y);
+        const gap = s3 ? CLOUD_LINE.srailGap * TILE : 0;
+        const lw = range(rng, s3 ? CLOUD_LINE.srailLand : CLOUD_LINE.sbeamLand) * TILE;
+        const kick = s3 ? CLOUD_LINE.srailKick * TILE : 0;
+        const ey = y + dip - kick;
+        if (dip >= 2 * TILE && fits(w + gap + lw) && !busy(level, x, x + w + gap + lw, y + dip / 2)) {
+          const pts: [number, number][] = [];
+          const n = 40;
+          for (let i = 0; i <= n; i++) {
+            const t = i / n;
+            let f: number;
+            if (!s3) f = (dip * (1 - Math.cos(Math.PI * t))) / 2;
+            else if (t < 0.65) f = (dip * (1 - Math.cos((Math.PI * t) / 0.65))) / 2;
+            else f = dip - kick * (1 - Math.cos((Math.PI / 2) * ((t - 0.65) / 0.35)));
+            pts.push([x + w * t, y + f]);
+          }
+          const r = polyRail(pts);
+          r.sky = beat;
+          rails.push(r);
+          coins(x, x + w, (cx) => r.yAt(cx) ?? y);
+          //(off the S-rail's kick you're thrown up and on: the cloud a little over where it leaves you)
+          const ly = s3 ? ey - TILE / 2 : y + dip;
+          surfaces.push({ kind: 'ledge', x0: x + w + gap, x1: x + w + gap + lw, y: ly, row: -1, sky: 'cloud' });
+          coins(x + w + gap, x + w + gap + lw, () => ly);
+          if (s3) level.pickups.push({ kind: 'cash', x: x + w + gap / 2, y: ly - PICKUPS.arc });
+          x += w + gap + lw;
+          y = ly;
+        } else beat = 'puff';
+      }
+      if (beat === 'bridge') {
+        //a cloud to leave from, the drones across the gap at its height, and a cloud on the far side
+        const fw = range(rng, CLOUD_LINE.bridgeFrom) * TILE;
+        const n = range(rng, CLOUD_LINE.bridge);
+        const edge = CLOUD_LINE.bridgeEdge * TILE;
+        const span = edge + CLOUD_LINE.bridgeFar * TILE + (n - 1) * CLOUD_LINE.bridgePitch * TILE + DRONE.w;
+        const lw = range(rng, CLOUD_LINE.bridgeLand) * TILE;
+        if (fits(fw + span + lw) && !busy(level, x, x + fw + span + lw, y)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + fw, y, row: -1, sky: 'cloud' });
+          coins(x, x + fw, () => y);
+          const gx = x + fw;
+          for (let i = 0; i < n; i++) {
+            const dx = gx + edge + i * CLOUD_LINE.bridgePitch * TILE;
+            bridges.push({ x: dx, h: 0, base: y });
+            level.pickups.push({ kind: 'cash', x: dx + DRONE.w / 2, y: y - PICKUPS.arc });
+          }
+          if (rng() < CLOUDS.stoken) level.pickups.push({ kind: 'stoken', x: gx + span / 2, y: y - PICKUPS.high });
+          (level.airways ??= []).push([gx, gx + span]);
+          surfaces.push({ kind: 'ledge', x0: gx + span, x1: gx + span + lw, y, row: -1, sky: 'cloud' });
+          coins(gx + span, gx + span + lw, () => y);
+          x = gx + span + lw;
+        } else beat = 'puff';
+      }
+      if (beat === 'launch') {
+        //roll up the quarterpipe, up through the cloud bank, down the big rail to the little flat, up the second
+        //quarterpipe and down the second rail onto the layer
+        const L = LAUNCH;
+        const rw = range(rng, L.run) * TILE;
+        const fw = range(rng, L.flat) * TILE;
+        const lw = range(rng, L.land) * TILE;
+        const leg = (L.qp + L.railAt + L.rail) * TILE;
+        const w = rw + leg + fw + leg + lw;
+        const fx = x + rw + leg;
+        const fy = Math.min(y, lowest(fx));
+        const ex = fx + fw + leg;
+        const ey = Math.min(fy, lowest(ex));
+        const clear = (x0: number, x1: number, yy: number) => !busy(level, x0, x1, yy);
+        if (fits(w) && clear(x, ex + lw, y) && clear(x, ex + lw, y - L.railUp * TILE) && clear(x, ex + lw, y - (L.railUp / 2) * TILE)) {
+          surfaces.push({ kind: 'ledge', x0: x, x1: x + rw, y, row: -1, sky: 'cloud' });
+          coins(x, x + rw, () => y);
+          //one leg: the quarterpipe from (qx, qy) and the rail down from over its lip to (tx, ty)
+          const legOf = (qx: number, qy: number, tx: number, ty: number) => {
+            const lip = qy - L.qpUp * TILE;
+            const lx = qx + L.qp * TILE;
+            surfaces.push({ kind: 'bank', x0: qx, x1: lx, y: qy, y1: lip, row: -1, sky: 'qp', launch: L.vsp, launchHsp: L.hsp });
+            surfaces.push({ kind: 'ledge', x0: lx - 1.5 * TILE, x1: lx - 1.5 * TILE + L.bank * TILE, y: lip - L.bankUp * TILE, row: -1, sky: 'cloud' });
+            const r = polyRail([[lx + L.railAt * TILE, lip - L.railUp * TILE], [tx, ty]]);
+            r.sky = 'downrail';
+            rails.push(r);
+            coins(lx + L.railAt * TILE + TILE, tx, (cx) => r.yAt(cx) ?? ty);
+            //(a line of coins up the launch, the way it throws you)
+            for (let k = 1; k <= 4; k++) level.pickups.push({ kind: 'cash', x: lx + k * 1.2 * TILE, y: lip - k * 2.2 * TILE });
+          };
+          legOf(x + rw, y, fx, fy);
+          surfaces.push({ kind: 'ledge', x0: fx, x1: fx + fw, y: fy, row: -1, sky: 'cloud' });
+          coins(fx, fx + fw, () => fy);
+          legOf(fx + fw, fy, ex, ey);
+          surfaces.push({ kind: 'ledge', x0: ex, x1: ex + lw, y: ey, row: -1, sky: 'cloud' });
+          coins(ex, ex + lw, () => ey);
+          (level.airways ??= []).push([x + rw, ex]);
+          x = ex + lw;
+          y = ey;
+        } else beat = 'puff';
+      }
+      sets[beat] = (sets[beat] ?? 0) + 1;
       if (beat === 'gap') {
         const w = range(rng, CLOUDS.gap) * TILE;
         if (rng() < CLOUDS.stoken) level.pickups.push({ kind: 'stoken', x: x + w / 2, y: y - PICKUPS.arc });
@@ -495,6 +685,11 @@ export function addClouds(level: Level, seed: number): void {
       }
       if (beat === 'puff' || beat === 'thin') {
         const w = range(rng, beat === 'thin' ? CLOUDS.thin : CLOUDS.puff) * TILE;
+        //(act 3, where the clouds are the only way: crowded right there, up a little out of the way instead of a hole)
+        if (act === 3 && fits(w) && busy(level, x, x + w, y)) {
+          const up = clearAt(level, x, x + w, y, y - 2 * TILE);
+          if (up !== null && up <= y) y = up;
+        }
         if (fits(w) && !busy(level, x, x + w, y)) {
           surfaces.push({ kind: 'ledge', x0: x, x1: x + w, y, row: -1, sky: beat === 'thin' ? 'thin' : 'cloud', ...(beat === 'thin' ? { crumble: true, crumbleFrames: CLOUDS.thinFrames } : {}) });
           coins(x, x + w, () => y);
@@ -547,13 +742,15 @@ export function addClouds(level: Level, seed: number): void {
     surfaces.push({ kind: 'ledge', x0: a - 2 * TILE, x1, y: y0, row: -1, sky: 'cloud' });
     coins(Math.max(a, level.startX + TILE), x1, () => y0);
     level.startY = y0;
-    const pieces: CloudPiece[] = act >= 4 ? HIGH[act as 4 | 5].pieces : ['blimp', 'swing', 'rig'];
+    //(act 3: not the rig, that drops you to the street, and the street ends the act's floor)
+    const pieces: CloudPiece[] = act >= 4 ? HIGH[act as 4 | 5].pieces : ['blimp', 'swing'];
     lay(x1 + range(rng, CLOUDS.between) * TILE, y0, false, pieces[Math.floor(rng() * pieces.length)]);
     //(laid, so the staircases keep clear of it)
     level.surfaces.push(...surfaces.splice(0));
     level.rails.push(...rails.splice(0));
     if (movers.length) level.skyMovers = [...(level.skyMovers ?? []), ...movers.splice(0)];
     if (busts.length) level.busts = [...(level.busts ?? []), ...busts.splice(0)];
+    if (bridges.length) level.bridges = [...(level.bridges ?? []), ...bridges.splice(0)];
     let layer = piecesOf(level, a, level.width).filter((p) => p.cloud);
     //where a staircase climbs up into the layer, the clouds in its way go (and their coins), so it rises on through
     //the layer to its height instead of flattening out under it with nowhere to go
@@ -597,7 +794,8 @@ export function addClouds(level: Level, seed: number): void {
       return false;
     };
     //every later stretch: girders up off the lip (an ollie onto the first), a flip a step, until the layer's in reach
-    for (const [c, d] of spans.slice(1)) {
+    //(not act 3's: the clouds are its only way through, so falling to the street loses the floor anyway)
+    for (const [c, d] of act === 3 ? [] : spans.slice(1)) {
       //(the first step's an ollie and a flip up off the lip, like the sky's way in, so it clears a rail run down the
       //hill off the lip: the first rise is that, from the lip's height)
       const [l, top] = lipOf(level, c, d);

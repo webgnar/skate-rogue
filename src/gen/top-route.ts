@@ -41,7 +41,7 @@ const range = (rng: Rng, [lo, hi]: number[]) => lo + Math.floor(rng() * (hi - lo
 export function groundAt(level: Level, x: number): number | undefined {
   let y: number | undefined = isStreetAt(level, x) ? level.streetY : undefined;
   for (const s of level.surfaces) {
-    if (s.side || s.el || s.top || s.kicker || s.kind === 'overpass' || s.kind === 'rail' || s.kind === 'ledge') continue;
+    if (s.side || s.el || s.top || s.kicker || s.sky === 'qp' || s.kind === 'overpass' || s.kind === 'rail' || s.kind === 'ledge') continue;
     if (x < s.x0 || x > s.x1) continue;
     const sy = surfaceY(s, x);
     if (y === undefined || sy < y) y = sy;
