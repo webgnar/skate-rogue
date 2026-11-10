@@ -57,8 +57,4 @@ each at 3x into `app-store/screenshots/` (not in git; about 25 minutes in a clou
 
 ## Still open
 
-- The contact email on the support page (`CONTACT_EMAIL` in `public/support.html`). App Store Connect wants a support
-  URL with a way to reach the developer.
-- Music rights: both tracks have to be cleared for the store, even free.
-- The age rating: street dice are simulated gambling (for in-game coins only) in Apple's questionnaire.
 - iPad, Android (Capacitor does Android the same way), in-app purchases, Game Center for the leaderboard.

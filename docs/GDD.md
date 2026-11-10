@@ -1716,11 +1716,8 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   spinning ring, zero-g pipes) on top of the stair sets and rails (default: not yet). A fall in space is now a bail
   (see Act 5's station line); whether the scene should play every time or only the first few (default: every time,
   a tap skips it).
-- **The iPhone app** (built Nov 10, 2026, see The iPhone app): the support contact email on `/support.html` (default:
-  none shown until zack picks one); whether to support iPad too (default: iPhone only, so no iPad screenshots are
-  needed); the age rating answers, since street dice count as simulated gambling (default: answer it honestly as
-  infrequent/mild); the music rights before launch, as for the portal; and whether the app keeps the leaderboard
-  (default: off, as on the portal).
+- **The iPhone app** (built Nov 10, 2026, see The iPhone app): whether to support iPad too (default: iPhone only, so no
+  iPad screenshots are needed), and whether the app keeps the leaderboard (default: off, as on the portal).
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
 - **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
   chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until
