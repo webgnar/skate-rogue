@@ -14,8 +14,8 @@ const MAX_INITIAL = 50 * 1024 * 1024; // what loads before the first gameplaySta
 const MOBILE_HOME = 20 * 1024 * 1024; // their mobile homepage wants the initial download under this
 
 // what the portal build never loads: the Meshy test skaters (DEV TOOLS only, off in this build), the home screen
-// app's icons and manifest (the page tags are stripped by vite.config.ts), and notes
-for (const p of ['models/meshy', 'icons', 'manifest.webmanifest', 'music/README.md']) rmSync(join(DIR, p), { recursive: true, force: true });
+// app's icons and manifest (the page tags are stripped by vite.config.ts), the site's privacy and support pages, and notes
+for (const p of ['models/meshy', 'icons', 'manifest.webmanifest', 'music/README.md', 'privacy.html', 'support.html']) rmSync(join(DIR, p), { recursive: true, force: true });
 // and the far backdrops of the old separate worlds (src/render/biomes.ts BACKDROPS): the one city only draws Chicago's
 // skyline, planets and sculptures; the rest show only with the ?biome= dev flag, which leaves out a layer that's missing.
 // About 0.7 MB, room for the hand-drawn card art (public/sprites/cards/art)

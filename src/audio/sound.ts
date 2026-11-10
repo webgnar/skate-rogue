@@ -63,7 +63,7 @@ export class Sound {
   // call from a user gesture: makes the context (or wakes it) and starts loading the samples
   unlock(): void {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended' && !this.away) void this.ctx.resume().catch(() => {});
+      if (this.ctx.state !== 'running' && this.ctx.state !== 'closed' && !this.away) void this.ctx.resume().catch(() => {});
       return;
     }
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -272,7 +272,9 @@ export class Sound {
   // the loops and the music, every frame
   update(f: SoundFrame): void {
     if (!this.ctx || this.away) return;
-    if (this.ctx.state === 'suspended' && !document.hidden) void this.ctx.resume().catch(() => {});
+    //'interrupted' is iOS's state after a call, an alarm or Siri took the audio (Safari and the iOS app both): wake it
+    //like a suspended one, or the game stays silent until the next relaunch
+    if (this.ctx.state !== 'running' && this.ctx.state !== 'closed' && !document.hidden) void this.ctx.resume().catch(() => {});
     const t = this.ctx.currentTime;
     //paused: the street sounds fade out and the music dips under the pause card
     this.musicDuck.gain.setTargetAtTime(f.paused ? LOOPS.pauseDuck : 1, t, 0.25);

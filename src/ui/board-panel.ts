@@ -4,7 +4,7 @@
 import { cleanTag, type BoardId, type Entry, type Row } from '../net/board-rules';
 import { postScore, topRows } from '../net/leaderboard';
 import { loadSave, writeSave } from '../run/save';
-import { ON_CRAZYGAMES } from '../net/portal';
+import { STORE_BUILD } from '../net/portal';
 
 const TITLES: Record<BoardId, string> = { score: 'TOP SCORES', floor: 'DEEPEST RUNS', daily: "TODAY'S DAILY" };
 
@@ -33,7 +33,7 @@ export class BoardPanel {
       if (e.key === 'Enter') void this.saveTag();
     });
     //is there a board at all? one quiet read decides whether the button shows
-    if (ON_CRAZYGAMES) return; // the leaderboard is our own server's, off on the portal (docs/CRAZYGAMES.md)
+    if (STORE_BUILD) return; // the leaderboard is our own server's, off on the portal and in the app (docs/CRAZYGAMES.md, docs/APP_STORE.md)
     void topRows('score').then((rows) => {
       this.online = rows !== null;
       this.button.hidden = !this.online;

@@ -11,7 +11,7 @@ grind, and Noita-style builds and unlock trees give each run its own shape.
 | | |
 | --- | --- |
 | Genre | 3D side-scrolling (2.5D) roguelike skate platformer |
-| Platforms | Mobile web first (iOS Safari, Android Chrome, installable PWA), desktop browser, itch.io |
+| Platforms | Mobile web first (iOS Safari, Android Chrome, installable PWA), desktop browser, itch.io, the CrazyGames portal, and a free iPhone app on the App Store (Capacitor) |
 | Engine | Three.js + TypeScript + Vite; custom kinematic physics (Excalibur, which the old runner uses, is 2D only) |
 | Input | Touch first; keyboard and gamepad supported |
 | Session length | A floor is 30–90 s; a good run is 10–25 min; a bad run can be 2 min |
@@ -1284,6 +1284,16 @@ saves through their Data module. On the portal the game has no full screen switc
 The ad calls are in place but switched off (ads still paused). Details and limits: `docs/CRAZYGAMES.md`. The upload,
 store art and Basic Launch submission are zack's, on the CrazyGames developer portal **(not submitted yet)**.
 
+### The iPhone app: free on the App Store
+zack (Nov 10, 2026): "throw it up there for free". `npm run build:ios` builds the same game into a Capacitor iOS app
+(`ios/App`, bundle id `com.webgnar.skateescape`): iPhone only, portrait and landscape, full screen with the status
+bar hidden, the home bar fading and edge swipes needing a second swipe so a tap never throws the player out of a
+run. Like the portal build it has no full screen switch, no Add to Home Screen tip, no dev tools and no leaderboard,
+so the app collects nothing (privacy policy at `/privacy.html` on the Vercel site, support at `/support.html`). No
+in-app purchases and no ads in this first version: the paid chapters and Stoken bundles come later, as an update.
+The Xcode archive and the upload need zack's Mac and Apple account **(not submitted yet)**. Details, the store
+listing text and the screenshot sizes: `docs/APP_STORE.md`.
+
 ### Chapters (story packs)
 
 The five-act escape (see How a run ends) is **Chapter 1**, free, with its ending. Each later chapter is a new
@@ -1675,7 +1685,7 @@ thread of its own:
     machine; it now only compiles in the background); and the hub's still pieces are merged (about 200 draws down to
     160).
 11. Release on ad-supported web game portals (zack still picks which).
-12. App store builds with Capacitor, if wanted.
+12. App store builds with Capacitor: the iPhone app is built (`npm run build:ios`, docs/APP_STORE.md) **(not submitted yet)**; Android not started.
 
 ## Milestones
 
@@ -1706,6 +1716,11 @@ The new game lives in this repo (webgnar/skate-rogue); the old 2D runner stays l
   spinning ring, zero-g pipes) on top of the stair sets and rails (default: not yet). A fall in space is now a bail
   (see Act 5's station line); whether the scene should play every time or only the first few (default: every time,
   a tap skips it).
+- **The iPhone app** (built Nov 10, 2026, see The iPhone app): the support contact email on `/support.html` (default:
+  none shown until zack picks one); whether to support iPad too (default: iPhone only, so no iPad screenshots are
+  needed); the age rating answers, since street dice count as simulated gambling (default: answer it honestly as
+  infrequent/mild); the music rights before launch, as for the portal; and whether the app keeps the leaderboard
+  (default: off, as on the portal).
 - **The sewer route**: built out Oct 31, 2026 (see Three routes); art pass from zack's refs (`sewer/refs/`) next.
 - **Monetization details** (plan decided Nov 2, 2026, see Monetization): prices, bundle sizes, how many Stoken a
   chapter costs to earn, which cosmetics are money-only, and the store screen. Chapter 2's story. Defaults until
