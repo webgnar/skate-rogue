@@ -50,8 +50,8 @@ Handles are 44 px or bigger on touch, one finger pans, two pinch to zoom, and lo
 
 1. **What's hand-made?** DECIDED (zack, 2026-11-10): sets dropped into generated floors. Whole hand-made
    floors stay a later phase (4).
-2. **Where do you build?** Phone first (every tool sized for touch), desktop first with phone for nudging and
-   playing (recommended), or desktop only.
+2. **Where do you build?** DECIDED (zack, 2026-11-10): desktop builds new sets; the phone plays from any point,
+   nudges what's there and saves (the table above).
 3. **Saving from the phone.** Keep pasting to Claude (as `?levels` does now), a save button that commits to a
    branch and opens a PR for Claude to check and merge (recommended), or sets saved online and live in the game
    at once with no PR.
