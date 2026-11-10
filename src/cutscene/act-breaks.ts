@@ -5,16 +5,15 @@
 //
 //  1 to 2  "Okay. Higher."    the cruisers jammed after the roadblock, the fire escape up, the chopper's spotlight
 //  2 to 3  "STOKE DETECTED"    a 50-50 on a power line, the sparks hit a substation, the billboards, the drones
-//  3 to 4  "No further."       up through the clouds into the stars, a blimp, the gunships' lights blink on
-//  4 to 5  "...Whoa."          off the last blimp into space, a slow flip, the rocket launches from the city
+//  3 to 4  "No further."       up through the clouds into the stars, a blimp, the fighter jets' lights blink on
+//  4 to 5  "...Whoa."          off the last blimp into space, a slow flip, the drones pour up out of the city
 import * as THREE from 'three';
 import { BASE, CLIPS, mix as mixPose, sample, type Pose } from '../render/poses';
 import type { SampleId } from '../audio/cues';
 import { SCALE, type SkaterRig } from '../render/skater-rig';
 import { makeDrone } from '../render/drone-view';
 import { makeParkedCruiser } from '../render/kit';
-import { makeRocket } from '../render/chaser-view';
-import { makeGunship } from '../render/car-damage';
+import { makeJet } from '../render/car-damage';
 import { Particles } from '../render/particles';
 import { Impacts } from '../render/impact';
 import { inkify, setInkLens, setInkResolution } from '../render/toon';
@@ -806,7 +805,7 @@ export class ActBreakScene {
     qp.position.set(qx, 0, street - 2.2);
     this.scene.add(qp);
     //one world, so the flight is one path through every cut (zack 2026-11-10: "players position need to be fluid
-    //with camera changes"): the cloud tops H over the street, and the sky above them (the blimp, the gunships, the
+    //with camera changes"): the cloud tops H over the street, and the sky above them (the blimp, the jets, the
     //ship) laid out in their own frame L, which sits right over the quarterpipe
     const H = 60;
     const X0 = qx + R; // the coping's line: straight up from here
@@ -842,14 +841,14 @@ export class ActBreakScene {
     const air = blimp(16);
     air.position.set(2, 4, 0);
     high.add(moon, moonGlow, ship, shipGlow, air);
-    //the gunships, a line across the sky, their eyes coming on one at a time
+    //the fighter jets, a line across the sky nose to tail, their eyes coming on one at a time
     const ships = Array.from({ length: 7 }, (_, i) => {
-      const g = makeGunship(-3, 3, 0, 2.2, 0);
+      const g = makeJet(-3, 3, 0, 2.2, 0);
       inkify(g);
       g.scale.setScalar(3);
       g.position.set(-48 + i * 16, 42 + (i % 2) * 3, -45);
       const light = glowSprite(0xff2a2a, 9, 0);
-      light.position.set(0, 1.2, 1);
+      light.position.set(3, 1.55, 0.4); // on its nose, where its red eye is
       g.add(light);
       high.add(g);
       return { g, light };
@@ -951,7 +950,7 @@ export class ActBreakScene {
     };
 
     //the sounds: the run-in and the ramp, the pop off the coping, the slow tre, the landing on the blimp, the
-    //gunships' eyes coming on, and the kick-up at the end
+    //jets' eyes coming on, and the kick-up at the end
     this.loop(0, TQ, 'roll', 4.5);
     this.loop(TQ, TUP, 'roll', 6);
     this.sfx(TQ, 'kicker', 0.7);
@@ -1033,7 +1032,7 @@ export class ActBreakScene {
         return;
       }
       if (tt < 13.4) {
-        //7 and 8: on the blimp's back to breathe; then looking up as the gunships' lights come on
+        //7 and 8: on the blimp's back to breathe; then looking up as the jets' lights come on
         this.ride(W(2, 4.05, 0), 0, tt < 9.2 ? SIT : LOOK_UP);
         if (tt < 9.2) this.shot(W(7, 6.8, 9), W(1.5, 5.6, 0), 50);
         else this.shot(W(4.5, 4.6, 6), W(-2, 30, -40), 58);
@@ -1053,10 +1052,10 @@ export class ActBreakScene {
     const sky = this.sky();
     this.scene.fog = new THREE.Fog(0x0a0e22, 300, 2600);
     const skyAll = sky.group;
-    //above the clouds: the last blimp, a gunship spinning out of the line
+    //above the clouds: the last blimp, a jet spinning out of the line
     const air = blimp(18);
     air.position.set(0, 4, 0);
-    const spin = makeGunship(-3, 3, 0, 2.2, 3);
+    const spin = makeJet(-3, 3, 0, 2.2, 3);
     inkify(spin);
     spin.scale.setScalar(2.2);
     const smoke = Array.from({ length: 14 }, (_, i) => {
@@ -1066,7 +1065,7 @@ export class ActBreakScene {
       return s;
     });
     const line = [1, 2].map((i) => {
-      const g = makeGunship(-3, 3, 0, 2.2, 0);
+      const g = makeJet(-3, 3, 0, 2.2, 0);
       inkify(g);
       g.scale.setScalar(2.2);
       g.position.set(30 + i * 22, 40, -50);
@@ -1083,7 +1082,7 @@ export class ActBreakScene {
     ship.scale.setScalar(3);
     const shipGlow = glowSprite(0xbfe8ff, 60, 0.7);
     this.scene.add(ship, shipGlow);
-    //the city: the silo opening in the hero street, the rocket, the billboards, the sleepwalkers
+    //the city: the silo opening in the hero street, the drones pouring up out of it, the billboards, the sleepwalkers
     const c = cityStage();
     const cityGroup = new THREE.Group();
     cityGroup.add(c.group);
@@ -1091,19 +1090,18 @@ export class ActBreakScene {
     const pit = silo();
     pit.group.position.set(0, 0, 12);
     cityGroup.add(pit.group);
-    const rocket = makeRocket();
-    inkify(rocket);
-    rocket.scale.setScalar(5);
-    rocket.rotation.z = Math.PI / 2;
-    const eye = glowSprite(0xff2a2a, 2.4);
-    eye.position.set(1.6, 0, 0);
-    rocket.add(eye);
-    this.scene.add(rocket);
-    const plume = Array.from({ length: 24 }, (_, i) => {
-      const s = glowSprite(i % 3 ? 0xddddee : 0xffb347, 5, 0.6);
-      s.material.blending = i % 3 ? THREE.NormalBlending : THREE.AdditiveBlending;
-      this.scene.add(s);
-      return s;
+    //the swarm (zack, Nov 10 2026: "we could just use drones in space for now"): drones by the dozen, a red eye
+    //each, rising out of the silo in a column that spreads as it climbs; `swarm` is where its middle is
+    const swarm = new THREE.Vector3();
+    const pack = Array.from({ length: 16 }, (_, i) => {
+      const d = makeDrone();
+      d.group.scale.setScalar(3);
+      inkify(d.group);
+      const eye = glowSprite(0xff2a2a, 2.4);
+      d.group.add(eye);
+      this.scene.add(d.group);
+      const a = i * 2.4;
+      return { ...d, eye, off: V(Math.cos(a) * (1 + (i % 4)), -i * 2.2, Math.sin(a) * (1 + (i % 4))), phase: i * 0.7 };
     });
     const boards = [
       { x: -12, y: ROOF_Y + 5.5, z: -8, w: 10 },
@@ -1123,7 +1121,7 @@ export class ActBreakScene {
     });
     const cloudsAt = cloudLayer(0, { n: 90, r: 260 });
     this.scene.add(cloudsAt);
-    //the sounds: wheels on the blimp, off its nose, the toe catching the board, the slow flip, the silo, the rocket
+    //the sounds: wheels on the blimp, off its nose, the toe catching the board, the slow flip, the silo, the drones
     this.loop(0, 3, 'roll', 6);
     this.sfx(0.4, 'drone_down', 0.8);
     this.sfx(3, 'ollie');
@@ -1132,6 +1130,8 @@ export class ActBreakScene {
     this.sfx(9.2, 'door_slam', 0.8, SLOW);
     this.sfx(10.2, 'car_wreck', 0.9, SLOW);
     this.sfx(13, 'gun_shot', 0.6, SLOW);
+    this.sfx(11, 'drone_down', 0.9);
+    this.sfx(14, 'drone_down', 0.9);
     return (t, dt) => {
       const inCity = t >= 9 && t < 13;
       cityGroup.visible = inCity;
@@ -1152,26 +1152,25 @@ export class ActBreakScene {
       ship.position.set(30, 70, -60);
       shipGlow.position.copy(ship.position);
       ship.rotation.y += dt * 0.3;
-      //the rocket: in the silo, up out of it (9-13), up through the clouds (13-15), its trail far below (15-17)
+      //the drones: in the silo, pouring up out of it (9-13), up through the clouds (13-15), their eyes far below
+      //and climbing (15-17); the column spreads as it rises
       const lift = smooth(10.2, 13, t);
-      rocket.visible = (t >= 9 && t < 15) || t >= 15;
-      eye.visible = t >= 13;
       pit.open(smooth(9.2, 10.2, t));
-      if (t < 13) rocket.position.set(0, -6 + lift * 40, 12);
-      else if (t < 15) rocket.position.set(0, mix(-30, 18, smooth(13, 15, t)), 0);
-      else rocket.position.set(-30, mix(-40, -10, smooth(15, 17, t)), -20);
-      const trail = t >= 10.2;
-      plume.forEach((s, i) => {
-        s.visible = trail && rocket.visible;
-        const back = V(0, -(i * 1.6 + ((t * 20) % 1.6)), 0);
-        s.position.copy(rocket.position).add(back);
-        s.scale.setScalar(4 + i * 0.5);
-        s.material.opacity = 0.7 * (1 - i / plume.length);
+      if (t < 13) swarm.set(0, -6 + lift * 40, 12);
+      else if (t < 15) swarm.set(0, mix(-30, 18, smooth(13, 15, t)), 0);
+      else swarm.set(-30, mix(-40, -10, smooth(15, 17, t)), -20);
+      const spread = t < 13 ? 1 + lift * 1.5 : 2.5;
+      pack.forEach((d, i) => {
+        d.group.visible = t >= 9;
+        d.group.position.set(swarm.x + d.off.x * spread + Math.sin(t * 2 + d.phase) * 0.6, swarm.y + d.off.y * (t < 10.2 ? 0 : 1) + Math.sin(t * 3.3 + d.phase) * 0.5, swarm.z + d.off.z * spread);
+        d.group.rotation.y = t * 0.4 + i;
+        for (const r of d.rotors) r.rotation.y += dt * 40;
+        d.eye.visible = t >= 10.2;
       });
       for (const b of boards) b.set(smooth(9.6, 10.2, t), t);
       for (const w of walkers) w.look(smooth(10.6, 11.2, t), 0xff6a3a);
       if (t < 3) {
-        //1: tracking: they race along the last blimp while a gunship spins out of the broken line
+        //1: tracking: they race along the last blimp while a jet spins out of the broken line
         air.position.x = -t * 2;
         this.ride(V(4, 4.05, 0), 0, clipAt('ride', t));
         spin.position.set(-14 + t * 3, 24 - t * t * 2.4, -20);
@@ -1201,18 +1200,18 @@ export class ActBreakScene {
         return;
       }
       if (t < 13) {
-        //4: down in the city: the plaza splits, the rocket lights and lifts; every screen says the same thing
+        //4: down in the city: the plaza splits and the drones pour up out of it; every screen says the same thing
         this.ride(V(0, -500, 0), 0, BASE);
         this.shot(V(-4, 1.6, 34), V(0, mix(6, 24, lift), 6), 56);
         return;
       }
       if (t < 15) {
-        //5: the rocket's eye: it punches up through the clouds, and finds them
+        //5: the swarm punches up through the clouds, and finds them
         this.ride(V(0, -500, 0), 0, BASE);
-        this.shot(V(26, 9, 38), rocket.position.clone().setY(Math.max(4, rocket.position.y)), 48);
+        this.shot(V(26, 9, 38), swarm.clone().setY(Math.max(4, swarm.y)), 48);
         return;
       }
-      //6: they see the trail coming, then look up at the ship
+      //6: they see the red eyes coming, then look up at the ship
       const look = smooth(15.4, 16.2, t);
       this.ride(V(0, 10, 0), 0, look > 0.5 ? LOOK_UP : { ...FLOAT, head: 1.1, nod: 0.6 });
       this.shot(V(4, 6.5, 9), V(mix(-10, 9, look), mix(4, 22, look), mix(-12, -14, look)), 54);

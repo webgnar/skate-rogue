@@ -226,10 +226,10 @@ export class Pilot {
       if (sk.railD > sk.rail.length - 30 && !continues(level, sk.rail)) return true;
       return false;
     }
-    //act 4's ceiling (src/gen/escape.ts): drones diving onto the blimp's back ahead, gunships in the line: ollie onto
+    //act 4's ceiling (src/gen/escape.ts): drones diving onto the blimp's back ahead, jets in the line: ollie onto
     //them as the reference bot does a car, and flip up onto a roof the ollie falls short of
     const drones = sim.swarm ? sim.swarm.drones.filter((d) => d.state === 'dive' || d.state === 'hover').map((d) => d.box) : [];
-    const hazards = [...drones, ...level.cars.filter((c) => c.model === 'gunship')];
+    const hazards = [...drones, ...level.cars.filter((c) => c.model === 'jet')];
     if (sk.grounded && hazards.some((c) => c.x0 - sk.x > 20 && c.x0 - sk.x < 70 && c.roof < sk.y && c.bottom > sk.y - PHYS.height)) return true;
     if (sk.mode === 'air' && sk.vsp > -1 && sk.jumps > 0 && blocked(hazards, sk.x, sk.boardY)) return true;
     if (sk.grounded && sk.surface) {

@@ -9,14 +9,16 @@ import type { Level } from '../physics/level';
 import { toX, toY } from './kit';
 import { model } from './models';
 import { inkify } from './toon';
+import { makeDrone } from './drone-view';
 
-export type ChaserLook = 'wave' | 'chariot' | 'guards' | 'rocket';
+export type ChaserLook = 'wave' | 'chariot' | 'guards' | 'rocket' | 'swarm';
 
 // one world, one chaser (zack, Oct 24 2026: no separate biomes): the guards, the city's own security after you.
 // The wave and the chariot stay built for a later use (Endless, or a special floor).
-// Act 5's finale sends a rocket instead (src/sim/chaser.ts).
+// Act 5's finale sends the drone swarm instead (src/sim/chaser.ts; zack, Nov 10 2026: "we could just use drones in
+// space for now"). The rocket stays built for a bigger space chaser later.
 export function chaserLook(level?: Level): ChaserLook {
-  if (level?.escape?.rocket) return 'rocket';
+  if (level?.escape?.swarm) return 'swarm';
   return 'guards';
 }
 
@@ -25,6 +27,7 @@ export const CHASER_CALLS: Record<ChaserLook, { start: string; caught: string }>
   chariot: { start: 'CHARIOT ON YOUR TAIL!', caught: 'TRAMPLED!' },
   guards: { start: 'GUARDS! RUN!', caught: 'COLLARED!' },
   rocket: { start: 'LAUNCH DETECTED!', caught: 'INTERCEPTED!' },
+  swarm: { start: 'DRONES INBOUND!', caught: 'SWARMED!' },
 };
 
 const lambert = (color: number, emissive = 0) => new THREE.MeshLambertMaterial({ color, emissive });
@@ -77,6 +80,28 @@ export function makeRocket(): THREE.Group {
     const fin = box(0.6, Math.abs(y) > 0 ? 0.35 : 0.05, Math.abs(z) > 0 ? 0.35 : 0.05, red, -0.8, y, z);
     g.add(fin);
   }
+  return g;
+}
+
+// act 5's chaser: the AI's drone swarm, seven enforcer drones (src/render/drone-view.ts) in a loose pack flying
+// nose first (+x) at the skater, the lead ones out front. Each keeps its home spot in the pack (userData.home) and
+// weaves round it in ChaserView.update.
+export const SWARM_PACK: readonly [number, number, number][] = [
+  [0.4, 0.1, 0.2], [-0.5, 0.8, -0.6], [-0.6, -0.6, 0.7], [-1.5, 0.3, -1.1], [-1.6, 1.3, 0.5], [-2.5, -0.3, 0.1], [-2.7, 1.0, -0.8],
+];
+const SWARM_SCALE = 0.75; // each drone a touch smaller than the street swarm's, so the pack reads as many
+export function makeSwarm(): THREE.Group {
+  const g = new THREE.Group();
+  SWARM_PACK.forEach(([x, y, z], i) => {
+    const d = makeDrone();
+    d.group.rotation.y = Math.PI; // the drone model faces -x: turn it to chase along +x
+    const holder = new THREE.Group();
+    holder.add(d.group);
+    holder.position.set(x, y, z);
+    holder.scale.setScalar(SWARM_SCALE);
+    holder.userData = { home: new THREE.Vector3(x, y, z), phase: i * 1.37, rotors: d.rotors };
+    g.add(holder);
+  });
   return g;
 }
 
@@ -266,7 +291,7 @@ export class ChaserView {
     const look = chaserLook(level);
     if (look !== this.look) {
       if (this.body) this.group.remove(this.body);
-      this.body = look === 'rocket' ? makeRocket() : fromModels(look) ?? (look === 'wave' ? makeWave() : look === 'chariot' ? makeChariot() : makeGuards());
+      this.body = look === 'swarm' ? makeSwarm() : look === 'rocket' ? makeRocket() : fromModels(look) ?? (look === 'wave' ? makeWave() : look === 'chariot' ? makeChariot() : makeGuards());
       inkify(this.body);
       this.group.add(this.body);
       this.look = look;
@@ -277,8 +302,20 @@ export class ChaserView {
     const target = toX(at(chaser, 'x'));
     this.surging = target - this.x > 0.5;
     this.x += (target - this.x) * Math.min(1, dt * (target > this.x ? 6 : 2));
-    //the rocket flies at your height (it rides 1.5 up its tile so it sits level with you), the guards run the street
-    this.group.position.set(this.x, look === 'rocket' ? toY(level, at(chaser, 'y')) - 0.5 : toY(level, level.streetY), 0.2);
+    //the rocket and the swarm fly at your height (1.5 up its tile so they sit level with you), the guards run the street
+    const flies = look === 'rocket' || look === 'swarm';
+    this.group.position.set(this.x, flies ? toY(level, at(chaser, 'y')) - 0.5 : toY(level, level.streetY), 0.2);
+    if (look === 'swarm') {
+      //each drone weaves on its own, rotors spinning; a surge tips them nose down as they dart in
+      for (const d of this.body!.children) {
+        const p = d.userData.home as THREE.Vector3;
+        const ph = d.userData.phase as number;
+        d.position.set(p.x + Math.sin(this.t * 1.7 + ph) * 0.25, p.y + Math.sin(this.t * 3.1 + ph * 2) * 0.22, p.z + Math.cos(this.t * 1.3 + ph) * 0.2);
+        d.rotation.z += ((this.surging ? -0.35 : -0.08) - d.rotation.z) * Math.min(1, dt * 6);
+        for (const r of d.userData.rotors as THREE.Mesh[]) r.rotation.y += dt * 40;
+      }
+      return;
+    }
     if (look === 'rocket') {
       this.body!.rotation.x += dt * 3; // it rolls as it flies
       const f = this.body!.getObjectByName('flame');

@@ -4,7 +4,7 @@
 //
 //  A  0-5 s    the beam lifts the rider over the clouds; the last Flock camera on the tallest tower tilts up, sparks
 //              and goes dark: NO SIGNAL
-//  B  5-10 s   looking down: the AI's drones, its cruiser and its falling rocket stall at the cloud layer and turn
+//  B  5-10 s   looking down: the AI's drones, its cruiser and its last space drones stall at the cloud layer and turn
 //              back. "It can't follow where the ground ends."
 //  C  10-16 s  up into the black: the sky darkens, the stars come out, the ship fills the frame and takes them in
 //  D  16-23 s  inside (the ship hub, src/ship/hub-scene.ts): the rider drops in, the crew dancing round the spot
@@ -19,7 +19,6 @@ import { BASE, type Pose } from '../render/poses';
 import { SCALE } from '../render/skater-rig';
 import { makeDrone } from '../render/drone-view';
 import { makeParkedCruiser } from '../render/kit';
-import { makeRocket } from '../render/chaser-view';
 import { inkify, setInkLens, setInkResolution, toon } from '../render/toon';
 import { cloudTexture, glowTexture } from '../title/city';
 import { makeRng } from '../gen/rng';
@@ -65,7 +64,7 @@ export class EndingScene {
   private readonly beam: THREE.Mesh;
   private readonly flock: { lamp: THREE.MeshBasicMaterial; head: THREE.Group; screen: THREE.Sprite; sparks: THREE.Sprite[] };
   private readonly chasers: { o: THREE.Object3D; from: THREE.Vector3; spin: number }[] = [];
-  private readonly rocket: THREE.Group;
+  private readonly fallers: THREE.Group[] = []; // the drones that chased you through space, tumbling back down
   private readonly streaks: THREE.LineSegments;
   private t = 0;
   private len: number;
@@ -107,7 +106,7 @@ export class EndingScene {
     this.beam.position.y = (ENDING.shipUp - 40) / 2;
     s.add(this.beam);
     this.flock = flockTower(s);
-    //the hunt, stalled at the cloud tops: three drones, the cruiser on its jets, the rocket falling away
+    //the hunt, stalled at the cloud tops: three drones, the cruiser on its jets, the space drones falling away
     const drone = (x: number, z: number) => {
       const d = makeDrone();
       d.group.scale.setScalar(1.8);
@@ -126,10 +125,13 @@ export class EndingScene {
     car.position.set(3, 0.6, -9);
     s.add(car);
     this.chasers.push({ o: car, from: car.position.clone(), spin: -0.5 });
-    this.rocket = makeRocket();
-    inkify(this.rocket);
-    this.rocket.scale.setScalar(2);
-    s.add(this.rocket);
+    for (let i = 0; i < 3; i++) {
+      const d = makeDrone();
+      d.group.scale.setScalar(1.8);
+      inkify(d.group);
+      s.add(d.group);
+      this.fallers.push(d.group);
+    }
     this.streaks = streaks();
     this.hub.scene.add(this.streaks);
     const rider = this.hub.rider;
@@ -266,13 +268,14 @@ export class EndingScene {
       c.o.position.y = c.from.y + Math.sin(t * 2 + c.from.x) * 0.3 - sink * 14;
       c.o.rotation.y = c.spin * sink * 2;
     }
-    //the rocket: its engine cut, tipping over and falling back through the clouds
+    //the last drones from space: they stall, tumble, and fall back through the clouds
     const fall = Math.max(0, t - AT.B + 0.5);
-    this.rocket.position.set(-10 + fall * 1.2, 10 - fall * fall * 1.4, -2);
-    this.rocket.rotation.set(0, 0, Math.PI / 2 - Math.min(Math.PI * 1.2, fall * 0.9));
-    this.rocket.visible = this.full && t > AT.B - 1 && t < AT.C;
-    const fire = this.rocket.getObjectByName('flame');
-    if (fire) fire.visible = fall < 0.3;
+    this.fallers.forEach((d, i) => {
+      const f = Math.max(0, fall - i * 0.35);
+      d.position.set(-10 + i * 3.5 + f * 1.2, 10 + i * 1.5 - f * f * 1.4, -2 - i * 2);
+      d.rotation.set(f * (1.6 + i * 0.5), 0, f * (2.2 - i * 0.6));
+      d.visible = this.full && t > AT.B - 1 && t < AT.C;
+    });
   }
 
   private aspect(): boolean {

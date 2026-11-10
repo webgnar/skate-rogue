@@ -50,43 +50,81 @@ function parkedGroup(level: Level, i: number, stage: Stage): THREE.Group {
   const v = STAGE_MODEL[stage];
   if (car.model === 'bus') return makeBus(x0, x1, bottom, roof, v);
   if (car.model === 'cruiser') return makeParkedCruiser(x0, x1, bottom, roof, i, v);
-  if (car.model === 'gunship') return makeGunship(x0, x1, bottom, roof, stage);
+  if (car.model === 'jet') return makeJet(x0, x1, bottom, roof, stage);
   return makeCar(x0, x1, bottom, roof, parkedPaint(level, i), parkedModel(level, i), v);
 }
 
-// act 4's ceiling (src/gen/escape.ts): one of the AI's gunships hanging in the line across the sky. A gunmetal
-// hull filling its box (you land on its back or slam into its nose), a red eye, cannon pods, rotor discs on stubs
-// over each end; a stomped one sags, its eye going dark
-export function makeGunship(x0: number, x1: number, bottom: number, roof: number, stage: Stage): THREE.Group {
+// act 4's ceiling (src/gen/escape.ts): one of the AI's fighter jets flying in the line across the sky, nose +x
+// (zack, Nov 10 2026: "a fighter jet instead of a helicopter"). A gunmetal fuselage along its box's top (you land
+// on its spine or slam into its nose), a pointed nose with the AI's red eye, a dark canopy, swept wings out across
+// the lane, twin tail fins, missiles slung under it to fill the box, an afterburner lit at the tail. A stomped one
+// noses down, its eye and its burner going dark.
+export function makeJet(x0: number, x1: number, bottom: number, roof: number, stage: Stage): THREE.Group {
   const g = new THREE.Group();
   const w = x1 - x0;
   const h = roof - bottom;
-  const mid = (x0 + x1) / 2;
-  const hull = new THREE.MeshLambertMaterial({ color: stage > 1 ? 0x3a3e46 : 0x6a7482 });
-  const plate = new THREE.MeshLambertMaterial({ color: 0x3a4250 });
-  const eye = new THREE.MeshBasicMaterial({ color: stage > 1 ? 0x401010 : 0xff2a2a });
-  const rotor = new THREE.MeshLambertMaterial({ color: 0x8a9098 });
-  const add = (bw: number, bh: number, bd: number, mat: THREE.Material, x: number, y: number, z: number) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat);
+  const hurt = stage > 1;
+  const hull = new THREE.MeshLambertMaterial({ color: hurt ? 0x3a3e46 : 0x6a7486 });
+  const plate = new THREE.MeshLambertMaterial({ color: 0x3a4252 });
+  const glass = new THREE.MeshLambertMaterial({ color: 0x1a2440 });
+  const stripe = new THREE.MeshLambertMaterial({ color: 0xc02a2a });
+  const white = new THREE.MeshLambertMaterial({ color: 0xdfe4ea });
+  const eye = new THREE.MeshBasicMaterial({ color: hurt ? 0x401010 : 0xff2a2a });
+  const burn = new THREE.MeshBasicMaterial({ color: hurt ? 0x2a1a10 : 0xffa040 });
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, rz = 0, rx = 0) => {
+    const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
+    m.rotation.set(rx, 0, rz);
     g.add(m);
+    return m;
   };
-  const cy = bottom + h * 0.5;
-  add(w * 0.92, h * 0.62, 1.6, hull, mid, cy, 0);
-  add(w * 0.6, h * 0.2, 1.2, plate, mid - w * 0.05, roof - h * 0.12, 0); // the back's armour plate (its deck)
-  add(w * 0.18, h * 0.42, 1.3, plate, x1 - w * 0.12, cy - h * 0.04, 0); // the nose
-  add(0.08, h * 0.16, 0.5, eye, x1 + 0.0, cy + h * 0.06, 0.2);
-  add(0.08, h * 0.16, 0.5, eye, x0 + w * 0.04, cy + h * 0.06, 0.2); // a tail light so it reads from behind
-  for (const z of [-0.95, 0.95]) {
-    add(w * 0.35, h * 0.16, 0.25, plate, mid + w * 0.12, bottom + h * 0.18, z); // cannon pods under its flanks
-    add(w * 0.2, 0.08, 0.08, plate, mid + w * 0.38, bottom + h * 0.18, z);
+  const along = -Math.PI / 2; // a cylinder or cone stands on y: this lays it along x, its top forward
+  //the fuselage: a long slim tube, tapering to the tail, high in the box so its back is the deck you land on
+  const r = h * 0.17;
+  const cy = roof - h * 0.36;
+  const tail = x0 + w * 0.08;
+  const neck = x1 - w * 0.3;
+  add(new THREE.CylinderGeometry(r, r * 0.8, neck - tail, 10), hull, (tail + neck) / 2, cy, 0, along);
+  add(new THREE.BoxGeometry((neck - tail) * 0.7, h * 0.05, r * 1.1), plate, (tail + neck) / 2, cy + r * 0.95, 0); // the spine
+  //the nose: a long cone forward, the AI's red eye glowing in its tip, a red band behind it
+  add(new THREE.ConeGeometry(r, x1 - neck, 10), hull, (neck + x1) / 2, cy, 0, along);
+  add(new THREE.SphereGeometry(r * 0.32, 8, 6), eye, x1 - w * 0.07, cy, 0);
+  add(new THREE.CylinderGeometry(r * 1.03, r * 1.03, w * 0.03, 10), stripe, neck, cy, 0, along);
+  //the bubble canopy, just behind the nose
+  const canopy = add(new THREE.SphereGeometry(1, 12, 8), glass, neck - w * 0.08, cy + r * 0.75, 0);
+  canopy.scale.set(w * 0.13, r * 0.6, r * 0.62);
+  //the intakes either side of the cockpit, under the wing roots
+  for (const z of [-1, 1]) add(new THREE.BoxGeometry(w * 0.26, r * 0.9, r * 0.5), plate, neck - w * 0.24, cy - r * 0.35, z * r * 1.05);
+  //swept delta wings out across the lane, front and back of the street: the root along the fuselage, the tip back
+  const wing = new THREE.Shape();
+  wing.moveTo(0, 0);
+  wing.lineTo(-w * 0.38, 0);
+  wing.lineTo(-w * 0.5, 1.5);
+  wing.lineTo(-w * 0.4, 1.5);
+  wing.closePath();
+  const wingGeo = new THREE.ExtrudeGeometry(wing, { depth: 0.06, bevelEnabled: false });
+  for (const sz of [-1, 1]) {
+    //the shape's y is out along the wing: tipped flat so it runs along z, one each side
+    add(wingGeo, hull, neck - w * 0.08, cy - r * 0.3, 0, 0, sz * Math.PI / 2);
+    add(new THREE.BoxGeometry(w * 0.1, 0.07, 0.12), stripe, neck - w * 0.08 - w * 0.45, cy - r * 0.3, sz * 1.5); // red tips
+    //tailplanes, small, at the back
+    add(new THREE.BoxGeometry(w * 0.14, 0.05, 0.75), hull, tail + w * 0.07, cy - r * 0.2, sz * 0.45);
+    //twin fins, swept back and canted out, up to the box's roof
+    const fin = add(new THREE.BoxGeometry(w * 0.13, h * 0.42, 0.05), plate, tail + w * 0.11, roof - h * 0.22, sz * r * 0.6, 0.45);
+    fin.rotation.x = -sz * 0.22;
+    add(new THREE.BoxGeometry(w * 0.08, h * 0.05, 0.07), stripe, tail + w * 0.11 - h * 0.21 * Math.sin(0.45), roof - h * 0.03, sz * (r * 0.6 + h * 0.21 * Math.sin(0.22)), 0.45); // red fin tips
+    //a missile slung under each wing, down in the box's lower half: white body, red nose
+    const len = w * 0.3;
+    const mx = neck - w * 0.32;
+    const my = bottom + h * 0.25;
+    add(new THREE.BoxGeometry(0.05, cy - r * 0.3 - my, 0.05), plate, mx, (cy - r * 0.3 + my) / 2, sz * 0.7); // the pylon
+    add(new THREE.CylinderGeometry(0.08, 0.08, len, 8), white, mx, my, sz * 0.7, along);
+    add(new THREE.ConeGeometry(0.08, 0.2, 8), stripe, mx + len / 2 + 0.1, my, sz * 0.7, along);
   }
-  for (const x of [x0 + w * 0.15, x1 - w * 0.2]) {
-    add(0.12, h * 0.25, 0.12, plate, x, bottom + h * 0.12, -0.6); // a stub down to its rotor (behind, below the hull)
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.2, w * 0.2, 0.05, 16), rotor);
-    disc.position.set(x, bottom + 0.02, -0.6);
-    g.add(disc);
-  }
+  //the engine nozzle and its afterburner, lit
+  add(new THREE.CylinderGeometry(r * 0.75, r * 0.85, w * 0.05, 10), plate, tail - w * 0.02, cy, 0, along);
+  const flame = add(new THREE.ConeGeometry(r * 0.6, w * 0.18, 10), burn, tail - w * 0.13, cy, 0, Math.PI / 2); // points back
+  flame.name = 'flame';
   if (stage >= 2) g.rotation.z = -0.06 * (stage - 1); // stomped: it noses down
   return g;
 }
@@ -187,7 +225,7 @@ export function damageParked(kit: THREE.Object3D | null, level: Level, i: number
     hideRange(state.lit, state.ranges[i].lit);
   }
   const mesh = parkedGroup(level, i, stage);
-  if (level.cars[i].model !== 'gunship') damagedLook(mesh, level.cars[i].model === 'bus' ? 'Bus' : level.cars[i].model === 'cruiser' ? 'Cruiser' : parkedModel(level, i), stage, i);
+  if (level.cars[i].model !== 'jet') damagedLook(mesh, level.cars[i].model === 'bus' ? 'Bus' : level.cars[i].model === 'cruiser' ? 'Cruiser' : parkedModel(level, i), stage, i);
   inkify(mesh);
   root.add(mesh);
   state.shown.set(i, { mesh, stage, slide: stage === 3 ? 0 : -1 });
