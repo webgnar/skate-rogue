@@ -440,7 +440,8 @@ html, body {
    It replaced the mirrored STOKE and HEAT bars (zack, 2026-11-06) */
 #meters { grid-column: 1 / 4; display: flex; justify-content: flex-start; min-width: 0; }
 #detect {
-  width: 52vw;
+  /* stops short of the middle, where the score and the combo hanging under it sit (zack, 2026-11-10) */
+  width: min(52vw, calc(50% - var(--u) * 12));
   box-sizing: border-box;
   display: flex;
   align-items: center;
