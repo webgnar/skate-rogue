@@ -8,7 +8,7 @@
 //  3 to 4  "No further."       up through the clouds into the stars, a blimp, the gunships' lights blink on
 //  4 to 5  "...Whoa."          off the last blimp into space, a slow flip, the rocket launches from the city
 import * as THREE from 'three';
-import { BASE, CLIPS, sample, type Pose } from '../render/poses';
+import { BASE, CLIPS, mix as mixPose, sample, type Pose } from '../render/poses';
 import { SCALE, type SkaterRig } from '../render/skater-rig';
 import { makeDrone } from '../render/drone-view';
 import { makeParkedCruiser } from '../render/kit';
@@ -688,27 +688,33 @@ export class ActBreakScene {
   // the blimp, a slow tre flip close up over the cloud tops, then down onto the blimp's back)
   private act3(): (t: number, dt: number) => void {
     const D = ACT3_UP; // the old cutscene runs on from the blimp landing, this much later
-    //the street: the city's own, a quarterpipe in the near lane, a cloud ceiling far over it
+    //the street: the city's own, a quarterpipe in the near lane
     const c = this.city();
     const street = 15.5;
     const qx = 14; // the transition's foot
     const R = 3; // its radius (and height)
     const qp = quarterpipe(R, 4.4);
     qp.position.set(qx, 0, street - 2.2);
-    const ceiling = cloudLayer(78, { under: true, n: 160 });
-    const low = new THREE.Group();
-    low.add(qp, ceiling);
-    this.scene.add(low);
-    //up above the clouds
+    this.scene.add(qp);
+    //one world, so the flight is one path through every cut (zack 2026-11-10: "players position need to be fluid
+    //with camera changes"): the cloud tops H over the street, and the sky above them (the blimp, the gunships, the
+    //ship) laid out in their own frame L, which sits right over the quarterpipe
+    const H = 60;
+    const X0 = qx + R; // the coping's line: straight up from here
+    const UPX = -16.2; // that line, in the sky's frame
+    const L = V(X0 - UPX, H, street);
+    const W = (x: number, y: number, z: number) => V(x, y, z).add(L);
     const sky = this.sky();
+    sky.group.position.copy(L);
+    const [dome, stars] = sky.group.children;
     const high = new THREE.Group();
+    high.position.copy(L);
     this.scene.add(high);
-    //inside the cloud: the drones' red eyes in the mist, round where they come up
-    const UPX = -16; // where they come up through the cloud tops: well clear of the blimp's nose
-    const eyes = [V(-6, -10, -6), V(-3, -14, -9), V(-9, -12, -2), V(5, -11, -8), V(7, -15, -4), V(3, -9, -11)].map((p) => {
+    //in the cloud's underside: the drones' red eyes in the mist, round the way up
+    const eyes = [V(-6, -1, -6), V(-3, -5, -9), V(-9, -3, -2), V(5, -2, -8), V(7, -6, -4), V(3, 0, -11)].map((p) => {
       const e = glowSprite(0xff2a2a, 2.6, 0.9);
       e.material.fog = true;
-      e.position.copy(p).add(V(UPX, 0, 0));
+      e.position.copy(p).add(V(UPX, -1, 0)).add(L);
       this.scene.add(e);
       return e;
     });
@@ -723,7 +729,7 @@ export class ActBreakScene {
     ship.position.set(-80, 520, -700);
     const shipGlow = glowSprite(0xbfe8ff, 90, 0.8);
     shipGlow.position.copy(ship.position);
-    //the blimp they land on, nose +x, its back at y 4
+    //the blimp they land on, nose +x, its back at y 4 (in the sky's frame), well off the line up
     const air = blimp(16);
     air.position.set(2, 4, 0);
     high.add(moon, moonGlow, ship, shipGlow, air);
@@ -742,35 +748,114 @@ export class ActBreakScene {
     //the landing on the blimp: the game's landing dust
     const dust = new Particles();
     const pad = new THREE.Group();
+    pad.position.copy(L);
     pad.add(dust.points);
     this.scene.add(pad);
     let landed = false;
-    const LAND = 9.8; // the board hits the blimp's back
-    const apex = 10.5;
+
+    // ---- the ride, as one path ----
+    //the run-in: rolling up to the ramp, speeding up to 9 m/s as they get there
+    const TQ = 2.2; // the transition's foot
+    const vIn = 9;
+    const accIn = 1.136;
+    const runX = (t: number) => qx - vIn * (TQ - t) + accIn * (TQ - t) ** 2;
+    //round the transition, pumping it from 9 up to 12 m/s
+    const vOut = 12;
+    const arc = (Math.PI / 2) * R;
+    const TUP = TQ + (2 * arc) / (vIn + vOut); // off the coping
+    const pump = (vOut - vIn) / (TUP - TQ);
+    //then the flight: up to the apex 10.5 over the cloud tops, eased from the coping's speed (a smooth cubic, so the
+    //launch and the slow top have no kinks), then a plain fall onto the blimp's back
+    const APEX = H + 10.5;
+    const TA = 3.4; // flight time to the apex
+    const G = 11.7;
+    const BACK = H + 4.05; // the blimp's back, where the board lands
+    const TL = TA + Math.sqrt((2 * (APEX - BACK)) / G);
+    const up = (tau: number): number => {
+      if (tau >= TA) return APEX - (G / 2) * (tau - TA) ** 2;
+      const u = tau / TA;
+      return (2 * u ** 3 - 3 * u ** 2 + 1) * R + (u ** 3 - 2 * u ** 2 + u) * TA * vOut + (-2 * u ** 3 + 3 * u ** 2) * APEX;
+    };
+    //out of the cloud tops they steer over for the blimp: an easing drift along x that lands them on its back,
+    //moving, and they slide to a stop over its middle
+    let tauTop = 0;
+    while (up(tauTop) < H && tauTop < TA) tauTop += 0.005;
+    const LANDX = W(-1.5, 0, 0).x;
+    const across = (tau: number) => {
+      const u = Math.min(1, Math.max(0, (tau - tauTop) / (TL - tauTop)));
+      return X0 + (LANDX - X0) * u * u;
+    };
+    const vLand = (2 * (LANDX - X0)) / (TL - tauTop);
+    const STOP = W(2, 0, 0).x;
+    const slide = (2 * (STOP - LANDX)) / vLand;
+    //the clock runs slow over the top for the tre flip: the flight's own time against the cutscene's
+    const rate = (t: number) => 1 - 0.8 * (smooth(5.4, 5.9, t) - smooth(8.4, 8.9, t));
+    const STEP = 1 / 240;
+    const flight: number[] = [];
+    for (let t = TUP, tau = 0; t < 14; t += STEP) {
+      flight.push(tau);
+      tau += rate(t) * STEP;
+    }
+    const tauAt = (t: number) => {
+      const i = Math.min(flight.length - 1, Math.max(0, Math.floor((t - TUP) / STEP)));
+      return t < TUP ? 0 : flight[i];
+    };
+    const timeAt = (tau: number) => TUP + flight.findIndex((f) => f >= tau) * STEP;
+    const LAND = timeAt(TL);
+    //the cuts, where the path gets to them
+    const yAt = (t: number) => up(tauAt(t));
+    let cut = TUP;
+    const when = (y: number) => {
+      while (yAt(cut) < y && cut < 14) cut += STEP;
+      return cut;
+    };
+    const C1 = when(13); // the street: they leave the top of frame
+    const C2 = when(H - 3.5); // looking up: on into the cloud, then from over it as they burst out of the tops
+    const C3 = C2;
+    const C4 = 5.8; // over the clouds, wide: the slow motion takes hold; close in for the tre
+    const C5 = 8.5; // and back out wide as it lets go, for the drop onto the blimp
+    const C6 = D + 6.8; // the old cutscene: sitting on the blimp's back
+    const TRE = [TA - 0.32, TA + 0.22]; // the tre flip, on the flight's clock (its clip is 0.42 s)
+    // where they are at t (world), the pose and the board's roll
+    const at = (t: number): { p: THREE.Vector3; pose: Pose; roll: number } => {
+      if (t < TQ) return { p: V(runX(t), 0, street), pose: clipAt(t < 1.1 ? 'push' : 'ride', t), roll: 0 };
+      if (t < TUP) {
+        const k = t - TQ;
+        const a = (vIn * k + (pump / 2) * k * k) / R;
+        return { p: V(qx + R * Math.sin(a), R * (1 - Math.cos(a)), street), pose: clipAt('ride', t), roll: a };
+      }
+      const tau = tauAt(t);
+      if (tau < TL) {
+        const roll = (Math.PI / 2) * (1 - smooth(0, 0.45, tau));
+        const air = clipAt('air', tau);
+        const k = (tau - TRE[0]) / (TRE[1] - TRE[0]);
+        const into = smooth(TRE[0] - 0.12, TRE[0], tau) * (1 - smooth(TRE[1], TRE[1] + 0.12, tau));
+        const pose = into > 0 ? mixPose(air, clipAt('tre', Math.min(1, Math.max(0, k)) * 0.42), into) : air;
+        return { p: V(across(tau), up(tau), street), pose, roll };
+      }
+      //down on the blimp's back: the knees take it, a slide to a stop, then they sit down
+      const s = Math.min(1, (t - LAND) / slide);
+      const x = LANDX + (STOP - LANDX) * (1 - (1 - s) ** 2);
+      const sat = smooth(LAND + 0.7, C6 - 0.1, t);
+      const pose = mixPose(clipAt('landBig', Math.min(0.6, t - LAND)), SIT, sat);
+      return { p: V(x, BACK, street), pose, roll: 0 };
+    };
+
     return (t, dt) => {
-      const onStreet = t < 4.4;
-      const inCloud = t >= 4.4 && t < 5.6;
-      c.group.visible = onStreet;
-      low.visible = onStreet;
-      sky.group.visible = !onStreet;
-      high.visible = !onStreet;
-      if (onStreet) {
+      const shotNo = t < C1 ? 1 : t < C2 ? 2 : t < C3 ? 3 : t < C4 ? 4 : t < C5 ? 5 : t < C6 ? 6 : 7;
+      const below = shotNo <= 2;
+      const inCloud = shotNo === 3;
+      c.group.visible = below;
+      qp.visible = below;
+      dome.visible = !below;
+      stars.visible = !below;
+      high.visible = !below;
+      for (const e of eyes) e.visible = shotNo <= 4;
+      sky.set(0.72);
+      if (below) {
         c.update(t, dt);
         this.scene.fog = new THREE.Fog(DUSK.fog, DUSK.fogNear, DUSK.fogFar);
-      } else {
-        sky.set(0.72);
-        const fog = (this.scene.fog ??= new THREE.Fog(0x1a2448, 300, 2400)) as THREE.Fog;
-        if (inCloud) {
-          fog.color.setHex(0xdfe4f0);
-          fog.near = 1;
-          fog.far = 30;
-        } else {
-          fog.color.setHex(0x1a2448);
-          fog.near = 300;
-          fog.far = 2400;
-        }
-      }
-      for (const e of eyes) e.visible = inCloud;
+      } else this.scene.fog = inCloud ? new THREE.Fog(0xdfe4f0, 1, 30) : new THREE.Fog(0x1a2448, 300, 2400);
       const tt = t - D; // the old cutscene's clock, from the landing on
       ships.forEach((s, i) => {
         const on = tt > 9.4 + i * 0.35;
@@ -780,88 +865,62 @@ export class ActBreakScene {
       if (t < LAND) {
         landed = false;
         dust.clear();
+      } else if (!landed) {
+        landed = true;
+        dust.dust(-1.5, 4.05, 2.6);
+        dust.dust(-1.5, 4.05, 2.2, true);
       }
       dust.update(dt, this.renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)));
-      if (t < 3) {
-        //1: wide, side on: they push down the near lane, carve up the quarterpipe and launch straight up off the coping
-        if (t < 2.2) {
-          const k = t / 2.2;
-          this.ride(V(mix(-6, qx, k * (2 - k) * 0.5 + k * 0.5), 0, street), 0, clipAt(t < 1.1 ? 'push' : 'ride', t));
-        } else if (t < 2.55) {
-          //up the transition: round the quarter circle, the board on its face
-          const a = smooth(2.2, 2.55, t) * (Math.PI / 2);
-          this.ride(V(qx + R * Math.sin(a), R * (1 - Math.cos(a)), street), 0, clipAt('ride', t), a);
+      if (shotNo < 7) {
+        const { p, pose, roll } = at(t);
+        this.ride(p, 0, pose, roll);
+        const rider = p.clone().add(V(0, 0.9, 0));
+        if (shotNo === 1) {
+          //1: wide, side on: they roll down the near lane, carve up the quarterpipe and launch straight up off the
+          //coping; the camera tilts up after them as they go (an upright phone pans with them along the lane)
+          const lx = this.tall ? Math.min(qx + 1, Math.max(p.x, qx - 10) + 1) : qx - 2;
+          const ly = mix(3.2, 8, smooth(TUP, C1, t));
+          this.shot(V(lx - 1, 3.4, street + 17), V(lx, ly, street), 48);
+        } else if (shotNo === 2) {
+          //2: from the foot of the ramp, looking up after them as they shrink into the dusk and into the cloud
+          //(it follows them off the coping, then settles on the cloud they're heading into, so they shrink up into it)
+          const look = rider.clone().lerp(V(X0 - 2, H - 4, street - 4), 0.85 * smooth(C1, C2 - 0.4, t));
+          this.shot(V(X0 + 4, 0.8, street + 6), look, 62);
+        } else if (shotNo === 3) {
+          //3: inside the cloud: white all round, the drones' eyes behind; the camera rises slower than they do, so
+          //they pass up through the frame
+          const cy = H - 8 + (p.y - (H - 9)) * 0.45;
+          this.shot(V(X0 + 6, cy, street + 8), V(X0, cy + 2, street), 58);
+        } else if (shotNo === 4) {
+          //4: out of the cloud tops into the stars, the blimp off to the side; the camera tilts up after them
+          const look = rider.clone().lerp(W(-5, 6, 0), 0.35);
+          this.shot(W(-4, 3, 15), look, 52);
+        } else if (shotNo === 5) {
+          //5: close, in slow motion, the camera drifting round them: the tre flip over the top
+          const a = mix(0.55, -0.25, (t - C4) / (C5 - C4));
+          this.shot(rider.clone().add(V(Math.sin(a) * 5.4, 0.6, Math.cos(a) * 5.4)), rider, 42);
         } else {
-          //off the coping, straight up, coming upright as they go
-          const k = t - 2.55;
-          this.ride(V(qx + R - 0.2, R + 22 * k, street), 0, clipAt('air', t), (Math.PI / 2) * (1 - smooth(2.55, 2.95, t)));
+          //6: back out wide as the clock picks up: the drop onto the blimp's back, the slide, and they sit
+          const look = rider.clone().lerp(W(0, 5, 0), 0.4);
+          this.shot(W(8, 9, 16), look, 50);
+          const hit = t >= LAND ? 1 - smooth(LAND, LAND + 0.4, t) : 0;
+          if (hit > 0) this.camera.position.add(V((Math.random() - 0.5) * hit * 0.3, (Math.random() - 0.5) * hit * 0.25, 0));
         }
-        //(an upright phone pans with them along the lane, then holds on the ramp)
-        const lx = this.tall ? Math.min(qx + 1, Math.max(this.holder.position.x, qx - 10) + 1) : qx - 2;
-        this.shot(V(lx - 1, 3.4, street + 17), V(lx, 3.2, street), 48);
-        return;
-      }
-      if (onStreet) {
-        //2: from the foot of the quarterpipe, looking straight up: they shrink into the dusk and into the cloud
-        const k = t - 2.55;
-        this.ride(V(qx + R - 0.2, R + 22 * k + 6 * k * k, street), 0, clipAt('air', t));
-        this.shot(V(qx + R + 4, 0.8, street + 6), V(qx + R - 0.5, 34, street - 1), 62);
-        return;
-      }
-      if (inCloud) {
-        //3: inside the cloud: white all round, the drones' eyes behind, and they streak up past
-        const k = smooth(4.4, 5.6, t);
-        this.ride(V(UPX, mix(-22, 0, k), 0), 0, clipAt('air', t));
-        this.shot(V(UPX + 6, -12, 8), V(UPX, -9, 0), 58);
-        return;
-      }
-      if (t < 6.4) {
-        //4: out through the cloud tops into the stars, the blimp off to the side, slowing at the top
-        const k = smooth(5.6, 6.4, t);
-        this.ride(V(UPX, mix(-2, apex - 0.4, Math.sqrt(k)), 0), 0, clipAt('air', t));
-        this.shot(V(UPX + 12, 12, 16), V(UPX + 5, 6, 0), 52);
-        return;
-      }
-      if (t < 9) {
-        //5: close up at the top, in slow motion: a tre flip, the board spinning and flipping under their knees
-        const k = smooth(6.5, 8.8, t);
-        const x = mix(UPX, UPX + 3, (t - 6.4) / 2.6);
-        const y = apex - 0.4 + Math.sin(((t - 6.4) / 2.6) * Math.PI) * 0.4;
-        this.ride(V(x, y, 0), 0, clipAt('tre', k * 0.42));
-        this.shot(V(x + 3.4, y + 1.5, 5.2), V(x - 0.1, y + 0.8, 0), 42);
-        return;
-      }
-      if (t < D + 7) {
-        //6: wide: down out of the sky onto the blimp's back; the knees take it, dust off its skin
-        const k = smooth(9, LAND, t);
-        const x0 = UPX + 3;
-        const p = t < LAND ? V(mix(x0, 2, k), mix(apex, 4.05, k * k), 0) : V(2, 4.05, 0);
-        const pose = t < LAND ? clipAt('air', t) : t < LAND + 0.6 ? clipAt('landBig', t - LAND) : SIT;
-        if (t >= LAND && !landed) {
-          landed = true;
-          pad.position.set(0, 0, 0);
-          dust.dust(2, 4.05, 2.6);
-          dust.dust(2, 4.05, 2.2, true);
-        }
-        const hit = t >= LAND ? 1 - smooth(LAND, LAND + 0.4, t) : 0;
-        this.ride(p, 0, pose);
-        this.shot(V(9, 9, 17), V(-3, 6, 0), 50);
-        if (hit > 0) this.camera.position.add(V((Math.random() - 0.5) * hit * 0.3, (Math.random() - 0.5) * hit * 0.25, 0));
         return;
       }
       if (tt < 13.4) {
         //7 and 8: on the blimp's back to breathe; then looking up as the gunships' lights come on
-        this.ride(V(2, 4.05, 0), 0, tt < 9.2 ? SIT : LOOK_UP);
-        if (tt < 9.2) this.shot(V(7, 6.8, 9), V(1.5, 5.6, 0), 50);
-        else this.shot(V(4.5, 4.6, 6), V(-2, 30, -40), 58);
+        this.ride(W(2, 4.05, 0), 0, tt < 9.2 ? SIT : LOOK_UP);
+        if (tt < 9.2) this.shot(W(7, 6.8, 9), W(1.5, 5.6, 0), 50);
+        else this.shot(W(4.5, 4.6, 6), W(-2, 30, -40), 58);
         return;
       }
       //9: close and low: they stand, kick the board up, and grin
       const pop = tt - 14.2;
       const pose = pop > 0 && pop < 0.6 ? clipAt('ollie', pop) : clipAt('idle', tt);
       const hop = pop > 0 && pop < 0.6 ? Math.sin((pop / 0.6) * Math.PI) * 0.8 : 0;
-      this.ride(V(2, 4.05 + hop, 0), -0.5, pose);
-      this.shot(V(4.2, 4.6, 4.4), V(2, 6, 0), 46);
+      this.ride(W(2, 4.05 + hop, 0), -0.5, pose);
+      this.shot(W(4.2, 4.6, 4.4), W(2, 6, 0), 46);
     };
   }
 
